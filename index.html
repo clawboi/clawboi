@@ -248,6 +248,19 @@ box-shadow:0 0 30px #8a2eff;
 .player{width:100%;}
 .releaseInfo{text-align:center;}
 }
+  /* MOBILE NAV FIX */
+@media (max-width: 650px){
+  header{
+    padding: 14px 16px;      /* tighter */
+    gap: 18px;               /* less space between links */
+    justify-content: space-between; /* spreads evenly without huge gaps */
+  }
+  header a{
+    font-size: 11px;         /* slightly smaller */
+    letter-spacing: .18em;   /* less spaced out */
+    white-space: nowrap;     /* keeps each label on one line */
+  }
+}
   o span{
   position:relative;
   display:inline-block;
