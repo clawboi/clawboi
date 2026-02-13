@@ -1,240 +1,252 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CLAWBOI</title>
 
 <style>
-:root{
---bg:#000;
---fg:#fff;
---vio:#8A2EFF;
---max:1100px;
---sans: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-}
 
-*{box-sizing:border-box}
 body{
 margin:0;
 background:#000;
 color:#fff;
-font-family:var(--sans);
--webkit-font-smoothing:antialiased;
+font-family:Helvetica,Arial,sans-serif;
+overflow-x:hidden;
 }
 
-.wrap{
-max-width:var(--max);
-margin:0 auto;
-padding:0 22px 80px;
-}
-
-/* NAV */
 header{
-border-bottom:1px solid rgba(255,255,255,.08);
-}
-.nav{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+padding:18px 30px;
 display:flex;
-justify-content:space-between;
-align-items:center;
-padding:16px 0;
+justify-content:center;
+gap:40px;
+background:rgba(0,0,0,.6);
+backdrop-filter:blur(8px);
+z-index:1000;
 }
-.logo{
-letter-spacing:.35em;
-font-size:12px;
-text-transform:uppercase;
-}
-.links{
-display:flex;
-gap:18px;
-}
-.links a{
-font-size:11px;
-letter-spacing:.3em;
-text-transform:uppercase;
-color:rgba(255,255,255,.75);
-border-bottom:1px solid transparent;
-padding-bottom:6px;
-}
-.links a:hover{
+
+header a{
 color:#fff;
-border-bottom-color:var(--vio);
+text-decoration:none;
+letter-spacing:.25em;
+font-size:12px;
+opacity:.8;
+transition:.25s;
 }
 
-/* HERO */
+header a:hover{
+opacity:1;
+color:#b026ff;
+}
+
 .hero{
+height:100vh;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
 text-align:center;
-padding:90px 0 60px;
 }
 
-.title{
-font-size:clamp(56px,10vw,120px);
-letter-spacing:.12em;
-margin:0;
-font-weight:900;
-text-transform:uppercase;
-animation: glow 3.5s ease-in-out infinite alternate;
+.logo{
+font-size:clamp(48px,9vw,110px);
+letter-spacing:.25em;
+animation:glow 4s ease-in-out infinite alternate;
 }
 
 @keyframes glow{
-0%{text-shadow:0 0 10px rgba(138,46,255,.25)}
-100%{text-shadow:0 0 32px rgba(138,46,255,.7)}
+from{ text-shadow:0 0 10px #8a2eff,0 0 30px #8a2eff;}
+to{ text-shadow:0 0 25px #d580ff,0 0 60px #8a2eff;}
 }
 
-.tag{
-margin-top:20px;
-font-size:15px;
-letter-spacing:.25em;
-color:rgba(255,255,255,.7);
-}
-
-/* RELEASE */
 .section{
-padding:70px 0;
-border-top:1px solid rgba(255,255,255,.08);
+padding:120px 20px 80px;
 text-align:center;
 }
 
 .h2{
-font-size:12px;
 letter-spacing:.35em;
-text-transform:uppercase;
-color:rgba(255,255,255,.8);
-margin-bottom:28px;
+font-size:12px;
+opacity:.7;
+margin-bottom:30px;
 }
 
-.release{
-max-width:420px;
+.releaseBox{
+display:flex;
+gap:26px;
+align-items:center;
+border:1px solid rgba(255,255,255,.12);
+border-radius:26px;
+padding:24px;
+max-width:640px;
 margin:auto;
+background:rgba(255,255,255,.02);
 }
 
 .cover{
-width:100%;
-border-radius:20px;
-border:1px solid rgba(255,255,255,.12);
-display:block;
+width:160px;
+height:160px;
+object-fit:cover;
+border-radius:18px;
+box-shadow:0 0 40px rgba(138,46,255,.25);
 }
 
-.songtitle{
-margin-top:16px;
+.releaseInfo{
+display:flex;
+flex-direction:column;
+gap:18px;
+text-align:left;
+}
+
+.songTitle{
 font-size:18px;
-letter-spacing:.22em;
+letter-spacing:.18em;
 text-transform:uppercase;
+}
+
+.player{
+filter:invert(1);
+width:260px;
+}
+
+.playBtn{
+display:inline-block;
+padding:14px 20px;
+border-radius:18px;
+border:1px solid rgba(138,46,255,.8);
+background:rgba(138,46,255,.12);
+letter-spacing:.22em;
+font-size:12px;
+text-transform:uppercase;
+color:white;
+text-decoration:none;
+transition:.25s;
+}
+
+.playBtn:hover{
+background:#8a2eff;
+box-shadow:0 0 25px #8a2eff;
+}
+
+.visuals{
+margin-top:60px;
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+gap:20px;
+max-width:900px;
+margin-left:auto;
+margin-right:auto;
+}
+
+.visuals img{
+width:100%;
+border-radius:18px;
+opacity:.85;
+transition:.35s;
+}
+
+.visuals img:hover{
+opacity:1;
+transform:scale(1.03);
 }
 
 .lyric{
-margin-top:10px;
-font-size:15px;
-color:rgba(255,255,255,.75);
+margin:120px auto;
+max-width:700px;
+font-size:22px;
+letter-spacing:.08em;
+opacity:.85;
 }
 
-/* BUTTON */
-.btn{
-display:inline-block;
-margin-top:28px;
-border:1px solid rgba(138,46,255,.8);
-padding:16px 22px;
-border-radius:18px;
-letter-spacing:.3em;
-font-size:11px;
-text-transform:uppercase;
-background:rgba(138,46,255,.1);
-transition:.18s;
-}
-.btn:hover{
-transform:translateY(-2px);
-background:rgba(138,46,255,.18);
-border-color:rgba(138,46,255,1);
-}
-
-/* FOOTER */
-footer{
-margin-top:80px;
-padding-top:20px;
-border-top:1px solid rgba(255,255,255,.08);
+.follow{
+margin-bottom:140px;
 text-align:center;
-font-size:11px;
-letter-spacing:.3em;
-color:rgba(255,255,255,.5);
 }
+
+.follow a{
+display:inline-block;
+padding:18px 28px;
+border-radius:30px;
+border:1px solid #8a2eff;
+text-decoration:none;
+color:white;
+letter-spacing:.25em;
+font-size:12px;
+transition:.25s;
+}
+
+.follow a:hover{
+background:#8a2eff;
+box-shadow:0 0 30px #8a2eff;
+}
+
+@media(max-width:650px){
+.releaseBox{
+flex-direction:column;
+text-align:center;
+}
+.player{
+width:100%;
+}
+.releaseInfo{
+text-align:center;
+}
+}
+
 </style>
 </head>
-
 <body>
-<div class="wrap">
 
 <header>
-<div class="nav">
-<div class="logo">CLAWBOI</div>
-<div class="links">
-<a href="listen.html">Listen</a>
-<a href="shop.html">Shop</a>
-<a href="follow.html">Follow</a>
-</div>
-</div>
+<a href="listen.html">LISTEN</a>
+<a href="shop.html">SHOP</a>
+<a href="follow.html">FOLLOW</a>
 </header>
 
 <section class="hero">
-<h1 class="title">CLAWBOI</h1>
-<div class="tag">crawling back to innocence</div>
+<div class="logo">CLAWBOI</div>
 </section>
 
 <section class="section">
 
-<div class="h2">Latest Release</div>
+<div class="h2">LATEST RELEASE</div>
 
-<div class="release">
+<div class="releaseBox">
 
-<img src="images/cover.jpg" class="cover" alt="cover art">
+<img src="images/cover.jpg" class="cover">
 
-<div class="songtitle">Song Name</div>
+<div class="releaseInfo">
+
+<div class="songTitle">YOUR SONG TITLE</div>
+
+<audio controls class="player">
+<source src="audio/song.mp3" type="audio/mpeg">
+</audio>
+
+<a href="listen.html" class="playBtn">PLAY ME</a>
+
+</div>
+</div>
+
+<div class="visuals">
+<img src="images/vis1.jpg">
+<img src="images/vis2.jpg">
+<img src="images/vis3.jpg">
+</div>
+
+</section>
 
 <div class="lyric">
-“I tried everything but nothings fixing me”
+“I tried everything but nothing’s fixing me”
 </div>
 
-<a href="listen.html" class="btn">Listen</a>
-
+<div class="follow">
+<a href="follow.html">FOLLOW FOR MORE</a>
 </div>
-</section>
-
-  <section class="section">
-
-<div class="h2">Visuals</div>
-
-<div style="
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-gap:18px;
-max-width:900px;
-margin:0 auto;
-">
-
-<a href="https://youtube.com" target="_blank">
-<img src="images/visual1.jpg" style="width:100%;border-radius:18px;border:1px solid rgba(255,255,255,.12);">
-</a>
-
-<a href="https://youtube.com" target="_blank">
-<img src="images/visual2.jpg" style="width:100%;border-radius:18px;border:1px solid rgba(255,255,255,.12);">
-</a>
-
-<a href="https://youtube.com" target="_blank">
-<img src="images/visual3.jpg" style="width:100%;border-radius:18px;border:1px solid rgba(255,255,255,.12);">
-</a>
-
-</div>
-
-</section>
-
-<footer>
-© <span id="y"></span> CLAWBOI
-</footer>
-
-</div>
-
-<script>
-document.getElementById("y").textContent=new Date().getFullYear();
-</script>
 
 </body>
 </html>
