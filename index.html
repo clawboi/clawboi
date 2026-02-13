@@ -248,6 +248,36 @@ box-shadow:0 0 30px #8a2eff;
 .player{width:100%;}
 .releaseInfo{text-align:center;}
 }
+  /* ELECTRIC ARC EFFECT */
+.logo{
+position:relative;
+overflow:visible;
+}
+
+.logo span{
+position:relative;
+display:inline-block;
+}
+
+/* lightning line */
+.logo::after{
+content:"";
+position:absolute;
+left:-20%;
+top:50%;
+width:140%;
+height:2px;
+background:linear-gradient(90deg, transparent, #a855ff, #fff, #a855ff, transparent);
+filter:blur(1px);
+opacity:.9;
+animation:electricMove 2.2s linear infinite;
+}
+
+@keyframes electricMove{
+0%{transform:translateX(-100%)}
+100%{transform:translateX(100%)}
+}
+
 </style>
 </head>
 
@@ -261,7 +291,7 @@ box-shadow:0 0 30px #8a2eff;
 </header>
 
 <section class="hero">
-<div class="logo">CLAWBOI</div>
+<div class="logo"><span>CLAWBOI</span></div>
 </section>
 
 <section class="section">
