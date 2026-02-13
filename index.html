@@ -248,29 +248,43 @@ box-shadow:0 0 30px #8a2eff;
 .player{width:100%;}
 .releaseInfo{text-align:center;}
 }
-  /* ELECTRIC ARC EFFECT */
-.logo{
-position:relative;
-overflow:visible;
+  o span{
+  position:relative;
+  display:inline-block;
+  color:white;
+  text-shadow:
+    0 0 5px #8a2eff,
+    0 0 10px #8a2eff,
+    0 0 20px #8a2eff,
+    0 0 40px #8a2eff;
+
+  animation:electricFlow 2.5s linear infinite;
 }
 
-.logo span{
-position:relative;
-display:inline-block;
-}
+@keyframes electricFlow{
+  0%{
+    text-shadow:
+      0 0 2px #8a2eff,
+      0 0 5px #8a2eff,
+      0 0 10px #8a2eff,
+      0 0 20px #8a2eff;
+  }
 
-/* lightning line */
-.logo::after{
-content:"";
-position:absolute;
-left:-20%;
-top:50%;
-width:140%;
-height:2px;
-background:linear-gradient(90deg, transparent, #a855ff, #fff, #a855ff, transparent);
-filter:blur(1px);
-opacity:.9;
-animation:electricMove 2.2s linear infinite;
+  50%{
+    text-shadow:
+      0 0 6px #8a2eff,
+      0 0 15px #8a2eff,
+      0 0 30px #8a2eff,
+      0 0 60px #8a2eff;
+  }
+
+  100%{
+    text-shadow:
+      0 0 2px #8a2eff,
+      0 0 5px #8a2eff,
+      0 0 10px #8a2eff,
+      0 0 20px #8a2eff;
+  }
 }
 
 @keyframes electricMove{
