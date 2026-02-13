@@ -5,18 +5,22 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>CLAWBOI</title>
   <meta name="theme-color" content="#000000" />
+
   <style>
     :root{
       --bg:#000;
       --fg:#fff;
-      --muted:rgba(255,255,255,.70);
-      --hair:rgba(255,255,255,.10);
+      --muted: rgba(255,255,255,.72);
+      --hair: rgba(255,255,255,.10);
       --violet:#8A2EFF;
-      --max:1180px;
-      --r:22px;
+      --vio2:#B66BFF;
+      --max: 1180px;
+      --r: 24px;
+
       --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       --display: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
     }
+
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
@@ -31,8 +35,10 @@
     a{color:var(--fg); text-decoration:none}
     a:hover{opacity:.92}
     :focus-visible{ outline:2px solid rgba(138,46,255,.95); outline-offset:3px; border-radius:12px; }
+    html, body, * { cursor:auto !important; }
+    a, button { cursor:pointer !important; }
 
-    /* Grain (cheaper: smaller + lower opacity) */
+    /* light grain */
     .grain:before{
       content:"";
       position:fixed; inset:0;
@@ -43,56 +49,57 @@
       transform: translateZ(0);
     }
 
-    /* Ambient background (NO continuous animation) */
+    /* ambient field (animated slowly, low cost) */
     .bgfield{
-      position:fixed; inset:0;
+      position:fixed; inset:-20%;
       pointer-events:none;
       z-index:0;
       background:
         radial-gradient(900px 700px at 18% 18%, rgba(138,46,255,.18), transparent 60%),
-        radial-gradient(800px 650px at 82% 35%, rgba(255,255,255,.06), transparent 60%),
-        radial-gradient(700px 520px at 30% 85%, rgba(138,46,255,.10), transparent 60%);
-      filter: saturate(130%);
+        radial-gradient(900px 700px at 82% 30%, rgba(255,255,255,.06), transparent 60%),
+        radial-gradient(800px 600px at 32% 86%, rgba(138,46,255,.11), transparent 60%);
       opacity:.95;
       transform: translateZ(0);
+      animation: drift 18s ease-in-out infinite alternate;
+    }
+    @keyframes drift{
+      0%{ transform: translate3d(0,0,0) scale(1); filter:saturate(125%); }
+      100%{ transform: translate3d(-1.2%,1.0%,0) scale(1.02); filter:saturate(145%); }
+    }
+    @media (prefers-reduced-motion: reduce){
+      .bgfield{ animation:none; }
     }
 
     .wrap{ max-width:var(--max); margin:0 auto; padding: 0 22px 90px; position:relative; z-index:2; }
 
-    /* Sticky header (lighter: no blur) */
+    /* header */
     header{
       position:sticky; top:0;
-      z-index:5;
-      background: rgba(0,0,0,.86);
-      border-bottom:1px solid rgba(255,255,255,.08);
+      z-index:6;
+      background: rgba(0,0,0,.88);
+      border-bottom: 1px solid rgba(255,255,255,.08);
     }
     .nav{
+      max-width:var(--max);
+      margin:0 auto;
+      padding: 14px 22px;
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:14px;
-      padding: 14px 22px;
-      max-width:var(--max);
-      margin:0 auto;
     }
     .brandMini{
-      display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
-    }
-    .brandMini .sig{
       letter-spacing:.28em;
       text-transform: uppercase;
-      font-weight: 800;
+      font-weight: 900;
       font-size: 12px;
-      opacity:.92;
-    }
-    .brandMini .era{
-      font-size: 11px;
-      letter-spacing: .26em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.55);
+      opacity:.95;
     }
     .navlinks{
-      display:flex; gap:14px; flex-wrap:wrap; align-items:center;
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      align-items:center;
     }
     .navlinks a{
       font-size:11px;
@@ -105,72 +112,65 @@
     }
     .navlinks a:hover{
       color: rgba(255,255,255,.95);
-      border-bottom-color: rgba(138,46,255,.8);
+      border-bottom-color: rgba(138,46,255,.85);
     }
 
-    /* HERO */
+    /* hero */
     .hero{
-      min-height: 86vh;
-      display:flex;
-      align-items:center;
-      padding: 44px 0 26px;
+      padding: 44px 0 18px;
       border-bottom: 1px solid rgba(255,255,255,.08);
-      position:relative;
     }
-    .heroInner{
-      width:100%;
+    .heroGrid{
       display:grid;
-      grid-template-columns: 1.1fr .9fr;
+      grid-template-columns: 1.05fr .95fr;
       gap: 22px;
       align-items:start;
+      min-height: 64vh;
     }
     @media (max-width: 940px){
-      .heroInner{ grid-template-columns: 1fr; }
+      .heroGrid{ grid-template-columns:1fr; min-height:auto; }
     }
 
     .title{
       margin:0;
       font-family: var(--display);
-      font-weight: 900;
+      font-weight: 950;
       letter-spacing: .10em;
       text-transform: uppercase;
       font-size: clamp(58px, 9vw, 118px);
       line-height: .98;
-      text-shadow: 0 0 28px rgba(138,46,255,.18);
+      text-shadow: 0 0 32px rgba(138,46,255,.18);
+      position:relative;
     }
 
-    /* Lightweight “glitch”: only on hover (no continuous animation) */
-    .glitch{
-      position:relative;
-      display:inline-block;
+    /* shimmer underline */
+    .title:after{
+      content:"";
+      display:block;
+      width: 240px;
+      height: 2px;
+      margin-top: 14px;
+      background: linear-gradient(90deg, transparent, rgba(138,46,255,.9), rgba(255,255,255,.35), rgba(138,46,255,.9), transparent);
+      opacity:.7;
+      transform: translateZ(0);
+      animation: sweep 3.8s linear infinite;
     }
-    .glitch:before,
-    .glitch:after{
-      content: attr(data-text);
-      position:absolute;
-      left:0; top:0;
-      width:100%;
-      opacity:0;
-      pointer-events:none;
-      mix-blend-mode: screen;
-      transition: opacity .18s ease;
+    @keyframes sweep{
+      0%{ background-position: 0% 50%; }
+      100%{ background-position: 200% 50%; }
     }
-    .glitch:before{ color: rgba(138,46,255,.9); transform: translate3d(1px,0,0); }
-    .glitch:after{ color: rgba(255,255,255,.85); transform: translate3d(-1px,0,0); }
-    .glitch:hover:before,
-    .glitch:hover:after{ opacity:.7; }
+    @media (prefers-reduced-motion: reduce){
+      .title:after{ animation:none; }
+    }
 
     .tagline{
       margin: 14px 0 0;
-      max-width: 62ch;
+      max-width: 64ch;
       color: rgba(255,255,255,.82);
       font-size: clamp(16px, 2.1vw, 20px);
       line-height: 1.7;
     }
-    .tagline .vio{
-      color: rgba(138,46,255,.95);
-      text-shadow: 0 0 16px rgba(138,46,255,.22);
-    }
+    .vio{ color: rgba(138,46,255,.98); text-shadow: 0 0 18px rgba(138,46,255,.18); }
 
     .ctaRow{
       margin-top: 18px;
@@ -179,7 +179,6 @@
       gap: 12px;
       align-items:center;
     }
-
     .pill{
       border: 1px solid rgba(138,46,255,.70);
       background: rgba(138,46,255,.10);
@@ -198,28 +197,48 @@
     }
     .pill:hover{
       transform: translateY(-1px);
-      border-color: rgba(138,46,255,.95);
+      border-color: rgba(138,46,255,.98);
       background: rgba(138,46,255,.14);
       box-shadow: 0 0 0 6px rgba(138,46,255,.10);
     }
     .pill.ghost{
       border-color: rgba(255,255,255,.16);
       background: rgba(255,255,255,.03);
-      color: rgba(255,255,255,.85);
+      color: rgba(255,255,255,.86);
     }
 
-    /* Right card */
-    .signal{
+    /* Latest Release card */
+    .panel{
       border:1px solid rgba(255,255,255,.10);
       border-radius: 26px;
       background: rgba(255,255,255,.02);
       overflow:hidden;
       padding: 18px;
+      position:relative;
     }
-    .signalInner{
+    .panel:before{
+      content:"";
+      position:absolute; inset:-40%;
+      background:
+        radial-gradient(closest-side at 30% 30%, rgba(138,46,255,.22), transparent 65%),
+        radial-gradient(closest-side at 70% 60%, rgba(255,255,255,.06), transparent 70%);
+      opacity:.65;
+      pointer-events:none;
+      transform: translateZ(0);
+      animation: breathe 6.5s ease-in-out infinite alternate;
+    }
+    @keyframes breathe{
+      from{ transform: translate3d(0,0,0) scale(1); opacity:.55; }
+      to{ transform: translate3d(1.2%,-1.0%,0) scale(1.02); opacity:.75; }
+    }
+    @media (prefers-reduced-motion: reduce){
+      .panel:before{ animation:none; }
+    }
+    .panelInner{
+      position:relative;
       border-radius: 22px;
       border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.55);
+      background: rgba(0,0,0,.58);
       padding: 18px;
     }
     .kicker{
@@ -233,40 +252,66 @@
       margin: 12px 0 0;
       font-size: clamp(20px, 2.6vw, 28px);
       line-height: 1.35;
-      color: rgba(255,255,255,.90);
-      max-width: 28ch;
+      color: rgba(255,255,255,.92);
+      max-width: 30ch;
     }
-    .bigLine .vio{ color: rgba(138,46,255,.95); }
+    .subline{
+      margin-top: 10px;
+      color: rgba(255,255,255,.70);
+      font-size: 12px;
+      letter-spacing:.22em;
+      text-transform: uppercase;
+      line-height: 1.55;
+    }
 
-    /* Marquee (slower + optional) */
+    /* marquee of clickable songs */
     .marqueeWrap{
       border-top:1px solid rgba(255,255,255,.08);
       border-bottom:1px solid rgba(255,255,255,.08);
       background: rgba(255,255,255,.02);
       overflow:hidden;
+      position:relative;
+      z-index:2;
     }
     .marquee{
       display:flex;
-      gap: 30px;
+      gap: 26px;
       white-space: nowrap;
       padding: 12px 0;
       will-change: transform;
-      animation: roll 28s linear infinite;
+      animation: roll 22s linear infinite;
+      transform: translateZ(0);
     }
-    .marquee span{
-      font-size: 11px;
-      letter-spacing:.34em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.70);
-    }
-    .marquee .vio{ color: rgba(138,46,255,.95); }
     @keyframes roll{
       0%{ transform: translate3d(0,0,0); }
       100%{ transform: translate3d(-50%,0,0); }
     }
+    .song{
+      font-size: 11px;
+      letter-spacing:.34em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.72);
+      padding: 6px 0;
+      border-bottom: 1px solid transparent;
+      transition: color .18s ease, border-color .18s ease, transform .18s ease;
+    }
+    .song:hover{
+      color: rgba(255,255,255,.96);
+      border-bottom-color: rgba(138,46,255,.85);
+      transform: translateY(-1px);
+    }
+    .song.vio{ color: rgba(138,46,255,.98); }
 
+    @media (max-width: 520px){
+      .marquee{ animation: none; }
+    }
+    @media (prefers-reduced-motion: reduce){
+      .marquee{ animation:none !important; }
+    }
+
+    /* sections */
     .section{
-      padding: 70px 0;
+      padding: 68px 0;
       border-bottom: 1px solid rgba(255,255,255,.08);
     }
     .head{
@@ -300,8 +345,8 @@
       border-top:1px solid rgba(255,255,255,.08);
       padding-top: 18px;
     }
-    .copy .vio{ color: rgba(138,46,255,.95); }
 
+    /* visuals tiles */
     .tiles{
       margin-top: 18px;
       display:grid;
@@ -312,9 +357,10 @@
       border-radius: 18px;
       border:1px solid rgba(255,255,255,.10);
       background: rgba(255,255,255,.02);
-      min-height: 140px;
+      min-height: 150px;
       overflow:hidden;
       position:relative;
+      transform: translateZ(0);
     }
     .tile .ph{
       position:absolute; inset:0;
@@ -330,7 +376,7 @@
     .span4{ grid-column: span 4; }
     @media (max-width: 940px){
       .span6,.span4{ grid-column: span 12; }
-      .tile{ min-height: 170px; }
+      .tile{ min-height: 190px; }
     }
 
     footer{
@@ -347,13 +393,11 @@
       margin-top: 44px;
     }
 
-    /* Auto-disable marquee on small devices for speed */
-    @media (max-width: 520px){
-      .marquee{ animation: none; }
-    }
-
+    /* scroll reveal (light) */
+    .reveal{ opacity:0; transform: translateY(10px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.is-visible{ opacity:1; transform: translateY(0); }
     @media (prefers-reduced-motion: reduce){
-      .marquee{ animation:none !important; }
+      .reveal{ opacity:1; transform:none; }
     }
   </style>
 </head>
@@ -363,88 +407,125 @@
 
   <header>
     <div class="nav">
-      <div class="brandMini">
-        <div class="sig">CLAWBOI</div>
-        <div class="era">CLUB DECAY ERA</div>
-      </div>
+      <div class="brandMini">CLAWBOI</div>
       <nav class="navlinks" aria-label="Site">
-        <a href="#listen">Listen</a>
+        <a href="listen.html">Listen</a>
         <a href="#visuals">Visuals</a>
-        <a href="#transmission">Transmission</a>
-        <a href="epk.html">EPK</a>
+        <a href="shop.html">Shop</a>
+        <a href="follow.html">Follow</a>
       </nav>
     </div>
   </header>
 
   <main class="wrap">
     <section class="hero">
-      <div class="heroInner">
+      <div class="heroGrid">
         <div>
-          <h1 class="title"><span class="glitch" data-text="CLAWBOI">CLAWBOI</span></h1>
-
+          <h1 class="title">CLAWBOI</h1>
           <p class="tagline">
             <span class="vio">Crawling Back to Innocence</span>.
             Emo-trap confessionals, ghost-flex, late-night pulse.
           </p>
 
-          <div class="ctaRow" id="listen">
-            <a class="pill" href="#">Listen</a>
-            <a class="pill ghost" href="#">Watch</a>
-            <a class="pill ghost" href="#">Follow</a>
-            <a class="pill" href="drops.html">Drops</a>
+          <div class="ctaRow">
+            <a class="pill" href="listen.html">Listen</a>
+            <a class="pill ghost" href="#latest">Latest</a>
+            <a class="pill ghost" href="#visuals">Visuals</a>
           </div>
         </div>
 
-        <aside class="signal">
-          <div class="signalInner">
-            <p class="kicker">Transmission</p>
-            <p class="bigLine">
-              crawling back to <span class="vio">innocence</span><br>
-              with a <span class="vio">violet</span> bruise.
-            </p>
+        <aside class="panel" id="latest" aria-label="Latest release">
+          <div class="panelInner">
+            <p class="kicker">Latest Release</p>
+            <p class="bigLine"><span class="vio">[TITLE HERE]</span></p>
+            <div class="subline">single · [year] · replace this with a 1-line vibe hook</div>
+
+            <div class="ctaRow" style="margin-top:14px;">
+              <a class="pill" href="listen.html">Play</a>
+              <a class="pill ghost" href="listen.html#spotify">Spotify</a>
+              <a class="pill ghost" href="listen.html#apple">Apple</a>
+            </div>
           </div>
         </aside>
       </div>
     </section>
   </main>
 
-  <section class="marqueeWrap" aria-hidden="true">
+  <section class="marqueeWrap" aria-label="Song ticker">
     <div class="marquee">
-      <span>CLUB DECAY ·</span>
-      <span class="vio">CRAWLING BACK TO INNOCENCE ·</span>
-      <span>GHOST FLEX ·</span>
-      <span>EMO TRAP ·</span>
-      <span class="vio">ELECTRIC VIOLET ·</span>
-      <span>RAW IPHONE ·</span>
-      <span>CLUB DECAY ·</span>
-      <span class="vio">CRAWLING BACK TO INNOCENCE ·</span>
-      <span>GHOST FLEX ·</span>
-      <span>EMO TRAP ·</span>
-      <span class="vio">ELECTRIC VIOLET ·</span>
-      <span>RAW IPHONE ·</span>
+      <a class="song vio" href="listen.html#songs">CASKET</a>
+      <a class="song" href="listen.html#songs">BLOOD FLOW</a>
+      <a class="song" href="listen.html#songs">4CUPPPPPZ</a>
+      <a class="song" href="listen.html#songs">TOM FORD NIGHTS</a>
+      <a class="song vio" href="listen.html#songs">CRAWLING BACK TO INNOCENCE</a>
+      <a class="song" href="listen.html#songs">MANSION</a>
+      <a class="song" href="listen.html#songs">TWO TIMES</a>
+      <a class="song" href="listen.html#songs">VAULT OF COUTURE</a>
+
+      <a class="song vio" href="listen.html#songs">CASKET</a>
+      <a class="song" href="listen.html#songs">BLOOD FLOW</a>
+      <a class="song" href="listen.html#songs">4CUPPPPPZ</a>
+      <a class="song" href="listen.html#songs">TOM FORD NIGHTS</a>
+      <a class="song vio" href="listen.html#songs">CRAWLING BACK TO INNOCENCE</a>
+      <a class="song" href="listen.html#songs">MANSION</a>
+      <a class="song" href="listen.html#songs">TWO TIMES</a>
+      <a class="song" href="listen.html#songs">VAULT OF COUTURE</a>
     </div>
   </section>
 
   <main class="wrap">
-    <section class="section" id="transmission">
+    <section class="section reveal" id="about">
       <div class="head">
-        <h2 class="h2">Transmission</h2>
-        <p class="hint">fragment</p>
+        <h2 class="h2">About</h2>
+        <p class="hint">signal</p>
       </div>
       <p class="copy">
-        CLAWBOI is a late-night signal. Pain in rhythm. Confidence with a cracked halo.
-        The <span class="vio">Club Decay Era</span> is not a phase, it’s a location.
+        CLAWBOI is dark, melodic emo-trap from Reseda, CA. Raw iPhone energy, club melancholy,
+        and confessionals that still flex. The sound lives in the tension between numb and alive,
+        ghost and body, love and static.
       </p>
     </section>
 
-    <section class="section" id="visuals" style="border-bottom:none;">
+    <section class="section reveal" id="what-to-hear">
+      <div class="head">
+        <h2 class="h2">What to Hear</h2>
+        <p class="hint">start here</p>
+      </div>
+      <p class="copy">
+        For the <span class="vio">late-night club</span>: start with <span class="vio">4cupppppz</span>.
+        For the <span class="vio">hurt</span>: <span class="vio">Casket</span>.
+        For the <span class="vio">movie</span>: <span class="vio">Blood Flow</span>.
+        For the <span class="vio">flex that cracks</span>: <span class="vio">Tom Ford Nights</span>.
+      </p>
+      <div class="ctaRow" style="margin-top:18px;">
+        <a class="pill" href="listen.html">Go to Listen</a>
+        <a class="pill ghost" href="listen.html#playlists">Playlists</a>
+      </div>
+    </section>
+
+    <section class="section reveal" id="lyrics">
+      <div class="head">
+        <h2 class="h2">Lyrics</h2>
+        <p class="hint">fragments</p>
+      </div>
+      <p class="copy">
+        “i tried everything… but nothing’s fixing me.”<br><br>
+        “all black with a violet bruise.”<br><br>
+        “ghost in the club, still dancing.”
+      </p>
+      <p class="copy" style="margin-top:14px; color: rgba(255,255,255,.60); font-size: 14px; letter-spacing:.18em; text-transform: uppercase;">
+        Replace these with real lines later. We can format full lyrics on a separate page if you want.
+      </p>
+    </section>
+
+    <section class="section reveal" id="visuals" style="border-bottom:none;">
       <div class="head">
         <h2 class="h2">Visuals</h2>
-        <p class="hint">add images later</p>
+        <p class="hint">fast collage</p>
       </div>
-
       <p class="copy">
-        Add images into <span class="vio">/images</span> and we’ll turn this into a living collage wall.
+        Put images into <span class="vio">/images</span> and swap these placeholders into real tiles.
+        Static images stay fast.
       </p>
 
       <div class="tiles">
@@ -464,6 +545,18 @@
 
   <script>
     document.getElementById('y').textContent = new Date().getFullYear();
+
+    // light reveal
+    const els = Array.from(document.querySelectorAll('.reveal'));
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(ent => {
+        if(ent.isIntersecting){
+          ent.target.classList.add('is-visible');
+          io.unobserve(ent.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    els.forEach(el => io.observe(el));
   </script>
 </body>
 </html>
