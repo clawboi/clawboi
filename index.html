@@ -1,562 +1,212 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CLAWBOI</title>
-  <meta name="theme-color" content="#000000" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CLAWBOI</title>
 
-  <style>
-    :root{
-      --bg:#000;
-      --fg:#fff;
-      --muted: rgba(255,255,255,.72);
-      --hair: rgba(255,255,255,.10);
-      --violet:#8A2EFF;
-      --vio2:#B66BFF;
-      --max: 1180px;
-      --r: 24px;
+<style>
+:root{
+--bg:#000;
+--fg:#fff;
+--vio:#8A2EFF;
+--max:1100px;
+--sans: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+}
 
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      --display: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-    }
+*{box-sizing:border-box}
+body{
+margin:0;
+background:#000;
+color:#fff;
+font-family:var(--sans);
+-webkit-font-smoothing:antialiased;
+}
 
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      background:var(--bg);
-      color:var(--fg);
-      font-family:var(--sans);
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-      overflow-x:hidden;
-    }
-    a{color:var(--fg); text-decoration:none}
-    a:hover{opacity:.92}
-    :focus-visible{ outline:2px solid rgba(138,46,255,.95); outline-offset:3px; border-radius:12px; }
-    html, body, * { cursor:auto !important; }
-    a, button { cursor:pointer !important; }
+.wrap{
+max-width:var(--max);
+margin:0 auto;
+padding:0 22px 80px;
+}
 
-    /* light grain */
-    .grain:before{
-      content:"";
-      position:fixed; inset:0;
-      pointer-events:none;
-      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.10'/%3E%3C/svg%3E");
-      mix-blend-mode: overlay;
-      opacity:.05;
-      transform: translateZ(0);
-    }
+/* NAV */
+header{
+border-bottom:1px solid rgba(255,255,255,.08);
+}
+.nav{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:16px 0;
+}
+.logo{
+letter-spacing:.35em;
+font-size:12px;
+text-transform:uppercase;
+}
+.links{
+display:flex;
+gap:18px;
+}
+.links a{
+font-size:11px;
+letter-spacing:.3em;
+text-transform:uppercase;
+color:rgba(255,255,255,.75);
+border-bottom:1px solid transparent;
+padding-bottom:6px;
+}
+.links a:hover{
+color:#fff;
+border-bottom-color:var(--vio);
+}
 
-    /* ambient field (animated slowly, low cost) */
-    .bgfield{
-      position:fixed; inset:-20%;
-      pointer-events:none;
-      z-index:0;
-      background:
-        radial-gradient(900px 700px at 18% 18%, rgba(138,46,255,.18), transparent 60%),
-        radial-gradient(900px 700px at 82% 30%, rgba(255,255,255,.06), transparent 60%),
-        radial-gradient(800px 600px at 32% 86%, rgba(138,46,255,.11), transparent 60%);
-      opacity:.95;
-      transform: translateZ(0);
-      animation: drift 18s ease-in-out infinite alternate;
-    }
-    @keyframes drift{
-      0%{ transform: translate3d(0,0,0) scale(1); filter:saturate(125%); }
-      100%{ transform: translate3d(-1.2%,1.0%,0) scale(1.02); filter:saturate(145%); }
-    }
-    @media (prefers-reduced-motion: reduce){
-      .bgfield{ animation:none; }
-    }
+/* HERO */
+.hero{
+text-align:center;
+padding:90px 0 60px;
+}
 
-    .wrap{ max-width:var(--max); margin:0 auto; padding: 0 22px 90px; position:relative; z-index:2; }
+.title{
+font-size:clamp(56px,10vw,120px);
+letter-spacing:.12em;
+margin:0;
+font-weight:900;
+text-transform:uppercase;
+animation: glow 3.5s ease-in-out infinite alternate;
+}
 
-    /* header */
-    header{
-      position:sticky; top:0;
-      z-index:6;
-      background: rgba(0,0,0,.88);
-      border-bottom: 1px solid rgba(255,255,255,.08);
-    }
-    .nav{
-      max-width:var(--max);
-      margin:0 auto;
-      padding: 14px 22px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:14px;
-    }
-    .brandMini{
-      letter-spacing:.28em;
-      text-transform: uppercase;
-      font-weight: 900;
-      font-size: 12px;
-      opacity:.95;
-    }
-    .navlinks{
-      display:flex;
-      gap:14px;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-    .navlinks a{
-      font-size:11px;
-      letter-spacing:.30em;
-      text-transform:uppercase;
-      color: rgba(255,255,255,.70);
-      padding: 8px 0;
-      border-bottom:1px solid transparent;
-      transition: color .18s ease, border-color .18s ease;
-    }
-    .navlinks a:hover{
-      color: rgba(255,255,255,.95);
-      border-bottom-color: rgba(138,46,255,.85);
-    }
+@keyframes glow{
+0%{text-shadow:0 0 10px rgba(138,46,255,.25)}
+100%{text-shadow:0 0 32px rgba(138,46,255,.7)}
+}
 
-    /* hero */
-    .hero{
-      padding: 44px 0 18px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-    }
-    .heroGrid{
-      display:grid;
-      grid-template-columns: 1.05fr .95fr;
-      gap: 22px;
-      align-items:start;
-      min-height: 64vh;
-    }
-    @media (max-width: 940px){
-      .heroGrid{ grid-template-columns:1fr; min-height:auto; }
-    }
+.tag{
+margin-top:20px;
+font-size:15px;
+letter-spacing:.25em;
+color:rgba(255,255,255,.7);
+}
 
-    .title{
-      margin:0;
-      font-family: var(--display);
-      font-weight: 950;
-      letter-spacing: .10em;
-      text-transform: uppercase;
-      font-size: clamp(58px, 9vw, 118px);
-      line-height: .98;
-      text-shadow: 0 0 32px rgba(138,46,255,.18);
-      position:relative;
-    }
+/* RELEASE */
+.section{
+padding:70px 0;
+border-top:1px solid rgba(255,255,255,.08);
+text-align:center;
+}
 
-    /* shimmer underline */
-    .title:after{
-      content:"";
-      display:block;
-      width: 240px;
-      height: 2px;
-      margin-top: 14px;
-      background: linear-gradient(90deg, transparent, rgba(138,46,255,.9), rgba(255,255,255,.35), rgba(138,46,255,.9), transparent);
-      opacity:.7;
-      transform: translateZ(0);
-      animation: sweep 3.8s linear infinite;
-    }
-    @keyframes sweep{
-      0%{ background-position: 0% 50%; }
-      100%{ background-position: 200% 50%; }
-    }
-    @media (prefers-reduced-motion: reduce){
-      .title:after{ animation:none; }
-    }
+.h2{
+font-size:12px;
+letter-spacing:.35em;
+text-transform:uppercase;
+color:rgba(255,255,255,.8);
+margin-bottom:28px;
+}
 
-    .tagline{
-      margin: 14px 0 0;
-      max-width: 64ch;
-      color: rgba(255,255,255,.82);
-      font-size: clamp(16px, 2.1vw, 20px);
-      line-height: 1.7;
-    }
-    .vio{ color: rgba(138,46,255,.98); text-shadow: 0 0 18px rgba(138,46,255,.18); }
+.release{
+max-width:420px;
+margin:auto;
+}
 
-    .ctaRow{
-      margin-top: 18px;
-      display:flex;
-      flex-wrap:wrap;
-      gap: 12px;
-      align-items:center;
-    }
-    .pill{
-      border: 1px solid rgba(138,46,255,.70);
-      background: rgba(138,46,255,.10);
-      border-radius: 18px;
-      padding: 14px 14px;
-      font-size: 11px;
-      letter-spacing: .28em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.92);
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-height: 52px;
-      -webkit-tap-highlight-color: transparent;
-      transition: transform .16s ease, background .16s ease, border-color .16s ease, box-shadow .16s ease;
-    }
-    .pill:hover{
-      transform: translateY(-1px);
-      border-color: rgba(138,46,255,.98);
-      background: rgba(138,46,255,.14);
-      box-shadow: 0 0 0 6px rgba(138,46,255,.10);
-    }
-    .pill.ghost{
-      border-color: rgba(255,255,255,.16);
-      background: rgba(255,255,255,.03);
-      color: rgba(255,255,255,.86);
-    }
+.cover{
+width:100%;
+border-radius:20px;
+border:1px solid rgba(255,255,255,.12);
+display:block;
+}
 
-    /* Latest Release card */
-    .panel{
-      border:1px solid rgba(255,255,255,.10);
-      border-radius: 26px;
-      background: rgba(255,255,255,.02);
-      overflow:hidden;
-      padding: 18px;
-      position:relative;
-    }
-    .panel:before{
-      content:"";
-      position:absolute; inset:-40%;
-      background:
-        radial-gradient(closest-side at 30% 30%, rgba(138,46,255,.22), transparent 65%),
-        radial-gradient(closest-side at 70% 60%, rgba(255,255,255,.06), transparent 70%);
-      opacity:.65;
-      pointer-events:none;
-      transform: translateZ(0);
-      animation: breathe 6.5s ease-in-out infinite alternate;
-    }
-    @keyframes breathe{
-      from{ transform: translate3d(0,0,0) scale(1); opacity:.55; }
-      to{ transform: translate3d(1.2%,-1.0%,0) scale(1.02); opacity:.75; }
-    }
-    @media (prefers-reduced-motion: reduce){
-      .panel:before{ animation:none; }
-    }
-    .panelInner{
-      position:relative;
-      border-radius: 22px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.58);
-      padding: 18px;
-    }
-    .kicker{
-      margin:0;
-      font-size: 11px;
-      letter-spacing:.32em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.58);
-    }
-    .bigLine{
-      margin: 12px 0 0;
-      font-size: clamp(20px, 2.6vw, 28px);
-      line-height: 1.35;
-      color: rgba(255,255,255,.92);
-      max-width: 30ch;
-    }
-    .subline{
-      margin-top: 10px;
-      color: rgba(255,255,255,.70);
-      font-size: 12px;
-      letter-spacing:.22em;
-      text-transform: uppercase;
-      line-height: 1.55;
-    }
+.songtitle{
+margin-top:16px;
+font-size:18px;
+letter-spacing:.22em;
+text-transform:uppercase;
+}
 
-    /* marquee of clickable songs */
-    .marqueeWrap{
-      border-top:1px solid rgba(255,255,255,.08);
-      border-bottom:1px solid rgba(255,255,255,.08);
-      background: rgba(255,255,255,.02);
-      overflow:hidden;
-      position:relative;
-      z-index:2;
-    }
-    .marquee{
-      display:flex;
-      gap: 26px;
-      white-space: nowrap;
-      padding: 12px 0;
-      will-change: transform;
-      animation: roll 22s linear infinite;
-      transform: translateZ(0);
-    }
-    @keyframes roll{
-      0%{ transform: translate3d(0,0,0); }
-      100%{ transform: translate3d(-50%,0,0); }
-    }
-    .song{
-      font-size: 11px;
-      letter-spacing:.34em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.72);
-      padding: 6px 0;
-      border-bottom: 1px solid transparent;
-      transition: color .18s ease, border-color .18s ease, transform .18s ease;
-    }
-    .song:hover{
-      color: rgba(255,255,255,.96);
-      border-bottom-color: rgba(138,46,255,.85);
-      transform: translateY(-1px);
-    }
-    .song.vio{ color: rgba(138,46,255,.98); }
+.lyric{
+margin-top:10px;
+font-size:15px;
+color:rgba(255,255,255,.75);
+}
 
-    @media (max-width: 520px){
-      .marquee{ animation: none; }
-    }
-    @media (prefers-reduced-motion: reduce){
-      .marquee{ animation:none !important; }
-    }
+/* BUTTON */
+.btn{
+display:inline-block;
+margin-top:28px;
+border:1px solid rgba(138,46,255,.8);
+padding:16px 22px;
+border-radius:18px;
+letter-spacing:.3em;
+font-size:11px;
+text-transform:uppercase;
+background:rgba(138,46,255,.1);
+transition:.18s;
+}
+.btn:hover{
+transform:translateY(-2px);
+background:rgba(138,46,255,.18);
+border-color:rgba(138,46,255,1);
+}
 
-    /* sections */
-    .section{
-      padding: 68px 0;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-    }
-    .head{
-      display:flex;
-      align-items:flex-end;
-      justify-content:space-between;
-      gap: 16px;
-      flex-wrap:wrap;
-      margin-bottom: 18px;
-    }
-    .h2{
-      margin:0;
-      font-size: 12px;
-      letter-spacing:.34em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.86);
-    }
-    .hint{
-      margin:0;
-      font-size: 11px;
-      letter-spacing:.24em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.50);
-    }
-    .copy{
-      margin:0;
-      max-width: 80ch;
-      color: rgba(255,255,255,.82);
-      font-size: clamp(16px, 2.1vw, 20px);
-      line-height: 1.75;
-      border-top:1px solid rgba(255,255,255,.08);
-      padding-top: 18px;
-    }
-
-    /* visuals tiles */
-    .tiles{
-      margin-top: 18px;
-      display:grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: 10px;
-    }
-    .tile{
-      border-radius: 18px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.02);
-      min-height: 150px;
-      overflow:hidden;
-      position:relative;
-      transform: translateZ(0);
-    }
-    .tile .ph{
-      position:absolute; inset:0;
-      display:flex; align-items:center; justify-content:center;
-      color: rgba(255,255,255,.55);
-      font-size: 10px;
-      letter-spacing:.34em;
-      text-transform: uppercase;
-      text-align:center;
-      padding: 16px;
-    }
-    .span6{ grid-column: span 6; }
-    .span4{ grid-column: span 4; }
-    @media (max-width: 940px){
-      .span6,.span4{ grid-column: span 12; }
-      .tile{ min-height: 190px; }
-    }
-
-    footer{
-      padding-top: 22px;
-      color: rgba(255,255,255,.50);
-      font-size: 11px;
-      letter-spacing:.24em;
-      text-transform: uppercase;
-      display:flex;
-      justify-content:space-between;
-      gap: 12px;
-      flex-wrap:wrap;
-      border-top:1px solid rgba(255,255,255,.08);
-      margin-top: 44px;
-    }
-
-    /* scroll reveal (light) */
-    .reveal{ opacity:0; transform: translateY(10px); transition: opacity .6s ease, transform .6s ease; }
-    .reveal.is-visible{ opacity:1; transform: translateY(0); }
-    @media (prefers-reduced-motion: reduce){
-      .reveal{ opacity:1; transform:none; }
-    }
-  </style>
+/* FOOTER */
+footer{
+margin-top:80px;
+padding-top:20px;
+border-top:1px solid rgba(255,255,255,.08);
+text-align:center;
+font-size:11px;
+letter-spacing:.3em;
+color:rgba(255,255,255,.5);
+}
+</style>
 </head>
 
-<body class="grain">
-  <div class="bgfield" aria-hidden="true"></div>
+<body>
+<div class="wrap">
 
-  <header>
-    <div class="nav">
-      <div class="brandMini">CLAWBOI</div>
-      <nav class="navlinks" aria-label="Site">
-        <a href="listen.html">Listen</a>
-        <a href="#visuals">Visuals</a>
-        <a href="shop.html">Shop</a>
-        <a href="follow.html">Follow</a>
-      </nav>
-    </div>
-  </header>
+<header>
+<div class="nav">
+<div class="logo">CLAWBOI</div>
+<div class="links">
+<a href="listen.html">Listen</a>
+<a href="shop.html">Shop</a>
+<a href="follow.html">Follow</a>
+</div>
+</div>
+</header>
 
-  <main class="wrap">
-    <section class="hero">
-      <div class="heroGrid">
-        <div>
-          <h1 class="title">CLAWBOI</h1>
-          <p class="tagline">
-            <span class="vio">Crawling Back to Innocence</span>.
-            Emo-trap confessionals, ghost-flex, late-night pulse.
-          </p>
+<section class="hero">
+<h1 class="title">CLAWBOI</h1>
+<div class="tag">crawling back to innocence</div>
+</section>
 
-          <div class="ctaRow">
-            <a class="pill" href="listen.html">Listen</a>
-            <a class="pill ghost" href="#latest">Latest</a>
-            <a class="pill ghost" href="#visuals">Visuals</a>
-          </div>
-        </div>
+<section class="section">
 
-        <aside class="panel" id="latest" aria-label="Latest release">
-          <div class="panelInner">
-            <p class="kicker">Latest Release</p>
-            <p class="bigLine"><span class="vio">[TITLE HERE]</span></p>
-            <div class="subline">single · [year] · replace this with a 1-line vibe hook</div>
+<div class="h2">Latest Release</div>
 
-            <div class="ctaRow" style="margin-top:14px;">
-              <a class="pill" href="listen.html">Play</a>
-              <a class="pill ghost" href="listen.html#spotify">Spotify</a>
-              <a class="pill ghost" href="listen.html#apple">Apple</a>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </section>
-  </main>
+<div class="release">
 
-  <section class="marqueeWrap" aria-label="Song ticker">
-    <div class="marquee">
-      <a class="song vio" href="listen.html#songs">CASKET</a>
-      <a class="song" href="listen.html#songs">BLOOD FLOW</a>
-      <a class="song" href="listen.html#songs">4CUPPPPPZ</a>
-      <a class="song" href="listen.html#songs">TOM FORD NIGHTS</a>
-      <a class="song vio" href="listen.html#songs">CRAWLING BACK TO INNOCENCE</a>
-      <a class="song" href="listen.html#songs">MANSION</a>
-      <a class="song" href="listen.html#songs">TWO TIMES</a>
-      <a class="song" href="listen.html#songs">VAULT OF COUTURE</a>
+<img src="images/cover.jpg" class="cover" alt="cover art">
 
-      <a class="song vio" href="listen.html#songs">CASKET</a>
-      <a class="song" href="listen.html#songs">BLOOD FLOW</a>
-      <a class="song" href="listen.html#songs">4CUPPPPPZ</a>
-      <a class="song" href="listen.html#songs">TOM FORD NIGHTS</a>
-      <a class="song vio" href="listen.html#songs">CRAWLING BACK TO INNOCENCE</a>
-      <a class="song" href="listen.html#songs">MANSION</a>
-      <a class="song" href="listen.html#songs">TWO TIMES</a>
-      <a class="song" href="listen.html#songs">VAULT OF COUTURE</a>
-    </div>
-  </section>
+<div class="songtitle">Song Name</div>
 
-  <main class="wrap">
-    <section class="section reveal" id="about">
-      <div class="head">
-        <h2 class="h2">About</h2>
-        <p class="hint">signal</p>
-      </div>
-      <p class="copy">
-        CLAWBOI is dark, melodic emo-trap from Reseda, CA. Raw iPhone energy, club melancholy,
-        and confessionals that still flex. The sound lives in the tension between numb and alive,
-        ghost and body, love and static.
-      </p>
-    </section>
+<div class="lyric">
+“I tried everything but nothings fixing me”
+</div>
 
-    <section class="section reveal" id="what-to-hear">
-      <div class="head">
-        <h2 class="h2">What to Hear</h2>
-        <p class="hint">start here</p>
-      </div>
-      <p class="copy">
-        For the <span class="vio">late-night club</span>: start with <span class="vio">4cupppppz</span>.
-        For the <span class="vio">hurt</span>: <span class="vio">Casket</span>.
-        For the <span class="vio">movie</span>: <span class="vio">Blood Flow</span>.
-        For the <span class="vio">flex that cracks</span>: <span class="vio">Tom Ford Nights</span>.
-      </p>
-      <div class="ctaRow" style="margin-top:18px;">
-        <a class="pill" href="listen.html">Go to Listen</a>
-        <a class="pill ghost" href="listen.html#playlists">Playlists</a>
-      </div>
-    </section>
+<a href="listen.html" class="btn">Listen</a>
 
-    <section class="section reveal" id="lyrics">
-      <div class="head">
-        <h2 class="h2">Lyrics</h2>
-        <p class="hint">fragments</p>
-      </div>
-      <p class="copy">
-        “i tried everything… but nothing’s fixing me.”<br><br>
-        “all black with a violet bruise.”<br><br>
-        “ghost in the club, still dancing.”
-      </p>
-      <p class="copy" style="margin-top:14px; color: rgba(255,255,255,.60); font-size: 14px; letter-spacing:.18em; text-transform: uppercase;">
-        Replace these with real lines later. We can format full lyrics on a separate page if you want.
-      </p>
-    </section>
+</div>
+</section>
 
-    <section class="section reveal" id="visuals" style="border-bottom:none;">
-      <div class="head">
-        <h2 class="h2">Visuals</h2>
-        <p class="hint">fast collage</p>
-      </div>
-      <p class="copy">
-        Put images into <span class="vio">/images</span> and swap these placeholders into real tiles.
-        Static images stay fast.
-      </p>
+<footer>
+© <span id="y"></span> CLAWBOI
+</footer>
 
-      <div class="tiles">
-        <div class="tile span6"><div class="ph">Add image: /images/cover-01.jpg</div></div>
-        <div class="tile span6"><div class="ph">Add image: /images/still-01.jpg</div></div>
-        <div class="tile span4"><div class="ph">Add image: /images/cover-02.jpg</div></div>
-        <div class="tile span4"><div class="ph">Add image: /images/still-02.jpg</div></div>
-        <div class="tile span4"><div class="ph">Add image: /images/texture-01.jpg</div></div>
-      </div>
+</div>
 
-      <footer>
-        <div>© <span id="y"></span> CLAWBOI</div>
-        <div style="color:rgba(255,255,255,.62)">black · white · electric violet</div>
-      </footer>
-    </section>
-  </main>
+<script>
+document.getElementById("y").textContent=new Date().getFullYear();
+</script>
 
-  <script>
-    document.getElementById('y').textContent = new Date().getFullYear();
-
-    // light reveal
-    const els = Array.from(document.querySelectorAll('.reveal'));
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach(ent => {
-        if(ent.isIntersecting){
-          ent.target.classList.add('is-visible');
-          io.unobserve(ent.target);
-        }
-      });
-    }, { threshold: 0.12 });
-    els.forEach(el => io.observe(el));
-  </script>
 </body>
 </html>
