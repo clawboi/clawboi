@@ -1,1 +1,613 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Listen — CLAWBOI</title>
+  <meta name="theme-color" content="#000000" />
+
+  <style>
+    :root{
+      --bg:#000;
+      --fg:#fff;
+      --muted: rgba(255,255,255,.72);
+      --hair: rgba(255,255,255,.10);
+      --violet:#8A2EFF;
+      --vio2:#B66BFF;
+      --max: 1180px;
+      --r: 24px;
+
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      --display: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+
+    *{ box-sizing:border-box }
+    html,body{ height:100% }
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--fg);
+      font-family:var(--sans);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      overflow-x:hidden;
+    }
+    a{ color:var(--fg); text-decoration:none }
+    a:hover{ opacity:.92 }
+    :focus-visible{ outline:2px solid rgba(138,46,255,.95); outline-offset:3px; border-radius:12px; }
+
+    /* light grain */
+    .grain:before{
+      content:"";
+      position:fixed; inset:0;
+      pointer-events:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.10'/%3E%3C/svg%3E");
+      mix-blend-mode: overlay;
+      opacity:.05;
+      transform: translateZ(0);
+    }
+
+    /* subtle ambient field */
+    .bgfield{
+      position:fixed; inset:-20%;
+      pointer-events:none;
+      z-index:0;
+      background:
+        radial-gradient(900px 700px at 18% 18%, rgba(138,46,255,.18), transparent 60%),
+        radial-gradient(900px 700px at 82% 30%, rgba(255,255,255,.06), transparent 60%),
+        radial-gradient(800px 600px at 32% 86%, rgba(138,46,255,.11), transparent 60%);
+      opacity:.95;
+      transform: translateZ(0);
+      animation: drift 18s ease-in-out infinite alternate;
+    }
+    @keyframes drift{
+      0%{ transform: translate3d(0,0,0) scale(1); filter:saturate(125%); }
+      100%{ transform: translate3d(-1.2%,1.0%,0) scale(1.02); filter:saturate(145%); }
+    }
+    @media (prefers-reduced-motion: reduce){
+      .bgfield{ animation:none; }
+    }
+
+    .wrap{ max-width:var(--max); margin:0 auto; padding: 0 22px 96px; position:relative; z-index:2; }
+
+    /* sticky header */
+    header{
+      position:sticky; top:0;
+      z-index:6;
+      background: rgba(0,0,0,.88);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .nav{
+      max-width:var(--max);
+      margin:0 auto;
+      padding: 14px 22px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+    }
+    .brandMini{
+      letter-spacing:.28em;
+      text-transform: uppercase;
+      font-weight: 900;
+      font-size: 12px;
+      opacity:.95;
+    }
+    .navlinks{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .navlinks a{
+      font-size:11px;
+      letter-spacing:.30em;
+      text-transform:uppercase;
+      color: rgba(255,255,255,.70);
+      padding: 8px 0;
+      border-bottom:1px solid transparent;
+      transition: color .18s ease, border-color .18s ease;
+    }
+    .navlinks a:hover{
+      color: rgba(255,255,255,.95);
+      border-bottom-color: rgba(138,46,255,.85);
+    }
+    .navlinks a.active{
+      color: rgba(255,255,255,.95);
+      border-bottom-color: rgba(138,46,255,.85);
+    }
+
+    /* hero */
+    .hero{
+      padding: 44px 0 18px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .h1{
+      margin:0;
+      font-family: var(--display);
+      font-weight: 950;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      font-size: clamp(46px, 8vw, 92px);
+      line-height: .98;
+      text-shadow: 0 0 32px rgba(138,46,255,.18);
+    }
+    .sub{
+      margin: 14px 0 0;
+      max-width: 75ch;
+      color: rgba(255,255,255,.82);
+      font-size: clamp(16px, 2.1vw, 20px);
+      line-height: 1.7;
+    }
+    .vio{ color: rgba(138,46,255,.98); text-shadow: 0 0 16px rgba(138,46,255,.16); }
+
+    .quickRow{
+      margin-top: 18px;
+      display:flex;
+      flex-wrap:wrap;
+      gap: 12px;
+      align-items:center;
+    }
+    .pill{
+      border: 1px solid rgba(138,46,255,.70);
+      background: rgba(138,46,255,.10);
+      border-radius: 18px;
+      padding: 14px 14px;
+      font-size: 11px;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.92);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height: 52px;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .16s ease, background .16s ease, border-color .16s ease, box-shadow .16s ease;
+    }
+    .pill:hover{
+      transform: translateY(-1px);
+      border-color: rgba(138,46,255,.98);
+      background: rgba(138,46,255,.14);
+      box-shadow: 0 0 0 6px rgba(138,46,255,.10);
+    }
+    .pill.ghost{
+      border-color: rgba(255,255,255,.16);
+      background: rgba(255,255,255,.03);
+      color: rgba(255,255,255,.86);
+    }
+
+    /* sections */
+    .section{
+      padding: 68px 0;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .head{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap: 16px;
+      flex-wrap:wrap;
+      margin-bottom: 18px;
+    }
+    .h2{
+      margin:0;
+      font-size: 12px;
+      letter-spacing:.34em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.86);
+    }
+    .hint{
+      margin:0;
+      font-size: 11px;
+      letter-spacing:.24em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.50);
+    }
+    .copy{
+      margin:0;
+      max-width: 86ch;
+      color: rgba(255,255,255,.82);
+      font-size: clamp(16px, 2.1vw, 20px);
+      line-height: 1.75;
+      border-top:1px solid rgba(255,255,255,.08);
+      padding-top: 18px;
+    }
+
+    /* embed cards */
+    .grid{
+      margin-top: 18px;
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+    }
+    .card{
+      grid-column: span 6;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 22px;
+      background: rgba(255,255,255,.02);
+      padding: 18px;
+      position:relative;
+      overflow:hidden;
+      transform: translateZ(0);
+    }
+    @media (max-width: 940px){
+      .card{ grid-column: span 12; }
+    }
+    .card:before{
+      content:"";
+      position:absolute; right:-50px; top:-50px;
+      width:160px; height:160px;
+      background: radial-gradient(circle at 30% 30%, rgba(138,46,255,.35), transparent 60%);
+      opacity:.65;
+      pointer-events:none;
+    }
+    .t{
+      margin:0;
+      font-size: 12px;
+      letter-spacing:.34em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.86);
+    }
+    .m{
+      margin-top: 10px;
+      color: rgba(255,255,255,.70);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+    .ph{
+      margin-top: 14px;
+      border:1px dashed rgba(255,255,255,.16);
+      border-radius: 18px;
+      padding: 14px;
+      color: rgba(255,255,255,.58);
+      font-size: 11px;
+      letter-spacing:.22em;
+      text-transform: uppercase;
+      line-height: 1.6;
+    }
+
+    /* song list */
+    .songs{
+      margin-top: 18px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 900px){ .songs{ grid-template-columns:1fr; } }
+
+    .songCard{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 22px;
+      background: rgba(255,255,255,.02);
+      padding: 16px;
+      position:relative;
+      overflow:hidden;
+    }
+    .songCard:hover{
+      border-color: rgba(138,46,255,.40);
+    }
+
+    .songTop{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap:wrap;
+    }
+    .songName{
+      margin:0;
+      font-size: 16px;
+      letter-spacing:.22em;
+      text-transform: uppercase;
+    }
+    .songMeta{
+      margin:0;
+      font-size: 11px;
+      letter-spacing:.22em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.56);
+    }
+    .songBtns{
+      margin-top: 12px;
+      display:flex;
+      flex-wrap:wrap;
+      gap: 10px;
+      align-items:center;
+    }
+    .mini{
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.03);
+      border-radius: 16px;
+      padding: 12px 12px;
+      font-size: 10px;
+      letter-spacing:.28em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.86);
+      transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
+    }
+    .mini:hover{
+      transform: translateY(-1px);
+      border-color: rgba(138,46,255,.65);
+      background: rgba(138,46,255,.08);
+      box-shadow: 0 0 0 6px rgba(138,46,255,.08);
+    }
+
+    /* lyrics collapsible (fast) */
+    details{
+      margin-top: 12px;
+      border-top: 1px solid rgba(255,255,255,.08);
+      padding-top: 12px;
+    }
+    summary{
+      list-style:none;
+      cursor:pointer;
+      font-size: 10px;
+      letter-spacing:.34em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.70);
+      user-select:none;
+    }
+    summary::-webkit-details-marker{ display:none; }
+    .lyr{
+      margin-top: 10px;
+      color: rgba(255,255,255,.78);
+      line-height: 1.75;
+      font-size: 14px;
+      white-space: pre-wrap;
+    }
+
+    footer{
+      padding-top: 22px;
+      color: rgba(255,255,255,.50);
+      font-size: 11px;
+      letter-spacing:.24em;
+      text-transform: uppercase;
+      display:flex;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap:wrap;
+      border-top:1px solid rgba(255,255,255,.08);
+      margin-top: 44px;
+    }
+
+    /* reveal */
+    .reveal{ opacity:0; transform: translateY(10px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.is-visible{ opacity:1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce){
+      .reveal{ opacity:1; transform:none; }
+    }
+  </style>
+</head>
+
+<body class="grain">
+  <div class="bgfield" aria-hidden="true"></div>
+
+  <header>
+    <div class="nav">
+      <div class="brandMini"><a href="index.html">CLAWBOI</a></div>
+      <nav class="navlinks" aria-label="Site">
+        <a class="active" href="listen.html">Listen</a>
+        <a href="index.html#visuals">Visuals</a>
+        <a href="shop.html">Shop</a>
+        <a href="follow.html">Follow</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1 class="h1">Listen</h1>
+      <p class="sub">
+        <span class="vio">Crawling Back to Innocence</span> in motion.
+        Replace the placeholders with Spotify/Apple/YouTube links whenever you’re ready.
+      </p>
+
+      <div class="quickRow" aria-label="Quick jump">
+        <a class="pill" href="#latest">Latest</a>
+        <a class="pill ghost" href="#songs">Songs</a>
+        <a class="pill ghost" href="#playlists">Playlists</a>
+        <a class="pill ghost" href="#spotify">Spotify</a>
+        <a class="pill ghost" href="#apple">Apple</a>
+      </div>
+    </section>
+
+    <section class="section reveal" id="latest">
+      <div class="head">
+        <h2 class="h2">Latest</h2>
+        <p class="hint">drop</p>
+      </div>
+
+      <p class="copy">
+        Put the newest single here with your preferred embed or link.
+        Keep it simple so it loads instantly.
+      </p>
+
+      <div class="grid" aria-label="Latest embed options">
+        <article class="card">
+          <h3 class="t">Spotify Embed</h3>
+          <div class="m">Paste Spotify embed code inside this card later.</div>
+          <div class="ph">
+            Replace with Spotify iframe (copy from Spotify “Share” → “Embed”).
+          </div>
+        </article>
+
+        <article class="card">
+          <h3 class="t">YouTube / Visualizer</h3>
+          <div class="m">Paste a YouTube embed if you want the newest release to be visual-first.</div>
+          <div class="ph">
+            Replace with YouTube iframe (Share → Embed).
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section reveal" id="songs">
+      <div class="head">
+        <h2 class="h2">Songs</h2>
+        <p class="hint">clickable</p>
+      </div>
+
+      <p class="copy">
+        These are your on-site “song tiles”. Each can link out to Spotify/Apple/YouTube.
+        (The moving words on the home page land here.)
+      </p>
+
+      <div class="songs" aria-label="Songs list">
+        <article class="songCard" id="casket">
+          <div class="songTop">
+            <h3 class="songName">Casket</h3>
+            <p class="songMeta">single · year</p>
+          </div>
+          <div class="songBtns">
+            <a class="mini" href="#spotify">Spotify</a>
+            <a class="mini" href="#apple">Apple</a>
+            <a class="mini" href="#youtube">YouTube</a>
+          </div>
+          <details>
+            <summary>Lyrics</summary>
+            <div class="lyr">Paste lyrics (or fragments) here later.</div>
+          </details>
+        </article>
+
+        <article class="songCard" id="blood-flow">
+          <div class="songTop">
+            <h3 class="songName">Blood Flow</h3>
+            <p class="songMeta">single · year</p>
+          </div>
+          <div class="songBtns">
+            <a class="mini" href="#spotify">Spotify</a>
+            <a class="mini" href="#apple">Apple</a>
+            <a class="mini" href="#youtube">YouTube</a>
+          </div>
+          <details>
+            <summary>Lyrics</summary>
+            <div class="lyr">Paste lyrics (or fragments) here later.</div>
+          </details>
+        </article>
+
+        <article class="songCard" id="4cupppppz">
+          <div class="songTop">
+            <h3 class="songName">4cupppppz</h3>
+            <p class="songMeta">single · year</p>
+          </div>
+          <div class="songBtns">
+            <a class="mini" href="#spotify">Spotify</a>
+            <a class="mini" href="#apple">Apple</a>
+            <a class="mini" href="#youtube">YouTube</a>
+          </div>
+          <details>
+            <summary>Lyrics</summary>
+            <div class="lyr">Paste lyrics (or fragments) here later.</div>
+          </details>
+        </article>
+
+        <article class="songCard" id="tom-ford-nights">
+          <div class="songTop">
+            <h3 class="songName">Tom Ford Nights</h3>
+            <p class="songMeta">single · year</p>
+          </div>
+          <div class="songBtns">
+            <a class="mini" href="#spotify">Spotify</a>
+            <a class="mini" href="#apple">Apple</a>
+            <a class="mini" href="#youtube">YouTube</a>
+          </div>
+          <details>
+            <summary>Lyrics</summary>
+            <div class="lyr">Paste lyrics (or fragments) here later.</div>
+          </details>
+        </article>
+      </div>
+    </section>
+
+    <section class="section reveal" id="playlists">
+      <div class="head">
+        <h2 class="h2">Playlists</h2>
+        <p class="hint">mood</p>
+      </div>
+
+      <p class="copy">
+        Add 2–4 playlists: “Start Here”, “Club Decay”, “Sad Flex”, “Night Drive”.
+        These can be links or embeds.
+      </p>
+
+      <div class="grid" aria-label="Playlists placeholders">
+        <article class="card">
+          <h3 class="t">Start Here</h3>
+          <div class="m">Link or embed playlist later.</div>
+          <div class="ph">Add link later</div>
+        </article>
+        <article class="card">
+          <h3 class="t">Club Decay</h3>
+          <div class="m">Link or embed playlist later.</div>
+          <div class="ph">Add link later</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section reveal" id="spotify">
+      <div class="head">
+        <h2 class="h2">Spotify</h2>
+        <p class="hint">link</p>
+      </div>
+      <p class="copy">
+        Replace this with your real Spotify artist link.
+        Keep it as a simple button for speed.
+      </p>
+      <div class="quickRow">
+        <a class="pill" href="#" target="_blank" rel="noopener">Open Spotify</a>
+        <a class="pill ghost" href="#songs">Back to Songs</a>
+      </div>
+    </section>
+
+    <section class="section reveal" id="apple">
+      <div class="head">
+        <h2 class="h2">Apple Music</h2>
+        <p class="hint">link</p>
+      </div>
+      <p class="copy">
+        Replace this with your Apple Music artist link.
+      </p>
+      <div class="quickRow">
+        <a class="pill" href="#" target="_blank" rel="noopener">Open Apple Music</a>
+        <a class="pill ghost" href="#songs">Back to Songs</a>
+      </div>
+    </section>
+
+    <section class="section reveal" id="youtube" style="border-bottom:none;">
+      <div class="head">
+        <h2 class="h2">YouTube</h2>
+        <p class="hint">visuals</p>
+      </div>
+      <p class="copy">
+        Replace this with your YouTube channel link (or a latest video embed if you want).
+      </p>
+      <div class="quickRow">
+        <a class="pill" href="#" target="_blank" rel="noopener">Open YouTube</a>
+        <a class="pill ghost" href="index.html#visuals">Home Visuals</a>
+      </div>
+
+      <footer>
+        <div>© <span id="y"></span> CLAWBOI</div>
+        <div style="color:rgba(255,255,255,.62)">black · white · electric violet</div>
+      </footer>
+    </section>
+  </main>
+
+  <script>
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    // light reveal
+    const els = Array.from(document.querySelectorAll('.reveal'));
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(ent => {
+        if(ent.isIntersecting){
+          ent.target.classList.add('is-visible');
+          io.unobserve(ent.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    els.forEach(el => io.observe(el));
+  </script>
+</body>
+</html>
 
