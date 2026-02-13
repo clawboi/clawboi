@@ -1,1 +1,866 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CLAWBOI</title>
+  <meta name="theme-color" content="#000000" />
+  <style>
+    :root{
+      --bg:#000;
+      --fg:#fff;
+      --muted:rgba(255,255,255,.70);
+      --hair:rgba(255,255,255,.10);
+      --violet:#8A2EFF;        /* electric violet */
+      --violet2:#B388FF;       /* soft violet */
+      --max:1180px;
+      --r:22px;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      --display: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--fg);
+      font-family:var(--sans);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      overflow-x:hidden;
+    }
+    a{color:var(--fg); text-decoration:none}
+    a:hover{opacity:.92}
+    :focus-visible{ outline:2px solid rgba(138,46,255,.95); outline-offset:3px; border-radius:12px; }
+
+    /* Subtle film grain */
+    .grain:before{
+      content:"";
+      position:fixed; inset:-20px;
+      pointer-events:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E");
+      mix-blend-mode: overlay;
+      opacity:.06;
+      transform: translateZ(0);
+    }
+
+    /* Ambient motion layers */
+    .bgfield{
+      position:fixed; inset:0;
+      pointer-events:none;
+      overflow:hidden;
+      z-index:0;
+    }
+    .bgfield:before{
+      content:"";
+      position:absolute; inset:-200px;
+      background:
+        radial-gradient(900px 700px at 20% 20%, rgba(138,46,255,.22), transparent 60%),
+        radial-gradient(800px 650px at 80% 35%, rgba(255,255,255,.08), transparent 60%),
+        radial-gradient(700px 520px at 30% 85%, rgba(138,46,255,.14), transparent 60%);
+      filter: saturate(130%);
+      opacity:.95;
+      animation: drift 12s ease-in-out infinite alternate;
+      transform: translateZ(0);
+    }
+    .bgfield:after{
+      content:"";
+      position:absolute; inset:-100px;
+      background:
+        linear-gradient(90deg, transparent, rgba(138,46,255,.06), transparent),
+        linear-gradient(0deg, transparent, rgba(255,255,255,.05), transparent);
+      opacity:.35;
+      animation: scan 7s linear infinite;
+      transform: translateZ(0);
+      mix-blend-mode: screen;
+    }
+
+    @keyframes drift{
+      0%{ transform: translate3d(-1.5%, -1.2%, 0) scale(1.02); }
+      100%{ transform: translate3d(1.6%, 1.3%, 0) scale(1.03); }
+    }
+    @keyframes scan{
+      0%{ transform: translate3d(-4%, 0, 0); }
+      100%{ transform: translate3d(4%, 0, 0); }
+    }
+
+    /* Cursor trail canvas sits on top */
+    #trail{
+      position:fixed; inset:0;
+      z-index:6;
+      pointer-events:none;
+      opacity:.85;
+      mix-blend-mode: screen;
+    }
+
+    .wrap{ max-width:var(--max); margin:0 auto; padding: 0 22px 90px; position:relative; z-index:2; }
+
+    /* Top nav (hybrid: Home + EPK + Drops later) */
+    header{
+      position:sticky; top:0;
+      z-index:5;
+      backdrop-filter: blur(10px);
+      background: rgba(0,0,0,.78);
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .nav{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding: 14px 22px;
+      max-width:var(--max);
+      margin:0 auto;
+    }
+    .brandMini{
+      display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+    }
+    .brandMini .sig{
+      letter-spacing:.28em;
+      text-transform: uppercase;
+      font-weight: 700;
+      font-size: 12px;
+      opacity:.92;
+    }
+    .brandMini .era{
+      font-size: 11px;
+      letter-spacing:.26em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.55);
+    }
+    .navlinks{
+      display:flex; gap:14px; flex-wrap:wrap; align-items:center;
+    }
+    .navlinks a{
+      font-size:11px;
+      letter-spacing:.30em;
+      text-transform:uppercase;
+      color: rgba(255,255,255,.70);
+      padding: 8px 0;
+      border-bottom:1px solid transparent;
+      transition: color .18s ease, border-color .18s ease;
+    }
+    .navlinks a:hover{
+      color: rgba(255,255,255,.95);
+      border-bottom-color: rgba(138,46,255,.8);
+    }
+
+    /* HERO */
+    .hero{
+      min-height: 92vh;
+      display:flex;
+      align-items:center;
+      padding: 44px 0 26px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      position:relative;
+    }
+    .heroInner{
+      width:100%;
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 22px;
+      align-items:start;
+    }
+    @media (max-width: 940px){
+      .heroInner{ grid-template-columns: 1fr; }
+    }
+
+    .title{
+      margin:0;
+      font-family: var(--display);
+      font-weight: 800;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      font-size: clamp(58px, 9vw, 118px);
+      line-height: .98;
+      text-shadow: 0 0 34px rgba(138,46,255,.24);
+    }
+
+    /* Glitch overlay effect */
+    .glitch{
+      position:relative;
+      display:inline-block;
+    }
+    .glitch:before,
+    .glitch:after{
+      content: attr(data-text);
+      position:absolute;
+      left:0; top:0;
+      width:100%;
+      opacity:.62;
+      pointer-events:none;
+      mix-blend-mode: screen;
+      filter: saturate(140%);
+      clip-path: inset(0 0 0 0);
+    }
+    .glitch:before{
+      transform: translate3d(1px, 0, 0);
+      color: rgba(138,46,255,.85);
+      animation: glitch1 3.2s infinite steps(1,end);
+    }
+    .glitch:after{
+      transform: translate3d(-1px, 0, 0);
+      color: rgba(255,255,255,.85);
+      animation: glitch2 4.1s infinite steps(1,end);
+    }
+    @keyframes glitch1{
+      0%, 92%, 100%{ clip-path: inset(0 0 0 0); }
+      93%{ clip-path: inset(12% 0 66% 0); }
+      94%{ clip-path: inset(55% 0 20% 0); }
+      95%{ clip-path: inset(25% 0 55% 0); }
+      96%{ clip-path: inset(70% 0 12% 0); }
+    }
+    @keyframes glitch2{
+      0%, 88%, 100%{ clip-path: inset(0 0 0 0); }
+      89%{ clip-path: inset(62% 0 18% 0); }
+      90%{ clip-path: inset(18% 0 62% 0); }
+      91%{ clip-path: inset(40% 0 35% 0); }
+    }
+
+    .tagline{
+      margin: 14px 0 0;
+      max-width: 62ch;
+      color: rgba(255,255,255,.82);
+      font-size: clamp(16px, 2.1vw, 20px);
+      line-height: 1.7;
+    }
+    .tagline b{
+      color: rgba(255,255,255,.95);
+      font-weight: 700;
+    }
+    .tagline .vio{
+      color: rgba(138,46,255,.95);
+      text-shadow: 0 0 18px rgba(138,46,255,.30);
+    }
+
+    .ctaRow{
+      margin-top: 18px;
+      display:flex;
+      flex-wrap:wrap;
+      gap: 12px;
+      align-items:center;
+    }
+
+    .pill{
+      border: 1px solid rgba(138,46,255,.70);
+      background: rgba(138,46,255,.10);
+      border-radius: 18px;
+      padding: 14px 14px;
+      font-size: 11px;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.92);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height: 52px;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+      position:relative;
+      overflow:hidden;
+    }
+    .pill:hover{
+      transform: translateY(-1px);
+      border-color: rgba(138,46,255,.95);
+      background: rgba(138,46,255,.14);
+      box-shadow: 0 0 0 6px rgba(138,46,255,.10);
+    }
+    .pill:active{ transform: translateY(0) scale(.99); }
+
+    .pill.ghost{
+      border-color: rgba(255,255,255,.16);
+      background: rgba(255,255,255,.03);
+      color: rgba(255,255,255,.85);
+    }
+    .pill.ghost:hover{
+      border-color: rgba(138,46,255,.55);
+      background: rgba(138,46,255,.07);
+      box-shadow: 0 0 0 6px rgba(138,46,255,.08);
+    }
+
+    /* Right column: "signal" card with animated edges */
+    .signal{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 26px;
+      background: rgba(255,255,255,.02);
+      overflow:hidden;
+      position:relative;
+      padding: 18px;
+      min-height: 360px;
+    }
+    .signal:before{
+      content:"";
+      position:absolute; inset:-2px;
+      background:
+        linear-gradient(120deg,
+          rgba(138,46,255,.0) 0%,
+          rgba(138,46,255,.22) 38%,
+          rgba(255,255,255,.10) 52%,
+          rgba(138,46,255,.0) 70%);
+      opacity:.45;
+      animation: edge 5.8s linear infinite;
+      pointer-events:none;
+    }
+    @keyframes edge{
+      0%{ transform: translate3d(-30%, -10%, 0) rotate(0.001deg); }
+      100%{ transform: translate3d(30%, 10%, 0) rotate(0.001deg); }
+    }
+    .signalInner{
+      position:relative;
+      border-radius: 22px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(8px);
+      padding: 18px;
+      height:100%;
+    }
+    .kicker{
+      margin:0;
+      font-size: 11px;
+      letter-spacing:.32em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.58);
+    }
+    .bigLine{
+      margin: 12px 0 0;
+      font-size: clamp(20px, 2.6vw, 28px);
+      line-height: 1.35;
+      color: rgba(255,255,255,.90);
+      max-width: 26ch;
+    }
+    .bigLine .vio{ color: rgba(138,46,255,.95); text-shadow: 0 0 18px rgba(138,46,255,.30); }
+
+    .metaList{
+      margin-top: 16px;
+      display:grid;
+      gap: 10px;
+    }
+    .metaItem{
+      border-top:1px solid rgba(255,255,255,.09);
+      padding-top: 10px;
+      color: rgba(255,255,255,.76);
+      font-size: 13px;
+      letter-spacing:.02em;
+      line-height:1.6;
+    }
+    .metaItem span{
+      display:inline-block;
+      font-size: 10px;
+      letter-spacing:.30em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.55);
+      margin-bottom: 6px;
+    }
+
+    /* Marquee lyric wall */
+    .marqueeWrap{
+      position:relative;
+      overflow:hidden;
+      border-top:1px solid rgba(255,255,255,.08);
+      border-bottom:1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.02);
+    }
+    .marquee{
+      display:flex;
+      gap: 36px;
+      white-space: nowrap;
+      padding: 14px 0;
+      will-change: transform;
+      animation: roll 18s linear infinite;
+    }
+    .marquee:nth-child(2){
+      animation-duration: 28s;
+      opacity:.85;
+    }
+    .marquee span{
+      font-size: 11px;
+      letter-spacing:.34em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.70);
+    }
+    .marquee .vio{ color: rgba(138,46,255,.95); }
+    @keyframes roll{
+      0%{ transform: translate3d(0,0,0); }
+      100%{ transform: translate3d(-50%,0,0); }
+    }
+
+    /* Sections */
+    .section{
+      padding: 70px 0;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .head{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap: 16px;
+      flex-wrap:wrap;
+      margin-bottom: 18px;
+    }
+    .h2{
+      margin:0;
+      font-size: 12px;
+      letter-spacing:.34em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.86);
+    }
+    .hint{
+      margin:0;
+      font-size: 11px;
+      letter-spacing:.24em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.50);
+    }
+    .copy{
+      margin:0;
+      max-width: 80ch;
+      color: rgba(255,255,255,.82);
+      font-size: clamp(16px, 2.1vw, 20px);
+      line-height: 1.75;
+      border-top:1px solid rgba(255,255,255,.08);
+      padding-top: 18px;
+    }
+    .copy .vio{ color: rgba(138,46,255,.95); text-shadow: 0 0 18px rgba(138,46,255,.26); }
+
+    /* Cards */
+    .grid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 16px;
+      margin-top: 18px;
+    }
+    @media (max-width: 940px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+    .card{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: var(--r);
+      background: rgba(255,255,255,.02);
+      overflow:hidden;
+      position:relative;
+      padding: 18px;
+    }
+    .card:before{
+      content:"";
+      position:absolute;
+      right:-60px; top:-60px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle at 30% 30%, rgba(138,46,255,.35), transparent 60%);
+      opacity:.75;
+      pointer-events:none;
+      filter: blur(.2px);
+    }
+    .t{
+      margin:0;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing:.08em;
+      text-transform: uppercase;
+    }
+    .m{
+      margin-top: 10px;
+      color: rgba(255,255,255,.70);
+      line-height: 1.65;
+      font-size: 14px;
+      max-width: 70ch;
+    }
+    .chips{
+      margin-top: 14px;
+      display:flex; gap:10px; flex-wrap:wrap;
+    }
+    .chip{
+      border: 1px solid rgba(138,46,255,.45);
+      background: rgba(138,46,255,.08);
+      border-radius: 999px;
+      padding: 8px 10px;
+      font-size: 10px;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.88);
+    }
+
+    /* Visual grid */
+    .tiles{
+      margin-top: 18px;
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 10px;
+    }
+    .tile{
+      border-radius: 18px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.02);
+      min-height: 130px;
+      overflow:hidden;
+      position:relative;
+      transform: translateZ(0);
+    }
+    .tile:after{
+      content:"";
+      position:absolute; inset:0;
+      background: radial-gradient(600px 220px at 20% 15%, rgba(138,46,255,.18), transparent 55%);
+      opacity:.85;
+      pointer-events:none;
+      transition: opacity .25s ease;
+    }
+    .tile:hover:after{ opacity: 1; }
+    .tile .ph{
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      color: rgba(255,255,255,.55);
+      font-size: 10px;
+      letter-spacing:.34em;
+      text-transform: uppercase;
+      text-align:center;
+      padding: 16px;
+    }
+    .tile img{
+      width:100%; height:100%;
+      object-fit: cover;
+      display:block;
+      filter: grayscale(10%) contrast(1.08) saturate(1.05);
+      opacity:.92;
+    }
+
+    /* Tile layout */
+    .span6{ grid-column: span 6; }
+    .span4{ grid-column: span 4; }
+    .span3{ grid-column: span 3; }
+    @media (max-width: 940px){
+      .span6,.span4,.span3{ grid-column: span 12; }
+      .tile{ min-height: 160px; }
+    }
+
+    /* Reveal */
+    .reveal{
+      opacity:0;
+      transform: translateY(10px);
+      transition: opacity .75s ease, transform .75s ease;
+    }
+    .reveal.is-visible{ opacity:1; transform: translateY(0); }
+
+    footer{
+      padding-top: 22px;
+      color: rgba(255,255,255,.50);
+      font-size: 11px;
+      letter-spacing:.24em;
+      text-transform: uppercase;
+      display:flex;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap:wrap;
+      border-top:1px solid rgba(255,255,255,.08);
+      margin-top: 44px;
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce){
+      .bgfield:before, .bgfield:after, .marquee{ animation: none !important; }
+      .pill, .navlinks a, .tile:after{ transition: none !important; }
+      .reveal{ opacity:1; transform:none; }
+    }
+  </style>
+</head>
+
+<body class="grain">
+  <div class="bgfield" aria-hidden="true"></div>
+  <canvas id="trail" aria-hidden="true"></canvas>
+
+  <header>
+    <div class="nav">
+      <div class="brandMini">
+        <div class="sig">CLAWBOI</div>
+        <div class="era">CLUB DECAY ERA</div>
+      </div>
+      <nav class="navlinks" aria-label="Site">
+        <a href="#listen">Listen</a>
+        <a href="#visuals">Visuals</a>
+        <a href="#transmission">Transmission</a>
+        <a href="epk.html">EPK</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div class="heroInner">
+        <div>
+          <h1 class="title">
+            <span class="glitch" data-text="CLAWBOI">CLAWBOI</span>
+          </h1>
+
+          <p class="tagline">
+            <b class="vio">Crawling Back to Innocence</b>.
+            Emo-trap confessionals, ghost-flex, and late-night pulse.
+            Black, white, <span class="vio">electric violet</span>.
+          </p>
+
+          <div class="ctaRow" id="listen">
+            <!-- Replace # with your links later -->
+            <a class="pill" href="#" aria-label="Listen (add Spotify/Apple link)">Listen</a>
+            <a class="pill ghost" href="#" aria-label="Watch (add YouTube link)">Watch</a>
+            <a class="pill ghost" href="#" aria-label="Follow (add Instagram/TikTok link)">Follow</a>
+            <a class="pill" href="drops.html" aria-label="Drops page (create later)">Drops</a>
+          </div>
+        </div>
+
+        <aside class="signal" aria-label="Signal card">
+          <div class="signalInner">
+            <p class="kicker">Transmission</p>
+            <p class="bigLine">
+              This is the part where the <span class="vio">lights</span> lie
+              and the <span class="vio">truth</span> still hits.
+            </p>
+
+            <div class="metaList">
+              <div class="metaItem">
+                <span>Featured Drop</span><br>
+                TITLE GOES HERE · 2026 · (link later)
+              </div>
+              <div class="metaItem">
+                <span>Sound</span><br>
+                dreamy trap · emo bars · club melancholy · raw edges
+              </div>
+              <div class="metaItem">
+                <span>Note</span><br>
+                Replace placeholders once you drop links, art, and credits.
+              </div>
+            </div>
+
+            <div class="ctaRow" style="margin-top:14px;">
+              <a class="pill ghost" href="epk.html">Open EPK</a>
+              <a class="pill" href="#visuals">Enter Visuals</a>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <section class="marqueeWrap" aria-hidden="true">
+    <div class="marquee">
+      <span>CLUB DECAY ·</span>
+      <span class="vio">CRAWLING BACK TO INNOCENCE ·</span>
+      <span>GHOST FLEX ·</span>
+      <span>EMO TRAP ·</span>
+      <span class="vio">ELECTRIC VIOLET ·</span>
+      <span>RAW IPHONE VIDEOS ·</span>
+      <span>CLUB DECAY ·</span>
+      <span class="vio">CRAWLING BACK TO INNOCENCE ·</span>
+      <span>GHOST FLEX ·</span>
+      <span>EMO TRAP ·</span>
+      <span class="vio">ELECTRIC VIOLET ·</span>
+      <span>RAW IPHONE VIDEOS ·</span>
+    </div>
+    <div class="marquee">
+      <span>TRANSMISSION RECEIVED ·</span>
+      <span class="vio">REMEMBER ME ·</span>
+      <span>DON'T SAVE ME ·</span>
+      <span class="vio">VIOLET BRUISE ·</span>
+      <span>NO FILTER ·</span>
+      <span>NO APOLOGY ·</span>
+      <span>TRANSMISSION RECEIVED ·</span>
+      <span class="vio">REMEMBER ME ·</span>
+      <span>DON'T SAVE ME ·</span>
+      <span class="vio">VIOLET BRUISE ·</span>
+      <span>NO FILTER ·</span>
+      <span>NO APOLOGY ·</span>
+    </div>
+  </section>
+
+  <main class="wrap">
+    <section class="section reveal" id="transmission">
+      <div class="head">
+        <h2 class="h2">Transmission</h2>
+        <p class="hint">manifesto fragment</p>
+      </div>
+
+      <p class="copy">
+        CLAWBOI is a late-night signal in a clean black room.
+        Pain dressed in rhythm. Confidence with a cracked halo.
+        The <span class="vio">Club Decay Era</span> is not a phase, it’s a location.
+      </p>
+
+      <div class="grid">
+        <article class="card">
+          <h3 class="t">What to add here later</h3>
+          <p class="m">
+            Spotify embed, Bandcamp embed, or a featured YouTube video.
+            We’ll wire this up once you drop links.
+          </p>
+          <div class="chips">
+            <span class="chip">Embed</span>
+            <span class="chip">Featured</span>
+            <span class="chip">Live</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <h3 class="t">Drop Notes</h3>
+          <p class="m">
+            A place for credits, producers, and the “why” behind each release.
+            Keep it sharp: 2–4 lines per drop.
+          </p>
+          <div class="chips">
+            <span class="chip">Credits</span>
+            <span class="chip">Notes</span>
+            <span class="chip">Era</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section reveal" id="visuals" style="border-bottom:none;">
+      <div class="head">
+        <h2 class="h2">Visuals</h2>
+        <p class="hint">stills, covers, frames</p>
+      </div>
+
+      <p class="copy">
+        Drop covers, frames from videos, textures, scans, anything.
+        This grid is built to feel like a moving wall of memory.
+        Replace placeholders with files in <span class="vio">/images</span>.
+      </p>
+
+      <div class="tiles" aria-label="Visual grid">
+        <!-- HOW TO ADD IMAGES:
+             1) create /images folder
+             2) add files like: images/cover-01.jpg
+             3) replace a placeholder tile with:
+                <img src="images/cover-01.jpg" alt="Cover art" />
+        -->
+
+        <div class="tile span6">
+          <div class="ph">Add image: /images/cover-01.jpg</div>
+          <!-- <img src="images/cover-01.jpg" alt="Cover art 01" /> -->
+        </div>
+
+        <div class="tile span6">
+          <div class="ph">Add image: /images/still-01.jpg</div>
+          <!-- <img src="images/still-01.jpg" alt="Video still 01" /> -->
+        </div>
+
+        <div class="tile span4">
+          <div class="ph">Add image: /images/cover-02.jpg</div>
+          <!-- <img src="images/cover-02.jpg" alt="Cover art 02" /> -->
+        </div>
+
+        <div class="tile span4">
+          <div class="ph">Add image: /images/still-02.jpg</div>
+          <!-- <img src="images/still-02.jpg" alt="Video still 02" /> -->
+        </div>
+
+        <div class="tile span4">
+          <div class="ph">Add image: /images/texture-01.jpg</div>
+          <!-- <img src="images/texture-01.jpg" alt="Texture 01" /> -->
+        </div>
+      </div>
+
+      <footer>
+        <div>© <span id="y"></span> CLAWBOI</div>
+        <div style="color:rgba(255,255,255,.62)">black · white · electric violet</div>
+      </footer>
+    </section>
+  </main>
+
+  <script>
+    // Year
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    // Reveal on scroll
+    const revealEls = Array.from(document.querySelectorAll('.reveal'));
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(ent => {
+        if(ent.isIntersecting){
+          ent.target.classList.add('is-visible');
+          io.unobserve(ent.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    revealEls.forEach(el => io.observe(el));
+
+    // Cursor trail (violet ink)
+    const canvas = document.getElementById('trail');
+    const ctx = canvas.getContext('2d', { alpha:true });
+
+    let W=0,H=0, dpr=1;
+    function resize(){
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      W = canvas.width = Math.floor(innerWidth * dpr);
+      H = canvas.height = Math.floor(innerHeight * dpr);
+      canvas.style.width = innerWidth + "px";
+      canvas.style.height = innerHeight + "px";
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    window.addEventListener('resize', resize, { passive:true });
+    resize();
+
+    const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // points
+    const pts = [];
+    let mx = innerWidth*0.5, my = innerHeight*0.5;
+    let last = performance.now();
+
+    function addPoint(x,y){
+      pts.push({ x, y, vx:(Math.random()-.5)*0.8, vy:(Math.random()-.5)*0.8, a:1, r: 12 + Math.random()*22 });
+      if(pts.length > 80) pts.shift();
+    }
+
+    window.addEventListener('pointermove', (e)=>{
+      mx = e.clientX; my = e.clientY;
+      if(!prefersReduced) addPoint(mx,my);
+    }, { passive:true });
+
+    function step(now){
+      const dt = Math.min(33, now - last);
+      last = now;
+
+      // fade canvas
+      ctx.clearRect(0,0,innerWidth,innerHeight);
+
+      if(!prefersReduced){
+        for(const p of pts){
+          p.x += p.vx * (dt/16);
+          p.y += p.vy * (dt/16);
+          p.a *= 0.965;
+          p.r *= 0.992;
+
+          const g = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+          g.addColorStop(0, `rgba(138,46,255,${0.22*p.a})`);
+          g.addColorStop(0.35, `rgba(179,136,255,${0.12*p.a})`);
+          g.addColorStop(1, 'rgba(0,0,0,0)');
+
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+          ctx.fill();
+        }
+      }
+
+      // prune
+      for(let i=pts.length-1;i>=0;i--){
+        if(pts[i].a < 0.05 || pts[i].r < 2) pts.splice(i,1);
+      }
+
+      requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+
+    // Subtle parallax drift based on scroll (motion without "vanishing" sections)
+    // Only affects background intensity, not layout.
+    const bg = document.querySelector('.bgfield');
+    function onScroll(){
+      if(prefersReduced) return;
+      const y = window.scrollY || 0;
+      const t = Math.max(0, Math.min(1, y / (window.innerHeight * 1.2)));
+      bg.style.opacity = String(1 - t*0.12);
+      bg.style.filter = `saturate(${1.0 + t*0.12})`;
+    }
+    window.addEventListener('scroll', onScroll, { passive:true });
+    onScroll();
+  </script>
+</body>
+</html>
 
