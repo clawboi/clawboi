@@ -7,359 +7,343 @@
 
 <style>
 body{
-  margin:0;
-  background:#000;
-  color:#fff;
-  font-family:Helvetica,Arial,sans-serif;
-  overflow-x:hidden;
+margin:0;
+background:#000;
+color:#fff;
+font-family:Helvetica,Arial,sans-serif;
+overflow-x:hidden;
 }
 
-/* header */
+/* NAV */
 header{
-  position:fixed;
-  top:0; left:0;
-  width:100%;
-  padding:18px 30px;
-  display:flex;
-  justify-content:center;
-  gap:40px;
-  background:rgba(0,0,0,.6);
-  backdrop-filter:blur(8px);
-  z-index:1000;
+position:fixed;
+top:0; left:0;
+width:100%;
+padding:18px 30px;
+display:flex;
+justify-content:center;
+gap:40px;
+background:rgba(0,0,0,.6);
+backdrop-filter:blur(8px);
+z-index:1000;
 }
-
 header a{
-  color:#fff;
-  text-decoration:none;
-  letter-spacing:.25em;
-  font-size:12px;
-  opacity:.8;
-  transition:.25s;
+color:#fff;
+text-decoration:none;
+letter-spacing:.25em;
+font-size:12px;
+opacity:.8;
+transition:.25s;
 }
 header a:hover{
-  opacity:1;
-  color:#b026ff;
+opacity:1;
+color:#b026ff;
 }
 
-/* hero */
+/* HERO */
 .hero{
-  height:100vh;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  text-align:center;
-  padding:0 18px;
+height:100vh;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+text-align:center;
 }
 
+/* ELECTRIC LOGO */
 .logo{
-  font-size:clamp(48px,9vw,110px);
-  letter-spacing:.25em;
-  animation:glow 4s ease-in-out infinite alternate;
-}
-@keyframes glow{
-  from{ text-shadow:0 0 10px #8a2eff,0 0 30px #8a2eff;}
-  to{ text-shadow:0 0 25px #d580ff,0 0 60px #8a2eff;}
+font-size:clamp(48px,9vw,110px);
+letter-spacing:.25em;
+position:relative;
+color:#fff;
 }
 
+/* glow layer */
+.logo::before{
+content:"CLAWBOI";
+position:absolute;
+left:0;
+top:0;
+color:#9d4dff;
+filter:blur(6px);
+opacity:.7;
+animation:electricGlow 2.5s infinite linear;
+}
+
+/* flicker layer */
+.logo::after{
+content:"CLAWBOI";
+position:absolute;
+left:0;
+top:0;
+color:#d9b3ff;
+opacity:.35;
+animation:electricFlicker 3s infinite;
+}
+
+@keyframes electricGlow{
+0%{transform:translate(0,0)}
+25%{transform:translate(1px,-1px)}
+50%{transform:translate(-1px,1px)}
+75%{transform:translate(1px,1px)}
+100%{transform:translate(0,0)}
+}
+
+@keyframes electricFlicker{
+0%,19%,22%,63%,65%,100%{opacity:.35}
+20%,21%,64%{opacity:0}
+}
+
+/* SECTION */
 .section{
-  padding:120px 20px 80px;
-  text-align:center;
+padding:120px 20px 80px;
+text-align:center;
 }
-
 .h2{
-  letter-spacing:.35em;
-  font-size:12px;
-  opacity:.7;
-  margin-bottom:30px;
+letter-spacing:.35em;
+font-size:12px;
+opacity:.7;
+margin-bottom:30px;
 }
 
-/* Latest Release box */
+/* RELEASE BOX */
 .releaseBox{
-  display:flex;
-  gap:26px;
-  align-items:center;
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:26px;
-  padding:24px;
-  max-width:640px;
-  margin:auto;
-  background:rgba(255,255,255,.02);
+display:flex;
+gap:26px;
+align-items:center;
+border:1px solid rgba(255,255,255,.12);
+border-radius:26px;
+padding:24px;
+max-width:640px;
+margin:auto;
+background:rgba(255,255,255,.02);
 }
-
 .cover{
-  width:160px;
-  height:160px;
-  object-fit:cover;
-  border-radius:18px;
-  box-shadow:0 0 40px rgba(138,46,255,.25);
+width:160px;
+height:160px;
+object-fit:cover;
+border-radius:18px;
+box-shadow:0 0 40px rgba(138,46,255,.25);
 }
-
 .releaseInfo{
-  display:flex;
-  flex-direction:column;
-  gap:18px;
-  text-align:left;
+display:flex;
+flex-direction:column;
+gap:18px;
+text-align:left;
 }
-
 .songTitle{
-  font-size:18px;
-  letter-spacing:.18em;
-  text-transform:uppercase;
+font-size:18px;
+letter-spacing:.18em;
+text-transform:uppercase;
 }
-
 .player{
-  filter:invert(1);
-  width:260px;
+filter:invert(1);
+width:260px;
 }
-
 .playBtn{
-  display:inline-block;
-  padding:14px 20px;
-  border-radius:18px;
-  border:1px solid rgba(138,46,255,.8);
-  background:rgba(138,46,255,.12);
-  letter-spacing:.22em;
-  font-size:12px;
-  text-transform:uppercase;
-  color:white;
-  text-decoration:none;
-  transition:.25s;
+display:inline-block;
+padding:14px 20px;
+border-radius:18px;
+border:1px solid rgba(138,46,255,.8);
+background:rgba(138,46,255,.12);
+letter-spacing:.22em;
+font-size:12px;
+text-transform:uppercase;
+color:white;
+text-decoration:none;
+transition:.25s;
 }
-
 .playBtn:hover{
-  background:#8a2eff;
-  box-shadow:0 0 25px #8a2eff;
+background:#8a2eff;
+box-shadow:0 0 25px #8a2eff;
 }
 
-/* Video feed */
+/* VIDEO FEED */
 .videoFeed{
-  max-width:920px;
-  margin:60px auto 0;
-  display:grid;
-  gap:22px;
+max-width:920px;
+margin:60px auto 0;
+display:grid;
+gap:22px;
 }
-
 .videoCard{
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.02);
-  border-radius:22px;
-  overflow:hidden;
+border:1px solid rgba(255,255,255,.12);
+background:rgba(255,255,255,.02);
+border-radius:22px;
+overflow:hidden;
 }
-
 .videoFrame{
-  width:100%;
-  aspect-ratio:16/9;
-  background:#050505;
-  position:relative;
+width:100%;
+aspect-ratio:16/9;
+background:#050505;
+position:relative;
 }
-
-/* lightweight placeholder while loading */
 .videoFrame::after{
-  content:"LOADING";
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  letter-spacing:.35em;
-  font-size:11px;
-  color:rgba(255,255,255,.45);
-  text-transform:uppercase;
+content:"LOADING";
+position:absolute;
+inset:0;
+display:flex;
+align-items:center;
+justify-content:center;
+letter-spacing:.35em;
+font-size:11px;
+color:rgba(255,255,255,.45);
 }
-
 .videoMeta{
-  padding:14px 16px 16px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:14px;
+padding:14px 16px 16px;
+display:flex;
+justify-content:space-between;
+align-items:center;
 }
-
 .videoTitle{
-  font-size:12px;
-  letter-spacing:.22em;
-  text-transform:uppercase;
-  color:rgba(255,255,255,.82);
+font-size:12px;
+letter-spacing:.22em;
+text-transform:uppercase;
 }
-
 .ytLink{
-  font-size:11px;
-  letter-spacing:.22em;
-  text-transform:uppercase;
-  color:rgba(255,255,255,.65);
-  border-bottom:1px solid transparent;
-  padding-bottom:6px;
-  text-decoration:none;
+font-size:11px;
+letter-spacing:.22em;
+text-transform:uppercase;
+color:rgba(255,255,255,.65);
+text-decoration:none;
 }
 .ytLink:hover{
-  color:#fff;
-  border-bottom-color:#8a2eff;
+color:#fff;
+border-bottom:1px solid #8a2eff;
 }
 
-/* Single lyric */
+/* LYRIC */
 .lyric{
-  margin:120px auto;
-  max-width:700px;
-  font-size:22px;
-  letter-spacing:.08em;
-  opacity:.85;
-  text-align:center;
+margin:120px auto;
+max-width:700px;
+font-size:22px;
+letter-spacing:.08em;
+opacity:.85;
+text-align:center;
 }
 
-/* Follow */
+/* FOLLOW */
 .follow{
-  margin-bottom:140px;
-  text-align:center;
+margin-bottom:140px;
+text-align:center;
 }
 .follow a{
-  display:inline-block;
-  padding:18px 28px;
-  border-radius:30px;
-  border:1px solid #8a2eff;
-  text-decoration:none;
-  color:white;
-  letter-spacing:.25em;
-  font-size:12px;
-  transition:.25s;
+display:inline-block;
+padding:18px 28px;
+border-radius:30px;
+border:1px solid #8a2eff;
+text-decoration:none;
+color:white;
+letter-spacing:.25em;
+font-size:12px;
+transition:.25s;
 }
 .follow a:hover{
-  background:#8a2eff;
-  box-shadow:0 0 30px #8a2eff;
+background:#8a2eff;
+box-shadow:0 0 30px #8a2eff;
 }
 
-/* mobile */
+/* MOBILE */
 @media(max-width:650px){
-  .releaseBox{ flex-direction:column; text-align:center; }
-  .player{ width:100%; }
-  .releaseInfo{ text-align:center; }
+.releaseBox{flex-direction:column;text-align:center;}
+.player{width:100%;}
+.releaseInfo{text-align:center;}
 }
 </style>
 </head>
 
 <body>
 
-<!-- NAV: visuals tab removed -->
 <header>
-  <a href="listen.html">LISTEN</a>
-  <a href="shop.html">SHOP</a>
-  <a href="follow.html">FOLLOW</a>
+<a href="listen.html">LISTEN</a>
+<a href="#visuals">VISUALS</a>
+<a href="shop.html">SHOP</a>
+<a href="follow.html">FOLLOW</a>
 </header>
 
 <section class="hero">
-  <div class="logo">CLAWBOI</div>
+<div class="logo">CLAWBOI</div>
 </section>
 
 <section class="section">
 
-  <div class="h2">LATEST RELEASE</div>
+<div class="h2">LATEST RELEASE</div>
 
-  <div class="releaseBox">
-    <img src="images/cover.jpg" class="cover" alt="Cover art">
+<div class="releaseBox">
+<img src="images/cover.jpg" class="cover">
+<div class="releaseInfo">
+<div class="songTitle">YOUR SONG TITLE</div>
 
-    <div class="releaseInfo">
-      <div class="songTitle">YOUR SONG TITLE</div>
+<audio controls class="player">
+<source src="audio/song.mp3" type="audio/mpeg">
+</audio>
 
-      <audio controls class="player">
-        <source src="audio/song.mp3" type="audio/mpeg">
-      </audio>
+<a href="listen.html" class="playBtn">PLAY ME</a>
+</div>
+</div>
 
-      <a href="listen.html" class="playBtn">PLAY ME</a>
-    </div>
-  </div>
+</section>
 
-  <div class="h2" style="margin-top:70px;">VIDEOS</div>
+<section class="section" id="visuals">
 
-  <!-- VIDEO FEED -->
-  <div class="videoFeed">
+<div class="h2">VISUALS</div>
 
-    <!-- Replace VIDEO_ID_HERE with your YouTube video ID -->
-    <div class="videoCard" data-youtube-id="VIDEO_ID_HERE">
-      <div class="videoFrame"></div>
-      <div class="videoMeta">
-        <div class="videoTitle">Music Video 01</div>
-        <a class="ytLink" href="https://www.youtube.com/watch?v=VIDEO_ID_HERE" target="_blank" rel="noopener">OPEN</a>
-      </div>
-    </div>
+<div class="videoFeed">
 
-    <div class="videoCard" data-youtube-id="VIDEO_ID_HERE_2">
-      <div class="videoFrame"></div>
-      <div class="videoMeta">
-        <div class="videoTitle">Music Video 02</div>
-        <a class="ytLink" href="https://www.youtube.com/watch?v=VIDEO_ID_HERE_2" target="_blank" rel="noopener">OPEN</a>
-      </div>
-    </div>
+<div class="videoCard" data-youtube-id="VIDEO_ID_1">
+<div class="videoFrame"></div>
+<div class="videoMeta">
+<div class="videoTitle">Video One</div>
+<a class="ytLink" href="https://youtube.com/watch?v=VIDEO_ID_1" target="_blank">OPEN</a>
+</div>
+</div>
 
-    <div class="videoCard" data-youtube-id="VIDEO_ID_HERE_3">
-      <div class="videoFrame"></div>
-      <div class="videoMeta">
-        <div class="videoTitle">Music Video 03</div>
-        <a class="ytLink" href="https://www.youtube.com/watch?v=VIDEO_ID_HERE_3" target="_blank" rel="noopener">OPEN</a>
-      </div>
-    </div>
+<div class="videoCard" data-youtube-id="VIDEO_ID_2">
+<div class="videoFrame"></div>
+<div class="videoMeta">
+<div class="videoTitle">Video Two</div>
+<a class="ytLink" href="https://youtube.com/watch?v=VIDEO_ID_2" target="_blank">OPEN</a>
+</div>
+</div>
 
-  </div>
+</div>
 
 </section>
 
 <div class="lyric">
-  “I tried everything but nothing’s fixing me”
+“I tried everything but nothing’s fixing me”
 </div>
 
 <div class="follow">
-  <a href="follow.html">FOLLOW FOR MORE</a>
+<a href="follow.html">FOLLOW FOR MORE</a>
 </div>
 
 <script>
-/*
-  FAST AUTOPLAY VIDEO FEED
-  - Lazy loads iframes only when near viewport
-  - Autoplay muted (required by browsers)
-  - Loops by using playlist=id
-*/
-
 function buildIframe(id){
-  const src =
-    "https://www.youtube.com/embed/" + encodeURIComponent(id) +
-    "?autoplay=1&mute=1&playsinline=1&controls=0&rel=0&modestbranding=1" +
-    "&loop=1&playlist=" + encodeURIComponent(id);
-
-  const iframe = document.createElement("iframe");
-  iframe.src = src;
-  iframe.setAttribute("title","YouTube video player");
-  iframe.setAttribute("frameborder","0");
-  iframe.setAttribute("allow","autoplay; encrypted-media; picture-in-picture");
-  iframe.setAttribute("allowfullscreen","");
-  iframe.style.width = "100%";
-  iframe.style.height = "100%";
-  return iframe;
+const src="https://www.youtube.com/embed/"+id+"?autoplay=1&mute=1&controls=0&loop=1&playlist="+id;
+const iframe=document.createElement("iframe");
+iframe.src=src;
+iframe.allow="autoplay";
+iframe.style.width="100%";
+iframe.style.height="100%";
+iframe.frameBorder="0";
+return iframe;
 }
-
-const cards = Array.from(document.querySelectorAll(".videoCard"));
-
-const io = new IntersectionObserver((entries) => {
-  entries.forEach(ent => {
-    const card = ent.target;
-    const frame = card.querySelector(".videoFrame");
-    const id = card.getAttribute("data-youtube-id");
-
-    if(!id) return;
-
-    if(ent.isIntersecting){
-      // Load only once
-      if(!frame.querySelector("iframe")){
-        frame.innerHTML = "";
-        frame.appendChild(buildIframe(id));
-      }
-    } else {
-      // Optional: unload when offscreen to save CPU on phones
-      // Comment this out if you want them to keep playing.
-      frame.innerHTML = "";
-    }
-  });
-}, { rootMargin: "300px 0px 300px 0px", threshold: 0.01 });
-
-cards.forEach(c => io.observe(c));
+const cards=document.querySelectorAll(".videoCard");
+const io=new IntersectionObserver(entries=>{
+entries.forEach(e=>{
+const frame=e.target.querySelector(".videoFrame");
+const id=e.target.dataset.youtubeId;
+if(e.isIntersecting){
+if(!frame.querySelector("iframe")){
+frame.innerHTML="";
+frame.appendChild(buildIframe(id));
+}
+}else{
+frame.innerHTML="";
+}
+});
+},{rootMargin:"300px"});
+cards.forEach(c=>io.observe(c));
 </script>
 
 </body>
