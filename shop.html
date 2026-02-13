@@ -1,1 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Shop — CLAWBOI</title>
+  <meta name="theme-color" content="#000000" />
+  <style>
+    :root{ --bg:#000; --fg:#fff; --hair:rgba(255,255,255,.10); --violet:#8A2EFF; --max:1180px; --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+    a{color:var(--fg);text-decoration:none}
+    a:hover{opacity:.92}
+    .wrap{max-width:var(--max);margin:0 auto;padding:0 22px 90px;}
+    header{position:sticky;top:0;background:rgba(0,0,0,.88);border-bottom:1px solid rgba(255,255,255,.08);z-index:6;}
+    .nav{max-width:var(--max);margin:0 auto;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;}
+    .brandMini{letter-spacing:.28em;text-transform:uppercase;font-weight:900;font-size:12px;opacity:.95;}
+    .navlinks{display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
+    .navlinks a{font-size:11px;letter-spacing:.30em;text-transform:uppercase;color:rgba(255,255,255,.70);padding:8px 0;border-bottom:1px solid transparent;}
+    .navlinks a:hover{color:rgba(255,255,255,.95);border-bottom-color:rgba(138,46,255,.85);}
+    .hero{padding:44px 0 18px;border-bottom:1px solid rgba(255,255,255,.08);}
+    .h1{margin:0;font-weight:950;letter-spacing:.10em;text-transform:uppercase;font-size:clamp(40px,7vw,84px);line-height:1;}
+    .sub{margin:12px 0 0;color:rgba(255,255,255,.72);letter-spacing:.22em;text-transform:uppercase;font-size:12px;line-height:1.6;max-width:70ch;}
+    .grid{margin-top:22px;display:grid;grid-template-columns:repeat(12,1fr);gap:12px;}
+    .card{grid-column:span 6;border:1px solid rgba(255,255,255,.10);border-radius:22px;background:rgba(255,255,255,.02);padding:18px;min-height:160px;position:relative;overflow:hidden;}
+    @media (max-width:900px){ .card{grid-column:span 12;} }
+    .t{margin:0;font-size:16px;letter-spacing:.22em;text-transform:uppercase;}
+    .m{margin-top:10px;color:rgba(255,255,255,.70);line-height:1.6;font-size:14px;}
+    .pill{display:inline-flex;margin-top:14px;border:1px solid rgba(138,46,255,.70);background:rgba(138,46,255,.10);border-radius:18px;padding:12px 14px;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:rgba(255,255,255,.92);}
+    footer{margin-top:44px;padding-top:22px;border-top:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.50);font-size:11px;letter-spacing:.24em;text-transform:uppercase;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav">
+      <div class="brandMini"><a href="index.html">CLAWBOI</a></div>
+      <nav class="navlinks" aria-label="Site">
+        <a href="listen.html">Listen</a>
+        <a href="index.html#visuals">Visuals</a>
+        <a href="shop.html" style="color:rgba(255,255,255,.95);border-bottom-color:rgba(138,46,255,.85);">Shop</a>
+        <a href="follow.html">Follow</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1 class="h1">Shop</h1>
+      <p class="sub">No Shopify required for a simple “DM to buy” drop. We can add Stripe later if you want.</p>
+    </section>
+
+    <section class="grid" aria-label="Shop items">
+      <article class="card">
+        <h2 class="t">Poster Drop</h2>
+        <div class="m">Limited prints. Add product photo later in /images.</div>
+        <a class="pill" href="follow.html">Buy (Link Later)</a>
+      </article>
+
+      <article class="card">
+        <h2 class="t">Merch</h2>
+        <div class="m">Hoodie / Tee / Sticker pack placeholders. Swap in real items.</div>
+        <a class="pill" href="follow.html">Buy (Link Later)</a>
+      </article>
+
+      <article class="card">
+        <h2 class="t">Digital</h2>
+        <div class="m">Beat packs, presets, stems, sample kit. Instant download later.</div>
+        <a class="pill" href="follow.html">Get (Link Later)</a>
+      </article>
+
+      <article class="card">
+        <h2 class="t">Custom</h2>
+        <div class="m">One-off piece. DM only. Make it rare.</div>
+        <a class="pill" href="follow.html">DM (Link Later)</a>
+      </article>
+    </section>
+
+    <footer>
+      <div>© <span id="y"></span> CLAWBOI</div>
+      <div>black · white · electric violet</div>
+    </footer>
+  </main>
+
+  <script>
+    document.getElementById('y').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
 
