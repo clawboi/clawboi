@@ -1,417 +1,419 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CLAWBOI</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>CLAWBOI</title>
+  <meta name="theme-color" content="#000000" />
 
-<style>
-body{
-margin:0;
-background:#000;
-color:#fff;
-font-family:Helvetica,Arial,sans-serif;
-overflow-x:hidden;
-}
+  <style>
+    :root{
+      --bg:#000;
+      --fg:#fff;
+      --violet:#8a2eff;      /* electric violet */
+      --violet2:#b98cff;
+      --hair: rgba(255,255,255,.10);
+      --muted: rgba(255,255,255,.70);
+      --max: 1100px;
+      --r: 20px;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x:hidden;
+    }
+    a{color:inherit;text-decoration:none}
+    a:hover{opacity:.92}
+    :focus-visible{ outline: 2px solid rgba(138,46,255,.9); outline-offset: 3px; border-radius: 12px; }
 
-/* NAV */
-header{
-position:fixed;
-top:0; left:0;
-width:100%;
-padding:18px 30px;
-display:flex;
-justify-content:center;
-gap:40px;
-flex-wrap: wrap;
-background:rgba(0,0,0,.6);
-backdrop-filter:blur(8px);
-z-index:1000;
-}
-header a{
-color:#fff;
-text-decoration:none;
-letter-spacing:.25em;
-font-size:12px;
-opacity:.8;
-transition:.25s;
-}
-header a:hover{
-opacity:1;
-color:#b026ff;
-}
+    /* subtle grain (fast) */
+    body:before{
+      content:"";
+      position:fixed; inset:0;
+      pointer-events:none;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(138,46,255,.10), transparent 35%),
+        radial-gradient(circle at 70% 30%, rgba(138,46,255,.08), transparent 38%),
+        radial-gradient(circle at 45% 85%, rgba(138,46,255,.06), transparent 45%);
+      opacity:.9;
+      mix-blend-mode: screen;
+    }
 
-/* HERO */
-.hero{
-height:100vh;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-text-align:center;
-}
+    /* NAV */
+    header{
+      position:fixed;
+      top:0; left:0;
+      width:100%;
+      z-index:1000;
+      display:flex;
+      justify-content:center;
+      gap:40px;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,.08);
 
-/* ELECTRIC LOGO */
-.logo{
-font-size:clamp(48px,9vw,110px);
-letter-spacing:.25em;
-position:relative;
-color:#fff;
-}
+      /* safe-area fixes iPhone clipping */
+      padding:
+        18px calc(28px + env(safe-area-inset-right))
+        18px calc(28px + env(safe-area-inset-left));
+    }
+    header a{
+      font-size:12px;
+      letter-spacing:.28em;
+      text-transform:uppercase;
+      color: rgba(255,255,255,.85);
+      padding: 6px 0;
+      white-space: nowrap;
+      border-bottom: 1px solid transparent;
+      transition: color .18s ease, border-color .18s ease, transform .18s ease;
+    }
+    header a:hover{
+      color: rgba(255,255,255,.98);
+      border-bottom-color: rgba(138,46,255,.75);
+      transform: translateY(-1px);
+    }
 
-/* glow layer */
-.logo::before{
-content:"CLAWBOI";
-position:absolute;
-left:0;
-top:0;
-color:#9d4dff;
-filter:blur(6px);
-opacity:.7;
-animation:electricGlow 2.5s infinite linear;
-}
+    /* Mobile tighten so nothing cuts */
+    @media (max-width:650px){
+      header{
+        gap:16px;
+        padding:
+          12px calc(12px + env(safe-area-inset-right))
+          12px calc(12px + env(safe-area-inset-left));
+      }
+      header a{
+        font-size:11px;
+        letter-spacing:.16em;
+      }
+    }
 
-/* flicker layer */
-.logo::after{
-content:"CLAWBOI";
-position:absolute;
-left:0;
-top:0;
-color:#d9b3ff;
-opacity:.35;
-animation:electricFlicker 3s infinite;
-}
+    .wrap{ max-width: var(--max); margin:0 auto; padding: 0 22px 90px; position:relative; z-index:1; }
 
-@keyframes electricGlow{
-0%{transform:translate(0,0)}
-25%{transform:translate(1px,-1px)}
-50%{transform:translate(-1px,1px)}
-75%{transform:translate(1px,1px)}
-100%{transform:translate(0,0)}
-}
+    /* HERO */
+    .hero{
+      min-height: 88vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding-top: 92px; /* header space */
+      padding-bottom: 40px;
+      text-align:center;
+    }
 
-@keyframes electricFlicker{
-0%,19%,22%,63%,65%,100%{opacity:.35}
-20%,21%,64%{opacity:0}
-}
+    .logo{
+      font-weight: 650;
+      letter-spacing: .34em;
+      font-size: clamp(44px, 10vw, 92px);
+      line-height: 1.05;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.95);
 
-/* SECTION */
-.section{
-padding:120px 20px 80px;
-text-align:center;
-}
-.h2{
-letter-spacing:.35em;
-font-size:12px;
-opacity:.7;
-margin-bottom:30px;
-}
+      /* base glow */
+      text-shadow:
+        0 0 14px rgba(138,46,255,.30),
+        0 0 32px rgba(138,46,255,.18);
 
-/* RELEASE BOX */
-.releaseBox{
-display:flex;
-gap:26px;
-align-items:center;
-border:1px solid rgba(255,255,255,.12);
-border-radius:26px;
-padding:24px;
-max-width:640px;
-margin:auto;
-background:rgba(255,255,255,.02);
-}
-.cover{
-width:160px;
-height:160px;
-object-fit:cover;
-border-radius:18px;
-box-shadow:0 0 40px rgba(138,46,255,.25);
-}
-.releaseInfo{
-display:flex;
-flex-direction:column;
-gap:18px;
-text-align:left;
-}
-.songTitle{
-font-size:18px;
-letter-spacing:.18em;
-text-transform:uppercase;
-}
-.player{
-filter:invert(1);
-width:260px;
-}
-.playBtn{
-display:inline-block;
-padding:14px 20px;
-border-radius:18px;
-border:1px solid rgba(138,46,255,.8);
-background:rgba(138,46,255,.12);
-letter-spacing:.22em;
-font-size:12px;
-text-transform:uppercase;
-color:white;
-text-decoration:none;
-transition:.25s;
-}
-.playBtn:hover{
-background:#8a2eff;
-box-shadow:0 0 25px #8a2eff;
-}
+      /* smooth, cheap animation */
+      animation: electricGlow 2.9s ease-in-out infinite;
+    }
 
-/* VIDEO FEED */
-.videoFeed{
-max-width:920px;
-margin:60px auto 0;
-display:grid;
-gap:22px;
-}
-.videoCard{
-border:1px solid rgba(255,255,255,.12);
-background:rgba(255,255,255,.02);
-border-radius:22px;
-overflow:hidden;
-}
-.videoFrame{
-width:100%;
-aspect-ratio:16/9;
-background:#050505;
-position:relative;
-}
-.videoFrame::after{
-content:"LOADING";
-position:absolute;
-inset:0;
-display:flex;
-align-items:center;
-justify-content:center;
-letter-spacing:.35em;
-font-size:11px;
-color:rgba(255,255,255,.45);
-}
-.videoMeta{
-padding:14px 16px 16px;
-display:flex;
-justify-content:space-between;
-align-items:center;
-}
-.videoTitle{
-font-size:12px;
-letter-spacing:.22em;
-text-transform:uppercase;
-}
-.ytLink{
-font-size:11px;
-letter-spacing:.22em;
-text-transform:uppercase;
-color:rgba(255,255,255,.65);
-text-decoration:none;
-}
-.ytLink:hover{
-color:#fff;
-border-bottom:1px solid #8a2eff;
-}
+    /* respects users who hate motion */
+    @media (prefers-reduced-motion: reduce){
+      .logo{ animation:none; }
+    }
 
-/* LYRIC */
-.lyric{
-margin:120px auto;
-max-width:700px;
-font-size:22px;
-letter-spacing:.08em;
-opacity:.85;
-text-align:center;
-}
+    @keyframes electricGlow{
+      0%{
+        text-shadow:
+          0 0 10px rgba(138,46,255,.20),
+          0 0 24px rgba(138,46,255,.12);
+        filter: saturate(110%);
+      }
+      45%{
+        text-shadow:
+          0 0 12px rgba(138,46,255,.35),
+          0 0 40px rgba(138,46,255,.22),
+          0 0 70px rgba(138,46,255,.12);
+        filter: saturate(135%);
+      }
+      100%{
+        text-shadow:
+          0 0 10px rgba(138,46,255,.22),
+          0 0 26px rgba(138,46,255,.14);
+        filter: saturate(120%);
+      }
+    }
 
-/* FOLLOW */
-.follow{
-margin-bottom:140px;
-text-align:center;
-}
-.follow a{
-display:inline-block;
-padding:18px 28px;
-border-radius:30px;
-border:1px solid #8a2eff;
-text-decoration:none;
-color:white;
-letter-spacing:.25em;
-font-size:12px;
-transition:.25s;
-}
-.follow a:hover{
-background:#8a2eff;
-box-shadow:0 0 30px #8a2eff;
-}
+    /* SECTIONS */
+    section.block{
+      border-top: 1px solid rgba(255,255,255,.08);
+      padding: 48px 0;
+    }
+    .kicker{
+      margin:0 0 10px;
+      font-size:12px;
+      letter-spacing:.28em;
+      text-transform:uppercase;
+      color: rgba(255,255,255,.72);
+    }
 
-/* MOBILE */
-@media (max-width:650px){
-  header{
-    padding: 12px calc(12px + env(safe-area-inset-right))
-             12px calc(12px + env(safe-area-inset-left));
-    gap: 14px;
-    flex-wrap: nowrap;
-  }
-  header a{
-    font-size: 11px;
-    letter-spacing: .14em;
-    white-space: nowrap;
-  }
-}
+    /* Latest release box */
+    .releaseBox{
+      display:flex;
+      gap:18px;
+      align-items:center;
+      border: 1px solid rgba(138,46,255,.35);
+      background: rgba(138,46,255,.06);
+      border-radius: 22px;
+      padding: 18px;
+      overflow:hidden;
+    }
+    .cover{
+      width: 110px;
+      height: 110px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      overflow:hidden;
+      flex: 0 0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color: rgba(255,255,255,.55);
+      font-size: 11px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+    .cover img{width:100%;height:100%;object-fit:cover;display:block}
 
-  /* MOBILE NAV FIX */
-@media (max-width: 650px){
-  header{
-    padding: 14px 16px;      /* tighter */
-    gap: 18px;               /* less space between links */
-    justify-content: space-between; /* spreads evenly without huge gaps */
-  }
-  header a{
-    font-size: 11px;         /* slightly smaller */
-    letter-spacing: .18em;   /* less spaced out */
-    white-space: nowrap;     /* keeps each label on one line */
-  }
-}
-  .logo span{
-  position:relative;
-  display:inline-block;
-  color:white;
-  text-shadow:
-    0 0 5px #8a2eff,
-    0 0 10px #8a2eff,
-    0 0 20px #8a2eff,
-    0 0 40px #8a2eff;
+    .releaseInfo{
+      flex: 1 1 auto;
+      min-width: 0;
+      text-align:left;
+    }
+    .releaseTitle{
+      margin:0;
+      font-size: 18px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+    }
+    .releaseMeta{
+      margin: 8px 0 0;
+      color: rgba(255,255,255,.70);
+      font-size: 13px;
+      line-height: 1.5;
+    }
 
-  animation:electricFlow 2.5s linear infinite;
-}
+    .actions{
+      display:flex;
+      gap:10px;
+      flex: 0 0 auto;
+      align-items:center;
+    }
+    .btn{
+      border: 1px solid rgba(138,46,255,.75);
+      background: rgba(138,46,255,.14);
+      color: rgba(255,255,255,.95);
+      border-radius: 999px;
+      padding: 12px 14px;
+      font-size: 12px;
+      letter-spacing: .20em;
+      text-transform: uppercase;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      transition: transform .18s ease, background .18s ease, box-shadow .18s ease, border-color .18s ease;
+      white-space: nowrap;
+    }
+    .btn:hover{
+      transform: translateY(-1px);
+      background: rgba(138,46,255,.20);
+      border-color: rgba(138,46,255,.95);
+      box-shadow: 0 0 0 6px rgba(138,46,255,.10);
+    }
+    .btn:active{ transform: translateY(0) scale(.99); }
 
-@keyframes electricFlow{
-  0%{
-    text-shadow:
-      0 0 2px #8a2eff,
-      0 0 5px #8a2eff,
-      0 0 10px #8a2eff,
-      0 0 20px #8a2eff;
-  }
+    .player{
+      width: 290px;
+      max-width: 42vw;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.02);
+      padding: 10px;
+    }
+    .player small{
+      display:block;
+      color: rgba(255,255,255,.55);
+      letter-spacing:.14em;
+      text-transform: uppercase;
+      font-size: 10px;
+      margin-bottom: 8px;
+    }
+    .player audio{ width: 100%; }
 
-  50%{
-    text-shadow:
-      0 0 6px #8a2eff,
-      0 0 15px #8a2eff,
-      0 0 30px #8a2eff,
-      0 0 60px #8a2eff;
-  }
+    @media (max-width:650px){
+      .releaseBox{ flex-direction: column; text-align:center; }
+      .releaseInfo{ text-align:center; }
+      .actions{ width:100%; justify-content:center; flex-wrap: wrap; }
+      .player{ width:100%; max-width: 100%; }
+    }
 
-  100%{
-    text-shadow:
-      0 0 2px #8a2eff,
-      0 0 5px #8a2eff,
-      0 0 10px #8a2eff,
-      0 0 20px #8a2eff;
-  }
-}
+    /* Visuals */
+    .videoGrid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 14px;
+    }
+    @media (max-width:800px){
+      .videoGrid{ grid-template-columns: 1fr; }
+    }
+    .videoCard{
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.02);
+      border-radius: 22px;
+      overflow:hidden;
+    }
+    .videoCard iframe{
+      width:100%;
+      aspect-ratio: 16/9;
+      border:0;
+      display:block;
+      background:#000;
+    }
+    .videoCap{
+      padding: 12px 14px;
+      font-size: 12px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.78);
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
 
-@keyframes electricMove{
-0%{transform:translateX(-100%)}
-100%{transform:translateX(100%)}
-}
+    /* lyric + footer */
+    .lyric{
+      margin: 0;
+      font-size: clamp(16px, 2.2vw, 20px);
+      line-height: 1.7;
+      color: rgba(255,255,255,.82);
+      max-width: 70ch;
+    }
+    .lyric em{
+      font-style: normal;
+      color: rgba(138,46,255,.90);
+      text-shadow: 0 0 18px rgba(138,46,255,.18);
+    }
 
-</style>
+    footer{
+      padding-top: 32px;
+      color: rgba(255,255,255,.55);
+      font-size: 11px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      display:flex;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      border-top: 1px solid rgba(255,255,255,.08);
+      margin-top: 30px;
+    }
+  </style>
 </head>
 
 <body>
+  <header aria-label="Primary">
+    <a href="listen.html">LISTEN</a>
+    <a href="#visuals">VISUALS</a>
+    <a href="shop.html">SHOP</a>
+    <a href="follow.html">FOLLOW</a>
+  </header>
 
-<header>
-<a href="listen.html">LISTEN</a>
-<a href="#visuals">VISUALS</a>
-<a href="shop.html">SHOP</a>
-<a href="follow.html">FOLLOW</a>
-</header>
+  <main class="wrap">
+    <section class="hero" aria-label="Hero">
+      <div>
+        <div class="logo">CLAWBOI</div>
+      </div>
+    </section>
 
-<section class="hero">
-<div class="logo"><span>CLAWBOI</span></div>
-</section>
+    <section class="block" aria-label="Latest Release">
+      <p class="kicker">Latest Release</p>
 
-<section class="section">
+      <div class="releaseBox">
+        <div class="cover" aria-label="Cover art">
+          <!-- Put your cover art in /images and set the filename below -->
+          <!-- Example: images/latest-cover.jpg -->
+          <img src="images/latest-cover.jpg" alt="Latest release cover art" onerror="this.remove(); this.parentNode.textContent='ADD COVER ART';" />
+        </div>
 
-<div class="h2">LATEST RELEASE</div>
+        <div class="releaseInfo">
+          <h2 class="releaseTitle">TITLE HERE</h2>
+          <p class="releaseMeta">
+            Drop date / vibe / one-liner. Keep it cold. Keep it true.
+          </p>
+          <div class="actions" style="margin-top:12px;">
+            <a class="btn" href="listen.html">PLAY ME</a>
+            <a class="btn" href="listen.html">LISTEN PAGE</a>
+          </div>
+        </div>
 
-<div class="releaseBox">
-<img src="images/cover.jpg" class="cover">
-<div class="releaseInfo">
-<div class="songTitle">YOUR SONG TITLE</div>
+        <div class="player" aria-label="Audio player">
+          <small>Preview</small>
+          <!-- Optional: add mp3 file like /audio/latest.mp3 -->
+          <audio controls preload="none">
+            <source src="audio/latest.mp3" type="audio/mpeg" />
+          </audio>
+        </div>
+      </div>
+    </section>
 
-<audio controls class="player">
-<source src="audio/song.mp3" type="audio/mpeg">
-</audio>
+    <section id="visuals" class="block" aria-label="Visuals">
+      <p class="kicker">Visuals</p>
 
-<a href="listen.html" class="playBtn">PLAY ME</a>
-</div>
-</div>
+      <div class="videoGrid">
+        <!-- Replace the VIDEO_IDs with your YouTube IDs -->
+        <div class="videoCard">
+          <iframe
+            src="https://www.youtube.com/embed/VIDEO_ID_1?rel=0&modestbranding=1"
+            title="Clawboi Visual 1"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen></iframe>
+          <div class="videoCap">Music Video 01</div>
+        </div>
 
-</section>
+        <div class="videoCard">
+          <iframe
+            src="https://www.youtube.com/embed/VIDEO_ID_2?rel=0&modestbranding=1"
+            title="Clawboi Visual 2"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen></iframe>
+          <div class="videoCap">Music Video 02</div>
+        </div>
+      </div>
+    </section>
 
-<section class="section" id="visuals">
+    <section class="block" aria-label="Lyric">
+      <p class="kicker">one line</p>
+      <p class="lyric">“I tried everything but <em>nothing’s fixing me</em>.”</p>
 
-<div class="h2">VISUALS</div>
+      <div style="margin-top:18px;">
+        <a class="btn" href="follow.html">FOLLOW FOR MORE</a>
+      </div>
 
-<div class="videoFeed">
+      <footer>
+        <div>© <span id="y"></span> CLAWBOI</div>
+        <div style="color:rgba(255,255,255,.62)">BLACK / WHITE / ELECTRIC VIOLET</div>
+      </footer>
+    </section>
+  </main>
 
-<div class="videoCard" data-youtube-id="VIDEO_ID_1">
-<div class="videoFrame"></div>
-<div class="videoMeta">
-<div class="videoTitle">Video One</div>
-<a class="ytLink" href="https://youtube.com/watch?v=VIDEO_ID_1" target="_blank">OPEN</a>
-</div>
-</div>
-
-<div class="videoCard" data-youtube-id="VIDEO_ID_2">
-<div class="videoFrame"></div>
-<div class="videoMeta">
-<div class="videoTitle">Video Two</div>
-<a class="ytLink" href="https://youtube.com/watch?v=VIDEO_ID_2" target="_blank">OPEN</a>
-</div>
-</div>
-
-</div>
-
-</section>
-
-<div class="lyric">
-“I tried everything but nothing’s fixing me”
-</div>
-
-<div class="follow">
-<a href="follow.html">FOLLOW FOR MORE</a>
-</div>
-
-<script>
-function buildIframe(id){
-const src="https://www.youtube.com/embed/"+id+"?autoplay=1&mute=1&controls=0&loop=1&playlist="+id;
-const iframe=document.createElement("iframe");
-iframe.src=src;
-iframe.allow="autoplay";
-iframe.style.width="100%";
-iframe.style.height="100%";
-iframe.frameBorder="0";
-return iframe;
-}
-const cards=document.querySelectorAll(".videoCard");
-const io=new IntersectionObserver(entries=>{
-entries.forEach(e=>{
-const frame=e.target.querySelector(".videoFrame");
-const id=e.target.dataset.youtubeId;
-if(e.isIntersecting){
-if(!frame.querySelector("iframe")){
-frame.innerHTML="";
-frame.appendChild(buildIframe(id));
-}
-}else{
-frame.innerHTML="";
-}
-});
-},{rootMargin:"300px"});
-cards.forEach(c=>io.observe(c));
-</script>
-
+  <script>
+    document.getElementById('y').textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
