@@ -132,20 +132,8 @@
     }
 
     /* Aura drift behind hero (CSS-only) */
-    .hero:before{
-      content:"";
-      position:absolute;
-      inset:-70%;
-      background:
-        radial-gradient(circle at 30% 30%, rgba(138,46,255,.20), transparent 55%),
-        radial-gradient(circle at 70% 40%, rgba(185,140,255,.12), transparent 58%),
-        radial-gradient(circle at 50% 80%, rgba(138,46,255,.08), transparent 60%);
-      filter: blur(22px);
-      animation: auraDrift 10s ease-in-out infinite;
-      pointer-events:none;
-      opacity:.55;
-       mix-blend-mode: screen;
-      pointer-events:none;
+    .hero:before{ display:none; }
+    
     }
     @keyframes auraDrift{
       0%,100%{ transform: translate3d(0,0,0) scale(1); opacity:.9; }
@@ -540,7 +528,7 @@
         <div class="videoCard">
          <iframe
 src="https://www.youtube.com/embed/uVcRKLRVFgs"
-title="Clawboi Visual 1"
+title="Clawboi 4 Cupzzzz"
 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
 allowfullscreen></iframe>
           <div class="videoCap">Music Video 01</div>
@@ -549,7 +537,7 @@ allowfullscreen></iframe>
         <div class="videoCard">
          <iframe
 src="https://www.youtube.com/embed/0J1GBxj3T0U"
-title="Clawboi Visual 2"
+title="Lung$"
 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
 allowfullscreen></iframe>
           <div class="videoCap">Music Video 02</div>
@@ -569,7 +557,7 @@ allowfullscreen></iframe>
 
       <footer>
         <div>© <span id="y"></span> CLAWBOI</div>
-        <div style="color:rgba(255,255,255,.62)">BLACK / WHITE / ELECTRIC VIOLET</div>
+        <div style="color:rgba(255,255,255,.62)"></div>
       </footer>
     </section>
   </main>
