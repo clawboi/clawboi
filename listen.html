@@ -132,49 +132,6 @@
       line-height: .98;
       text-shadow: 0 0 32px rgba(138,46,255,.18);
     }
-    .sub{
-      margin: 14px 0 0;
-      max-width: 80ch;
-      color: rgba(255,255,255,.82);
-      font-size: clamp(16px, 2.1vw, 20px);
-      line-height: 1.7;
-    }
-    .vio{ color: rgba(138,46,255,.98); text-shadow: 0 0 16px rgba(138,46,255,.16); }
-
-    .quickRow{
-      margin-top: 18px;
-      display:flex;
-      flex-wrap:wrap;
-      gap: 12px;
-      align-items:center;
-    }
-    .pill{
-      border: 1px solid rgba(138,46,255,.70);
-      background: rgba(138,46,255,.10);
-      border-radius: 18px;
-      padding: 14px 14px;
-      font-size: 11px;
-      letter-spacing: .28em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.92);
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-height: 52px;
-      -webkit-tap-highlight-color: transparent;
-      transition: transform .16s ease, background .16s ease, border-color .16s ease, box-shadow .16s ease;
-    }
-    .pill:hover{
-      transform: translateY(-1px);
-      border-color: rgba(138,46,255,.98);
-      background: rgba(138,46,255,.14);
-      box-shadow: 0 0 0 6px rgba(138,46,255,.10);
-    }
-    .pill.ghost{
-      border-color: rgba(255,255,255,.16);
-      background: rgba(255,255,255,.03);
-      color: rgba(255,255,255,.86);
-    }
 
     /* sections */
     .section{
@@ -213,46 +170,39 @@
       padding-top: 18px;
     }
 
-    /* cards grid */
-    .grid{
+    .quickRow{
       margin-top: 18px;
-      display:grid;
-      grid-template-columns: repeat(12, 1fr);
+      display:flex;
+      flex-wrap:wrap;
       gap: 12px;
+      align-items:center;
     }
-    .card{
-      grid-column: span 6;
-      border:1px solid rgba(255,255,255,.10);
-      border-radius: 22px;
-      background: rgba(255,255,255,.02);
-      padding: 18px;
-      position:relative;
-      overflow:hidden;
-      transform: translateZ(0);
-    }
-    @media (max-width: 940px){
-      .card{ grid-column: span 12; }
-    }
-    .card:before{
-      content:"";
-      position:absolute; right:-50px; top:-50px;
-      width:160px; height:160px;
-      background: radial-gradient(circle at 30% 30%, rgba(138,46,255,.35), transparent 60%);
-      opacity:.65;
-      pointer-events:none;
-    }
-    .t{
-      margin:0;
-      font-size: 12px;
-      letter-spacing:.34em;
+    .pill{
+      border: 1px solid rgba(138,46,255,.70);
+      background: rgba(138,46,255,.10);
+      border-radius: 18px;
+      padding: 14px 14px;
+      font-size: 11px;
+      letter-spacing: .28em;
       text-transform: uppercase;
-      color: rgba(255,255,255,.86);
+      color: rgba(255,255,255,.92);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height: 52px;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .16s ease, background .16s ease, border-color .16s ease, box-shadow .16s ease;
     }
-    .m{
-      margin-top: 10px;
-      color: rgba(255,255,255,.70);
-      line-height: 1.6;
-      font-size: 14px;
+    .pill:hover{
+      transform: translateY(-1px);
+      border-color: rgba(138,46,255,.98);
+      background: rgba(138,46,255,.14);
+      box-shadow: 0 0 0 6px rgba(138,46,255,.10);
+    }
+    .pill.ghost{
+      border-color: rgba(255,255,255,.16);
+      background: rgba(255,255,255,.03);
+      color: rgba(255,255,255,.86);
     }
 
     /* lists */
@@ -271,9 +221,14 @@
       padding: 16px;
       position:relative;
       overflow:hidden;
+      cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
     }
     .songCard:hover{
       border-color: rgba(138,46,255,.40);
+      transform: translateY(-1px);
+      box-shadow: 0 0 0 6px rgba(138,46,255,.06);
     }
 
     .songTop{
@@ -296,32 +251,38 @@
       text-transform: uppercase;
       color: rgba(255,255,255,.56);
     }
-    .songBtns{
-      margin-top: 12px;
-      display:flex;
-      flex-wrap:wrap;
-      gap: 10px;
-      align-items:center;
+
+    /* lyrics card */
+    .grid{
+      margin-top: 18px;
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
     }
-    .mini{
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.03);
-      border-radius: 16px;
-      padding: 12px 12px;
-      font-size: 10px;
-      letter-spacing:.28em;
+    .card{
+      grid-column: span 12;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 22px;
+      background: rgba(255,255,255,.02);
+      padding: 18px;
+      position:relative;
+      overflow:hidden;
+      transform: translateZ(0);
+    }
+    .t{
+      margin:0;
+      font-size: 12px;
+      letter-spacing:.34em;
       text-transform: uppercase;
       color: rgba(255,255,255,.86);
-      transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
     }
-    .mini:hover{
-      transform: translateY(-1px);
-      border-color: rgba(138,46,255,.65);
-      background: rgba(138,46,255,.08);
-      box-shadow: 0 0 0 6px rgba(138,46,255,.08);
+    .m{
+      margin-top: 10px;
+      color: rgba(255,255,255,.70);
+      line-height: 1.6;
+      font-size: 14px;
     }
 
-    /* lyrics collapsible */
     details{
       margin-top: 12px;
       border-top: 1px solid rgba(255,255,255,.08);
@@ -365,6 +326,7 @@
     .reveal.is-visible{ opacity:1; transform: translateY(0); }
     @media (prefers-reduced-motion: reduce){
       .reveal{ opacity:1; transform:none; }
+      .songCard{ transition:none; }
     }
   </style>
 </head>
@@ -388,10 +350,6 @@
   <main class="wrap">
     <section class="hero">
       <h1 class="h1">Listen</h1>
-      <p class="sub">
-        Two lanes, same heart: <span class="vio">House / Electronic</span> + <span class="vio">Hip Hop</span>.
-        Click a tile, go straight to the music.
-      </p>
 
       <div class="quickRow" aria-label="Quick jump">
         <a class="pill" href="#platforms">Platforms</a>
@@ -419,110 +377,85 @@
       </div>
     </section>
 
-    <!-- ALBUMS: HOUSE/ELECTRONIC -->
+    <!-- ALBUMS -->
     <section class="section reveal" id="albums">
       <div class="head">
         <h2 class="h2">Albums</h2>
-        <p class="hint">house / electronic</p>
+        <p class="hint">youtube playlists</p>
       </div>
 
       <p class="copy">
-        Playlists are hosted on YouTube. One click and you’re in.
+        One click and you’re in.
       </p>
 
-      <div class="songs" aria-label="House / Electronic albums">
-        <article class="songCard">
+      <div class="songs" aria-label="Albums">
+        <article class="songCard" data-href="https://youtube.com/playlist?list=OLAK5uy_nQGQMCJ0EHnAeBzgJXmWxtZXT4LJ4S3jI&si=L7-VQjEuYvXPD-9n">
           <div class="songTop">
             <h3 class="songName">Twerking Naked</h3>
-            <p class="songMeta">album · house/electronic</p>
-          </div>
-          <div class="songBtns">
-            <a class="mini" href="https://youtube.com/playlist?list=OLAK5uy_nQGQMCJ0EHnAeBzgJXmWxtZXT4LJ4S3jI&si=L7-VQjEuYvXPD-9n" target="_blank" rel="noopener">YouTube Playlist</a>
+            <p class="songMeta">album</p>
           </div>
         </article>
 
-        <article class="songCard">
+        <article class="songCard" data-href="https://youtube.com/playlist?list=OLAK5uy_kn7r3TBei8FFmraj0TYyIpcnvze0dRo94&si=mnhPulVvp70pmD1x">
           <div class="songTop">
             <h3 class="songName">Club Juice</h3>
-            <p class="songMeta">album · house/electronic</p>
-          </div>
-          <div class="songBtns">
-            <a class="mini" href="https://youtube.com/playlist?list=OLAK5uy_kn7r3TBei8FFmraj0TYyIpcnvze0dRo94&si=mnhPulVvp70pmD1x" target="_blank" rel="noopener">YouTube Playlist</a>
+            <p class="songMeta">album</p>
           </div>
         </article>
 
-        <article class="songCard">
+        <article class="songCard" data-href="https://youtube.com/playlist?list=OLAK5uy_mm2pE-2Dj8HaeN61qq3c8wPEayhpOOMbI&si=n6ehsdq_gKY2Xddv">
           <div class="songTop">
             <h3 class="songName">leila</h3>
-            <p class="songMeta">album · house/electronic</p>
-          </div>
-          <div class="songBtns">
-            <a class="mini" href="https://youtube.com/playlist?list=OLAK5uy_mm2pE-2Dj8HaeN61qq3c8wPEayhpOOMbI&si=n6ehsdq_gKY2Xddv" target="_blank" rel="noopener">YouTube Playlist</a>
+            <p class="songMeta">album</p>
           </div>
         </article>
       </div>
     </section>
 
-    <!-- SINGLES: HIP HOP -->
+    <!-- SINGLES -->
     <section class="section reveal" id="singles">
       <div class="head">
         <h2 class="h2">Singles</h2>
-        <p class="hint">hip hop</p>
+        <p class="hint">youtube</p>
       </div>
 
       <p class="copy">
-        Singles are linked to YouTube (official playlists/videos).
+        Click a title, go straight to the music.
       </p>
 
-      <div class="songs" aria-label="Hip hop singles">
-        <article class="songCard">
+      <div class="songs" aria-label="Singles">
+        <article class="songCard" data-href="https://youtube.com/playlist?list=OLAK5uy_kn5C0-QlsH3x2EqgZqGwgEtw8HbXHCAuU&si=2MfXAopKvG0v00m1">
           <div class="songTop">
             <h3 class="songName">Goodbye</h3>
-            <p class="songMeta">single · hip hop</p>
-          </div>
-          <div class="songBtns">
-            <a class="mini" href="https://youtube.com/playlist?list=OLAK5uy_kn5C0-QlsH3x2EqgZqGwgEtw8HbXHCAuU&si=2MfXAopKvG0v00m1" target="_blank" rel="noopener">YouTube</a>
+            <p class="songMeta">single</p>
           </div>
         </article>
 
-        <article class="songCard" id="two-times">
+        <article class="songCard" id="two-times" data-href="https://youtu.be/DEdhtI3LMS4?si=L8gA0uUbHFrX2_zN">
           <div class="songTop">
             <h3 class="songName">Two Times</h3>
-            <p class="songMeta">single · hip hop</p>
-          </div>
-          <div class="songBtns">
-            <a class="mini" href="https://youtube.com/playlist?list=OLAK5uy_mSRKlNcC-f_eZddyel1QJQgQFjPp6rAcs&si=AFfVm-WssjI-mZV-" target="_blank" rel="noopener">YouTube</a>
-            <a class="mini" href="#lyrics">Lyrics</a>
+            <p class="songMeta">single</p>
           </div>
         </article>
 
-        <article class="songCard">
+        <article class="songCard" data-href="https://youtube.com/playlist?list=OLAK5uy_nOF2ZQGf5DCZKVjoGSJz2lh6CjrJ9d3nk&si=3MKMe2K5kKKRcukc">
           <div class="songTop">
             <h3 class="songName">DROP 54</h3>
-            <p class="songMeta">single · hip hop</p>
-          </div>
-          <div class="songBtns">
-            <a class="mini" href="https://youtube.com/playlist?list=OLAK5uy_nOF2ZQGf5DCZKVjoGSJz2lh6CjrJ9d3nk&si=3MKMe2K5kKKRcukc" target="_blank" rel="noopener">YouTube</a>
+            <p class="songMeta">single</p>
           </div>
         </article>
 
-        <article class="songCard">
+        <article class="songCard" data-href="https://youtu.be/dlZriw8wdQg?si=Ew-qCKCIfisypTKS">
           <div class="songTop">
             <h3 class="songName">Body Count</h3>
-            <p class="songMeta">single · hip hop</p>
-          </div>
-          <div class="songBtns">
-            <a class="mini" href="https://youtu.be/dlZriw8wdQg?si=Ew-qCKCIfisypTKS" target="_blank" rel="noopener">YouTube</a>
+            <p class="songMeta">single</p>
           </div>
         </article>
 
-        <article class="songCard">
+        <article class="songCard" data-href="https://youtu.be/1vmeDqYX8E4?si=Bx4IJDvUtorH2Aka">
           <div class="songTop">
             <h3 class="songName">ONM333</h3>
-            <p class="songMeta">single · hip hop</p>
-          </div>
-          <div class="songBtns">
-            <a class="mini" href="https://youtu.be/1vmeDqYX8E4?si=Bx4IJDvUtorH2Aka" target="_blank" rel="noopener">YouTube</a>
+            <p class="songMeta">single</p>
           </div>
         </article>
       </div>
@@ -537,11 +470,10 @@
 
       <p class="copy">
         A clean on-page lyric drop for “Two Times”.
-        (You can add more songs later the same way.)
       </p>
 
       <div class="grid" aria-label="Lyrics cards">
-        <article class="card" style="grid-column: span 12;">
+        <article class="card">
           <h3 class="t">Two Times</h3>
           <div class="m">Tap to expand.</div>
 
@@ -590,11 +522,6 @@ shawty left so damn quick quick I think she was wrong
 shadows grow deep and they just start to grow long
             </div>
           </details>
-
-          <div class="songBtns" style="margin-top:14px;">
-            <a class="mini" href="#two-times">Back to Two Times</a>
-            <a class="mini" href="https://youtube.com/playlist?list=OLAK5uy_mSRKlNcC-f_eZddyel1QJQgQFjPp6rAcs&si=AFfVm-WssjI-mZV-" target="_blank" rel="noopener">Play on YouTube</a>
-          </div>
         </article>
       </div>
 
@@ -607,6 +534,24 @@ shadows grow deep and they just start to grow long
 
   <script>
     document.getElementById('y').textContent = new Date().getFullYear();
+
+    // click a title -> go straight to music
+    document.querySelectorAll('.songCard[data-href]').forEach(card=>{
+      card.addEventListener('click', ()=>{
+        const url = card.getAttribute('data-href');
+        if(url) window.open(url, '_blank', 'noopener');
+      });
+      // keyboard accessibility
+      card.setAttribute('tabindex','0');
+      card.setAttribute('role','link');
+      card.addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          const url = card.getAttribute('data-href');
+          if(url) window.open(url, '_blank', 'noopener');
+        }
+      });
+    });
 
     // light reveal
     const els = Array.from(document.querySelectorAll('.reveal'));
