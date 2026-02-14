@@ -7,18 +7,23 @@
 
 <style>
   :root{
-    --bg:#000;
-    --fg:#fff;
+    --bg:#040407;
+    --fg:#f2f2ff;
     --violet:#8a2eff;
-    --muted:rgba(255,255,255,.72);
+    --violet2:#3b0a6e;
+    --muted:rgba(242,242,255,.72);
     --good:#00ff9c;
     --bad:#ff2a2a;
+    --ink:rgba(255,255,255,.10);
   }
 
   html,body{height:100%}
   body{
     margin:0;
-    background:var(--bg);
+    background:
+      radial-gradient(900px 650px at 25% 18%, rgba(138,46,255,.16), transparent 60%),
+      radial-gradient(900px 650px at 78% 30%, rgba(255,42,42,.08), transparent 62%),
+      linear-gradient(#000, var(--bg));
     overflow:hidden;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     color:var(--fg);
@@ -34,8 +39,8 @@
     inset:0;
     z-index:1;
     width:100vw;
-    height:100vh;
-    touch-action:none; /* important: movement on canvas only */
+    height:100dvh; /* IMPORTANT: iPhone dynamic toolbar */
+    touch-action:none;
   }
 
   /* HUD */
@@ -50,13 +55,13 @@
     text-align:center;
     letter-spacing:.18em;
     font-size:12px;
-    opacity:.98;
+    opacity:.985;
     padding:10px 12px;
-    border:1px solid rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.10);
     border-radius:16px;
-    background:rgba(0,0,0,.35);
-    backdrop-filter: blur(8px);
-    box-shadow: 0 0 0 10px rgba(138,46,255,.035);
+    background:rgba(0,0,0,.45);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 0 10px rgba(138,46,255,.05);
   }
   #ui .row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
   .tag{
@@ -67,9 +72,9 @@
     color:rgba(255,255,255,.92);
     white-space:nowrap;
   }
-  .tag.v{border-color: rgba(138,46,255,.35); background: rgba(138,46,255,.08);}
-  .tag.g{border-color: rgba(0,255,156,.35); background: rgba(0,255,156,.06);}
-  .tag.r{border-color: rgba(255,42,42,.35); background: rgba(255,42,42,.06);}
+  .tag.v{border-color: rgba(138,46,255,.40); background: rgba(138,46,255,.10);}
+  .tag.g{border-color: rgba(0,255,156,.40); background: rgba(0,255,156,.07);}
+  .tag.r{border-color: rgba(255,42,42,.40); background: rgba(255,42,42,.07);}
 
   /* OVERLAY */
   #overlay{
@@ -78,7 +83,7 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    background:#000;
+    background:rgba(0,0,0,.88);
     z-index:10;
     padding:18px;
   }
@@ -95,11 +100,12 @@
     content:"";
     position:absolute; inset:-40%;
     background:
-      radial-gradient(780px 560px at 22% 18%, rgba(138,46,255,.18), transparent 60%),
-      radial-gradient(780px 560px at 78% 30%, rgba(255,255,255,.05), transparent 60%),
-      radial-gradient(780px 560px at 40% 88%, rgba(138,46,255,.10), transparent 60%);
+      radial-gradient(820px 580px at 20% 15%, rgba(138,46,255,.22), transparent 60%),
+      radial-gradient(820px 580px at 80% 32%, rgba(255,42,42,.10), transparent 62%),
+      radial-gradient(820px 580px at 44% 90%, rgba(138,46,255,.10), transparent 60%);
     opacity:.95;
     pointer-events:none;
+    filter: contrast(1.05) saturate(1.05);
   }
   .panel > *{position:relative; z-index:1}
 
@@ -111,7 +117,7 @@
   }
   .sub{
     margin:0 0 14px;
-    color:rgba(255,255,255,.75);
+    color:rgba(255,255,255,.74);
     letter-spacing:.14em;
     line-height:1.55;
     font-size:12px;
@@ -152,11 +158,7 @@
     color:rgba(255,255,255,.85);
   }
 
-  .choices{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-  }
+  .choices{display:flex; flex-wrap:wrap; gap:8px;}
   .chip{
     cursor:pointer;
     user-select:none;
@@ -170,7 +172,7 @@
     color:rgba(255,255,255,.9);
     transition: transform .14s ease, border-color .14s ease, background .14s ease, filter .14s ease;
   }
-  .chip:hover{ transform: translateY(-1px); border-color: rgba(138,46,255,.45); background: rgba(138,46,255,.06); }
+  .chip:hover{ transform: translateY(-1px); border-color: rgba(138,46,255,.55); background: rgba(138,46,255,.08); }
   .chip.on{ border-color: rgba(0,255,156,.5); background: rgba(0,255,156,.08); filter: brightness(1.06); }
 
   .btnRow{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
@@ -195,7 +197,6 @@
     color:#fff;
   }
 
-  /* Visible error box */
   #err{
     display:none;
     margin:10px 0 0;
@@ -210,7 +211,6 @@
     white-space:pre-wrap;
   }
 
-  /* Level banner */
   #levelBanner{
     position:fixed;
     inset:0;
@@ -222,7 +222,7 @@
   }
   #levelBanner .b{
     border:1px solid rgba(255,255,255,.16);
-    background:rgba(0,0,0,.55);
+    background:rgba(0,0,0,.62);
     backdrop-filter: blur(10px);
     border-radius:18px;
     padding:18px 18px;
@@ -230,10 +230,9 @@
     text-transform:uppercase;
     font-size:13px;
     text-align:center;
-    box-shadow: 0 0 0 10px rgba(138,46,255,.05);
+    box-shadow: 0 0 0 10px rgba(138,46,255,.06);
   }
 
-  /* Leaderboard */
   #board{ display:none; margin-top:12px; border-top:1px solid rgba(255,255,255,.10); padding-top:12px; }
   .lb{
     display:flex; justify-content:space-between; gap:12px;
@@ -253,6 +252,7 @@
     line-height:1.5;
     margin:10px 0 0;
   }
+  code{color:rgba(0,255,156,.9)}
 </style>
 </head>
 
@@ -283,10 +283,16 @@
           <button id="startBtn">START</button>
           <button class="secondary" id="toggleBoard">LEADERBOARD</button>
           <button class="secondary" id="clearBoardBtn" title="Clear local leaderboard">CLEAR</button>
+          <button class="secondary" id="muteBtn" title="Toggle music">MUTE</button>
+          <button class="secondary" id="retryAudioBtn" title="Retry audio">RETRY AUDIO</button>
         </div>
 
-        <p class="tiny">iPhone audio unlock: the START tap kicks music on. Files: <code>audio/dream1.mp3</code>, <code>audio/dream2.mp3</code></p>
-        <p class="tiny">Controls: drag on screen (or mouse). Bonus keys: ← → / A D. Pause: P.</p>
+        <p class="tiny">
+          Audio files (match repo): <code>audio/dream.mp3</code>, <code>audio/dream2.mp3</code>, <code>audio/dream3.mp3</code>
+        </p>
+        <p class="tiny">
+          Controls: drag/mouse. Keys: ← → / A D. Shoot: SPACE (or tap/click). Pause: P.
+        </p>
 
         <div id="board">
           <div class="optTitle">Top Scores (local)</div>
@@ -317,6 +323,9 @@
         <p class="sub" style="margin-top:10px;">
           Lives: <span style="color:var(--bad)">2</span>. Hearts heal + shrink + reduce fat. Bosses cheat. Devil files your taxes.
         </p>
+        <p class="sub" style="margin-top:-6px;">
+          New: bosses die by <span style="color:var(--violet)">SHOTS</span> (tap/click/space) + ring damage.
+        </p>
       </div>
     </div>
   </div>
@@ -340,7 +349,7 @@
 <div id="levelBanner"><div class="b" id="levelText">LEVEL 1</div></div>
 
 <canvas id="game"></canvas>
-<audio id="music" preload="none" playsinline></audio>
+<audio id="music" preload="auto" playsinline></audio>
 
 <script>
 (() => {
@@ -366,18 +375,41 @@
   if(!ctx) ctx = canvas.getContext("2d");
   if(!ctx){ showErr("Canvas init failed: could not get 2D context."); return; }
 
+  ctx.imageSmoothingEnabled = false;
+
   let W = innerWidth, H = innerHeight, DPR = 1;
+
+  function viewportSize(){
+    // Safari iPhone: visualViewport is the truth when toolbars shrink/expand
+    const vv = window.visualViewport;
+    const w = vv ? vv.width : innerWidth;
+    const h = vv ? vv.height : innerHeight;
+    return { w, h };
+  }
+
   function resize(){
-    W = innerWidth; H = innerHeight;
+    const v = viewportSize();
+    W = Math.max(320, Math.floor(v.w));
+    H = Math.max(480, Math.floor(v.h));
+
     DPR = Math.min(2, window.devicePixelRatio || 1);
+
     canvas.width = Math.floor(W * DPR);
     canvas.height = Math.floor(H * DPR);
     canvas.style.width = W + "px";
     canvas.style.height = H + "px";
-    ctx.setTransform(DPR,0,0,DPR,0,0); // draw in CSS pixels
+
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.imageSmoothingEnabled = false;
   }
+
   resize();
   addEventListener("resize", resize, { passive:true });
+  addEventListener("orientationchange", ()=>setTimeout(resize, 120), { passive:true });
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize", resize, { passive:true });
+    window.visualViewport.addEventListener("scroll", resize, { passive:true });
+  }
 
   /* ============== TINY BEEP (OPTIONAL) ============== */
   let actx = null;
@@ -415,9 +447,11 @@
   const clearBoardBtn = document.getElementById("clearBoardBtn");
   const board = document.getElementById("board");
   const lbList = document.getElementById("lbList");
+  const muteBtn = document.getElementById("muteBtn");
+  const retryAudioBtn = document.getElementById("retryAudioBtn");
 
   /* ============== LEADERBOARD ============== */
-  const LB_KEY = "clawboi_dream_lb_v4";
+  const LB_KEY = "clawboi_dream_lb_v5";
   function loadLB(){
     try{ return JSON.parse(localStorage.getItem(LB_KEY) || "[]"); }
     catch(e){ return []; }
@@ -461,7 +495,6 @@
   /* ============== OUTFIT ============== */
   const outfit = { hat:"none", shades:"none", chain:"none", fit:"hoodie" };
   const chips = Array.from(document.querySelectorAll(".chip"));
-
   function setChipState(){
     chips.forEach(ch=>{
       const part = ch.dataset.part;
@@ -478,27 +511,70 @@
   });
   setChipState();
 
-  /* ============== MUSIC (iOS unlock) ============== */
+  /* ============== MUSIC (FIXED PATHS + ERROR REPORTING) ============== */
   const music = document.getElementById("music");
-  const playlist = ["audio/dream1.mp3?v=1", "audio/dream2.mp3?v=1"];
+
+  // IMPORTANT: matches your repo screenshot
+  const playlist = [
+    "audio/dream.mp3?v=5",
+    "audio/dream2.mp3?v=5",
+    "audio/dream3.mp3?v=5"
+  ];
+
   let trackIndex = 0;
   let audioUnlocked = false;
+  let muted = false;
 
   function loadTrack(i){
-    trackIndex = i;
+    trackIndex = i % playlist.length;
     music.src = playlist[trackIndex];
     music.load();
   }
-  function startPlaylist(){
-    loadTrack(0);
-    music.volume = 0.78;
-    music.play().catch(()=>{});
+
+  async function startPlaylist(){
+    try{
+      loadTrack(0);
+      music.volume = 0.80;
+      music.muted = muted;
+      await music.play();
+    }catch(e){
+      showErr(
+        "AUDIO FAILED TO PLAY.\n" +
+        "1) Confirm files exist:\n" +
+        "   audio/dream.mp3, audio/dream2.mp3, audio/dream3.mp3\n" +
+        "2) If on iPhone: tap START again.\n\n" +
+        "Browser said: " + (e?.message || e)
+      );
+    }
   }
-  music.addEventListener("ended", ()=>{
-    trackIndex = (trackIndex + 1) % playlist.length;
-    loadTrack(trackIndex);
-    music.play().catch(()=>{});
+
+  music.addEventListener("ended", async ()=>{
+    try{
+      trackIndex = (trackIndex + 1) % playlist.length;
+      loadTrack(trackIndex);
+      await music.play();
+    }catch(e){}
   });
+
+  music.addEventListener("error", ()=>{
+    const code = music.error?.code;
+    showErr("AUDIO LOAD ERROR.\nCheck file names + path.\nTried: " + music.src + "\nCode: " + code);
+  });
+
+  muteBtn.onclick = ()=>{
+    muted = !muted;
+    music.muted = muted;
+    muteBtn.textContent = muted ? "UNMUTE" : "MUTE";
+    blip(muted ? 180 : 520,0.05,0.05);
+  };
+
+  retryAudioBtn.onclick = ()=>{
+    if(!audioUnlocked){
+      audioUnlocked = true;
+    }
+    startPlaylist();
+    blip(340,0.04,0.04);
+  };
 
   /* ============== GAME STATE ============== */
   let running = false;
@@ -521,15 +597,39 @@
   let mx = player.x;
   let keyDir = 0; // -1 left, 1 right
 
-  // IMPORTANT: pointer/touch ONLY on canvas, so overlay inputs type normally.
-  function onPointerMove(clientX){
-    mx = clientX;
+  /* ====== SHOOTING (NEW, FOR REAL BOSS KILLS) ====== */
+  let shots = [];
+  let shootCooldown = 0;
+
+  function shoot(){
+    if(!running || paused) return;
+    // small cooldown so it feels intentional not a hose
+    if(shootCooldown > 0) return;
+    shootCooldown = 10;
+
+    shots.push({
+      x: player.x,
+      y: player.y - 60,
+      vx: 0,
+      vy: -14,
+      r: 5,
+      life: 120
+    });
+
+    blip(760, 0.02, 0.03);
   }
+
+  /* pointer/touch only on canvas */
+  function onPointerMove(clientX){ mx = clientX; }
+
   canvas.addEventListener("pointerdown", (e)=>{
     if(!running) return;
     canvas.setPointerCapture?.(e.pointerId);
     onPointerMove(e.clientX);
+    // tap also shoots (bosses feel killable)
+    shoot();
   }, { passive:true });
+
   canvas.addEventListener("pointermove", (e)=>{
     if(!running) return;
     onPointerMove(e.clientX);
@@ -539,12 +639,18 @@
     const k = e.key.toLowerCase();
     if(e.key === "ArrowLeft" || k === "a") keyDir = -1;
     if(e.key === "ArrowRight" || k === "d") keyDir = 1;
+
+    if(e.key === " "){ // space shoot
+      e.preventDefault();
+      shoot();
+    }
+
     if(k === "p" && running){
       paused = !paused;
       blip(paused ? 240 : 520, 0.05, 0.05);
       if(!paused) requestAnimationFrame(loop);
     }
-  }, { passive:true });
+  }, { passive:false });
 
   addEventListener("keyup", (e)=>{
     const k = e.key.toLowerCase();
@@ -657,7 +763,7 @@
     nearMissBonus = 4 + Math.floor(L/2);
 
     uiTip.textContent =
-      boss ? "TIP: BOSSES CHEAT" :
+      boss ? "TIP: SHOOT + THREAD RING" :
       (L<=2 ? "TIP: STAY LOW" :
        L<=5 ? "TIP: HEARTS HEAL + SHRINK" :
        L<=8 ? "TIP: DONT GREED" :
@@ -669,12 +775,12 @@
   /* ============== BOSSES ============== */
   function spawnBoss(type){
     const baseHP = ({
-      "GHOST":   120,
-      "DOCTOR":  150,
-      "THUG":    170,
-      "GORILLA": 220,
-      "DEVIL":   320
-    })[type] || 140;
+      "GHOST":   140,
+      "DOCTOR":  180,
+      "THUG":    210,
+      "GORILLA": 280,
+      "DEVIL":   380
+    })[type] || 160;
 
     boss = {
       type,
@@ -690,6 +796,21 @@
     uiBoss.textContent = `BOSS: ${type}`;
     showBanner(`${type} BOSS`);
     blip(120,0.12,0.06);
+  }
+
+  function bossKill(){
+    score += (boss.type==="DEVIL") ? 6000 : 2500;
+    burst(boss.x, boss.y, "rgba(138,46,255,.95)", 90, 12);
+    burst(boss.x, boss.y, "rgba(255,255,255,.85)", 60, 10);
+    blip(680,0.09,0.06);
+    boss = null;
+    uiBoss.textContent = "BOSS: --";
+    showBanner("BOSS DOWN");
+
+    // make sure difficulty ramps after boss
+    levelTicks = 0;
+    level = Math.min(MAX_LEVEL, level + 1);
+    applyLevelSettings();
   }
 
   function bossUpdate(){
@@ -742,7 +863,7 @@
       spawnHazard("fakeheart");
     }
 
-    // Thread the ring to damage boss
+    // Ring damage (kept) - bonus DPS if you thread it
     const dx = player.x - boss.x;
     const dy = (player.y-30) - boss.y;
     const dist = Math.hypot(dx, dy);
@@ -757,60 +878,38 @@
     }
 
     if(boss.hp <= 0){
-      score += (boss.type==="DEVIL") ? 6000 : 2500;
-      burst(boss.x, boss.y, "rgba(138,46,255,.95)", 80, 12);
-      burst(boss.x, boss.y, "rgba(255,255,255,.85)", 50, 10);
-      blip(680,0.09,0.06);
-      boss = null;
-      uiBoss.textContent = "BOSS: --";
-      showBanner("BOSS DOWN");
+      bossKill();
     }
   }
 
   function drawBoss(){
     if(!boss) return;
 
-    // aura
+    // aura (darker meaner)
     ctx.save();
-    ctx.globalAlpha = 0.18;
-    ctx.fillStyle = "rgba(138,46,255,.9)";
+    ctx.globalAlpha = 0.16;
+    ctx.fillStyle = "rgba(138,46,255,.95)";
     ctx.beginPath();
     ctx.arc(boss.x, boss.y, boss.r*1.35, 0, Math.PI*2);
     ctx.fill();
     ctx.restore();
 
     if(boss.type === "GHOST"){
-      ctx.strokeStyle = "rgba(185,140,255,.85)";
+      ctx.strokeStyle = "rgba(185,140,255,.80)";
       ctx.lineWidth = 7;
       ctx.beginPath();
       ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
       ctx.stroke();
 
-      ctx.globalAlpha = 0.35;
-      ctx.fillStyle = "rgba(185,140,255,.55)";
+      ctx.globalAlpha = 0.30;
+      ctx.fillStyle = "rgba(185,140,255,.45)";
       ctx.beginPath();
       ctx.arc(boss.x, boss.y, boss.r*0.72, 0, Math.PI*2);
       ctx.fill();
       ctx.globalAlpha = 1;
 
     }else if(boss.type === "DOCTOR"){
-      ctx.strokeStyle = "rgba(255,255,255,.85)";
-      ctx.lineWidth = 7;
-      ctx.beginPath();
-      ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
-      ctx.stroke();
-
-      ctx.fillStyle = "rgba(0,0,0,.85)";
-      ctx.beginPath();
-      ctx.arc(boss.x, boss.y, boss.r*0.62, 0, Math.PI*2);
-      ctx.fill();
-
-      ctx.fillStyle = "rgba(255,255,255,.85)";
-      ctx.fillRect(boss.x - 10, boss.y - 34, 20, 68);
-      ctx.fillRect(boss.x - 34, boss.y - 10, 68, 20);
-
-    }else if(boss.type === "THUG"){
-      ctx.strokeStyle = "rgba(255,255,255,.55)";
+      ctx.strokeStyle = "rgba(255,255,255,.78)";
       ctx.lineWidth = 7;
       ctx.beginPath();
       ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
@@ -818,42 +917,58 @@
 
       ctx.fillStyle = "rgba(0,0,0,.90)";
       ctx.beginPath();
+      ctx.arc(boss.x, boss.y, boss.r*0.62, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,255,255,.82)";
+      ctx.fillRect(boss.x - 10, boss.y - 34, 20, 68);
+      ctx.fillRect(boss.x - 34, boss.y - 10, 68, 20);
+
+    }else if(boss.type === "THUG"){
+      ctx.strokeStyle = "rgba(255,255,255,.44)";
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(0,0,0,.92)";
+      ctx.beginPath();
       ctx.arc(boss.x, boss.y, boss.r*0.68, 0, Math.PI*2);
       ctx.fill();
 
-      ctx.fillStyle = "rgba(255,42,42,.85)";
+      ctx.fillStyle = "rgba(255,42,42,.88)";
       ctx.fillRect(boss.x - boss.r*0.40, boss.y - 8, boss.r*0.80, 16);
 
     }else if(boss.type === "GORILLA"){
-      ctx.strokeStyle = "rgba(255,255,255,.22)";
+      ctx.strokeStyle = "rgba(255,255,255,.18)";
       ctx.lineWidth = 10;
       ctx.beginPath();
       ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
       ctx.stroke();
 
-      ctx.fillStyle = "rgba(60,60,60,.92)";
+      ctx.fillStyle = "rgba(44,44,52,.95)";
       ctx.beginPath();
       ctx.arc(boss.x, boss.y, boss.r*0.78, 0, Math.PI*2);
       ctx.fill();
 
-      ctx.fillStyle = "rgba(0,0,0,.85)";
+      ctx.fillStyle = "rgba(0,0,0,.88)";
       ctx.beginPath();
       ctx.arc(boss.x, boss.y+18, boss.r*0.42, 0, Math.PI*2);
       ctx.fill();
 
     }else{ // DEVIL
-      ctx.strokeStyle = "rgba(255,42,42,.85)";
+      ctx.strokeStyle = "rgba(255,42,42,.88)";
       ctx.lineWidth = 9;
       ctx.beginPath();
       ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
       ctx.stroke();
 
-      ctx.fillStyle = "rgba(0,0,0,.90)";
+      ctx.fillStyle = "rgba(0,0,0,.92)";
       ctx.beginPath();
       ctx.arc(boss.x, boss.y, boss.r*0.70, 0, Math.PI*2);
       ctx.fill();
 
-      ctx.fillStyle = "rgba(255,42,42,.85)";
+      ctx.fillStyle = "rgba(255,42,42,.88)";
       ctx.beginPath();
       ctx.moveTo(boss.x - 60, boss.y - 80);
       ctx.lineTo(boss.x - 110, boss.y - 140);
@@ -875,41 +990,39 @@
     ctx.fillStyle = "rgba(255,255,255,.10)";
     roundRect(ctx, W/2 - hpW/2, 16, hpW, 10, 6, true);
 
-    ctx.fillStyle = (boss.type==="DEVIL") ? "rgba(255,42,42,.85)" : "rgba(138,46,255,.85)";
+    ctx.fillStyle = (boss.type==="DEVIL") ? "rgba(255,42,42,.88)" : "rgba(138,46,255,.88)";
     roundRect(ctx, W/2 - hpW/2, 16, hpW*hpPct, 10, 6, true);
   }
 
-  /* ============== CHIMP DRAW ============== */
+  /* ============== CHIMP DRAW (unchanged) ============== */
   function chimpPalette(tone){
     if(tone === "gray")  return { fur:"#6b6b6b", fur2:"#3f3f3f", skin:"#c9b79e", dark:"#0b0b0b" };
-    if(tone === "violet")return { fur:"#7a2cff", fur2:"#3b0a6e", skin:"#d0b0ff", dark:"#09000f" };
+    if(tone === "violet")return { fur:"#7a2cff", fur2:"#2a063f", skin:"#d0b0ff", dark:"#09000f" };
     if(tone === "albino")return { fur:"#e9e9e9", fur2:"#bfbfbf", skin:"#f1d7c6", dark:"#0b0b0b" };
-    return { fur:"#7a4b2a", fur2:"#5b341f", skin:"#d4b08a", dark:"#0b0b0b" }; // brown
+    return { fur:"#7a4b2a", fur2:"#4a291a", skin:"#d4b08a", dark:"#0b0b0b" };
   }
 
   function drawOutfit(g, px, py, s){
-    // Fit
     if(outfit.fit === "hoodie"){
-      g.fillStyle = "rgba(0,0,0,.90)";
+      g.fillStyle = "rgba(0,0,0,.92)";
       roundRect(g, px - s*0.76, py - s*0.25, s*1.52, s*0.78, s*0.22, true);
-      g.strokeStyle = "rgba(138,46,255,.45)";
+      g.strokeStyle = "rgba(138,46,255,.55)";
       g.lineWidth = 2;
       g.beginPath();
       g.moveTo(px - s*0.12, py - s*0.02);
       g.lineTo(px + s*0.12, py - s*0.02);
       g.stroke();
     }else if(outfit.fit === "jacket"){
-      g.fillStyle = "rgba(255,255,255,.06)";
+      g.fillStyle = "rgba(255,255,255,.05)";
       roundRect(g, px - s*0.78, py - s*0.28, s*1.56, s*0.86, s*0.18, true);
-      g.strokeStyle = "rgba(255,255,255,.14)";
+      g.strokeStyle = "rgba(255,255,255,.12)";
       g.lineWidth = 1;
       roundRect(g, px - s*0.78, py - s*0.28, s*1.56, s*0.86, s*0.18, false);
     }else{
-      g.fillStyle = "rgba(255,255,255,.04)";
+      g.fillStyle = "rgba(255,255,255,.035)";
       roundRect(g, px - s*0.72, py - s*0.18, s*1.44, s*0.70, s*0.20, true);
     }
 
-    // Chain
     if(outfit.chain !== "none"){
       g.strokeStyle = (outfit.chain==="gold") ? "rgba(255,230,0,.95)" : "rgba(220,220,255,.92)";
       g.lineWidth = 3;
@@ -920,7 +1033,6 @@
       g.fillRect(px - s*0.06, py + s*0.14, s*0.12, s*0.12);
     }
 
-    // Shades
     if(outfit.shades !== "none"){
       const col = (outfit.shades==="violet") ? "rgba(138,46,255,.95)" : "rgba(0,0,0,.95)";
       g.fillStyle = col;
@@ -929,16 +1041,15 @@
       g.fillRect(px - s*0.05, py - s*0.98, s*0.10, s*0.04);
     }
 
-    // Hat
     if(outfit.hat !== "none"){
       if(outfit.hat === "cap"){
         g.fillStyle = "rgba(0,0,0,.95)";
         roundRect(g, px - s*0.42, py - s*1.26, s*0.84, s*0.18, s*0.10, true);
         g.fillRect(px - s*0.10, py - s*1.08, s*0.62, s*0.06);
       }else{
-        g.fillStyle = "rgba(0,0,0,.85)";
+        g.fillStyle = "rgba(0,0,0,.88)";
         roundRect(g, px - s*0.40, py - s*1.28, s*0.80, s*0.24, s*0.14, true);
-        g.fillStyle = "rgba(138,46,255,.45)";
+        g.fillStyle = "rgba(138,46,255,.55)";
         g.fillRect(px - s*0.40, py - s*1.14, s*0.80, s*0.05);
       }
     }
@@ -946,93 +1057,78 @@
 
   function drawChimp(g, px, py, base){
     const {fur, fur2, skin, dark} = chimpPalette(chimpTone);
-
     const fatScale = 1 + player.fat/200;
     const shrinkScale = Math.max(0.78, 1 - player.shrink*0.02);
     const s = base * fatScale * shrinkScale;
 
     g.save();
 
-    // glow
     g.globalAlpha = 0.12;
-    g.fillStyle = "rgba(138,46,255,.9)";
+    g.fillStyle = "rgba(138,46,255,.95)";
     g.beginPath();
     g.arc(px, py-30, s*1.8, 0, Math.PI*2);
     g.fill();
 
-    // invuln blink
     g.globalAlpha = (player.invuln > 0 && (player.invuln % 10) < 5) ? 0.45 : 1;
 
-    // torso
     g.fillStyle = fur;
     g.beginPath();
     g.ellipse(px, py, s*0.72, s*0.78, 0, 0, Math.PI*2);
     g.fill();
 
-    // belly
     g.fillStyle = fur2;
     g.beginPath();
     g.ellipse(px, py+8, s*0.46, s*0.52, 0, 0, Math.PI*2);
     g.fill();
 
-    // arms
     g.fillStyle = fur;
     g.beginPath();
     g.ellipse(px - s*0.78, py+10, s*0.28, s*0.55, 0.2, 0, Math.PI*2);
     g.ellipse(px + s*0.78, py+10, s*0.28, s*0.55, -0.2, 0, Math.PI*2);
     g.fill();
 
-    // hands
     g.fillStyle = skin;
     g.beginPath();
     g.ellipse(px - s*0.86, py + s*0.45, s*0.16, s*0.12, 0, 0, Math.PI*2);
     g.ellipse(px + s*0.86, py + s*0.45, s*0.16, s*0.12, 0, 0, Math.PI*2);
     g.fill();
 
-    // legs
     g.fillStyle = fur;
     g.beginPath();
     g.ellipse(px - s*0.35, py + s*0.78, s*0.22, s*0.38, 0, 0, Math.PI*2);
     g.ellipse(px + s*0.35, py + s*0.78, s*0.22, s*0.38, 0, 0, Math.PI*2);
     g.fill();
 
-    // head
     g.fillStyle = fur;
     g.beginPath();
     g.ellipse(px, py - s*0.92, s*0.60, s*0.55, 0, 0, Math.PI*2);
     g.fill();
 
-    // ears
     g.fillStyle = fur2;
     g.beginPath();
     g.ellipse(px - s*0.62, py - s*0.92, s*0.14, s*0.18, 0, 0, Math.PI*2);
     g.ellipse(px + s*0.62, py - s*0.92, s*0.14, s*0.18, 0, 0, Math.PI*2);
     g.fill();
 
-    // face mask
     g.fillStyle = skin;
     g.beginPath();
     g.ellipse(px, py - s*0.82, s*0.40, s*0.34, 0, 0, Math.PI*2);
     g.fill();
 
-    // nose/mouth
     g.fillStyle = dark;
     g.beginPath();
     g.ellipse(px, py - s*0.78, s*0.10, s*0.07, 0, 0, Math.PI*2);
     g.fill();
     g.fillRect(px - s*0.16, py - s*0.70, s*0.32, s*0.05);
 
-    // eyes
     g.fillStyle = dark;
     g.beginPath();
     g.ellipse(px - s*0.20, py - s*0.96, s*0.06, s*0.06, 0, 0, Math.PI*2);
     g.ellipse(px + s*0.20, py - s*0.96, s*0.06, s*0.06, 0, 0, Math.PI*2);
     g.fill();
 
-    // outfit
     drawOutfit(g, px, py, s);
 
-    // fat ring warning
     const fatPct = Math.min(100, Math.floor((player.fat/140)*100));
     if(fatPct > 60){
       g.strokeStyle = `rgba(255,42,42,${(fatPct-60)/60})`;
@@ -1061,6 +1157,7 @@
   /* ============== START / RESET / END ============== */
   function resetGame(){
     pills = []; hearts = []; hazards = []; particles = [];
+    shots = [];
     score = 0; globalTicks = 0; levelTicks = 0;
     level = 1;
 
@@ -1097,13 +1194,18 @@
     startBtn.textContent = "PLAY AGAIN";
   }
 
-  startBtn.addEventListener("click", ()=>{
+  startBtn.addEventListener("click", async ()=>{
     try{
-      // Unlock iOS audio
+      // Unlock audio contexts + music
       if(!audioUnlocked){
         audioUnlocked = true;
         blip(300,0.03,0.03);
-        startPlaylist();
+        // resume WebAudio if Safari suspended it
+        try{ if(actx && actx.state === "suspended") await actx.resume(); }catch(e){}
+        await startPlaylist();
+      }else{
+        // if user hit play again and music paused, restart it
+        if(music.paused) { try{ await music.play(); }catch(e){} }
       }
 
       playerName = (nameInput.value || "PLAYER").slice(0,12).toUpperCase();
@@ -1114,6 +1216,7 @@
       errBox.style.display = "none";
       overlay.style.display = "none";
 
+      resize(); // iPhone: ensure proper size after overlay removed
       resetGame();
       running = true;
 
@@ -1129,16 +1232,16 @@
 
     globalTicks++;
     levelTicks++;
+    if(shootCooldown > 0) shootCooldown--;
 
-    // background
+    // background (darker mood)
     ctx.fillStyle = "#000";
     ctx.fillRect(0,0,W,H);
 
-    // drifting glow field
     const gx = (Math.sin(globalTicks*0.006)*0.5+0.5)*W;
-    const gy = (Math.cos(globalTicks*0.005)*0.5+0.5)*H*0.6;
-    const grd = ctx.createRadialGradient(gx,gy,10,gx,gy,Math.max(W,H)*0.75);
-    grd.addColorStop(0, "rgba(138,46,255,.10)");
+    const gy = (Math.cos(globalTicks*0.005)*0.5+0.5)*H*0.62;
+    const grd = ctx.createRadialGradient(gx,gy,10,gx,gy,Math.max(W,H)*0.80);
+    grd.addColorStop(0, "rgba(138,46,255,.14)");
     grd.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = grd;
     ctx.fillRect(0,0,W,H);
@@ -1173,6 +1276,36 @@
 
     if(player.invuln > 0) player.invuln--;
 
+    /* ====== SHOTS UPDATE + BOSS COLLISION (NEW) ====== */
+    for(let i=shots.length-1;i>=0;i--){
+      const s = shots[i];
+      s.x += s.vx;
+      s.y += s.vy;
+      s.life--;
+
+      // draw shot (pixel bolt)
+      ctx.fillStyle = "rgba(138,46,255,.95)";
+      ctx.fillRect(s.x-2, s.y-10, 4, 10);
+      ctx.fillStyle = "rgba(255,255,255,.65)";
+      ctx.fillRect(s.x-1, s.y-8, 2, 6);
+
+      if(boss){
+        // hits boss core circle
+        if(hitCircle(s.x, s.y, s.r, boss.x, boss.y, boss.r*0.92)){
+          shots.splice(i,1);
+          const dmg = boss.type==="DEVIL" ? 4.5 : boss.type==="GORILLA" ? 4.0 : 3.4;
+          boss.hp -= dmg;
+          score += 15;
+          burst(s.x, s.y, "rgba(138,46,255,.95)", 10, 5);
+          blip(520, 0.02, 0.03);
+          if(boss.hp <= 0) bossKill();
+          continue;
+        }
+      }
+
+      if(s.life <= 0 || s.y < -40) shots.splice(i,1);
+    }
+
     // pills
     for(let i=pills.length-1;i>=0;i--){
       const p = pills[i];
@@ -1182,9 +1315,10 @@
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(Math.sin((p.y+p.h)*0.012)*0.6);
-      ctx.fillStyle = `hsl(${p.h},90%,60%)`;
+      // darker pills, less candy vibe
+      ctx.fillStyle = `hsl(${p.h},70%,52%)`;
       roundRect(ctx, -p.r*1.2, -p.r*0.65, p.r*2.4, p.r*1.3, p.r*0.6, true);
-      ctx.fillStyle = "rgba(255,255,255,.35)";
+      ctx.fillStyle = "rgba(255,255,255,.22)";
       roundRect(ctx, -p.r*1.05, -p.r*0.12, p.r*2.1, p.r*0.20, p.r*0.2, true);
       ctx.restore();
 
@@ -1194,7 +1328,7 @@
       const near = (dist < p.r + player.size + 44) && !hit && dist > p.r + player.size + 8;
       if(near){
         score += nearMissBonus;
-        if(globalTicks % 7 === 0) burst(player.x, player.y-30, "rgba(255,255,255,.7)", 3, 3);
+        if(globalTicks % 7 === 0) burst(player.x, player.y-30, "rgba(255,255,255,.55)", 3, 3);
       }
 
       if(hit){
@@ -1202,7 +1336,7 @@
         player.fat += (p.kind==="bossPill") ? 13 : 10;
         if(p.kind==="bossPill" && Math.random() < 0.12) loseLife();
         blip(220,0.05,0.05);
-        burst(p.x,p.y,"rgba(255,255,255,.9)",18,7);
+        burst(p.x,p.y,"rgba(255,255,255,.85)",18,7);
       }
 
       if(p.y > H + 90) pills.splice(i,1);
@@ -1247,7 +1381,7 @@
       ctx.rotate(h.a);
 
       if(h.kind === "shard"){
-        ctx.fillStyle = "rgba(185,140,255,.78)";
+        ctx.fillStyle = "rgba(185,140,255,.70)";
         ctx.beginPath();
         ctx.moveTo(0,-h.r);
         ctx.lineTo(h.r, h.r);
@@ -1255,18 +1389,18 @@
         ctx.closePath();
         ctx.fill();
       }else if(h.kind === "needle"){
-        ctx.fillStyle = "rgba(255,255,255,.85)";
+        ctx.fillStyle = "rgba(255,255,255,.82)";
         ctx.fillRect(-2, -h.r*1.6, 4, h.r*3.2);
-        ctx.fillStyle = "rgba(255,42,42,.85)";
+        ctx.fillStyle = "rgba(255,42,42,.82)";
         ctx.fillRect(-2, h.r*1.2, 4, h.r*0.4);
       }else if(h.kind === "brick"){
-        ctx.fillStyle = "rgba(255,255,255,.20)";
+        ctx.fillStyle = "rgba(255,255,255,.16)";
         ctx.fillRect(-h.r, -h.r, h.r*2, h.r*2);
-        ctx.strokeStyle = "rgba(255,42,42,.65)";
+        ctx.strokeStyle = "rgba(255,42,42,.55)";
         ctx.lineWidth = 2;
         ctx.strokeRect(-h.r, -h.r, h.r*2, h.r*2);
       }else if(h.kind === "banana"){
-        ctx.fillStyle = "rgba(255,230,0,.85)";
+        ctx.fillStyle = "rgba(255,230,0,.80)";
         ctx.beginPath();
         ctx.ellipse(0,0,h.r*1.2,h.r*0.6,0.6,0,Math.PI*2);
         ctx.fill();
@@ -1309,7 +1443,7 @@
     drawBoss();
     drawChimp(ctx, player.x, player.y-10, player.size);
 
-    // particles
+    // particles (pixel grit)
     for(let i=particles.length-1;i>=0;i--){
       const p = particles[i];
       p.x += p.vx; p.y += p.vy;
