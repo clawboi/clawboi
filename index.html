@@ -12,8 +12,7 @@
   --violet:#8a2eff;
   --max:1100px;
   --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  /* same vibe as EAT ME (system font) */
-  --lyric: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  --lyric: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; /* same vibe as EAT ME */
 }
 
 *{box-sizing:border-box}
@@ -109,9 +108,7 @@ header a:hover{opacity:1}
 }
 
 /* lightning flash */
-.logo.flash{
-  animation:flash .35s linear;
-}
+.logo.flash{ animation:flash .35s linear; }
 @keyframes flash{
   0%{filter:brightness(1)}
   30%{filter:brightness(2.2)}
@@ -144,6 +141,8 @@ header a:hover{opacity:1}
   padding:18px;
   position:relative;
   overflow:hidden;
+  cursor:pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* shine */
@@ -157,9 +156,7 @@ header a:hover{opacity:1}
   background:linear-gradient(120deg,transparent,rgba(255,255,255,.35),transparent);
   transform:skewX(-20deg);
 }
-.releaseBox:hover:before{
-  animation:shine 1.2s linear;
-}
+.releaseBox:hover:before{ animation:shine 1.2s linear; }
 @keyframes shine{to{left:130%}}
 
 .cover{
@@ -188,44 +185,40 @@ header a:hover{opacity:1}
   opacity:.7;
 }
 
-/* BUTTONS */
-.btn{
-  margin-top:14px;
-  border:1px solid var(--violet);
-  background:rgba(138,46,255,.18);
-  padding:12px 18px;
+/* small status hint */
+.hintRow{
+  margin-top:12px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 14px;
   border-radius:999px;
   letter-spacing:.2em;
-  font-size:12px;
-  cursor:pointer;
-  display:inline-block;
-  transition:.3s;
+  font-size:11px;
+  text-transform:uppercase;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.03);
+  color:rgba(255,255,255,.92);
 }
-.btn:hover{background:rgba(138,46,255,.28)}
+.pill.violet{
+  border-color: rgba(138,46,255,.45);
+  background: rgba(138,46,255,.10);
+}
 
-.btn.rainbow{
-  animation:rainbow 4s linear infinite;
-}
+.pill.rainbow{ animation:rainbow 4s linear infinite; }
 @keyframes rainbow{
   0%{color:#ff2a2a;border-color:#ff2a2a}
   25%{color:#ffe600;border-color:#ffe600}
   50%{color:#00ff9c;border-color:#00ff9c}
   75%{color:#4aa3ff;border-color:#4aa3ff}
   100%{color:#ff2aff;border-color:#ff2aff}
-}
-
-/* NATIVE AUDIO PLAYER */
-.playerWrap{
-  margin-top:12px;
-  width:min(520px, 100%);
-}
-audio.player{
-  width:100%;
-  height:44px;
-  border-radius:999px;
-  background:rgba(138,46,255,.10);
-  border:1px solid rgba(138,46,255,.45);
-  padding:8px 10px;
 }
 
 /* VISUALS */
@@ -250,13 +243,13 @@ audio.player{
 /* LYRIC ROTATOR */
 .lyric{
   text-align:center;
-  font-size:clamp(14px,1.9vw,20px); /* slightly smaller */
+  font-size:clamp(14px,1.9vw,20px);
   margin-top:30px;
   line-height:1.7;
   font-family:var(--lyric);
   letter-spacing:.02em;
   opacity:1;
-  transition:opacity 2.2s; /* longer fade */
+  transition:opacity 2.2s;
 }
 .lyric.fade{opacity:0}
 
@@ -300,7 +293,7 @@ footer{
 }
 
 @media (prefers-reduced-motion: reduce){
-  .logo, .followBtn, .eat, .btn.rainbow, .hero:after{ animation:none !important; }
+  .logo, .followBtn, .eat, .pill.rainbow, .hero:after{ animation:none !important; }
 }
 </style>
 </head>
@@ -323,7 +316,8 @@ footer{
 <section class="block">
   <div class="kicker">Latest Release</div>
 
-  <div class="releaseBox">
+  <!-- Entire box is the player -->
+  <div class="releaseBox" id="releaseBox" role="button" aria-label="Play or pause latest release">
 
     <div class="cover">
       <img src="images/latest-cover.jpg" alt="Latest cover">
@@ -333,19 +327,17 @@ footer{
       <h2 class="releaseTitle">Two Times</h2>
       <div class="releaseMeta">emo trap / lonely flex</div>
 
-      <!-- optional rainbow button just for vibe -->
-      <button class="btn rainbow" id="playBtn" type="button">PLAY</button>
-      <a class="btn" href="https://youtu.be/DEdhtI3LMS4" target="_blank" rel="noopener">YOUTUBE</a>
-
-      <!-- real iPhone-friendly player (scrub bar + pause/play) -->
-      <div class="playerWrap" aria-label="Audio player">
-        <audio class="player" id="audio" controls playsinline preload="metadata">
-          <source src="audio/latest.mp3?v=1" type="audio/mpeg">
-          Your browser does not support the audio element.
-        </audio>
+      <div class="hintRow">
+        <span class="pill violet" id="tapHint">TAP TO PLAY</span>
+        <a class="pill" href="https://youtu.be/DEdhtI3LMS4" target="_blank" rel="noopener">YOUTUBE</a>
       </div>
 
+      <!-- Hidden native audio (no controls shown) -->
+      <audio id="audio" playsinline preload="metadata">
+        <source src="audio/latest.mp3?v=1" type="audio/mpeg">
+      </audio>
     </div>
+
   </div>
 </section>
 
@@ -376,7 +368,7 @@ footer{
 </main>
 
 <script>
-document.getElementById("y").textContent = new Date().getFullYear();
+document.getElementById("y").textContent=new Date().getFullYear();
 
 /* spotlight */
 document.addEventListener("pointermove",e=>{
@@ -391,56 +383,48 @@ logo.addEventListener("click",()=>{
   setTimeout(()=>logo.classList.remove("flash"),350);
 });
 
-/* button controls the real player too */
-const btn=document.getElementById("playBtn");
+/* iPhone-friendly: tap the release box to play/pause */
+const box=document.getElementById("releaseBox");
 const audio=document.getElementById("audio");
+const tapHint=document.getElementById("tapHint");
 
-btn.addEventListener("click", async ()=>{
+const setHint = (state) => {
+  if(!tapHint) return;
+  if(state === "playing"){
+    tapHint.textContent = "PLAYING";
+    tapHint.classList.add("rainbow");
+  }else if(state === "paused"){
+    tapHint.textContent = "TAP TO PLAY";
+    tapHint.classList.remove("rainbow");
+  }else if(state === "loading"){
+    tapHint.textContent = "LOADING";
+    tapHint.classList.remove("rainbow");
+  }
+};
+
+audio.addEventListener("play", ()=> setHint("playing"));
+audio.addEventListener("pause", ()=> setHint("paused"));
+audio.addEventListener("waiting", ()=> setHint("loading"));
+audio.addEventListener("canplay", ()=> { if(!audio.paused) setHint("playing"); });
+
+box.addEventListener("click", async (e)=>{
+  // Don’t hijack clicks on the YouTube link
+  const a = e.target.closest("a");
+  if(a) return;
+
   try{
     if(audio.paused){
-      await audio.play();
-      btn.textContent="STOP";
-      btn.classList.remove("rainbow");
-      btn.style.background="#000";
-      btn.style.color="#fff";
-      btn.style.borderColor="#fff";
+      setHint("loading");
+      await audio.play();  // user gesture = click on box
     }else{
       audio.pause();
-      audio.currentTime=0;
-      btn.textContent="PLAY";
-      btn.classList.add("rainbow");
-      btn.style.background="";
-      btn.style.color="";
-      btn.style.borderColor="";
+      audio.currentTime = 0;
     }
-  }catch(e){
-    // iPhone sometimes requires using the native control first
-    alert("Tap the audio player Play button once (iPhone rule), then this button will work.");
+  }catch(err){
+    // If this triggers, it's almost always path/caching/MIME.
+    setHint("paused");
+    alert("Audio didn’t start. Double-check: /audio/latest.mp3 is under 10–15MB and GitHub Pages is serving it (try hard refresh).");
   }
-});
-
-/* keep button state synced if user uses native controls */
-audio.addEventListener("play", ()=>{
-  btn.textContent="STOP";
-  btn.classList.remove("rainbow");
-  btn.style.background="#000";
-  btn.style.color="#fff";
-  btn.style.borderColor="#fff";
-});
-audio.addEventListener("pause", ()=>{
-  // if paused mid-track, keep STOP? nah flip back to PLAY
-  btn.textContent="PLAY";
-  btn.classList.add("rainbow");
-  btn.style.background="";
-  btn.style.color="";
-  btn.style.borderColor="";
-});
-audio.addEventListener("ended", ()=>{
-  btn.textContent="PLAY";
-  btn.classList.add("rainbow");
-  btn.style.background="";
-  btn.style.color="";
-  btn.style.borderColor="";
 });
 
 /* LYRIC ROTATOR (longer fade) */
@@ -453,16 +437,16 @@ const lyrics=[
 ];
 
 let i=0;
-const box=document.getElementById("lyricBox");
+const lyricBox=document.getElementById("lyricBox");
 
 setInterval(()=>{
-  box.classList.add("fade");
+  lyricBox.classList.add("fade");
   setTimeout(()=>{
     i=(i+1)%lyrics.length;
-    box.innerHTML="“"+lyrics[i]+"”";
-    box.classList.remove("fade");
-  },1600);
-},8000);
+    lyricBox.innerHTML="“"+lyrics[i]+"”";
+    lyricBox.classList.remove("fade");
+  },1700);
+},8500);
 </script>
 
 </body>
