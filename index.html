@@ -7,281 +7,300 @@
 
 <style>
 :root{
---bg:#070707;
---fg:#fff;
---violet:#8a2eff;
---max:1100px;
---sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
---lyric: "Georgia","Times New Roman",serif;
+  --bg:#070707;
+  --fg:#fff;
+  --violet:#8a2eff;
+  --max:1100px;
+  --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  /* same vibe as EAT ME (system font) */
+  --lyric: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
 }
 
 *{box-sizing:border-box}
 body{
-margin:0;
-background:var(--bg);
-color:#fff;
-font-family:var(--sans);
-overflow-x:hidden;
+  margin:0;
+  background:var(--bg);
+  color:#fff;
+  font-family:var(--sans);
+  overflow-x:hidden;
 }
 
 a{color:#fff;text-decoration:none}
 
 /* NAV */
 header{
-position:fixed;
-top:0;left:0;width:100%;
-display:flex;justify-content:center;gap:40px;
-background:rgba(0,0,0,.55);
-backdrop-filter:blur(10px);
-border-bottom:1px solid rgba(255,255,255,.08);
-padding:16px;
-z-index:9;
+  position:fixed;
+  top:0;left:0;width:100%;
+  display:flex;justify-content:center;gap:40px;
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  padding:16px;
+  z-index:9;
 }
 header a{
-font-size:12px;
-letter-spacing:.25em;
-text-transform:uppercase;
-opacity:.85;
-color:#fff;
+  font-size:12px;
+  letter-spacing:.25em;
+  text-transform:uppercase;
+  opacity:.85;
+  color:#fff;
 }
 header a:hover{opacity:1}
 
 /* WRAP */
 .wrap{
-max-width:var(--max);
-margin:auto;
-padding:0 22px 100px;
-position:relative;
-z-index:1;
+  max-width:var(--max);
+  margin:auto;
+  padding:0 22px 100px;
+  position:relative;
+  z-index:1;
 }
 
 /* HERO */
 .hero{
-min-height:88vh;
-display:flex;
-align-items:center;
-justify-content:center;
-padding-top:80px;
-text-align:center;
-position:relative;
+  min-height:88vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding-top:80px;
+  text-align:center;
+  position:relative;
 }
 
 /* softer spotlight */
 .hero::before{
-content:"";
-position:absolute;
-inset:0;
-pointer-events:none;
-background:radial-gradient(circle at var(--x,50%) var(--y,50%), rgba(138,46,255,.10), transparent 55%);
-mix-blend-mode:screen;
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:radial-gradient(circle at var(--x,50%) var(--y,50%), rgba(138,46,255,.08), transparent 60%);
+  mix-blend-mode:screen;
 }
 
 /* glow clouds */
 .hero:after{
-content:"";
-position:absolute;
-inset:0;
-pointer-events:none;
-background:
-radial-gradient(circle at 30% 30%,rgba(138,46,255,.16),transparent 40%),
-radial-gradient(circle at 70% 40%,rgba(138,46,255,.10),transparent 40%);
-animation:storm 7s ease-in-out infinite;
-mix-blend-mode:screen;
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 30% 30%,rgba(138,46,255,.14),transparent 42%),
+    radial-gradient(circle at 70% 40%,rgba(138,46,255,.09),transparent 44%);
+  animation:storm 7s ease-in-out infinite;
+  mix-blend-mode:screen;
 }
-@keyframes storm{50%{opacity:.25}}
+@keyframes storm{50%{opacity:.22}}
 
 /* LOGO */
 .logo{
-font-size:clamp(48px,10vw,92px);
-letter-spacing:.34em;
-text-transform:uppercase;
-cursor:pointer;
-text-shadow:
-0 0 14px rgba(138,46,255,.35),
-0 0 40px rgba(138,46,255,.18);
-animation:logoPulse 4.2s ease-in-out infinite;
+  font-size:clamp(48px,10vw,92px);
+  letter-spacing:.34em;
+  text-transform:uppercase;
+  cursor:pointer;
+  text-shadow:
+    0 0 14px rgba(138,46,255,.35),
+    0 0 40px rgba(138,46,255,.18);
+  animation:logoPulse 5.4s ease-in-out infinite;
+  user-select:none;
 }
 @keyframes logoPulse{
-0%,100%{transform:scale(1)}
-50%{transform:scale(1.015)}
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.01)}
 }
 
 /* lightning flash */
 .logo.flash{
-animation:flash .35s linear;
+  animation:flash .35s linear;
 }
 @keyframes flash{
-0%{filter:brightness(1)}
-30%{filter:brightness(2.5)}
-60%{filter:brightness(.5)}
-100%{filter:brightness(1)}
+  0%{filter:brightness(1)}
+  30%{filter:brightness(2.2)}
+  60%{filter:brightness(.7)}
+  100%{filter:brightness(1)}
 }
 
 /* BLOCK */
 .block{
-border-top:1px solid rgba(255,255,255,.08);
-padding:50px 0;
+  border-top:1px solid rgba(255,255,255,.08);
+  padding:50px 0;
 }
 
 .kicker{
-font-size:12px;
-letter-spacing:.28em;
-text-transform:uppercase;
-opacity:.7;
-margin-bottom:14px;
+  font-size:12px;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  opacity:.7;
+  margin-bottom:14px;
 }
 
 /* RELEASE BOX */
 .releaseBox{
-display:flex;
-gap:18px;
-align-items:center;
-border:1px solid rgba(138,46,255,.35);
-background:rgba(138,46,255,.06);
-border-radius:22px;
-padding:18px;
-position:relative;
-overflow:hidden;
+  display:flex;
+  gap:18px;
+  align-items:center;
+  border:1px solid rgba(138,46,255,.35);
+  background:rgba(138,46,255,.06);
+  border-radius:22px;
+  padding:18px;
+  position:relative;
+  overflow:hidden;
 }
 
 /* shine */
 .releaseBox:before{
-content:"";
-position:absolute;
-top:0;
-left:-60%;
-width:50%;
-height:100%;
-background:linear-gradient(120deg,transparent,rgba(255,255,255,.35),transparent);
-transform:skewX(-20deg);
+  content:"";
+  position:absolute;
+  top:0;
+  left:-60%;
+  width:50%;
+  height:100%;
+  background:linear-gradient(120deg,transparent,rgba(255,255,255,.35),transparent);
+  transform:skewX(-20deg);
 }
 .releaseBox:hover:before{
-animation:shine 1.2s linear;
+  animation:shine 1.2s linear;
 }
 @keyframes shine{to{left:130%}}
 
 .cover{
-width:110px;height:110px;
-border-radius:16px;
-overflow:hidden;
-border:1px solid rgba(255,255,255,.1);
-flex-shrink:0;
+  width:110px;height:110px;
+  border-radius:16px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.1);
+  flex-shrink:0;
 }
 .cover img{
-width:100%;
-height:100%;
-object-fit:cover;
-display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
 }
 
 .releaseTitle{
-margin:0;
-letter-spacing:.1em;
-text-transform:uppercase;
+  margin:0;
+  letter-spacing:.1em;
+  text-transform:uppercase;
 }
 
 .releaseMeta{
-margin-top:6px;
-font-size:14px;
-opacity:.7;
+  margin-top:6px;
+  font-size:14px;
+  opacity:.7;
 }
 
 /* BUTTONS */
 .btn{
-margin-top:14px;
-border:1px solid var(--violet);
-background:rgba(138,46,255,.18);
-padding:12px 18px;
-border-radius:999px;
-letter-spacing:.2em;
-font-size:12px;
-cursor:pointer;
-display:inline-block;
-transition:.3s;
+  margin-top:14px;
+  border:1px solid var(--violet);
+  background:rgba(138,46,255,.18);
+  padding:12px 18px;
+  border-radius:999px;
+  letter-spacing:.2em;
+  font-size:12px;
+  cursor:pointer;
+  display:inline-block;
+  transition:.3s;
 }
 .btn:hover{background:rgba(138,46,255,.28)}
 
 .btn.rainbow{
-animation:rainbow 4s linear infinite;
+  animation:rainbow 4s linear infinite;
 }
 @keyframes rainbow{
-0%{color:#ff2a2a;border-color:#ff2a2a}
-25%{color:#ffe600;border-color:#ffe600}
-50%{color:#00ff9c;border-color:#00ff9c}
-75%{color:#4aa3ff;border-color:#4aa3ff}
-100%{color:#ff2aff;border-color:#ff2aff}
+  0%{color:#ff2a2a;border-color:#ff2a2a}
+  25%{color:#ffe600;border-color:#ffe600}
+  50%{color:#00ff9c;border-color:#00ff9c}
+  75%{color:#4aa3ff;border-color:#4aa3ff}
+  100%{color:#ff2aff;border-color:#ff2aff}
+}
+
+/* NATIVE AUDIO PLAYER */
+.playerWrap{
+  margin-top:12px;
+  width:min(520px, 100%);
+}
+audio.player{
+  width:100%;
+  height:44px;
+  border-radius:999px;
+  background:rgba(138,46,255,.10);
+  border:1px solid rgba(138,46,255,.45);
+  padding:8px 10px;
 }
 
 /* VISUALS */
 .videoGrid{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:14px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
 }
 @media(max-width:800px){.videoGrid{grid-template-columns:1fr}}
 
 .videoCard{
-border:1px solid rgba(255,255,255,.1);
-border-radius:20px;
-overflow:hidden;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:20px;
+  overflow:hidden;
 }
 .videoCard iframe{
-width:100%;
-aspect-ratio:16/9;
-border:0;
+  width:100%;
+  aspect-ratio:16/9;
+  border:0;
 }
 
 /* LYRIC ROTATOR */
 .lyric{
-text-align:center;
-font-size:clamp(16px,2vw,22px);
-margin-top:30px;
-line-height:1.6;
-opacity:1;
-transition:opacity .8s;
-font-family:var(--sans);
-letter-spacing:.3em;
-text-transform:uppercase;
+  text-align:center;
+  font-size:clamp(14px,1.9vw,20px); /* slightly smaller */
+  margin-top:30px;
+  line-height:1.7;
+  font-family:var(--lyric);
+  letter-spacing:.02em;
+  opacity:1;
+  transition:opacity 2.2s; /* longer fade */
 }
 .lyric.fade{opacity:0}
 
 .lyric em{
-color:var(--violet);
-text-shadow:0 0 18px rgba(138,46,255,.4);
+  color:var(--violet);
+  text-shadow:0 0 18px rgba(138,46,255,.35);
 }
 
 /* FOLLOW */
 .followBtn{
-display:block;
-margin:40px auto 0;
-width:max-content;
-padding:16px 30px;
-border-radius:999px;
-background:#fff;
-color:#000;
-letter-spacing:.25em;
-font-size:13px;
-animation:pop 2s infinite;
+  display:block;
+  margin:40px auto 0;
+  width:max-content;
+  padding:16px 30px;
+  border-radius:999px;
+  background:#fff;
+  color:#000;
+  letter-spacing:.25em;
+  font-size:13px;
+  animation:pop 2s infinite;
 }
 @keyframes pop{50%{transform:scale(1.08)}}
 
 /* EAT */
 .eat{
-display:block;
-margin:70px auto 0;
-font-size:15px;
-letter-spacing:.3em;
-animation:rainbow 4s linear infinite;
+  display:block;
+  margin:70px auto 0;
+  font-size:15px;
+  letter-spacing:.3em;
+  animation:rainbow 4s linear infinite;
 }
 
 footer{
-margin-top:40px;
-padding-top:20px;
-border-top:1px solid rgba(255,255,255,.08);
-font-size:11px;
-letter-spacing:.2em;
-opacity:.6;
-text-align:center;
+  margin-top:40px;
+  padding-top:20px;
+  border-top:1px solid rgba(255,255,255,.08);
+  font-size:11px;
+  letter-spacing:.2em;
+  opacity:.6;
+  text-align:center;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .logo, .followBtn, .eat, .btn.rainbow, .hero:after{ animation:none !important; }
 }
 </style>
 </head>
@@ -289,126 +308,161 @@ text-align:center;
 <body>
 
 <header>
-<a href="listen.html">LISTEN</a>
-<a href="#visuals">VISUALS</a>
-<a href="shop.html">SHOP</a>
-<a href="follow.html">FOLLOW</a>
+  <a href="listen.html">LISTEN</a>
+  <a href="#visuals">VISUALS</a>
+  <a href="shop.html">SHOP</a>
+  <a href="follow.html">FOLLOW</a>
 </header>
 
 <main class="wrap">
 
 <section class="hero">
-<div class="logo" id="logo">CLAWBOI</div>
+  <div class="logo" id="logo">CLAWBOI</div>
 </section>
 
 <section class="block">
-<div class="kicker">Latest Release</div>
+  <div class="kicker">Latest Release</div>
 
-<div class="releaseBox">
+  <div class="releaseBox">
 
-<div class="cover">
-<img src="images/latest-cover.jpg">
-</div>
+    <div class="cover">
+      <img src="images/latest-cover.jpg" alt="Latest cover">
+    </div>
 
-<div>
-<h2 class="releaseTitle">Two Times</h2>
-<div class="releaseMeta">emo trap / lonely flex</div>
+    <div>
+      <h2 class="releaseTitle">Two Times</h2>
+      <div class="releaseMeta">emo trap / lonely flex</div>
 
-<button class="btn rainbow" id="playBtn">PLAY</button>
-<a class="btn" href="https://youtu.be/DEdhtI3LMS4" target="_blank">YOUTUBE</a>
+      <!-- optional rainbow button just for vibe -->
+      <button class="btn rainbow" id="playBtn" type="button">PLAY</button>
+      <a class="btn" href="https://youtu.be/DEdhtI3LMS4" target="_blank" rel="noopener">YOUTUBE</a>
 
-<audio id="audio" playsinline preload="auto" src="audio/latest.mp3"></audio>
+      <!-- real iPhone-friendly player (scrub bar + pause/play) -->
+      <div class="playerWrap" aria-label="Audio player">
+        <audio class="player" id="audio" controls playsinline preload="metadata">
+          <source src="audio/latest.mp3?v=1" type="audio/mpeg">
+          Your browser does not support the audio element.
+        </audio>
+      </div>
 
-</div>
-</div>
+    </div>
+  </div>
 </section>
 
 <section id="visuals" class="block">
-<div class="kicker">Visuals</div>
+  <div class="kicker">Visuals</div>
 
-<div class="videoGrid">
-<div class="videoCard">
-<iframe src="https://www.youtube.com/embed/uVcRKlRVFgs" allowfullscreen></iframe>
-</div>
-<div class="videoCard">
-<iframe src="https://www.youtube.com/embed/OJlGBxj3T0U" allowfullscreen></iframe>
-</div>
-</div>
+  <div class="videoGrid">
+    <div class="videoCard">
+      <iframe src="https://www.youtube.com/embed/uVcRKlRVFgs" allowfullscreen></iframe>
+    </div>
+    <div class="videoCard">
+      <iframe src="https://www.youtube.com/embed/OJlGBxj3T0U" allowfullscreen></iframe>
+    </div>
+  </div>
 </section>
 
 <p class="lyric" id="lyricBox">
-“I tried everything but <em>nothing’s fixing me</em>.”
+  “I tried everything but <em>nothing’s fixing me</em>.”
 </p>
 
 <a href="follow.html" class="followBtn">FOLLOW</a>
 <a href="dream.html" class="eat">EAT ME</a>
 
 <footer>
-© <span id="y"></span> CLAWBOI
+  © <span id="y"></span> CLAWBOI
 </footer>
 
 </main>
 
 <script>
-document.getElementById("y").textContent=new Date().getFullYear();
+document.getElementById("y").textContent = new Date().getFullYear();
 
 /* spotlight */
 document.addEventListener("pointermove",e=>{
-document.documentElement.style.setProperty("--x",(e.clientX/window.innerWidth)*100+"%");
-document.documentElement.style.setProperty("--y",(e.clientY/window.innerHeight)*100+"%");
+  document.documentElement.style.setProperty("--x",(e.clientX/window.innerWidth)*100+"%");
+  document.documentElement.style.setProperty("--y",(e.clientY/window.innerHeight)*100+"%");
 });
 
 /* logo lightning */
 const logo=document.getElementById("logo");
-logo.onclick=()=>{
-logo.classList.add("flash");
-setTimeout(()=>logo.classList.remove("flash"),350);
-};
+logo.addEventListener("click",()=>{
+  logo.classList.add("flash");
+  setTimeout(()=>logo.classList.remove("flash"),350);
+});
 
-/* AUDIO FIX (iPhone safe) */
+/* button controls the real player too */
 const btn=document.getElementById("playBtn");
 const audio=document.getElementById("audio");
 
-btn.onclick=async()=>{
-try{
-if(audio.paused){
-await audio.play();
-btn.textContent="STOP";
-btn.classList.remove("rainbow");
-btn.style.background="#000";
-btn.style.color="#fff";
-}else{
-audio.pause();
-audio.currentTime=0;
-btn.textContent="PLAY";
-btn.classList.add("rainbow");
-btn.style.background="";
-}
-}catch(e){
-alert("Audio path issue. Verify file exists at: audio/latest.mp3");
-}
-};
+btn.addEventListener("click", async ()=>{
+  try{
+    if(audio.paused){
+      await audio.play();
+      btn.textContent="STOP";
+      btn.classList.remove("rainbow");
+      btn.style.background="#000";
+      btn.style.color="#fff";
+      btn.style.borderColor="#fff";
+    }else{
+      audio.pause();
+      audio.currentTime=0;
+      btn.textContent="PLAY";
+      btn.classList.add("rainbow");
+      btn.style.background="";
+      btn.style.color="";
+      btn.style.borderColor="";
+    }
+  }catch(e){
+    // iPhone sometimes requires using the native control first
+    alert("Tap the audio player Play button once (iPhone rule), then this button will work.");
+  }
+});
 
-/* LYRIC ROTATOR */
+/* keep button state synced if user uses native controls */
+audio.addEventListener("play", ()=>{
+  btn.textContent="STOP";
+  btn.classList.remove("rainbow");
+  btn.style.background="#000";
+  btn.style.color="#fff";
+  btn.style.borderColor="#fff";
+});
+audio.addEventListener("pause", ()=>{
+  // if paused mid-track, keep STOP? nah flip back to PLAY
+  btn.textContent="PLAY";
+  btn.classList.add("rainbow");
+  btn.style.background="";
+  btn.style.color="";
+  btn.style.borderColor="";
+});
+audio.addEventListener("ended", ()=>{
+  btn.textContent="PLAY";
+  btn.classList.add("rainbow");
+  btn.style.background="";
+  btn.style.color="";
+  btn.style.borderColor="";
+});
+
+/* LYRIC ROTATOR (longer fade) */
 const lyrics=[
-`I tried everything but <em>nothing’s fixing me</em>.`,
-`I'm sad just right from <em>head to toe</em>.`,
-`These people ain't tryna <em>know me</em>.`,
-`Shadows grow deep and they <em>grow long</em>.`,
-`I’m riding with only the <em>real ones</em>.`
+  `I tried everything but <em>nothing’s fixing me</em>.`,
+  `I'm sad just right from <em>head to toe</em>.`,
+  `These people ain't tryna <em>know me</em>.`,
+  `Shadows grow deep and they <em>grow long</em>.`,
+  `I’m riding with only the <em>real ones</em>.`
 ];
 
 let i=0;
 const box=document.getElementById("lyricBox");
 
 setInterval(()=>{
-box.classList.add("fade");
-setTimeout(()=>{
-i=(i+1)%lyrics.length;
-box.innerHTML="“"+lyrics[i]+"”";
-box.classList.remove("fade");
-},1200);
-},7000);
+  box.classList.add("fade");
+  setTimeout(()=>{
+    i=(i+1)%lyrics.length;
+    box.innerHTML="“"+lyrics[i]+"”";
+    box.classList.remove("fade");
+  },1600);
+},8000);
 </script>
 
 </body>
