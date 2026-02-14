@@ -1,298 +1,1087 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>DREAM</title>
 
 <style>
-body{
-margin:0;
-background:#000;
-overflow:hidden;
-font-family:monospace;
-color:white;
-}
-canvas{display:block}
+  :root{
+    --bg:#000;
+    --fg:#fff;
+    --violet:#8a2eff;
+    --hair:rgba(255,255,255,.12);
+    --muted:rgba(255,255,255,.72);
+    --good:#00ff9c;
+    --bad:#ff2a2a;
+    --gold:#ffe600;
+  }
 
-#ui{
-position:fixed;
-top:12px;
-left:50%;
-transform:translateX(-50%);
-letter-spacing:.2em;
-font-size:14px;
-text-align:center;
-opacity:.9;
-}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:var(--bg);
+    overflow:hidden;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    color:var(--fg);
+    -webkit-font-smoothing:antialiased;
+  }
+  canvas{display:block}
 
-#nameBox{
-position:fixed;
-inset:0;
-display:flex;
-align-items:center;
-justify-content:center;
-flex-direction:column;
-gap:18px;
-background:#000;
-z-index:10;
-}
+  /* Top HUD */
+  #ui{
+    position:fixed;
+    top:10px;
+    left:50%;
+    transform:translateX(-50%);
+    text-align:center;
+    letter-spacing:.18em;
+    font-size:12px;
+    opacity:.95;
+    z-index:5;
+    user-select:none;
+    pointer-events:none;
+    padding:10px 12px;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:16px;
+    background:rgba(0,0,0,.35);
+    backdrop-filter: blur(8px);
+  }
+  #ui .row{display:flex; gap:12px; justify-content:center; flex-wrap:wrap}
+  .tag{
+    padding:6px 10px;
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:999px;
+    background:rgba(255,255,255,.03);
+    color:rgba(255,255,255,.92);
+    white-space:nowrap;
+  }
+  .tag.v{border-color: rgba(138,46,255,.35); background: rgba(138,46,255,.08);}
+  .tag.g{border-color: rgba(0,255,156,.35); background: rgba(0,255,156,.06);}
+  .tag.r{border-color: rgba(255,42,42,.35); background: rgba(255,42,42,.06);}
 
-input{
-background:#000;
-border:1px solid white;
-color:white;
-padding:12px;
-font-family:monospace;
-letter-spacing:.2em;
-text-align:center;
-}
+  /* Overlay / menus */
+  #overlay{
+    position:fixed;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#000;
+    z-index:10;
+    padding:18px;
+  }
+  .panel{
+    width:min(720px, 92vw);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:22px;
+    padding:18px;
+    background:rgba(255,255,255,.02);
+    position:relative;
+    overflow:hidden;
+  }
+  .panel:before{
+    content:"";
+    position:absolute; inset:-40%;
+    background:
+      radial-gradient(700px 520px at 20% 15%, rgba(138,46,255,.18), transparent 60%),
+      radial-gradient(650px 500px at 80% 30%, rgba(255,255,255,.05), transparent 60%),
+      radial-gradient(650px 520px at 35% 85%, rgba(138,46,255,.10), transparent 60%);
+    opacity:.9;
+    pointer-events:none;
+  }
+  .panel > *{position:relative; z-index:1}
 
-button{
-background:#fff;
-color:#000;
-border:0;
-padding:12px 18px;
-cursor:pointer;
-letter-spacing:.2em;
-}
+  .title{
+    font-size:22px;
+    letter-spacing:.34em;
+    text-transform:uppercase;
+    margin:0 0 10px;
+  }
+  .sub{
+    margin:0 0 14px;
+    color:rgba(255,255,255,.75);
+    letter-spacing:.14em;
+    line-height:1.55;
+    font-size:12px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:12px;
+    margin-top:12px;
+  }
+  @media (max-width:720px){ .grid{grid-template-columns:1fr;} }
+
+  input{
+    width:100%;
+    background:#000;
+    border:1px solid rgba(255,255,255,.24);
+    color:white;
+    padding:12px;
+    font-family:inherit;
+    letter-spacing:.18em;
+    text-align:center;
+    border-radius:14px;
+    outline:none;
+  }
+
+  .opts{
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:18px;
+    padding:12px;
+    background:rgba(255,255,255,.02);
+  }
+  .optTitle{
+    margin:0 0 10px;
+    font-size:11px;
+    letter-spacing:.26em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.85);
+  }
+  .choices{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .chip{
+    cursor:pointer;
+    user-select:none;
+    padding:10px 10px;
+    border-radius:999px;
+    font-size:11px;
+    letter-spacing:.20em;
+    text-transform:uppercase;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.03);
+    color:rgba(255,255,255,.9);
+    transition: transform .14s ease, border-color .14s ease, background .14s ease;
+  }
+  .chip:hover{ transform: translateY(-1px); border-color: rgba(138,46,255,.45); background: rgba(138,46,255,.06); }
+  .chip.on{ border-color: rgba(0,255,156,.5); background: rgba(0,255,156,.08); }
+
+  .btnRow{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
+  button{
+    appearance:none;
+    border:0;
+    cursor:pointer;
+    padding:12px 16px;
+    border-radius:999px;
+    font-family:inherit;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    font-size:12px;
+    background:#fff;
+    color:#000;
+    transition: transform .14s ease, filter .14s ease;
+  }
+  button:hover{ transform: translateY(-1px); filter:brightness(1.06); }
+  button.secondary{
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.14);
+    color:#fff;
+  }
+
+  /* Level banner */
+  #levelBanner{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:8;
+    pointer-events:none;
+  }
+  #levelBanner .b{
+    border:1px solid rgba(255,255,255,.16);
+    background:rgba(0,0,0,.55);
+    backdrop-filter: blur(10px);
+    border-radius:18px;
+    padding:18px 18px;
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    font-size:13px;
+    text-align:center;
+    box-shadow: 0 0 0 10px rgba(138,46,255,.05);
+  }
+
+  /* Leaderboard modal */
+  #board{
+    display:none;
+    margin-top:12px;
+    border-top:1px solid rgba(255,255,255,.10);
+    padding-top:12px;
+  }
+  .lb{
+    display:flex; justify-content:space-between; gap:12px;
+    padding:10px 12px;
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:14px;
+    background:rgba(255,255,255,.02);
+    margin-top:8px;
+    font-size:12px;
+    letter-spacing:.14em;
+  }
+  .lb strong{letter-spacing:.20em}
 </style>
 </head>
+
 <body>
 
-<div id="nameBox">
-<div>ENTER NAME</div>
-<input id="nameInput" maxlength="12" placeholder="PLAYER">
-<button onclick="startGame()">START</button>
+<div id="overlay">
+  <div class="panel">
+    <div class="title">DREAM</div>
+    <p class="sub">
+      Don’t eat the pills. Stay clean. Survive the levels. Boss fight at the end.
+      Hearts shrink you. Overeat = explode. 🐒💊
+    </p>
+
+    <div class="grid">
+      <div class="opts">
+        <div class="optTitle">Enter Name</div>
+        <input id="nameInput" maxlength="12" placeholder="PLAYER" />
+        <div class="btnRow">
+          <button id="startBtn">START</button>
+          <button class="secondary" id="toggleBoard">LEADERBOARD</button>
+        </div>
+
+        <div id="board">
+          <div class="optTitle">Top Scores (local)</div>
+          <div id="lbList"></div>
+          <p class="sub" style="margin-top:10px;">
+            Tip: iPhone audio rule: your first START tap unlocks music later.
+          </p>
+        </div>
+      </div>
+
+      <div class="opts">
+        <div class="optTitle">Build Outfit</div>
+        <div class="choices" id="outfitChoices">
+          <div class="chip" data-part="hat" data-val="none">Hat: None</div>
+          <div class="chip" data-part="hat" data-val="cap">Hat: Cap</div>
+          <div class="chip" data-part="hat" data-val="beanie">Hat: Beanie</div>
+
+          <div class="chip" data-part="shades" data-val="none">Shades: None</div>
+          <div class="chip" data-part="shades" data-val="black">Shades: Black</div>
+          <div class="chip" data-part="shades" data-val="violet">Shades: Violet</div>
+
+          <div class="chip" data-part="chain" data-val="none">Chain: None</div>
+          <div class="chip" data-part="chain" data-val="gold">Chain: Gold</div>
+          <div class="chip" data-part="chain" data-val="silver">Chain: Silver</div>
+
+          <div class="chip" data-part="fit" data-val="hoodie">Fit: Hoodie</div>
+          <div class="chip" data-part="fit" data-val="jacket">Fit: Jacket</div>
+          <div class="chip" data-part="fit" data-val="tee">Fit: Tee</div>
+        </div>
+
+        <p class="sub" style="margin-top:10px;">
+          Move with mouse/touch. You get 3 lives.
+          Grab <span style="color:var(--good)">HEARTS</span> to lose fat + heal a life.
+          Avoid everything else.
+        </p>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div id="ui"></div>
+<div id="ui">
+  <div class="row">
+    <span class="tag v" id="uiName">NAME</span>
+    <span class="tag" id="uiLevel">LEVEL 1</span>
+    <span class="tag g" id="uiLives">LIVES 3</span>
+    <span class="tag" id="uiScore">SCORE 0</span>
+    <span class="tag" id="uiHi">HI 0</span>
+  </div>
+  <div class="row" style="margin-top:8px;">
+    <span class="tag r" id="uiFat">FAT 0%</span>
+    <span class="tag" id="uiBoss">BOSS: --</span>
+    <span class="tag" id="uiTip">TIP: DODGE</span>
+  </div>
+</div>
+
+<div id="levelBanner"><div class="b" id="levelText">LEVEL 1</div></div>
+
 <canvas id="game"></canvas>
 
+<!-- Optional music for later: put your track at /audio/dream.mp3 -->
+<audio id="music" preload="none" playsinline>
+  <source src="audio/dream.mp3?v=1" type="audio/mpeg" />
+</audio>
+
 <script>
-const c=document.getElementById("game");
-const ctx=c.getContext("2d");
+/* =========================
+   CANVAS SETUP
+========================= */
+const c = document.getElementById("game");
+const ctx = c.getContext("2d", { alpha:false });
 
-function resize(){c.width=innerWidth;c.height=innerHeight}
-resize();addEventListener("resize",resize);
+function resize(){ c.width = innerWidth; c.height = innerHeight; }
+resize(); addEventListener("resize", resize);
 
-/* sound engine */
-const beep=()=>{let a=new AudioContext();let o=a.createOscillator();let g=a.createGain();o.connect(g);g.connect(a.destination);o.type="square";o.frequency.value=200+Math.random()*400;g.gain.value=.05;o.start();o.stop(a.currentTime+.08)}
-
-/* player */
-const player={x:c.width/2,y:c.height-120,size:40,fat:0}
-
-/* controls */
-let mx=player.x;
-addEventListener("mousemove",e=>mx=e.clientX);
-addEventListener("touchmove",e=>mx=e.touches[0].clientX,{passive:true});
-
-/* storage */
-let bestScore=localStorage.getItem("clawboiHigh")||0;
-let bestName=localStorage.getItem("clawboiName")||"NONE";
-let playerName="";
-
-/* gameplay */
-let pills=[];
-let particles=[];
-let score=0;
-let combo=0;
-let spawnRate=90;
-let tick=0;
-let speed=2;
-let exploded=false;
-let boom=0;
-let running=false;
-let boss=null;
-
-/* start */
-function startGame(){
-playerName=document.getElementById("nameInput").value||"PLAYER";
-document.getElementById("nameBox").style.display="none";
-running=true;
-loop();
+/* =========================
+   MINI SOUND (lightweight)
+========================= */
+let audioUnlocked = false;
+let actx = null;
+function blip(freq=320, dur=0.06, vol=0.05){
+  try{
+    if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+    o.connect(g); g.connect(actx.destination);
+    o.type = "square";
+    o.frequency.value = freq;
+    g.gain.value = vol;
+    o.start();
+    o.stop(actx.currentTime + dur);
+  }catch(e){}
 }
 
-/* spawn pills */
-function spawn(){
-pills.push({
-x:Math.random()*c.width,
-y:-20,
-r:12+Math.random()*12,
-v:speed+Math.random()*2,
-h:Math.random()*360
+/* =========================
+   UI ELEMENTS
+========================= */
+const uiName = document.getElementById("uiName");
+const uiLevel = document.getElementById("uiLevel");
+const uiLives = document.getElementById("uiLives");
+const uiScore = document.getElementById("uiScore");
+const uiHi = document.getElementById("uiHi");
+const uiFat = document.getElementById("uiFat");
+const uiBoss = document.getElementById("uiBoss");
+const uiTip = document.getElementById("uiTip");
+
+const overlay = document.getElementById("overlay");
+const startBtn = document.getElementById("startBtn");
+const nameInput = document.getElementById("nameInput");
+const levelBanner = document.getElementById("levelBanner");
+const levelText = document.getElementById("levelText");
+
+const boardBtn = document.getElementById("toggleBoard");
+const board = document.getElementById("board");
+const lbList = document.getElementById("lbList");
+
+/* =========================
+   LEADERBOARD (localStorage)
+========================= */
+const LB_KEY = "clawboi_dream_lb_v1";
+function loadLB(){
+  try{
+    return JSON.parse(localStorage.getItem(LB_KEY) || "[]");
+  }catch(e){ return []; }
+}
+function saveLB(list){
+  localStorage.setItem(LB_KEY, JSON.stringify(list.slice(0,10)));
+}
+function addScoreToLB(name, score){
+  const list = loadLB();
+  list.push({ name, score, t: Date.now() });
+  list.sort((a,b)=> b.score - a.score);
+  saveLB(list);
+}
+function renderLB(){
+  const list = loadLB();
+  lbList.innerHTML = "";
+  if(!list.length){
+    lbList.innerHTML = `<div class="sub">No scores yet. Be the first ghost in the machine.</div>`;
+    return;
+  }
+  list.slice(0,10).forEach((e, idx)=>{
+    const row = document.createElement("div");
+    row.className = "lb";
+    row.innerHTML = `<strong>#${idx+1}</strong><span>${escapeHtml(e.name)}</span><span>${e.score}</span>`;
+    lbList.appendChild(row);
+  });
+}
+function escapeHtml(s){
+  return (s||"").replace(/[&<>"']/g, (m)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+}
+
+boardBtn.onclick = ()=>{
+  board.style.display = (board.style.display === "block") ? "none" : "block";
+  if(board.style.display === "block") renderLB();
+};
+
+/* =========================
+   OUTFIT BUILDER
+========================= */
+const outfit = { hat:"none", shades:"none", chain:"none", fit:"hoodie" };
+const chips = Array.from(document.querySelectorAll(".chip"));
+function setChipState(){
+  chips.forEach(ch=>{
+    const part = ch.dataset.part;
+    const val = ch.dataset.val;
+    const on = outfit[part] === val;
+    ch.classList.toggle("on", on);
+  });
+}
+document.getElementById("outfitChoices").addEventListener("click",(e)=>{
+  const ch = e.target.closest(".chip");
+  if(!ch) return;
+  outfit[ch.dataset.part] = ch.dataset.val;
+  setChipState();
+  blip(420,0.04,0.04);
 });
+setChipState();
+
+/* =========================
+   GAME STATE
+========================= */
+let running = false;
+let playerName = "PLAYER";
+
+const player = {
+  x: innerWidth/2,
+  y: innerHeight - 140,
+  vx: 0,
+  size: 34,
+  fat: 0,            // 0..200, explode at 200
+  lives: 3,
+  invuln: 0,         // frames of invulnerability
+  shrink: 0,         // bonus shrink factor from hearts
+};
+
+let mx = player.x;
+addEventListener("mousemove", e=> mx = e.clientX);
+addEventListener("touchmove", e=> { mx = e.touches[0].clientX; }, { passive:true });
+
+/* Objects */
+let pills = [];     // bad
+let hearts = [];    // good
+let junk = [];      // boss adds hazards
+let particles = [];
+let score = 0;
+
+let level = 1;      // 1..5 then boss
+let levelTicks = 0;
+let globalTicks = 0;
+
+let spawnRate = 62;     // lower = more spawns
+let fallSpeed = 2.2;
+let heartRate = 260;    // hearts less common
+let nearMissBonus = 0;  // grows with skill
+
+let boss = null;        // boss state object
+let ended = false;
+
+/* =========================
+   MUSIC (optional later)
+   Put /audio/dream.mp3
+========================= */
+const music = document.getElementById("music");
+function tryStartMusic(){
+  // Must be in user gesture context. We'll call from START.
+  if(!music) return;
+  music.volume = 0.75;
+  music.loop = true;
+  music.play().catch(()=>{});
 }
 
-/* boss */
+/* =========================
+   LEVEL SETTINGS
+========================= */
+function applyLevelSettings(){
+  // Make it harder per level. Level banner pauses briefly.
+  const L = level;
+  spawnRate = Math.max(18, 64 - L*10);      // more pills
+  fallSpeed = 2.1 + L*0.75;                 // faster fall
+  heartRate = Math.max(160, 300 - L*25);    // hearts a bit more often later
+  nearMissBonus = 1 + L;                    // more reward for precision
+
+  uiTip.textContent = (L<5)
+    ? (L<=2 ? "TIP: STAY LOW" : L===3 ? "TIP: HEARTS SHRINK YOU" : "TIP: DONT GREED")
+    : "TIP: READY FOR BOSS";
+
+  showBanner(L < 6 ? `LEVEL ${L}` : `BOSS`);
+}
+
+function showBanner(txt){
+  levelText.textContent = txt;
+  levelBanner.style.display = "flex";
+  setTimeout(()=>{ levelBanner.style.display = "none"; }, 900);
+}
+
+/* =========================
+   SPAWNS
+========================= */
+function spawnPill(type="pill"){
+  const r = 10 + Math.random()*10;
+  pills.push({
+    type,
+    x: Math.random()*c.width,
+    y: -40,
+    r,
+    v: fallSpeed + Math.random()*1.6,
+    h: Math.random()*360,
+    wobble: (Math.random()*2-1)*0.8
+  });
+}
+function spawnHeart(){
+  hearts.push({
+    x: Math.random()*c.width,
+    y: -40,
+    r: 14,
+    v: fallSpeed*0.9 + Math.random()*0.8,
+    t: 0
+  });
+}
+function spawnJunk(){
+  // boss hazards: shards, needles, fake hearts
+  const kind = ["shard","needle","fakeheart"][Math.floor(Math.random()*3)];
+  junk.push({
+    kind,
+    x: Math.random()*c.width,
+    y: -40,
+    r: kind==="needle"? 10 : kind==="fakeheart"? 14 : 12,
+    v: fallSpeed*1.3 + Math.random()*2.4,
+    a: Math.random()*Math.PI*2
+  });
+}
+
+function burst(x,y,color,count=14,spd=6){
+  for(let i=0;i<count;i++){
+    particles.push({
+      x,y,
+      vx:(Math.random()-.5)*spd,
+      vy:(Math.random()-.5)*spd,
+      life: 36 + Math.random()*18,
+      color
+    });
+  }
+}
+
+/* =========================
+   BOSS
+========================= */
 function spawnBoss(){
-boss={x:c.width/2,y:-150,r:120,hp:20}
+  boss = {
+    x: c.width/2,
+    y: -160,
+    r: 120,
+    hp: 120,      // tougher
+    phase: 1,
+    t: 0,
+    sway: 0
+  };
+  showBanner("BOSS BATTLE");
+  blip(120,0.12,0.06);
+}
+function bossUpdate(){
+  if(!boss) return;
+
+  boss.t++;
+  // enter
+  if(boss.y < 160) boss.y += 1.6;
+
+  // sway
+  boss.sway = Math.sin(boss.t*0.02) * 140;
+  boss.x = c.width/2 + boss.sway;
+
+  // phases get worse
+  if(boss.hp < 85) boss.phase = 2;
+  if(boss.hp < 45) boss.phase = 3;
+
+  // spawn hazards based on phase
+  if(boss.t % (boss.phase===1? 22 : boss.phase===2? 16 : 11) === 0){
+    spawnJunk();
+  }
+  // add pills too (chaos)
+  if(boss.t % (boss.phase===1? 18 : boss.phase===2? 13 : 9) === 0){
+    spawnPill("bossPill");
+  }
+
+  // player can "damage" boss by near-miss threading near its radius
+  const dx = player.x - boss.x;
+  const dy = player.y - boss.y;
+  const dist = Math.hypot(dx, dy);
+
+  // sweet ring: not colliding, but close
+  const outer = boss.r + 50;
+  const inner = boss.r + 18;
+  if(dist < outer && dist > inner){
+    boss.hp -= 0.6 + (level*0.05);
+    score += 4;
+    if(boss.t % 6 === 0) burst(player.x, player.y, "rgba(138,46,255,.9)", 6, 4);
+  }
+
+  if(boss.hp <= 0){
+    // win
+    score += 2500;
+    burst(boss.x, boss.y, "rgba(138,46,255,.95)", 60, 10);
+    boss = null;
+    endGame(true);
+  }
 }
 
-/* particles */
-function burst(x,y,color){
-for(let i=0;i<12;i++){
-particles.push({
-x,y,
-vx:(Math.random()-.5)*6,
-vy:(Math.random()-.5)*6,
-life:40,
-color
-})
-}
+/* =========================
+   COLLISION HELPERS
+========================= */
+function hitCircle(ax,ay,ar,bx,by,br){
+  const dx = ax-bx, dy = ay-by;
+  return Math.hypot(dx,dy) < (ar+br);
 }
 
-/* restart */
-addEventListener("click",()=>{if(exploded)location.reload()});
+/* =========================
+   DRAW: PLAYER (chimp/orangutan vibe)
+========================= */
+function drawChimp(px,py,base){
+  const fatScale = 1 + player.fat/220;      // grows as you eat
+  const shrinkScale = Math.max(0.78, 1 - player.shrink*0.02);
+  const s = base * fatScale * shrinkScale;
 
-/* loop */
+  // invuln flicker
+  if(player.invuln > 0 && (player.invuln % 10) < 5){
+    ctx.globalAlpha = 0.45;
+  }else{
+    ctx.globalAlpha = 1;
+  }
+
+  // body
+  ctx.fillStyle = "#fff";
+  roundRect(px - s*0.55, py - s*0.25, s*1.1, s*0.95, s*0.25, true);
+
+  // head
+  ctx.fillStyle = "#fff";
+  roundRect(px - s*0.45, py - s*0.78, s*0.9, s*0.65, s*0.25, true);
+
+  // face mask (orangutan-ish)
+  ctx.fillStyle = "#000";
+  ctx.globalAlpha *= 0.92;
+  roundRect(px - s*0.28, py - s*0.60, s*0.56, s*0.34, s*0.18, true);
+  ctx.globalAlpha = 1;
+
+  // nostrils / mouth line
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(px - s*0.06, py - s*0.48, s*0.05, s*0.05);
+  ctx.fillRect(px + s*0.01, py - s*0.48, s*0.05, s*0.05);
+  ctx.fillRect(px - s*0.14, py - s*0.40, s*0.28, s*0.05);
+
+  // eyes
+  ctx.fillStyle="#000";
+  ctx.fillRect(px - s*0.22, py - s*0.66, s*0.08, s*0.08);
+  ctx.fillRect(px + s*0.14, py - s*0.66, s*0.08, s*0.08);
+
+  // ears
+  ctx.fillStyle="#fff";
+  roundRect(px - s*0.62, py - s*0.62, s*0.18, s*0.22, s*0.08, true);
+  roundRect(px + s*0.44, py - s*0.62, s*0.18, s*0.22, s*0.08, true);
+
+  // outfit overlay
+  drawOutfit(px,py,s);
+
+  // fat warning ring
+  const fatPct = Math.min(100, Math.floor((player.fat/200)*100));
+  if(fatPct > 60){
+    ctx.strokeStyle = `rgba(255,42,42,${(fatPct-60)/60})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(px, py - s*0.18, s*0.85, 0, Math.PI*2);
+    ctx.stroke();
+  }
+}
+
+function drawOutfit(px,py,s){
+  // Fit
+  if(outfit.fit === "hoodie"){
+    ctx.fillStyle = "rgba(0,0,0,.92)";
+    roundRect(px - s*0.6, py + s*0.05, s*1.2, s*0.65, s*0.25, true);
+    ctx.strokeStyle = "rgba(138,46,255,.55)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px - s*0.15, py + s*0.16);
+    ctx.lineTo(px + s*0.15, py + s*0.16);
+    ctx.stroke();
+  }else if(outfit.fit === "jacket"){
+    ctx.fillStyle = "rgba(255,255,255,.06)";
+    roundRect(px - s*0.62, py + s*0.02, s*1.24, s*0.70, s*0.20, true);
+    ctx.strokeStyle = "rgba(255,255,255,.14)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px - s*0.62, py + s*0.02, s*1.24, s*0.70);
+  }else{
+    ctx.fillStyle = "rgba(255,255,255,.06)";
+    roundRect(px - s*0.55, py + s*0.10, s*1.1, s*0.55, s*0.22, true);
+  }
+
+  // Chain
+  if(outfit.chain !== "none"){
+    ctx.strokeStyle = (outfit.chain==="gold") ? "rgba(255,230,0,.9)" : "rgba(220,220,255,.9)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(px, py + s*0.05, s*0.22, Math.PI*0.15, Math.PI*0.85);
+    ctx.stroke();
+    ctx.fillStyle = (outfit.chain==="gold") ? "rgba(255,230,0,.9)" : "rgba(220,220,255,.9)";
+    ctx.fillRect(px - s*0.05, py + s*0.20, s*0.10, s*0.12);
+  }
+
+  // Shades
+  if(outfit.shades !== "none"){
+    const col = (outfit.shades==="violet") ? "rgba(138,46,255,.95)" : "rgba(0,0,0,.95)";
+    ctx.fillStyle = col;
+    ctx.fillRect(px - s*0.30, py - s*0.66, s*0.26, s*0.10);
+    ctx.fillRect(px + s*0.04, py - s*0.66, s*0.26, s*0.10);
+    ctx.fillRect(px - s*0.04, py - s*0.62, s*0.08, s*0.04);
+  }
+
+  // Hat
+  if(outfit.hat !== "none"){
+    if(outfit.hat === "cap"){
+      ctx.fillStyle = "rgba(0,0,0,.95)";
+      roundRect(px - s*0.35, py - s*0.90, s*0.70, s*0.20, s*0.10, true);
+      ctx.fillRect(px - s*0.15, py - s*0.72, s*0.55, s*0.07);
+    }else{
+      ctx.fillStyle = "rgba(0,0,0,.85)";
+      roundRect(px - s*0.32, py - s*0.90, s*0.64, s*0.26, s*0.14, true);
+      ctx.fillStyle = "rgba(138,46,255,.45)";
+      ctx.fillRect(px - s*0.32, py - s*0.78, s*0.64, s*0.05);
+    }
+  }
+}
+
+function roundRect(x,y,w,h,r,fill){
+  const rr = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr,y);
+  ctx.arcTo(x+w,y,x+w,y+h,rr);
+  ctx.arcTo(x+w,y+h,x,y+h,rr);
+  ctx.arcTo(x,y+h,x,y,rr);
+  ctx.arcTo(x,y,x+w,y,rr);
+  if(fill) ctx.fill();
+  else ctx.stroke();
+}
+
+/* =========================
+   EXPLOSION / END
+========================= */
+function endGame(win=false){
+  running = false;
+  ended = true;
+
+  // save leaderboard
+  addScoreToLB(playerName, Math.floor(score));
+  renderLB();
+
+  overlay.style.display = "flex";
+  const p = overlay.querySelector(".panel");
+  p.querySelector(".title").textContent = win ? "YOU BEAT THE DREAM" : "OVERDOSE";
+  p.querySelector(".sub").innerHTML = win
+    ? `You survived the spiral. Score locked.`
+    : `You ate too much. The chimp exploded. Score locked.`;
+
+  // show leaderboard
+  board.style.display = "block";
+  renderLB();
+
+  // change button
+  startBtn.textContent = "PLAY AGAIN";
+}
+
+/* =========================
+   START / RESET
+========================= */
+function resetGame(){
+  pills = [];
+  hearts = [];
+  junk = [];
+  particles = [];
+  score = 0;
+
+  level = 1;
+  levelTicks = 0;
+  globalTicks = 0;
+
+  player.x = c.width/2;
+  player.y = c.height - 140;
+  player.size = 34;
+  player.fat = 0;
+  player.lives = 3;
+  player.invuln = 0;
+  player.shrink = 0;
+
+  boss = null;
+  ended = false;
+
+  applyLevelSettings();
+}
+
+startBtn.onclick = ()=>{
+  // unlock web audio + optional music
+  if(!audioUnlocked){
+    audioUnlocked = true;
+    try{ blip(300,0.04,0.04); }catch(e){}
+    tryStartMusic();
+  }
+
+  playerName = (nameInput.value || "PLAYER").slice(0,12).toUpperCase();
+  uiName.textContent = playerName;
+
+  overlay.style.display = "none";
+
+  resetGame();
+  running = true;
+  loop();
+};
+
+applyLevelSettings();
+
+/* =========================
+   DAMAGE / LIFE SYSTEM
+========================= */
+function loseLife(){
+  if(player.invuln > 0) return;
+  player.lives--;
+  player.invuln = 75; // invuln frames
+  burst(player.x, player.y, "rgba(255,42,42,.95)", 26, 8);
+  blip(140,0.08,0.06);
+
+  if(player.lives <= 0){
+    endGame(false);
+  }
+}
+function gainLife(){
+  if(player.lives < 5) player.lives++;
+}
+
+/* =========================
+   MAIN LOOP
+========================= */
 function loop(){
-if(!running)return;
-ctx.clearRect(0,0,c.width,c.height);
+  if(!running) return;
 
-tick++;
+  globalTicks++;
+  levelTicks++;
 
-/* spawn logic */
-if(!boss && tick%spawnRate===0)spawn();
-if(tick%900===0 && !boss)spawnBoss();
+  // background
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0,0,c.width,c.height);
 
-/* difficulty */
-if(tick%600===0){
-speed+=.3;
-if(spawnRate>25)spawnRate-=4;
-}
+  // soft glow field
+  ctx.globalAlpha = 1;
+  const gx = (Math.sin(globalTicks*0.005)*0.5+0.5)*c.width;
+  const gy = (Math.cos(globalTicks*0.004)*0.5+0.5)*c.height*0.6;
+  const grd = ctx.createRadialGradient(gx,gy,20,gx,gy,Math.max(c.width,c.height)*0.7);
+  grd.addColorStop(0, "rgba(138,46,255,.10)");
+  grd.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = grd;
+  ctx.fillRect(0,0,c.width,c.height);
 
-/* pills */
-for(let i=pills.length-1;i>=0;i--){
-let p=pills[i];
-p.y+=p.v;
+  // levels progression: each level lasts ~22 seconds
+  if(!boss){
+    const levelDuration = 60 * 22; // frames at ~60fps
+    if(level <= 5 && levelTicks > levelDuration){
+      level++;
+      levelTicks = 0;
 
-ctx.fillStyle=`hsl(${p.h},90%,60%)`;
-ctx.beginPath();
-ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-ctx.fill();
+      if(level <= 5){
+        applyLevelSettings();
+        blip(520,0.06,0.04);
+      }else{
+        spawnBoss();
+      }
+    }
+  }
 
-/* collision */
-let dx=p.x-player.x;
-let dy=p.y-player.y;
-let dist=Math.hypot(dx,dy);
+  // spawns
+  if(!boss){
+    if(globalTicks % spawnRate === 0) spawnPill();
+    if(globalTicks % heartRate === 0) spawnHeart();
+  }else{
+    // boss handles spawns
+    bossUpdate();
+  }
 
-/* near miss slowmo */
-if(dist<p.r+player.size+40 && dist>p.r+player.size){
-combo++;
-score+=combo;
-}
+  // occasionally drop hearts even during boss
+  if(boss && globalTicks % Math.max(190, heartRate) === 0) spawnHeart();
 
-/* eat */
-if(dist<p.r+player.size){
-pills.splice(i,1);
-player.fat+=6;
-combo=0;
-beep();
-burst(p.x,p.y,"white");
-}
+  // harder curve over time within a level
+  if(level <= 5 && globalTicks % 240 === 0){
+    fallSpeed += 0.08;
+    spawnRate = Math.max(16, spawnRate - 1);
+  }
 
-/* remove */
-if(p.y>c.height+40)pills.splice(i,1);
-}
+  // update player movement
+  player.x += (mx - player.x) * 0.20;
+  player.x = Math.max(30, Math.min(c.width-30, player.x));
+  player.y = c.height - 140;
 
-/* boss logic */
-if(boss){
-boss.y+=1.2;
-ctx.strokeStyle="#8a2eff";
-ctx.lineWidth=6;
-ctx.beginPath();
-ctx.arc(boss.x,boss.y,boss.r,0,Math.PI*2);
-ctx.stroke();
+  if(player.invuln > 0) player.invuln--;
 
-ctx.fillStyle="#8a2eff";
-ctx.fillRect(boss.x-60,boss.y-10,120,20);
+  // draw falling pills
+  for(let i=pills.length-1;i>=0;i--){
+    const p = pills[i];
+    p.y += p.v;
+    p.x += p.wobble;
 
-if(Math.abs(player.x-boss.x)<boss.r){
-boss.hp--;
-burst(player.x,player.y,"#8a2eff");
-}
+    // draw pill (capsule)
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(Math.sin((p.y+p.h)*0.01)*0.6);
+    ctx.fillStyle = `hsl(${p.h},90%,60%)`;
+    roundRect(-p.r*1.1, -p.r*0.65, p.r*2.2, p.r*1.3, p.r*0.6, true);
+    ctx.fillStyle = "rgba(255,255,255,.35)";
+    roundRect(-p.r*1.0, -p.r*0.10, p.r*2.0, p.r*0.18, p.r*0.2, true);
+    ctx.restore();
 
-if(boss.hp<=0){
-score+=1000;
-burst(boss.x,boss.y,"#8a2eff");
-boss=null;
-}
-}
+    // collision
+    const pr = p.r;
+    const hit = hitCircle(p.x,p.y,pr, player.x, player.y-20, player.size);
 
-/* movement */
-player.x+=(mx-player.x)*.2;
+    // near miss bonus
+    const dist = Math.hypot(p.x-player.x, p.y-(player.y-20));
+    const near = (dist < pr + player.size + 48) && !hit && dist > pr + player.size + 6;
 
-/* draw player */
-ctx.save();
-ctx.translate(player.x,player.y);
+    if(near){
+      score += nearMissBonus;
+      if(globalTicks % 6 === 0) burst(player.x, player.y-20, "rgba(255,255,255,.7)", 3, 3);
+    }
 
-let s=player.size+player.fat;
+    if(hit){
+      // EAT pill => fat grows fast => harder
+      pills.splice(i,1);
+      player.fat += (p.type==="bossPill" ? 14 : 10);
+      blip(240,0.05,0.05);
+      burst(p.x,p.y,"rgba(255,255,255,.9)",18,7);
+    }
 
-ctx.fillStyle="#fff";
-ctx.fillRect(-s,-s,s*2,s*2);
+    if(p.y > c.height + 80) pills.splice(i,1);
+  }
 
-ctx.fillStyle="#000";
-ctx.fillRect(-s/2,-s/2,8,8);
-ctx.fillRect(s/2-8,-s/2,8,8);
-ctx.fillRect(-s/4,s/4,s/2,8);
+  // hearts (good)
+  for(let i=hearts.length-1;i>=0;i--){
+    const h = hearts[i];
+    h.y += h.v;
+    h.t++;
 
-ctx.restore();
+    // draw heart (pixel-ish)
+    ctx.save();
+    ctx.translate(h.x,h.y);
+    ctx.scale(1 + Math.sin(h.t*0.12)*0.06, 1 + Math.cos(h.t*0.12)*0.06);
+    ctx.fillStyle = "rgba(0,255,156,.92)";
+    ctx.fillRect(-8,-2,4,4); ctx.fillRect(4,-2,4,4);
+    ctx.fillRect(-12,2,28,6);
+    ctx.fillRect(-10,8,24,6);
+    ctx.fillRect(-6,14,16,6);
+    ctx.restore();
 
-/* particles */
-for(let i=particles.length-1;i>=0;i--){
-let p=particles[i];
-p.x+=p.vx;
-p.y+=p.vy;
-p.life--;
-ctx.fillStyle=p.color;
-ctx.fillRect(p.x,p.y,4,4);
-if(p.life<=0)particles.splice(i,1);
-}
+    if(hitCircle(h.x,h.y,h.r, player.x, player.y-20, player.size)){
+      hearts.splice(i,1);
+      // shrink + heal + reduce fat
+      player.shrink = Math.min(12, player.shrink + 2);
+      player.fat = Math.max(0, player.fat - 20);
+      gainLife();
+      blip(620,0.06,0.05);
+      burst(h.x,h.y,"rgba(0,255,156,.95)",22,7);
+    }
 
-/* explosion */
-if(player.fat>150&&!exploded){
-exploded=true;
-if(score>bestScore){
-bestScore=score;
-bestName=playerName;
-localStorage.setItem("clawboiHigh",bestScore);
-localStorage.setItem("clawboiName",bestName);
-}
-}
+    if(h.y > c.height + 80) hearts.splice(i,1);
+  }
 
-if(exploded){
-boom+=8;
+  // junk hazards (boss fight)
+  for(let i=junk.length-1;i>=0;i--){
+    const j = junk[i];
+    j.y += j.v;
+    j.a += 0.08;
 
-ctx.fillStyle="rgba(255,255,255,.15)";
-ctx.beginPath();
-ctx.arc(player.x,player.y,boom,0,Math.PI*2);
-ctx.fill();
+    ctx.save();
+    ctx.translate(j.x,j.y);
+    ctx.rotate(j.a);
 
-ctx.fillStyle="#fff";
-ctx.font="bold 38px monospace";
-ctx.textAlign="center";
-ctx.fillText("OVERDOSE",c.width/2,c.height/2-60);
+    if(j.kind === "shard"){
+      ctx.fillStyle = "rgba(185,140,255,.75)";
+      ctx.beginPath();
+      ctx.moveTo(0,-j.r);
+      ctx.lineTo(j.r, j.r);
+      ctx.lineTo(-j.r, j.r);
+      ctx.closePath();
+      ctx.fill();
+    }else if(j.kind === "needle"){
+      ctx.fillStyle = "rgba(255,255,255,.85)";
+      ctx.fillRect(-2, -j.r*1.6, 4, j.r*3.2);
+      ctx.fillStyle = "rgba(255,42,42,.85)";
+      ctx.fillRect(-2, j.r*1.2, 4, j.r*0.4);
+    }else{
+      // fake heart
+      ctx.fillStyle = "rgba(255,42,42,.90)";
+      ctx.fillRect(-8,-2,4,4); ctx.fillRect(4,-2,4,4);
+      ctx.fillRect(-12,2,28,6);
+      ctx.fillRect(-10,8,24,6);
+      ctx.fillRect(-6,14,16,6);
+    }
+    ctx.restore();
 
-ctx.font="18px monospace";
-ctx.fillText("SCORE "+score,c.width/2,c.height/2);
+    const hit = hitCircle(j.x,j.y,j.r, player.x, player.y-20, player.size);
+    if(hit){
+      junk.splice(i,1);
+      // fake heart hurts, shard hurts, needle hurts
+      loseLife();
+      player.fat += 8;
+    }
 
-if(score>5000){
-ctx.fillStyle="#8a2eff";
-ctx.fillText("SECRET ENDING UNLOCKED",c.width/2,c.height/2+60);
-}
+    if(j.y > c.height + 80) junk.splice(i,1);
+  }
 
-ctx.fillText("BEST "+bestScore+" — "+bestName,c.width/2,c.height/2+100);
-ctx.fillText("CLICK TO RESTART",c.width/2,c.height/2+150);
-return;
-}
+  // draw boss
+  if(boss){
+    // aura ring
+    ctx.strokeStyle = "rgba(138,46,255,.85)";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
+    ctx.stroke();
 
-/* score */
-score++;
-document.getElementById("ui").textContent=
-playerName+" | "+score+" | combo "+combo+" | best "+bestScore;
+    // face
+    ctx.fillStyle = "rgba(0,0,0,.85)";
+    ctx.beginPath();
+    ctx.arc(boss.x, boss.y, boss.r*0.65, 0, Math.PI*2);
+    ctx.fill();
 
-requestAnimationFrame(loop);
+    // eyes
+    ctx.fillStyle = "rgba(255,255,255,.9)";
+    ctx.fillRect(boss.x - boss.r*0.35, boss.y - boss.r*0.10, boss.r*0.18, boss.r*0.08);
+    ctx.fillRect(boss.x + boss.r*0.17, boss.y - boss.r*0.10, boss.r*0.18, boss.r*0.08);
+
+    // HP bar
+    const hpW = 240;
+    const hpPct = Math.max(0, boss.hp/120);
+    ctx.fillStyle = "rgba(255,255,255,.10)";
+    roundRect(c.width/2 - hpW/2, 16, hpW, 10, 6, true);
+    ctx.fillStyle = "rgba(138,46,255,.85)";
+    roundRect(c.width/2 - hpW/2, 16, hpW*hpPct, 10, 6, true);
+  }
+
+  // draw player
+  drawChimp(player.x, player.y, player.size);
+
+  // particles
+  for(let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.98; p.vy *= 0.98;
+    p.life--;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x,p.y,3,3);
+    if(p.life <= 0) particles.splice(i,1);
+  }
+
+  // scoring tick
+  score += 1;
+
+  // fat explode
+  if(player.fat >= 200){
+    burst(player.x, player.y, "rgba(255,255,255,.95)", 80, 12);
+    burst(player.x, player.y, "rgba(138,46,255,.95)", 50, 10);
+    blip(90,0.16,0.08);
+    endGame(false);
+    return;
+  }
+
+  // UI update
+  uiLevel.textContent = boss ? "BOSS" : `LEVEL ${Math.min(level,5)}`;
+  uiLives.textContent = `LIVES ${player.lives}`;
+  uiScore.textContent = `SCORE ${Math.floor(score)}`;
+  const hi = loadLB()[0]?.score || 0;
+  uiHi.textContent = `HI ${hi}`;
+  uiFat.textContent = `FAT ${Math.min(100, Math.floor((player.fat/200)*100))}%`;
+  uiBoss.textContent = boss ? `BOSS HP ${Math.max(0, Math.floor(boss.hp))}` : "BOSS: --";
+
+  requestAnimationFrame(loop);
 }
 </script>
 </body>
