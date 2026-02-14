@@ -1,84 +1,55 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>CLAWBOI</title>
-<meta name="theme-color" content="#000000"/>
 
 <style>
 :root{
 --bg:#000;
 --fg:#fff;
 --violet:#8a2eff;
---violet2:#b98cff;
---hair:rgba(255,255,255,.10);
---muted:rgba(255,255,255,.70);
 --max:1100px;
---r:20px;
---sans:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+--sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
 }
+
 *{box-sizing:border-box}
-html,body{height:100%}
 body{
 margin:0;
-background:var(--bg);
-color:var(--fg);
+background:#000;
+color:#fff;
 font-family:var(--sans);
 overflow-x:hidden;
-}
-
-/* spotlight */
-#spot{
-position:fixed;inset:0;
-pointer-events:none;
-background:radial-gradient(circle at var(--sx,50%) var(--sy,22%),rgba(138,46,255,.14),transparent 46%);
-mix-blend-mode:screen;
-opacity:.65;
-z-index:0;
-}
-
-/* ambient glow */
-body:before{
-content:"";
-position:fixed;inset:0;
-background:
-radial-gradient(circle at 20% 10%,rgba(138,46,255,.10),transparent 35%),
-radial-gradient(circle at 70% 30%,rgba(138,46,255,.08),transparent 38%),
-radial-gradient(circle at 45% 85%,rgba(138,46,255,.06),transparent 45%);
-mix-blend-mode:screen;
-opacity:.9;
-pointer-events:none;
 }
 
 /* NAV */
 header{
 position:fixed;
-top:0;left:0;
-width:100%;
-z-index:1000;
-display:flex;
-justify-content:center;
-gap:40px;
+top:0;left:0;width:100%;
+display:flex;justify-content:center;gap:40px;
 background:rgba(0,0,0,.55);
 backdrop-filter:blur(10px);
 border-bottom:1px solid rgba(255,255,255,.08);
-padding:18px 28px;
+padding:16px;
+z-index:9;
 }
 header a{
 font-size:12px;
-letter-spacing:.28em;
+letter-spacing:.25em;
 text-transform:uppercase;
-color:rgba(255,255,255,.85);
-border-bottom:1px solid transparent;
-transition:.2s;
+opacity:.8;
 }
-header a:hover{
-border-bottom-color:var(--violet);
-transform:translateY(-1px);
-}
+header a:hover{opacity:1}
 
-.wrap{max-width:var(--max);margin:0 auto;padding:0 22px 90px;position:relative;z-index:1}
+/* WRAP */
+.wrap{
+max-width:var(--max);
+margin:auto;
+padding:0 22px 100px;
+position:relative;
+z-index:1;
+}
 
 /* HERO */
 .hero{
@@ -86,48 +57,56 @@ min-height:88vh;
 display:flex;
 align-items:center;
 justify-content:center;
-padding-top:92px;
+padding-top:80px;
 text-align:center;
 position:relative;
 }
 
+/* lightning background */
+.hero:after{
+content:"";
+position:absolute;
+inset:0;
+pointer-events:none;
+background:
+radial-gradient(circle at 30% 30%,rgba(138,46,255,.18),transparent 40%),
+radial-gradient(circle at 70% 40%,rgba(138,46,255,.12),transparent 40%);
+animation:storm 7s ease-in-out infinite;
+mix-blend-mode:screen;
+}
+@keyframes storm{
+50%{opacity:.3}
+}
+
+/* LOGO */
 .logo{
-font-weight:650;
+font-size:clamp(48px,10vw,92px);
 letter-spacing:.34em;
-font-size:clamp(44px,10vw,92px);
 text-transform:uppercase;
-color:#fff;
 text-shadow:
-0 0 14px rgba(138,46,255,.30),
-0 0 32px rgba(138,46,255,.18);
-animation:glow 3s ease-in-out infinite;
+0 0 14px rgba(138,46,255,.4),
+0 0 50px rgba(138,46,255,.2);
+animation:pulse 3s ease-in-out infinite;
 }
-@keyframes glow{
-0%,100%{filter:saturate(110%)}
-50%{filter:saturate(150%)}
-}
-
-/* divider */
-.divider{
-height:1px;
-background:linear-gradient(90deg,transparent,var(--violet),transparent);
-margin:18px 0;
+@keyframes pulse{
+50%{filter:brightness(1.3)}
 }
 
-/* sections */
-section.block{
+/* BLOCK */
+.block{
 border-top:1px solid rgba(255,255,255,.08);
-padding:48px 0;
+padding:50px 0;
 }
+
 .kicker{
 font-size:12px;
 letter-spacing:.28em;
 text-transform:uppercase;
-color:rgba(255,255,255,.7);
-margin-bottom:10px;
+opacity:.7;
+margin-bottom:14px;
 }
 
-/* latest */
+/* RELEASE BOX */
 .releaseBox{
 display:flex;
 gap:18px;
@@ -140,58 +119,64 @@ position:relative;
 overflow:hidden;
 }
 
-/* crystal slide */
-.releaseBox:after{
+/* shine sweep */
+.releaseBox:before{
 content:"";
 position:absolute;
-top:-60%;
+top:0;
 left:-60%;
-width:120%;
-height:120%;
-background:linear-gradient(120deg,transparent 45%,rgba(255,255,255,.25),transparent 55%);
-transform:rotate(8deg);
-opacity:0;
+width:50%;
+height:100%;
+background:linear-gradient(120deg,transparent,rgba(255,255,255,.35),transparent);
+transform:skewX(-20deg);
 }
-.releaseBox:hover:after{
-opacity:1;
-animation:shine 1.1s ease forwards;
+.releaseBox:hover:before{
+animation:shine 1.2s linear;
 }
 @keyframes shine{
-from{transform:translateX(-40%) rotate(8deg)}
-to{transform:translateX(40%) rotate(8deg)}
+to{left:130%}
 }
 
 .cover{
 width:110px;height:110px;
 border-radius:16px;
-border:1px solid rgba(255,255,255,.12);
 overflow:hidden;
-display:flex;
-align-items:center;
-justify-content:center;
+border:1px solid rgba(255,255,255,.1);
+flex-shrink:0;
 }
-.cover img{width:100%;height:100%;object-fit:cover}
+.cover img{
+width:100%;
+height:100%;
+object-fit:cover;
+display:block;
+}
 
-.releaseTitle{margin:0;font-size:18px;letter-spacing:.1em}
-.releaseMeta{margin-top:6px;color:rgba(255,255,255,.7)}
+.releaseTitle{
+margin:0;
+letter-spacing:.1em;
+text-transform:uppercase;
+}
 
-.btn{
+.releaseMeta{
+margin-top:6px;
+font-size:14px;
+opacity:.7;
+}
+
+/* PLAY BUTTON */
+.playBtn{
+margin-top:14px;
 border:1px solid var(--violet);
-background:rgba(138,46,255,.14);
-padding:12px 16px;
+background:rgba(138,46,255,.18);
+padding:12px 18px;
 border-radius:999px;
 letter-spacing:.2em;
-text-transform:uppercase;
 font-size:12px;
 cursor:pointer;
-transition:.2s;
 }
-.btn:hover{transform:translateY(-1px);box-shadow:0 0 0 6px rgba(138,46,255,.1)}
+.playBtn:hover{background:rgba(138,46,255,.28)}
 
-.player{
-margin-top:10px;
-}
-
+/* VISUALS */
 .videoGrid{
 display:grid;
 grid-template-columns:1fr 1fr;
@@ -201,7 +186,7 @@ gap:14px;
 
 .videoCard{
 border:1px solid rgba(255,255,255,.1);
-border-radius:22px;
+border-radius:20px;
 overflow:hidden;
 }
 .videoCard iframe{
@@ -210,34 +195,62 @@ aspect-ratio:16/9;
 border:0;
 }
 
-/* lyric */
+/* LYRIC */
 .lyric{
-font-size:clamp(18px,2.2vw,22px);
 text-align:center;
-margin-top:10px;
+font-size:clamp(18px,2.5vw,26px);
+margin-top:30px;
+line-height:1.6;
+color:#ddd;
 }
 .lyric em{
 color:var(--violet);
-text-shadow:0 0 18px rgba(138,46,255,.2);
+text-shadow:0 0 18px rgba(138,46,255,.4);
 }
 
-/* footer */
+/* FOLLOW BUTTON */
+.followBtn{
+display:block;
+margin:40px auto 0;
+width:max-content;
+padding:16px 28px;
+border-radius:999px;
+background:var(--violet);
+letter-spacing:.25em;
+font-size:13px;
+animation:pop 2s infinite;
+}
+@keyframes pop{
+50%{transform:scale(1.08)}
+}
+
+/* EAT ME */
+.eat{
+display:block;
+margin:70px auto 0;
+font-size:20px;
+letter-spacing:.3em;
+text-decoration:none;
+animation:eatFlash 1.4s infinite;
+}
+@keyframes eatFlash{
+0%,100%{opacity:1;transform:scale(1)}
+50%{opacity:.4;transform:scale(1.2)}
+}
+
 footer{
-padding-top:32px;
-text-align:center;
-color:rgba(255,255,255,.55);
-font-size:11px;
-letter-spacing:.18em;
-text-transform:uppercase;
+margin-top:40px;
+padding-top:20px;
 border-top:1px solid rgba(255,255,255,.08);
-margin-top:30px;
+font-size:11px;
+letter-spacing:.2em;
+opacity:.6;
+text-align:center;
 }
 </style>
 </head>
 
 <body>
-
-<div id="spot"></div>
 
 <header>
 <a href="listen.html">LISTEN</a>
@@ -253,37 +266,29 @@ margin-top:30px;
 </section>
 
 <section class="block">
-<p class="kicker">Latest Release</p>
-<div class="divider"></div>
+<div class="kicker">Latest Release</div>
 
 <div class="releaseBox">
 
 <div class="cover">
-<img src="images/latest-cover.jpeg">
+<img src="images/latest-cover.jpg" alt="">
 </div>
 
 <div>
 <h2 class="releaseTitle">Two Times</h2>
-<p class="releaseMeta">1.22.26 / emo trap / lonely flex</p>
+<div class="releaseMeta">emo trap / lonely flex</div>
 
-<div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
-<button class="btn" onclick="document.getElementById('track').play()">PLAY ▶</button>
-<a class="btn" href="https://youtu.be/DEdhtI3LMS4?si=L8gA0uUbHFrX2_zN" target="_blank">YOUTUBE</a>
-</div>
-
-<div class="player">
-<audio id="track" playsinline preload="metadata">
-<source src="./audio/latest.mp3" type="audio/mpeg">
+<button class="playBtn" id="play">PLAY</button>
+<audio id="audio" preload="auto">
+<source src="audio/latest.mp3" type="audio/mpeg">
 </audio>
-</div>
 
 </div>
 </div>
 </section>
 
 <section id="visuals" class="block">
-<p class="kicker">Visuals</p>
-<div class="divider"></div>
+<div class="kicker">Visuals</div>
 
 <div class="videoGrid">
 
@@ -298,26 +303,37 @@ margin-top:30px;
 </div>
 </section>
 
-<section class="block">
-<div class="lyric">“f*** it up, two times in my double cup <em>you think that I'm fine but I never was</em>.”</div>
+<p class="lyric">
+“I tried everything but <em>nothing’s fixing me</em>.”
+</p>
 
-<div style="text-align:center;margin-top:22px;">
-<a class="btn" href="follow.html">FOLLOW FOR MORE</a>
-</div>
+<a href="follow.html" class="followBtn">FOLLOW</a>
+
+<a href="dream.html" class="eat">EAT ME</a>
 
 <footer>
 © <span id="y"></span> CLAWBOI
 </footer>
 
-</section>
-
 </main>
 
 <script>
-document.getElementById('y').textContent=new Date().getFullYear();
+document.getElementById("y").textContent=new Date().getFullYear();
 
-/* spotlight follow */
-(()=>{const s=document.getElementById("spot");addEventListener("pointermove",e=>{s.style.setProperty("--sx",(e.clientX/innerWidth)*100+"%");s.style.setProperty("--sy",(e.clientY/innerHeight)*100+"%")})})();
+/* PLAY / STOP FIX FOR iPHONE */
+const btn=document.getElementById("play");
+const audio=document.getElementById("audio");
+
+btn.onclick=()=>{
+if(audio.paused){
+audio.play();
+btn.textContent="STOP";
+}else{
+audio.pause();
+audio.currentTime=0;
+btn.textContent="PLAY";
+}
+};
 </script>
 
 </body>
