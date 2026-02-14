@@ -697,9 +697,17 @@ function roundRect(g, x,y,w,h,r, fill){
 /* =========================
    CHIMP DRAW
 ========================= */
+  const previewState = { fat: 22, shrink: 0 };
+
 function drawChimp(g, px, py, base, isPreview=false){
   const fatVal = isPreview ? previewState.fat : player.fat;
 const shrinkVal = isPreview ? previewState.shrink : player.shrink;
+
+const fatVal = (isPreview || typeof player === "undefined") ? previewState.fat : player.fat;
+const shrinkVal = (isPreview || typeof player === "undefined") ? previewState.shrink : player.shrink;
+
+const fatVal = (isPreview || typeof player === "undefined") ? previewState.fat : player.fat;
+const shrinkVal = (isPreview || typeof player === "undefined") ? previewState.shrink : player.shrink;
 
 const fatScale = 1 + fatVal/200;
 const shrinkScale = Math.max(0.78, 1 - shrinkVal*0.02);
