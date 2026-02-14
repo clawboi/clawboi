@@ -692,13 +692,18 @@ function roundRect(g, x,y,w,h,r, fill){
   if(fill) g.fill(); else g.stroke();
 }
 
+  const previewState = { fat: 22, shrink: 0 };
+  
 /* =========================
    CHIMP DRAW
 ========================= */
 function drawChimp(g, px, py, base, isPreview=false){
-  const fatScale = 1 + player.fat/200;
-  const shrinkScale = Math.max(0.78, 1 - player.shrink*0.02);
-  const s = base * fatScale * shrinkScale;
+  const fatVal = isPreview ? previewState.fat : player.fat;
+const shrinkVal = isPreview ? previewState.shrink : player.shrink;
+
+const fatScale = 1 + fatVal/200;
+const shrinkScale = Math.max(0.78, 1 - shrinkVal*0.02);
+const s = base * fatScale * shrinkScale;
 
   const fur = "#7a4b2a";
   const fur2 = "#5b341f";
@@ -875,11 +880,9 @@ function drawPreview(){
   pctx.fillRect(0,0,pc.width,pc.height);
 
   // stable preview pose regardless of current fat/shrink
-  const savedFat = player.fat, savedShrink = player.shrink;
-  player.fat = 22;
-  player.shrink = 0;
-  drawChimp(pctx, pc.width/2, pc.height/2 + 40, 30, true);
-  player.fat = savedFat; player.shrink = savedShrink;
+previewState.fat = 22;
+previewState.shrink = 0;
+drawChimp(pctx, pc.width/2, pc.height/2 + 40, 30, true);
 
   pctx.fillStyle = "rgba(255,255,255,.70)";
   pctx.font = "10px ui-monospace, monospace";
