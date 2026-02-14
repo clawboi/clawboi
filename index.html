@@ -1,587 +1,266 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>CLAWBOI</title>
-  <meta name="theme-color" content="#000000" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>CLAWBOI</title>
+<meta name="theme-color" content="#000000" />
 
-  <style>
-    :root{
-      --bg:#000;
-      --fg:#fff;
-      --violet:#8a2eff;      /* electric violet */
-      --violet2:#b98cff;
-      --hair: rgba(255,255,255,.10);
-      --muted: rgba(255,255,255,.70);
-      --max: 1100px;
-      --r: 20px;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      background: var(--bg);
-      color: var(--fg);
-      font-family: var(--sans);
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      overflow-x:hidden;
-    }
-    a{color:inherit;text-decoration:none}
-    a:hover{opacity:.92}
-    :focus-visible{ outline: 2px solid rgba(138,46,255,.9); outline-offset: 3px; border-radius: 12px; }
-
-    /* ===== FAST FX LAYERS (no heavy loops) ===== */
-
-    /* Spotlight layer (subtle pointer-follow, tiny JS updates CSS vars) */
-    #spot{
-      position:fixed; inset:0;
-      pointer-events:none;
-      background: radial-gradient(circle at var(--sx,50%) var(--sy,22%), rgba(138,46,255,.14), transparent 46%);
-      mix-blend-mode: screen;
-      opacity:.65;
-      z-index:0;
-    }
-
-    /* Electric grain + aura (CSS-only) */
-    body:before{
-      content:"";
-      position:fixed; inset:0;
-      pointer-events:none;
-      background:
-        radial-gradient(circle at 20% 10%, rgba(138,46,255,.10), transparent 35%),
-        radial-gradient(circle at 70% 30%, rgba(138,46,255,.08), transparent 38%),
-        radial-gradient(circle at 45% 85%, rgba(138,46,255,.06), transparent 45%);
-      opacity:.95;
-      mix-blend-mode: screen;
-      z-index:0;
-    }
-    body:after{
-      content:"";
-      position:fixed; inset:0;
-      pointer-events:none;
-      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.25'/%3E%3C/svg%3E");
-      mix-blend-mode: overlay;
-      opacity:.045;
-      z-index:0;
-    }
-
-    /* NAV */
-    header{
-      position:fixed;
-      top:0; left:0;
-      width:100%;
-      z-index:1000;
-      display:flex;
-      justify-content:center;
-      gap:40px;
-      background: rgba(0,0,0,.55);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(255,255,255,.08);
-
-      /* safe-area fixes iPhone clipping */
-      padding:
-        18px calc(28px + env(safe-area-inset-right))
-        18px calc(28px + env(safe-area-inset-left));
-    }
-    header a{
-      font-size:12px;
-      letter-spacing:.28em;
-      text-transform:uppercase;
-      color: rgba(255,255,255,.85);
-      padding: 6px 0;
-      white-space: nowrap;
-      border-bottom: 1px solid transparent;
-      transition: color .18s ease, border-color .18s ease, transform .18s ease;
-    }
-    header a:hover{
-      color: rgba(255,255,255,.98);
-      border-bottom-color: rgba(138,46,255,.75);
-      transform: translateY(-1px);
-    }
-
-    /* Mobile tighten so nothing cuts */
-    @media (max-width:650px){
-      header{
-        gap:16px;
-        padding:
-          12px calc(12px + env(safe-area-inset-right))
-          12px calc(12px + env(safe-area-inset-left));
-      }
-      header a{
-        font-size:11px;
-        letter-spacing:.16em;
-      }
-    }
-
-    .wrap{ max-width: var(--max); margin:0 auto; padding: 0 22px 90px; position:relative; z-index:1; }
-
-    /* HERO */
-    .hero{
-      min-height: 88vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding-top: 92px; /* header space */
-      padding-bottom: 40px;
-      text-align:center;
-      position:relative;
-      overflow:hidden;
-    }
-
-    /* Aura drift behind hero (CSS-only) */
-    .hero:before{ content:none !important; }
-    
-    }
-    @keyframes auraDrift{
-      0%,100%{ transform: translate3d(0,0,0) scale(1); opacity:.9; }
-      50%{ transform: translate3d(2%, -2%, 0) scale(1.03); opacity:1; }
-    }
-
-    /* Lightning overlay (very light, blended, slow pulses) */
-    .hero:after{
-      content:"";
-      position:absolute; inset:0;
-      pointer-events:none;
-      opacity:.18;
-      mix-blend-mode: screen;
-      background:
-        radial-gradient(circle at 18% 28%, rgba(255,255,255,.14), transparent 38%),
-        radial-gradient(circle at 72% 24%, rgba(138,46,255,.16), transparent 42%),
-        linear-gradient(120deg, transparent 44%, rgba(185,140,255,.18) 49%, transparent 54%);
-      filter: blur(0px);
-      animation: stormPulse 6.8s ease-in-out infinite;
-    }
-    @keyframes stormPulse{
-      0%,100%{ opacity:.12; transform: translate3d(0,0,0); }
-      50%{ opacity:.22; transform: translate3d(0,-1%,0); }
-    }
-
-    .logo{
-      font-weight: 650;
-      letter-spacing: .34em;
-      font-size: clamp(44px, 10vw, 92px);
-      line-height: 1.05;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.95);
-      position:relative;
-      display:inline-block;
-      transform: translateZ(0);
-
-      /* base glow */
-      text-shadow:
-        0 0 14px rgba(138,46,255,.30),
-        0 0 32px rgba(138,46,255,.18);
-
-      /* smooth, cheap animation */
-      animation: electricGlow 2.9s ease-in-out infinite;
-    }
-
-    /* Extra electric edge shimmer (CSS-only, cheap) */
-    .logo::after{
-      content: attr(data-text);
-      position:absolute; inset:0;
-      color: transparent;
-      -webkit-text-stroke: 1px rgba(185,140,255,.32);
-      text-shadow:
-        0 0 10px rgba(138,46,255,.35),
-        0 0 22px rgba(138,46,255,.20);
-      opacity:.55;
-      filter: blur(.1px);
-      animation: edgeFlicker 1.9s steps(2,end) infinite;
-      pointer-events:none;
-    }
-    @keyframes edgeFlicker{
-      0%,100%{ opacity:.42; }
-      50%{ opacity:.68; }
-    }
-
-    /* respects users who hate motion */
-    @media (prefers-reduced-motion: reduce){
-      .logo{ animation:none; }
-      .logo::after{ animation:none; }
-      .hero:before{ animation:none; }
-      .hero:after{ animation:none; }
-      #spot{ display:none; }
-    }
-
-    @keyframes electricGlow{
-      0%{
-        text-shadow:
-          0 0 10px rgba(138,46,255,.20),
-          0 0 24px rgba(138,46,255,.12);
-        filter: saturate(110%);
-      }
-      45%{
-        text-shadow:
-          0 0 12px rgba(138,46,255,.35),
-          0 0 40px rgba(138,46,255,.22),
-          0 0 70px rgba(138,46,255,.12);
-        filter: saturate(135%);
-      }
-      100%{
-        text-shadow:
-          0 0 10px rgba(138,46,255,.22),
-          0 0 26px rgba(138,46,255,.14);
-        filter: saturate(120%);
-      }
-    }
-
-    /* Divider (hairline glow) */
-    .divider{
-      height:1px;
-      background: linear-gradient(90deg, transparent, rgba(138,46,255,.45), rgba(255,255,255,.12), transparent);
-      opacity:.55;
-      margin: 18px 0 0;
-    }
-
-    /* SECTIONS */
-    section.block{
-      border-top: 1px solid rgba(255,255,255,.08);
-      padding: 48px 0;
-    }
-    .kicker{
-      margin:0 0 10px;
-      font-size:12px;
-      letter-spacing:.28em;
-      text-transform:uppercase;
-      color: rgba(255,255,255,.72);
-    }
-
-    /* Latest release box */
-    .releaseBox{
-      display:flex;
-      gap:18px;
-      align-items:center;
-      border: 1px solid rgba(138,46,255,.35);
-      background: rgba(138,46,255,.06);
-      border-radius: 22px;
-      padding: 18px;
-      overflow:hidden;
-      position:relative;
-      transform: translateZ(0);
-    }
-
-    /* Glint on hover (cheap, premium) */
-    .releaseBox::after{
-      content:"";
-      position:absolute;
-      top:-60%; left:-60%;
-      width:120%; height:120%;
-      background: linear-gradient(120deg, transparent 45%, rgba(185,140,255,.18), transparent 55%);
-      transform: rotate(8deg);
-      opacity:0;
-      pointer-events:none;
-    }
-    .releaseBox:hover::after{
-      opacity:1;
-      animation: glint 1.1s ease forwards;
-    }
-    @keyframes glint{
-      from{ transform: translateX(-30%) rotate(8deg); }
-      to{ transform: translateX(30%) rotate(8deg); }
-    }
-
-    .cover{
-      width: 110px;
-      height: 110px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.04);
-      overflow:hidden;
-      flex: 0 0 auto;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color: rgba(255,255,255,.55);
-      font-size: 11px;
-      letter-spacing: .16em;
-      text-transform: uppercase;
-    }
-    .cover img{width:100%;height:100%;object-fit:cover;display:block}
-
-    .releaseInfo{
-      flex: 1 1 auto;
-      min-width: 0;
-      text-align:left;
-    }
-    .releaseTitle{
-      margin:0;
-      font-size: 18px;
-      letter-spacing: .10em;
-      text-transform: uppercase;
-    }
-    .releaseMeta{
-      margin: 8px 0 0;
-      color: rgba(255,255,255,.70);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .actions{
-      display:flex;
-      gap:10px;
-      flex: 0 0 auto;
-      align-items:center;
-    }
-    .btn{
-      border: 1px solid rgba(138,46,255,.75);
-      background: rgba(138,46,255,.14);
-      color: rgba(255,255,255,.95);
-      border-radius: 999px;
-      padding: 12px 14px;
-      font-size: 12px;
-      letter-spacing: .20em;
-      text-transform: uppercase;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      transition: transform .18s ease, background .18s ease, box-shadow .18s ease, border-color .18s ease, filter .18s ease;
-      white-space: nowrap;
-      transform: translateZ(0);
-    }
-    .btn:hover{
-      transform: translateY(-1px);
-      background: rgba(138,46,255,.20);
-      border-color: rgba(138,46,255,.95);
-      box-shadow: 0 0 0 6px rgba(138,46,255,.10);
-      filter: brightness(1.03);
-    }
-    .btn:active{ transform: translateY(0) scale(.99); }
-
-    /* Tap feel on iPhone */
-    .btn:active{ filter: brightness(1.05); }
-
-    .player{
-      width: 290px;
-      max-width: 42vw;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.02);
-      padding: 10px;
-    }
-    .player small{
-      display:block;
-      color: rgba(255,255,255,.55);
-      letter-spacing:.14em;
-      text-transform: uppercase;
-      font-size: 10px;
-      margin-bottom: 8px;
-    }
-    .player audio{ width: 100%; }
-
-    @media (max-width:650px){
-      .releaseBox{ flex-direction: column; text-align:center; }
-      .releaseInfo{ text-align:center; }
-      .actions{ width:100%; justify-content:center; flex-wrap: wrap; }
-      .player{ width:100%; max-width: 100%; }
-    }
-
-    /* Visuals */
-    .videoGrid{
-      display:grid;
-      grid-template-columns: repeat(2, minmax(0,1fr));
-      gap: 14px;
-    }
-    @media (max-width:800px){
-      .videoGrid{ grid-template-columns: 1fr; }
-    }
-    .videoCard{
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.02);
-      border-radius: 22px;
-      overflow:hidden;
-      position:relative;
-      transform: translateZ(0);
-    }
-
-    /* soft highlight on hover */
-    .videoCard:hover{
-      border-color: rgba(138,46,255,.35);
-      box-shadow: 0 0 0 6px rgba(138,46,255,.06);
-    }
-
-    .videoCard iframe{
-      width:100%;
-      aspect-ratio: 16/9;
-      border:0;
-      display:block;
-      background:#000;
-    }
-    .videoCap{
-      padding: 12px 14px;
-      font-size: 12px;
-      letter-spacing: .16em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.78);
-      border-top: 1px solid rgba(255,255,255,.08);
-    }
-
-    /* lyric + footer */
-    .lyric{
-      margin: 0;
-      font-size: clamp(16px, 2.2vw, 20px);
-      line-height: 1.7;
-      color: rgba(255,255,255,.82);
-      max-width: 70ch;
-    }
-    .lyric em{
-      font-style: normal;
-      color: rgba(138,46,255,.90);
-      text-shadow: 0 0 18px rgba(138,46,255,.18);
-    }
-
-    footer{
-      padding-top: 32px;
-      color: rgba(255,255,255,.55);
-      font-size: 11px;
-      letter-spacing: .18em;
-      text-transform: uppercase;
-      display:flex;
-      justify-content:space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      border-top: 1px solid rgba(255,255,255,.08);
-      margin-top: 30px;
-    }
-
-    /* Smooth anchor scroll (cheap premium) */
-    html{ scroll-behavior:smooth; }
-    section{ scroll-margin-top: 90px; }
-
-    /* lightning flash effect */
-.logo.flash{
-  animation: lightningFlash .35s linear 1;
+<style>
+:root{
+--bg:#000;
+--fg:#fff;
+--violet:#8a2eff;
+--violet2:#b98cff;
+--max:1100px;
+--sans:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
 }
 
-@keyframes lightningFlash{
-  0%{opacity:1; filter:brightness(1);}
-  20%{opacity:.2; filter:brightness(2.5);}
-  40%{opacity:1; filter:brightness(1);}
-  60%{opacity:.3; filter:brightness(3);}
-  80%{opacity:1;}
-  100%{opacity:1;}
+*{box-sizing:border-box}
+body{
+margin:0;
+background:#000;
+color:#fff;
+font-family:var(--sans);
+overflow-x:hidden;
+}
+a{text-decoration:none;color:inherit}
+
+/* cursor glow */
+#cursor{
+position:fixed;
+width:280px;
+height:280px;
+pointer-events:none;
+border-radius:50%;
+background:radial-gradient(circle,rgba(138,46,255,.22),transparent 70%);
+mix-blend-mode:screen;
+z-index:0;
 }
 
-  </style>
+/* header */
+header{
+position:fixed;
+top:0;
+width:100%;
+display:flex;
+justify-content:center;
+gap:40px;
+background:rgba(0,0,0,.55);
+backdrop-filter:blur(10px);
+border-bottom:1px solid rgba(255,255,255,.08);
+padding:18px;
+z-index:10;
+}
+header a{
+letter-spacing:.28em;
+font-size:12px;
+opacity:.9;
+}
+header a:hover{color:#fff}
+
+/* hero */
+.wrap{max-width:var(--max);margin:auto;padding:0 22px 90px;position:relative;z-index:1;}
+.hero{
+min-height:88vh;
+display:flex;
+align-items:center;
+justify-content:center;
+padding-top:100px;
+text-align:center;
+}
+
+.logo{
+font-size:clamp(44px,10vw,92px);
+letter-spacing:.34em;
+text-shadow:0 0 20px rgba(138,46,255,.4);
+animation:glow 3s ease-in-out infinite;
+cursor:pointer;
+}
+@keyframes glow{
+0%,100%{text-shadow:0 0 18px rgba(138,46,255,.35)}
+50%{text-shadow:0 0 40px rgba(138,46,255,.7)}
+}
+
+/* section */
+.block{padding:50px 0;border-top:1px solid rgba(255,255,255,.08);}
+.kicker{letter-spacing:.3em;font-size:12px;color:#aaa}
+
+/* release box */
+.releaseBox{
+display:flex;
+gap:18px;
+align-items:center;
+border:1px solid rgba(138,46,255,.4);
+background:rgba(138,46,255,.06);
+border-radius:22px;
+padding:18px;
+}
+
+.cover{
+width:110px;height:110px;border-radius:50%;
+overflow:hidden;
+border:2px solid rgba(255,255,255,.15);
+transition:transform 1.2s linear;
+}
+.cover:hover{transform:rotate(360deg);}
+.cover img{width:100%;height:100%;object-fit:cover}
+
+.releaseTitle{letter-spacing:.12em}
+.releaseMeta{color:#aaa;font-size:13px}
+
+.btn{
+border:1px solid rgba(138,46,255,.8);
+padding:12px 16px;
+border-radius:999px;
+letter-spacing:.25em;
+font-size:12px;
+background:rgba(138,46,255,.15);
+}
+.btn:hover{box-shadow:0 0 0 6px rgba(138,46,255,.1)}
+
+.player audio{width:100%}
+
+/* visuals */
+.videoGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.videoCard{border:1px solid rgba(255,255,255,.1);border-radius:22px;overflow:hidden}
+.videoCard iframe{width:100%;aspect-ratio:16/9;border:0}
+
+/* lyric glow */
+.lyric{
+text-align:center;
+font-size:clamp(18px,2.3vw,24px);
+margin:70px auto 30px;
+max-width:70ch;
+line-height:1.7;
+transition:.4s;
+}
+.lyric:hover{
+color:#fff;
+text-shadow:0 0 20px rgba(138,46,255,.7);
+}
+
+/* bottom follow */
+.followWrap{text-align:center;margin-top:30px}
+
+/* secret portal */
+.portal{
+position:fixed;
+bottom:8px;
+right:12px;
+font-size:10px;
+opacity:.25;
+transition:.3s;
+}
+.portal:hover{opacity:.9;color:#8a2eff}
+
+/* footer */
+footer{
+margin-top:60px;
+padding-top:24px;
+border-top:1px solid rgba(255,255,255,.08);
+font-size:11px;
+letter-spacing:.25em;
+color:#777;
+display:flex;
+justify-content:center;
+}
+</style>
 </head>
 
 <body>
-  <!-- FX spotlight layer -->
-  <div id="spot" aria-hidden="true"></div>
 
-  <header aria-label="Primary">
-    <a href="listen.html">LISTEN</a>
-    <a href="#visuals">VISUALS</a>
-    <a href="shop.html">SHOP</a>
-    <a href="follow.html">FOLLOW</a>
-  </header>
+<div id="cursor"></div>
 
-  <main class="wrap">
-    <section class="hero" aria-label="Hero">
-      <div>
-        <!-- data-text is used for the electric edge shimmer -->
-        <div class="logo" data-text="CLAWBOI">CLAWBOI</div>
-      </div>
-    </section>
+<header>
+<a href="index.html">CLAWBOI</a>
+<a href="listen.html">LISTEN</a>
+<a href="#visuals">VISUALS</a>
+<a href="shop.html">SHOP</a>
+<a href="follow.html">FOLLOW</a>
+</header>
 
-    <section class="block" aria-label="Latest Release">
-      <p class="kicker">Latest Release</p>
-      <div class="divider"></div>
+<main class="wrap">
 
-      <div class="releaseBox">
-        <div class="cover" aria-label="Cover art">
-          <!-- Put your cover art in /images and set the filename below -->
-          <!-- Example: images/latest-cover.jpg -->
-          <img src="images/latest-cover.jpg" alt="Latest release cover art" onerror="this.remove(); this.parentNode.textContent='ADD COVER ART';" />
-        </div>
+<section class="hero">
+<div class="logo">CLAWBOI</div>
+</section>
 
-        <div class="releaseInfo">
-          <h2 class="releaseTitle">Two Times</h2>
-          <p class="releaseMeta">
-            1.22.26 / emo trap / lonely flex.
-          </p>
-          <div class="actions" style="margin-top:12px;">
-            <a class="btn" href="listen.html">PLAY ME</a>
-            <a class="btn" href="listen.html">LISTEN PAGE</a>
-          </div>
-        </div>
+<section class="block">
+<p class="kicker">Latest Release</p>
 
-        <div class="player" aria-label="Audio player">
-          <small>Preview</small>
-          <!-- Optional: add mp3 file like /audio/latest.mp3 -->
-          <audio controls preload="none">
-            <source src="audio/latest.mp3" type="audio/mpeg" />
-          </audio>
-        </div>
-      </div>
-    </section>
+<div class="releaseBox">
 
-    <section id="visuals" class="block" aria-label="Visuals">
-      <p class="kicker">Visuals</p>
-      <div class="divider"></div>
+<div class="cover">
+<img src="images/latest-cover.jpeg">
+</div>
 
-      <div class="videoGrid">
-        <!-- Replace the VIDEO_IDs with your YouTube IDs -->
-        <div class="videoCard">
-        <iframe width="560" height="315" src="https://www.youtube.com/embed/uVcRKlRVFgs?si=v5xO3BQ5FmV_1hR5" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-          <div class="videoCap">Music Video 01</div>
-        </div>
+<div>
+<h2 class="releaseTitle">Two Times</h2>
+<p class="releaseMeta">emo trap / lonely flex</p>
 
-        <div class="videoCard">
-         <iframe width="560" height="315" src="https://www.youtube.com/embed/OJlGBxj3T0U?si=CrxPGUTcEWIhH2Z9" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-          <div class="videoCap">Music Video 02</div>
-        </div>
-      </div>
-    </section>
+<div style="margin-top:12px;">
+<a class="btn" href="https://youtu.be/DEdhtI3LMS4?si=L8gA0uUbHFrX2_zN" target="_blank">WATCH</a>
+</div>
+</div>
 
-    <section class="block" aria-label="Lyric">
-      <p class="kicker">one line</p>
-      <div class="divider"></div>
+<div class="player">
+<audio controls playsinline>
+<source src="audio/latest.mp3" type="audio/mpeg">
+</audio>
+</div>
 
-      <p class="lyric">“I tried everything but <em>nothing’s fixing me</em>.”</p>
+</div>
+</section>
 
-      <div style="margin-top:18px;">
-        <a class="btn" href="follow.html">FOLLOW FOR MORE</a>
-      </div>
+<section id="visuals" class="block">
+<p class="kicker">Visuals</p>
 
-      <footer>
-        <div>© <span id="y"></span> CLAWBOI</div>
-        <div style="color:rgba(255,255,255,.62)"></div>
-      </footer>
-    </section>
-  </main>
+<div class="videoGrid">
 
-  <script>
-    document.getElementById('y').textContent = new Date().getFullYear();
+<div class="videoCard">
+<iframe loading="lazy" src="https://www.youtube.com/embed/uVcRKlRVFgs" allowfullscreen></iframe>
+</div>
 
-    // Spotlight follow (very light, throttled with requestAnimationFrame)
-    (() => {
-      const spot = document.getElementById('spot');
-      if(!spot) return;
+<div class="videoCard">
+<iframe loading="lazy" src="https://www.youtube.com/embed/OJlGBxj3T0U" allowfullscreen></iframe>
+</div>
 
-      let x = 50, y = 22, raf = null;
+</div>
+</section>
 
-      const set = (nx, ny) => {
-        x = nx; y = ny;
-        if(raf) return;
-        raf = requestAnimationFrame(() => {
-          spot.style.setProperty('--sx', x + '%');
-          spot.style.setProperty('--sy', y + '%');
-          raf = null;
-        });
-      };
+<p class="lyric">
+“f*** it up, two times in my double cup  
+I ain’t level up, you think that I’m fine but I never was”
+</p>
 
-      // pointer moves
-      addEventListener('pointermove', (e) => {
-        set((e.clientX / innerWidth) * 100, (e.clientY / innerHeight) * 100);
-      }, { passive:true });
+<div class="followWrap">
+<a class="btn" href="follow.html">FOLLOW CLAWBOI</a>
+</div>
 
-      // initial
-      set(50, 22);
-    })();
-  </script>
+<footer>© <span id="y"></span> CLAWBOI</footer>
+
+</main>
+
+<a class="portal" href="dream.html">EAT ME</a>
+
+<script>
+document.getElementById("y").textContent=new Date().getFullYear();
+
+/* cursor glow */
+const c=document.getElementById("cursor");
+window.addEventListener("pointermove",e=>{
+c.style.left=e.clientX-140+"px";
+c.style.top=e.clientY-140+"px";
+});
+
+/* lightning logo click */
+const logo=document.querySelector(".logo");
+logo.addEventListener("click",()=>{
+logo.style.filter="brightness(3)";
+setTimeout(()=>logo.style.filter="none",120);
+});
+</script>
+
 </body>
 </html>
