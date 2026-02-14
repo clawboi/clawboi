@@ -244,11 +244,20 @@ box-shadow:0 0 30px #8a2eff;
 }
 
 /* MOBILE */
-@media(max-width:650px){
-.releaseBox{flex-direction:column;text-align:center;}
-.player{width:100%;}
-.releaseInfo{text-align:center;}
+@media (max-width:650px){
+  header{
+    padding: 12px calc(12px + env(safe-area-inset-right))
+             12px calc(12px + env(safe-area-inset-left));
+    gap: 14px;
+    flex-wrap: nowrap;
+  }
+  header a{
+    font-size: 11px;
+    letter-spacing: .14em;
+    white-space: nowrap;
+  }
 }
+
   /* MOBILE NAV FIX */
 @media (max-width: 650px){
   header{
