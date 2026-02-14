@@ -460,6 +460,21 @@
     /* Smooth anchor scroll (cheap premium) */
     html{ scroll-behavior:smooth; }
     section{ scroll-margin-top: 90px; }
+
+    /* lightning flash effect */
+.logo.flash{
+  animation: lightningFlash .35s linear 1;
+}
+
+@keyframes lightningFlash{
+  0%{opacity:1; filter:brightness(1);}
+  20%{opacity:.2; filter:brightness(2.5);}
+  40%{opacity:1; filter:brightness(1);}
+  60%{opacity:.3; filter:brightness(3);}
+  80%{opacity:1;}
+  100%{opacity:1;}
+}
+
   </style>
 </head>
 
@@ -586,5 +601,20 @@
       set(50, 22);
     })();
   </script>
+
+  /* lightning flash effect */
+.logo.flash{
+  animation: lightningFlash .35s linear 1;
+}
+
+@keyframes lightningFlash{
+  0%{opacity:1; filter:brightness(1);}
+  20%{opacity:.2; filter:brightness(2.5);}
+  40%{opacity:1; filter:brightness(1);}
+  60%{opacity:.3; filter:brightness(3);}
+  80%{opacity:1;}
+  100%{opacity:1;}
+}
+
 </body>
 </html>
