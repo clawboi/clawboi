@@ -1,0 +1,18 @@
+<body style="margin:0;background:black;overflow:hidden">
+<canvas id="c"></canvas>
+<script>
+const x=c.getContext("2d");
+function r(){
+c.width=innerWidth;
+c.height=innerHeight;
+for(let i=0;i<300;i++){
+x.fillStyle=`hsl(${Math.random()*360},80%,60%)`;
+x.beginPath();
+x.arc(Math.random()*c.width,Math.random()*c.height,Math.random()*4,0,7);
+x.fill();
+}
+requestAnimationFrame(r);
+}
+r();
+</script>
+</body>
