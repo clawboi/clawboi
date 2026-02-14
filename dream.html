@@ -10,11 +10,9 @@
     --bg:#000;
     --fg:#fff;
     --violet:#8a2eff;
-    --hair:rgba(255,255,255,.12);
     --muted:rgba(255,255,255,.72);
     --good:#00ff9c;
     --bad:#ff2a2a;
-    --gold:#ffe600;
   }
 
   html,body{height:100%}
@@ -26,17 +24,18 @@
     color:var(--fg);
     -webkit-font-smoothing:antialiased;
     -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
   }
+
   canvas{display:block}
 
-  /* GAME CANVAS LAYER */
+  /* GAME CANVAS */
   #game{
     position:fixed;
     inset:0;
     z-index:1;
     width:100vw;
     height:100vh;
+    touch-action:none; /* important: movement on canvas only */
   }
 
   /* HUD */
@@ -45,13 +44,13 @@
     top:10px;
     left:50%;
     transform:translateX(-50%);
+    z-index:5;
+    user-select:none;
+    pointer-events:none;
     text-align:center;
     letter-spacing:.18em;
     font-size:12px;
     opacity:.98;
-    z-index:5;
-    user-select:none;
-    pointer-events:none;
     padding:10px 12px;
     border:1px solid rgba(255,255,255,.08);
     border-radius:16px;
@@ -72,7 +71,7 @@
   .tag.g{border-color: rgba(0,255,156,.35); background: rgba(0,255,156,.06);}
   .tag.r{border-color: rgba(255,42,42,.35); background: rgba(255,42,42,.06);}
 
-  /* Overlay / menus */
+  /* OVERLAY */
   #overlay{
     position:fixed;
     inset:0;
@@ -82,17 +81,15 @@
     background:#000;
     z-index:10;
     padding:18px;
-    pointer-events:auto;
   }
   .panel{
-    width:min(860px, 94vw);
+    width:min(760px, 94vw);
     border:1px solid rgba(255,255,255,.12);
     border-radius:22px;
     padding:18px;
     background:rgba(255,255,255,.02);
     position:relative;
     overflow:hidden;
-    pointer-events:auto;
   }
   .panel:before{
     content:"";
@@ -122,13 +119,13 @@
 
   .grid{
     display:grid;
-    grid-template-columns: 1.1fr .9fr;
+    grid-template-columns: 1fr 1fr;
     gap:12px;
     margin-top:12px;
   }
   @media (max-width:820px){ .grid{grid-template-columns:1fr;} }
 
-  input{
+  input, select{
     width:100%;
     background:#000;
     border:1px solid rgba(255,255,255,.24);
@@ -141,7 +138,7 @@
     outline:none;
   }
 
-  .opts{
+  .box{
     border:1px solid rgba(255,255,255,.10);
     border-radius:18px;
     padding:12px;
@@ -153,12 +150,8 @@
     letter-spacing:.26em;
     text-transform:uppercase;
     color:rgba(255,255,255,.85);
-    display:flex;
-    justify-content:space-between;
-    gap:10px;
-    align-items:center;
-    flex-wrap:wrap;
   }
+
   .choices{
     display:flex;
     flex-wrap:wrap;
@@ -176,7 +169,6 @@
     background:rgba(255,255,255,.03);
     color:rgba(255,255,255,.9);
     transition: transform .14s ease, border-color .14s ease, background .14s ease, filter .14s ease;
-    pointer-events:auto;
   }
   .chip:hover{ transform: translateY(-1px); border-color: rgba(138,46,255,.45); background: rgba(138,46,255,.06); }
   .chip.on{ border-color: rgba(0,255,156,.5); background: rgba(0,255,156,.08); filter: brightness(1.06); }
@@ -195,7 +187,6 @@
     background:#fff;
     color:#000;
     transition: transform .14s ease, filter .14s ease;
-    pointer-events:auto;
   }
   button:hover{ transform: translateY(-1px); filter:brightness(1.06); }
   button.secondary{
@@ -204,32 +195,7 @@
     color:#fff;
   }
 
-  /* Preview chimp box */
-  .previewWrap{
-    display:flex;
-    gap:12px;
-    align-items:center;
-    justify-content:space-between;
-    flex-wrap:wrap;
-  }
-  #preview{
-    width:220px;
-    height:160px;
-    border:1px solid rgba(255,255,255,.10);
-    border-radius:18px;
-    background:rgba(0,0,0,.45);
-    backdrop-filter: blur(8px);
-    overflow:hidden;
-  }
-  .tiny{
-    font-size:11px;
-    letter-spacing:.16em;
-    color:rgba(255,255,255,.72);
-    line-height:1.5;
-    margin:0;
-  }
-
-  /* Visible error box (so you never get “dead UI” with no clue) */
+  /* Visible error box */
   #err{
     display:none;
     margin:10px 0 0;
@@ -268,12 +234,7 @@
   }
 
   /* Leaderboard */
-  #board{
-    display:none;
-    margin-top:12px;
-    border-top:1px solid rgba(255,255,255,.10);
-    padding-top:12px;
-  }
+  #board{ display:none; margin-top:12px; border-top:1px solid rgba(255,255,255,.10); padding-top:12px; }
   .lb{
     display:flex; justify-content:space-between; gap:12px;
     padding:10px 12px;
@@ -285,6 +246,13 @@
     letter-spacing:.14em;
   }
   .lb strong{letter-spacing:.20em}
+  .tiny{
+    font-size:11px;
+    letter-spacing:.16em;
+    color:rgba(255,255,255,.72);
+    line-height:1.5;
+    margin:10px 0 0;
+  }
 </style>
 </head>
 
@@ -294,43 +262,40 @@
   <div class="panel">
     <div class="title">DREAM</div>
     <p class="sub" id="subtitle">
-      12 fast levels. 2 lives. Less overdose limit. Bosses: Ghost → Doctor → Thug → Gorilla → Devil.
-      Hearts heal + shrink. Pills bloat. Explode if you overeat. 🐒💊
+      12 fast levels. 2 lives. Bosses: Ghost → Doctor → Thug → Gorilla → Devil. Hearts heal + shrink. Pills bloat. Explode if you overeat. 🐒💊
     </p>
 
     <div id="err"></div>
 
     <div class="grid">
-      <div class="opts">
-        <div class="optTitle">Enter Name <span style="opacity:.7">+ outfit preview</span></div>
+      <div class="box">
+        <div class="optTitle">Player</div>
+        <input id="nameInput" maxlength="12" inputmode="text" autocomplete="off" autocapitalize="characters" placeholder="PLAYER" />
+        <div style="height:10px"></div>
+        <select id="colorPick" aria-label="Chimp color">
+          <option value="brown" selected>CHIMP: BROWN</option>
+          <option value="gray">CHIMP: GRAY</option>
+          <option value="violet">CHIMP: VIOLET</option>
+          <option value="albino">CHIMP: ALBINO</option>
+        </select>
 
-        <div class="previewWrap">
-          <div style="flex:1 1 260px; min-width:240px;">
-            <input id="nameInput" maxlength="12" placeholder="PLAYER" />
-            <div class="btnRow">
-              <button id="startBtn">START</button>
-              <button class="secondary" id="toggleBoard">LEADERBOARD</button>
-              <button class="secondary" id="clearBoardBtn" title="Clear local leaderboard">CLEAR</button>
-            </div>
-            <p class="tiny">
-              iPhone audio: START is your “unlock tap”. Playlist runs: dream1 → dream2 (loops).
-            </p>
-            <p class="tiny" style="margin-top:8px;">
-              Controls: drag/touch or mouse to move. Bonus keys: ← → / A D. Pause: P.
-            </p>
+        <div class="btnRow">
+          <button id="startBtn">START</button>
+          <button class="secondary" id="toggleBoard">LEADERBOARD</button>
+          <button class="secondary" id="clearBoardBtn" title="Clear local leaderboard">CLEAR</button>
+        </div>
 
-            <div id="board">
-              <div class="optTitle">Top Scores (local)</div>
-              <div id="lbList"></div>
-            </div>
-          </div>
+        <p class="tiny">iPhone audio unlock: the START tap kicks music on. Files: <code>audio/dream1.mp3</code>, <code>audio/dream2.mp3</code></p>
+        <p class="tiny">Controls: drag on screen (or mouse). Bonus keys: ← → / A D. Pause: P.</p>
 
-          <canvas id="preview" width="220" height="160" aria-label="Chimp preview"></canvas>
+        <div id="board">
+          <div class="optTitle">Top Scores (local)</div>
+          <div id="lbList"></div>
         </div>
       </div>
 
-      <div class="opts">
-        <div class="optTitle">Build Outfit <span style="opacity:.7">live preview</span></div>
+      <div class="box">
+        <div class="optTitle">Light Outfit</div>
         <div class="choices" id="outfitChoices">
           <div class="chip" data-part="hat" data-val="none">Hat: None</div>
           <div class="chip" data-part="hat" data-val="cap">Hat: Cap</div>
@@ -350,9 +315,7 @@
         </div>
 
         <p class="sub" style="margin-top:10px;">
-          Lives: <span style="color:var(--bad)">2</span>.
-          Hearts: heal + shrink + reduce fat.
-          Bosses cheat. Devil files your taxes.
+          Lives: <span style="color:var(--bad)">2</span>. Hearts heal + shrink + reduce fat. Bosses cheat. Devil files your taxes.
         </p>
       </div>
     </div>
@@ -377,434 +340,699 @@
 <div id="levelBanner"><div class="b" id="levelText">LEVEL 1</div></div>
 
 <canvas id="game"></canvas>
-
-<!-- PLAYLIST: put your songs here -->
 <audio id="music" preload="none" playsinline></audio>
 
 <script>
-window.addEventListener("DOMContentLoaded", () => {
-/* =========================
-   CRASH DETECTOR (VISIBLE)
-========================= */
-const errBox = document.getElementById("err");
-function showErr(msg){
-  try{
+(() => {
+  /* ============== CRASH DETECTOR (VISIBLE) ============== */
+  const errBox = document.getElementById("err");
+  function showErr(msg){
     errBox.style.display = "block";
     errBox.textContent = String(msg || "Unknown error.");
-  }catch(e){}
-}
-window.addEventListener("error", (e)=>{
-  showErr("JS ERROR:\n" + (e.message || e.type) + "\n" + (e.filename || "") + ":" + (e.lineno || ""));
-  console.error(e);
-});
-window.addEventListener("unhandledrejection", (e)=>{
-  showErr("PROMISE ERROR:\n" + (e.reason?.message || e.reason || "Unknown rejection"));
-  console.error(e);
-});
-
-/* =========================
-   CANVAS (SAFARI SAFE)
-========================= */
-const c = document.getElementById("game");
-
-// Try options, then fallback (Safari sometimes returns null)
-let ctx = null;
-try { ctx = c.getContext("2d", { alpha:false }); } catch(e) {}
-if(!ctx) ctx = c.getContext("2d");
-
-if(!ctx){
-  showErr("Canvas init failed: could not get 2D context for #game.\nTry a different browser or iOS update.");
-  return;
-}
-
-function resize(){
-  // Set real pixel size for crispness
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  c.width = Math.floor(innerWidth * dpr);
-  c.height = Math.floor(innerHeight * dpr);
-  c.style.width = innerWidth + "px";
-  c.style.height = innerHeight + "px";
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-}
-resize();
-addEventListener("resize", resize, { passive:true });
-
-/* Preview canvas */
-const pc = document.getElementById("preview");
-let pctx = null;
-try { pctx = pc.getContext("2d"); } catch(e) {}
-if(!pctx){
-  showErr("Preview init failed: could not get 2D context for #preview.");
-  return;
-}
-
-/* =========================
-   TINY BEEP (optional)
-========================= */
-let actx = null;
-function blip(freq=320, dur=0.06, vol=0.05){
-  try{
-    if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-    const o = actx.createOscillator();
-    const g = actx.createGain();
-    o.connect(g); g.connect(actx.destination);
-    o.type = "square";
-    o.frequency.value = freq;
-    g.gain.value = vol;
-    o.start();
-    o.stop(actx.currentTime + dur);
-  }catch(e){}
-}
-
-/* =========================
-   UI
-========================= */
-const uiName = document.getElementById("uiName");
-const uiLevel = document.getElementById("uiLevel");
-const uiLives = document.getElementById("uiLives");
-const uiScore = document.getElementById("uiScore");
-const uiHi = document.getElementById("uiHi");
-const uiFat = document.getElementById("uiFat");
-const uiBoss = document.getElementById("uiBoss");
-const uiTip = document.getElementById("uiTip");
-
-const overlay = document.getElementById("overlay");
-const startBtn = document.getElementById("startBtn");
-const nameInput = document.getElementById("nameInput");
-const levelBanner = document.getElementById("levelBanner");
-const levelText = document.getElementById("levelText");
-const boardBtn = document.getElementById("toggleBoard");
-const clearBoardBtn = document.getElementById("clearBoardBtn");
-const board = document.getElementById("board");
-const lbList = document.getElementById("lbList");
-const subtitle = document.getElementById("subtitle");
-
-/* =========================
-   LEADERBOARD (LOCAL)
-========================= */
-const LB_KEY = "clawboi_dream_lb_v3";
-function loadLB(){
-  try{ return JSON.parse(localStorage.getItem(LB_KEY) || "[]"); }
-  catch(e){ return []; }
-}
-function saveLB(list){ localStorage.setItem(LB_KEY, JSON.stringify(list.slice(0,10))); }
-function addScoreToLB(name, score){
-  const list = loadLB();
-  list.push({ name, score, t: Date.now() });
-  list.sort((a,b)=> b.score - a.score);
-  saveLB(list);
-}
-function escapeHtml(s){
-  return (s||"").replace(/[&<>"']/g, (m)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
-}
-function renderLB(){
-  const list = loadLB();
-  lbList.innerHTML = "";
-  if(!list.length){
-    lbList.innerHTML = `<div class="sub">No scores yet. Go first.</div>`;
-    return;
   }
-  list.slice(0,10).forEach((e, idx)=>{
-    const row = document.createElement("div");
-    row.className = "lb";
-    const date = new Date(e.t);
-    const stamp = `${date.getMonth()+1}/${date.getDate()}`;
-    row.innerHTML = `<strong>#${idx+1}</strong><span>${escapeHtml(e.name)}</span><span>${e.score} <span style="opacity:.55">${stamp}</span></span>`;
-    lbList.appendChild(row);
+  window.addEventListener("error", (e)=>{
+    showErr("JS ERROR:\n" + (e.message || e.type) + "\n" + (e.filename || "") + ":" + (e.lineno || ""));
+    console.error(e);
   });
-}
-boardBtn.onclick = ()=>{
-  board.style.display = (board.style.display === "block") ? "none" : "block";
-  if(board.style.display === "block") renderLB();
-};
-clearBoardBtn.onclick = ()=>{
-  localStorage.removeItem(LB_KEY);
-  renderLB();
-  blip(180,0.06,0.05);
-};
-
-/* =========================
-   OUTFIT
-========================= */
-const outfit = { hat:"none", shades:"none", chain:"none", fit:"hoodie" };
-const chips = Array.from(document.querySelectorAll(".chip"));
-
-function setChipState(){
-  chips.forEach(ch=>{
-    const part = ch.dataset.part;
-    const val = ch.dataset.val;
-    ch.classList.toggle("on", outfit[part] === val);
+  window.addEventListener("unhandledrejection", (e)=>{
+    showErr("PROMISE ERROR:\n" + (e.reason?.message || e.reason || "Unknown rejection"));
+    console.error(e);
   });
-  drawPreview();
-}
 
-document.getElementById("outfitChoices").addEventListener("click",(e)=>{
-  const ch = e.target.closest(".chip");
-  if(!ch) return;
-  outfit[ch.dataset.part] = ch.dataset.val;
-  setChipState();
-  blip(420,0.04,0.04);
-});
+  /* ============== CANVAS ============== */
+  const canvas = document.getElementById("game");
+  let ctx = null;
+  try { ctx = canvas.getContext("2d", { alpha:false }); } catch(e) {}
+  if(!ctx) ctx = canvas.getContext("2d");
+  if(!ctx){ showErr("Canvas init failed: could not get 2D context."); return; }
 
-setChipState();
-
-/* =========================
-   MUSIC PLAYLIST
-========================= */
-const music = document.getElementById("music");
-const playlist = [
-  "audio/dream1.mp3?v=1",
-  "audio/dream2.mp3?v=1"
-];
-let trackIndex = 0;
-let audioUnlocked = false;
-
-function loadTrack(i){
-  trackIndex = i;
-  music.src = playlist[trackIndex];
-  music.load();
-}
-function startPlaylist(){
-  loadTrack(0);
-  music.volume = 0.78;
-  music.play().catch(()=>{});
-}
-music.addEventListener("ended", ()=>{
-  if(trackIndex < playlist.length - 1){
-    loadTrack(trackIndex + 1);
-    music.play().catch(()=>{});
-  }else{
-    loadTrack(0);
-    music.play().catch(()=>{});
+  let W = innerWidth, H = innerHeight, DPR = 1;
+  function resize(){
+    W = innerWidth; H = innerHeight;
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(DPR,0,0,DPR,0,0); // draw in CSS pixels
   }
-});
+  resize();
+  addEventListener("resize", resize, { passive:true });
 
-/* =========================
-   GAME STATE (HARD MODE)
-========================= */
-let running = false;
-let ended = false;
-let paused = false;
-let playerName = "PLAYER";
-
-const player = {
-  x: innerWidth/2,
-  y: innerHeight - 150,
-  size: 30,
-  fat: 0,       // explode at 140 (harder)
-  lives: 2,
-  invuln: 0,
-  shrink: 0
-};
-
-let mx = player.x;
-let usingTouch = false;
-let keyDir = 0; // -1 left, 1 right
-
-addEventListener("mousemove", e=> { if(!usingTouch) mx = e.clientX; }, { passive:true });
-addEventListener("touchstart", e=> { usingTouch = true; mx = e.touches[0].clientX; }, { passive:true });
-addEventListener("touchmove", e=> { mx = e.touches[0].clientX; }, { passive:true });
-
-addEventListener("keydown", (e)=>{
-  if(e.key === "ArrowLeft" || e.key.toLowerCase() === "a") keyDir = -1;
-  if(e.key === "ArrowRight" || e.key.toLowerCase() === "d") keyDir = 1;
-  if(e.key.toLowerCase() === "p" && running){
-    paused = !paused;
-    blip(paused ? 240 : 520, 0.05, 0.05);
-    if(!paused) requestAnimationFrame(loop);
+  /* ============== TINY BEEP (OPTIONAL) ============== */
+  let actx = null;
+  function blip(freq=320, dur=0.06, vol=0.05){
+    try{
+      if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = actx.createOscillator();
+      const g = actx.createGain();
+      o.connect(g); g.connect(actx.destination);
+      o.type = "square";
+      o.frequency.value = freq;
+      g.gain.value = vol;
+      o.start();
+      o.stop(actx.currentTime + dur);
+    }catch(e){}
   }
-}, { passive:true });
 
-addEventListener("keyup", (e)=>{
-  const k = e.key.toLowerCase();
-  if(k === "arrowleft" || k === "a"){
-    if(keyDir === -1) keyDir = 0;
+  /* ============== UI ============== */
+  const uiName = document.getElementById("uiName");
+  const uiLevel = document.getElementById("uiLevel");
+  const uiLives = document.getElementById("uiLives");
+  const uiScore = document.getElementById("uiScore");
+  const uiHi = document.getElementById("uiHi");
+  const uiFat = document.getElementById("uiFat");
+  const uiBoss = document.getElementById("uiBoss");
+  const uiTip = document.getElementById("uiTip");
+
+  const overlay = document.getElementById("overlay");
+  const startBtn = document.getElementById("startBtn");
+  const nameInput = document.getElementById("nameInput");
+  const colorPick = document.getElementById("colorPick");
+  const levelBanner = document.getElementById("levelBanner");
+  const levelText = document.getElementById("levelText");
+  const boardBtn = document.getElementById("toggleBoard");
+  const clearBoardBtn = document.getElementById("clearBoardBtn");
+  const board = document.getElementById("board");
+  const lbList = document.getElementById("lbList");
+
+  /* ============== LEADERBOARD ============== */
+  const LB_KEY = "clawboi_dream_lb_v4";
+  function loadLB(){
+    try{ return JSON.parse(localStorage.getItem(LB_KEY) || "[]"); }
+    catch(e){ return []; }
   }
-  if(k === "arrowright" || k === "d"){
-    if(keyDir === 1) keyDir = 0;
+  function saveLB(list){ localStorage.setItem(LB_KEY, JSON.stringify(list.slice(0,10))); }
+  function addScoreToLB(name, score){
+    const list = loadLB();
+    list.push({ name, score, t: Date.now() });
+    list.sort((a,b)=> b.score - a.score);
+    saveLB(list);
   }
-}, { passive:true });
-
-let pills = [];
-let hearts = [];
-let hazards = [];
-let particles = [];
-
-let score = 0;
-let globalTicks = 0;
-let levelTicks = 0;
-
-let level = 1;                 // 1..12
-const MAX_LEVEL = 12;
-const LEVEL_SECONDS = 9;        // fast levels
-const LEVEL_FRAMES = 60 * LEVEL_SECONDS;
-
-let spawnRate = 26;             // hard
-let fallSpeed = 4.2;
-let heartRate = 260;
-
-let nearMissBonus = 4;
-
-let boss = null;                // {type, hp, t, x,y,r, phase}
-
-/* Boss schedule */
-const bossAtLevels = new Map([
-  [3,  "GHOST"],
-  [6,  "DOCTOR"],
-  [9,  "THUG"],
-  [11, "GORILLA"],
-  [12, "DEVIL"]
-]);
-
-/* =========================
-   HELPERS
-========================= */
-function showBanner(txt){
-  levelText.textContent = txt;
-  levelBanner.style.display = "flex";
-  setTimeout(()=>{ levelBanner.style.display = "none"; }, 850);
-}
-function hitCircle(ax,ay,ar,bx,by,br){
-  const dx = ax-bx, dy = ay-by;
-  return Math.hypot(dx,dy) < (ar+br);
-}
-function rand(a,b){ return a + Math.random()*(b-a); }
-
-function burst(x,y,color,count=14,spd=7){
-  for(let i=0;i<count;i++){
-    particles.push({
-      x,y,
-      vx:(Math.random()-.5)*spd,
-      vy:(Math.random()-.5)*spd,
-      life: 30 + Math.random()*18,
-      color
+  function escapeHtml(s){
+    return (s||"").replace(/[&<>"']/g, (m)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  }
+  function renderLB(){
+    const list = loadLB();
+    lbList.innerHTML = "";
+    if(!list.length){
+      lbList.innerHTML = `<div class="sub">No scores yet. Go first.</div>`;
+      return;
+    }
+    list.slice(0,10).forEach((e, idx)=>{
+      const row = document.createElement("div");
+      row.className = "lb";
+      const d = new Date(e.t);
+      const stamp = `${d.getMonth()+1}/${d.getDate()}`;
+      row.innerHTML = `<strong>#${idx+1}</strong><span>${escapeHtml(e.name)}</span><span>${e.score} <span style="opacity:.55">${stamp}</span></span>`;
+      lbList.appendChild(row);
     });
   }
-}
-function roundRect(g, x,y,w,h,r, fill){
-  const rr = Math.min(r, w/2, h/2);
-  g.beginPath();
-  g.moveTo(x+rr,y);
-  g.arcTo(x+w,y,x+w,y+h,rr);
-  g.arcTo(x+w,y+h,x,y+h,rr);
-  g.arcTo(x,y+h,x,y,rr);
-  g.arcTo(x,y,x+w,y,rr);
-  if(fill) g.fill(); else g.stroke();
-}
+  boardBtn.onclick = ()=>{
+    board.style.display = (board.style.display === "block") ? "none" : "block";
+    if(board.style.display === "block") renderLB();
+  };
+  clearBoardBtn.onclick = ()=>{
+    localStorage.removeItem(LB_KEY);
+    renderLB();
+    blip(180,0.06,0.05);
+  };
 
-  const previewState = { fat: 22, shrink: 0 };
-  
-/* =========================
-   CHIMP DRAW
-========================= */
-  const previewState = { fat: 22, shrink: 0 };
+  /* ============== OUTFIT ============== */
+  const outfit = { hat:"none", shades:"none", chain:"none", fit:"hoodie" };
+  const chips = Array.from(document.querySelectorAll(".chip"));
 
-function drawChimp(g, px, py, base, isPreview=false){
-  const fatVal = isPreview ? previewState.fat : player.fat;
-const shrinkVal = isPreview ? previewState.shrink : player.shrink;
+  function setChipState(){
+    chips.forEach(ch=>{
+      const part = ch.dataset.part;
+      const val = ch.dataset.val;
+      ch.classList.toggle("on", outfit[part] === val);
+    });
+  }
+  document.getElementById("outfitChoices").addEventListener("click",(e)=>{
+    const ch = e.target.closest(".chip");
+    if(!ch) return;
+    outfit[ch.dataset.part] = ch.dataset.val;
+    setChipState();
+    blip(420,0.04,0.04);
+  });
+  setChipState();
 
-const fatVal = (isPreview || typeof player === "undefined") ? previewState.fat : player.fat;
-const shrinkVal = (isPreview || typeof player === "undefined") ? previewState.shrink : player.shrink;
+  /* ============== MUSIC (iOS unlock) ============== */
+  const music = document.getElementById("music");
+  const playlist = ["audio/dream1.mp3?v=1", "audio/dream2.mp3?v=1"];
+  let trackIndex = 0;
+  let audioUnlocked = false;
 
-const fatVal = (isPreview || typeof player === "undefined") ? previewState.fat : player.fat;
-const shrinkVal = (isPreview || typeof player === "undefined") ? previewState.shrink : player.shrink;
+  function loadTrack(i){
+    trackIndex = i;
+    music.src = playlist[trackIndex];
+    music.load();
+  }
+  function startPlaylist(){
+    loadTrack(0);
+    music.volume = 0.78;
+    music.play().catch(()=>{});
+  }
+  music.addEventListener("ended", ()=>{
+    trackIndex = (trackIndex + 1) % playlist.length;
+    loadTrack(trackIndex);
+    music.play().catch(()=>{});
+  });
 
-const fatScale = 1 + fatVal/200;
-const shrinkScale = Math.max(0.78, 1 - shrinkVal*0.02);
-const s = base * fatScale * shrinkScale;
+  /* ============== GAME STATE ============== */
+  let running = false;
+  let paused = false;
+  let ended = false;
 
-  const fur = "#7a4b2a";
-  const fur2 = "#5b341f";
-  const skin = "#d4b08a";
-  const dark = "#0b0b0b";
+  let playerName = "PLAYER";
+  let chimpTone = "brown";
 
-  g.save();
+  const player = {
+    x: W/2,
+    y: H - 150,
+    size: 30,
+    fat: 0,
+    lives: 2,
+    invuln: 0,
+    shrink: 0
+  };
 
-  if(!isPreview){
+  let mx = player.x;
+  let keyDir = 0; // -1 left, 1 right
+
+  // IMPORTANT: pointer/touch ONLY on canvas, so overlay inputs type normally.
+  function onPointerMove(clientX){
+    mx = clientX;
+  }
+  canvas.addEventListener("pointerdown", (e)=>{
+    if(!running) return;
+    canvas.setPointerCapture?.(e.pointerId);
+    onPointerMove(e.clientX);
+  }, { passive:true });
+  canvas.addEventListener("pointermove", (e)=>{
+    if(!running) return;
+    onPointerMove(e.clientX);
+  }, { passive:true });
+
+  addEventListener("keydown", (e)=>{
+    const k = e.key.toLowerCase();
+    if(e.key === "ArrowLeft" || k === "a") keyDir = -1;
+    if(e.key === "ArrowRight" || k === "d") keyDir = 1;
+    if(k === "p" && running){
+      paused = !paused;
+      blip(paused ? 240 : 520, 0.05, 0.05);
+      if(!paused) requestAnimationFrame(loop);
+    }
+  }, { passive:true });
+
+  addEventListener("keyup", (e)=>{
+    const k = e.key.toLowerCase();
+    if(e.key === "ArrowLeft" || k === "a"){ if(keyDir === -1) keyDir = 0; }
+    if(e.key === "ArrowRight" || k === "d"){ if(keyDir === 1) keyDir = 0; }
+  }, { passive:true });
+
+  let pills = [];
+  let hearts = [];
+  let hazards = [];
+  let particles = [];
+
+  let score = 0;
+  let globalTicks = 0;
+  let levelTicks = 0;
+
+  let level = 1;
+  const MAX_LEVEL = 12;
+  const LEVEL_SECONDS = 9;
+  const LEVEL_FRAMES = 60 * LEVEL_SECONDS;
+
+  let spawnRate = 26;
+  let fallSpeed = 4.2;
+  let heartRate = 260;
+  let nearMissBonus = 4;
+
+  let boss = null;
+
+  const bossAtLevels = new Map([
+    [3,  "GHOST"],
+    [6,  "DOCTOR"],
+    [9,  "THUG"],
+    [11, "GORILLA"],
+    [12, "DEVIL"]
+  ]);
+
+  /* ============== HELPERS ============== */
+  function showBanner(txt){
+    levelText.textContent = txt;
+    levelBanner.style.display = "flex";
+    setTimeout(()=>{ levelBanner.style.display = "none"; }, 850);
+  }
+  function hitCircle(ax,ay,ar,bx,by,br){
+    const dx = ax-bx, dy = ay-by;
+    return Math.hypot(dx,dy) < (ar+br);
+  }
+  function rand(a,b){ return a + Math.random()*(b-a); }
+
+  function burst(x,y,color,count=14,spd=7){
+    for(let i=0;i<count;i++){
+      particles.push({
+        x,y,
+        vx:(Math.random()-.5)*spd,
+        vy:(Math.random()-.5)*spd,
+        life: 30 + Math.random()*18,
+        color
+      });
+    }
+  }
+  function roundRect(g, x,y,w,h,r, fill){
+    const rr = Math.min(r, w/2, h/2);
+    g.beginPath();
+    g.moveTo(x+rr,y);
+    g.arcTo(x+w,y,x+w,y+h,rr);
+    g.arcTo(x+w,y+h,x,y+h,rr);
+    g.arcTo(x,y+h,x,y,rr);
+    g.arcTo(x,y,x+w,y,rr);
+    if(fill) g.fill(); else g.stroke();
+  }
+
+  /* ============== SPAWNS ============== */
+  function spawnPill(kind="pill"){
+    const r = rand(10,16);
+    pills.push({
+      kind,
+      x: Math.random()*W,
+      y: -40,
+      r,
+      v: fallSpeed + rand(0.2,2.2),
+      h: Math.random()*360,
+      wobble: rand(-1.1,1.1)
+    });
+  }
+  function spawnHeart(){
+    hearts.push({
+      x: Math.random()*W,
+      y: -40,
+      r: 14,
+      v: fallSpeed*0.95 + rand(0.1,0.9),
+      t: 0
+    });
+  }
+  function spawnHazard(kind){
+    hazards.push({
+      kind,
+      x: Math.random()*W,
+      y: -40,
+      r: (kind==="needle")? 10 : (kind==="skull")? 14 : 12,
+      v: fallSpeed*1.35 + rand(0.4,2.8),
+      a: rand(0,Math.PI*2)
+    });
+  }
+
+  /* ============== LEVEL SETTINGS ============== */
+  function applyLevelSettings(){
+    const L = level;
+    spawnRate = Math.max(12, 26 - Math.floor(L*1.2));
+    fallSpeed = 4.2 + L*0.55;
+    heartRate = Math.max(140, 260 - L*10);
+    nearMissBonus = 4 + Math.floor(L/2);
+
+    uiTip.textContent =
+      boss ? "TIP: BOSSES CHEAT" :
+      (L<=2 ? "TIP: STAY LOW" :
+       L<=5 ? "TIP: HEARTS HEAL + SHRINK" :
+       L<=8 ? "TIP: DONT GREED" :
+       "TIP: THREAD NEAR MISSES");
+
+    showBanner(`LEVEL ${L}`);
+  }
+
+  /* ============== BOSSES ============== */
+  function spawnBoss(type){
+    const baseHP = ({
+      "GHOST":   120,
+      "DOCTOR":  150,
+      "THUG":    170,
+      "GORILLA": 220,
+      "DEVIL":   320
+    })[type] || 140;
+
+    boss = {
+      type,
+      hp: baseHP,
+      max: baseHP,
+      t: 0,
+      x: W/2,
+      y: -180,
+      r: (type==="GORILLA")? 150 : (type==="DEVIL")? 170 : 120,
+      phase: 1
+    };
+
+    uiBoss.textContent = `BOSS: ${type}`;
+    showBanner(`${type} BOSS`);
+    blip(120,0.12,0.06);
+  }
+
+  function bossUpdate(){
+    if(!boss) return;
+    boss.t++;
+
+    if(boss.y < 170) boss.y += 1.8;
+
+    if(boss.type === "GHOST"){
+      boss.x = W/2 + Math.sin(boss.t*0.02) * 180;
+    }else if(boss.type === "DOCTOR"){
+      boss.x = W/2 + Math.sin(boss.t*0.03) * 120;
+    }else if(boss.type === "THUG"){
+      boss.x = W/2 + Math.sin(boss.t*0.04) * 220;
+    }else if(boss.type === "GORILLA"){
+      boss.x = W/2 + Math.sin(boss.t*0.018) * 140;
+    }else{
+      boss.x = W/2 + Math.sin(boss.t*0.022) * 240;
+    }
+
+    const hpPct = boss.hp / boss.max;
+    boss.phase = (hpPct < 0.18) ? 4 : (hpPct < 0.40) ? 3 : (hpPct < 0.70) ? 2 : 1;
+
+    const p = boss.phase;
+    const pillEvery = Math.max(6, 14 - p*2);
+    const hazardEvery = Math.max(8, 18 - p*3);
+
+    if(boss.t % pillEvery === 0){
+      spawnPill("bossPill");
+      if((boss.type === "THUG" || boss.type === "DEVIL") && boss.t % (pillEvery*2) === 0) spawnPill("bossPill");
+    }
+
+    if(boss.t % hazardEvery === 0){
+      if(boss.type === "GHOST"){
+        spawnHazard("shard"); if(p>=3) spawnHazard("shard");
+      }else if(boss.type === "DOCTOR"){
+        spawnHazard("needle"); if(p>=3) spawnHazard("needle");
+      }else if(boss.type === "THUG"){
+        spawnHazard("brick"); if(p>=3) spawnHazard("brick");
+      }else if(boss.type === "GORILLA"){
+        spawnHazard("banana"); spawnHazard("shard");
+      }else if(boss.type === "DEVIL"){
+        spawnHazard("skull"); spawnHazard("shard");
+        if(p>=3) spawnHazard("needle");
+        if(p>=4) spawnHazard("skull");
+      }
+    }
+
+    if((boss.type === "GHOST" || boss.type==="DEVIL") && boss.t % Math.max(22, 34 - p*4) === 0){
+      spawnHazard("fakeheart");
+    }
+
+    // Thread the ring to damage boss
+    const dx = player.x - boss.x;
+    const dy = (player.y-30) - boss.y;
+    const dist = Math.hypot(dx, dy);
+    const outer = boss.r + 54;
+    const inner = boss.r + 18;
+
+    if(dist < outer && dist > inner){
+      const dmg = (boss.type==="DEVIL") ? 0.9 : (boss.type==="GORILLA") ? 0.75 : 0.6;
+      boss.hp -= dmg;
+      score += 6;
+      if(boss.t % 5 === 0) burst(player.x, player.y-30, "rgba(138,46,255,.9)", 6, 4);
+    }
+
+    if(boss.hp <= 0){
+      score += (boss.type==="DEVIL") ? 6000 : 2500;
+      burst(boss.x, boss.y, "rgba(138,46,255,.95)", 80, 12);
+      burst(boss.x, boss.y, "rgba(255,255,255,.85)", 50, 10);
+      blip(680,0.09,0.06);
+      boss = null;
+      uiBoss.textContent = "BOSS: --";
+      showBanner("BOSS DOWN");
+    }
+  }
+
+  function drawBoss(){
+    if(!boss) return;
+
+    // aura
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = "rgba(138,46,255,.9)";
+    ctx.beginPath();
+    ctx.arc(boss.x, boss.y, boss.r*1.35, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    if(boss.type === "GHOST"){
+      ctx.strokeStyle = "rgba(185,140,255,.85)";
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
+      ctx.stroke();
+
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = "rgba(185,140,255,.55)";
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y, boss.r*0.72, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+    }else if(boss.type === "DOCTOR"){
+      ctx.strokeStyle = "rgba(255,255,255,.85)";
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(0,0,0,.85)";
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y, boss.r*0.62, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,255,255,.85)";
+      ctx.fillRect(boss.x - 10, boss.y - 34, 20, 68);
+      ctx.fillRect(boss.x - 34, boss.y - 10, 68, 20);
+
+    }else if(boss.type === "THUG"){
+      ctx.strokeStyle = "rgba(255,255,255,.55)";
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(0,0,0,.90)";
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y, boss.r*0.68, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,42,42,.85)";
+      ctx.fillRect(boss.x - boss.r*0.40, boss.y - 8, boss.r*0.80, 16);
+
+    }else if(boss.type === "GORILLA"){
+      ctx.strokeStyle = "rgba(255,255,255,.22)";
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(60,60,60,.92)";
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y, boss.r*0.78, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(0,0,0,.85)";
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y+18, boss.r*0.42, 0, Math.PI*2);
+      ctx.fill();
+
+    }else{ // DEVIL
+      ctx.strokeStyle = "rgba(255,42,42,.85)";
+      ctx.lineWidth = 9;
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(0,0,0,.90)";
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y, boss.r*0.70, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,42,42,.85)";
+      ctx.beginPath();
+      ctx.moveTo(boss.x - 60, boss.y - 80);
+      ctx.lineTo(boss.x - 110, boss.y - 140);
+      ctx.lineTo(boss.x - 40, boss.y - 120);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(boss.x + 60, boss.y - 80);
+      ctx.lineTo(boss.x + 110, boss.y - 140);
+      ctx.lineTo(boss.x + 40, boss.y - 120);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // HP bar
+    const hpW = Math.min(320, W - 40);
+    const hpPct = Math.max(0, boss.hp / boss.max);
+    ctx.fillStyle = "rgba(255,255,255,.10)";
+    roundRect(ctx, W/2 - hpW/2, 16, hpW, 10, 6, true);
+
+    ctx.fillStyle = (boss.type==="DEVIL") ? "rgba(255,42,42,.85)" : "rgba(138,46,255,.85)";
+    roundRect(ctx, W/2 - hpW/2, 16, hpW*hpPct, 10, 6, true);
+  }
+
+  /* ============== CHIMP DRAW ============== */
+  function chimpPalette(tone){
+    if(tone === "gray")  return { fur:"#6b6b6b", fur2:"#3f3f3f", skin:"#c9b79e", dark:"#0b0b0b" };
+    if(tone === "violet")return { fur:"#7a2cff", fur2:"#3b0a6e", skin:"#d0b0ff", dark:"#09000f" };
+    if(tone === "albino")return { fur:"#e9e9e9", fur2:"#bfbfbf", skin:"#f1d7c6", dark:"#0b0b0b" };
+    return { fur:"#7a4b2a", fur2:"#5b341f", skin:"#d4b08a", dark:"#0b0b0b" }; // brown
+  }
+
+  function drawOutfit(g, px, py, s){
+    // Fit
+    if(outfit.fit === "hoodie"){
+      g.fillStyle = "rgba(0,0,0,.90)";
+      roundRect(g, px - s*0.76, py - s*0.25, s*1.52, s*0.78, s*0.22, true);
+      g.strokeStyle = "rgba(138,46,255,.45)";
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(px - s*0.12, py - s*0.02);
+      g.lineTo(px + s*0.12, py - s*0.02);
+      g.stroke();
+    }else if(outfit.fit === "jacket"){
+      g.fillStyle = "rgba(255,255,255,.06)";
+      roundRect(g, px - s*0.78, py - s*0.28, s*1.56, s*0.86, s*0.18, true);
+      g.strokeStyle = "rgba(255,255,255,.14)";
+      g.lineWidth = 1;
+      roundRect(g, px - s*0.78, py - s*0.28, s*1.56, s*0.86, s*0.18, false);
+    }else{
+      g.fillStyle = "rgba(255,255,255,.04)";
+      roundRect(g, px - s*0.72, py - s*0.18, s*1.44, s*0.70, s*0.20, true);
+    }
+
+    // Chain
+    if(outfit.chain !== "none"){
+      g.strokeStyle = (outfit.chain==="gold") ? "rgba(255,230,0,.95)" : "rgba(220,220,255,.92)";
+      g.lineWidth = 3;
+      g.beginPath();
+      g.arc(px, py - s*0.05, s*0.30, Math.PI*0.20, Math.PI*0.80);
+      g.stroke();
+      g.fillStyle = (outfit.chain==="gold") ? "rgba(255,230,0,.95)" : "rgba(220,220,255,.92)";
+      g.fillRect(px - s*0.06, py + s*0.14, s*0.12, s*0.12);
+    }
+
+    // Shades
+    if(outfit.shades !== "none"){
+      const col = (outfit.shades==="violet") ? "rgba(138,46,255,.95)" : "rgba(0,0,0,.95)";
+      g.fillStyle = col;
+      g.fillRect(px - s*0.34, py - s*1.02, s*0.30, s*0.10);
+      g.fillRect(px + s*0.04, py - s*1.02, s*0.30, s*0.10);
+      g.fillRect(px - s*0.05, py - s*0.98, s*0.10, s*0.04);
+    }
+
+    // Hat
+    if(outfit.hat !== "none"){
+      if(outfit.hat === "cap"){
+        g.fillStyle = "rgba(0,0,0,.95)";
+        roundRect(g, px - s*0.42, py - s*1.26, s*0.84, s*0.18, s*0.10, true);
+        g.fillRect(px - s*0.10, py - s*1.08, s*0.62, s*0.06);
+      }else{
+        g.fillStyle = "rgba(0,0,0,.85)";
+        roundRect(g, px - s*0.40, py - s*1.28, s*0.80, s*0.24, s*0.14, true);
+        g.fillStyle = "rgba(138,46,255,.45)";
+        g.fillRect(px - s*0.40, py - s*1.14, s*0.80, s*0.05);
+      }
+    }
+  }
+
+  function drawChimp(g, px, py, base){
+    const {fur, fur2, skin, dark} = chimpPalette(chimpTone);
+
+    const fatScale = 1 + player.fat/200;
+    const shrinkScale = Math.max(0.78, 1 - player.shrink*0.02);
+    const s = base * fatScale * shrinkScale;
+
+    g.save();
+
+    // glow
     g.globalAlpha = 0.12;
     g.fillStyle = "rgba(138,46,255,.9)";
     g.beginPath();
     g.arc(px, py-30, s*1.8, 0, Math.PI*2);
     g.fill();
-  }
 
-  if(!isPreview && player.invuln > 0 && (player.invuln % 10) < 5){
-    g.globalAlpha = 0.45;
-  }else{
-    g.globalAlpha = 1;
-  }
+    // invuln blink
+    g.globalAlpha = (player.invuln > 0 && (player.invuln % 10) < 5) ? 0.45 : 1;
 
-  // torso
-  g.fillStyle = fur;
-  g.beginPath();
-  g.ellipse(px, py, s*0.72, s*0.78, 0, 0, Math.PI*2);
-  g.fill();
+    // torso
+    g.fillStyle = fur;
+    g.beginPath();
+    g.ellipse(px, py, s*0.72, s*0.78, 0, 0, Math.PI*2);
+    g.fill();
 
-  // belly
-  g.fillStyle = fur2;
-  g.beginPath();
-  g.ellipse(px, py+8, s*0.46, s*0.52, 0, 0, Math.PI*2);
-  g.fill();
+    // belly
+    g.fillStyle = fur2;
+    g.beginPath();
+    g.ellipse(px, py+8, s*0.46, s*0.52, 0, 0, Math.PI*2);
+    g.fill();
 
-  // arms
-  g.fillStyle = fur;
-  g.beginPath();
-  g.ellipse(px - s*0.78, py+10, s*0.28, s*0.55, 0.2, 0, Math.PI*2);
-  g.ellipse(px + s*0.78, py+10, s*0.28, s*0.55, -0.2, 0, Math.PI*2);
-  g.fill();
+    // arms
+    g.fillStyle = fur;
+    g.beginPath();
+    g.ellipse(px - s*0.78, py+10, s*0.28, s*0.55, 0.2, 0, Math.PI*2);
+    g.ellipse(px + s*0.78, py+10, s*0.28, s*0.55, -0.2, 0, Math.PI*2);
+    g.fill();
 
-  // hands
-  g.fillStyle = skin;
-  g.beginPath();
-  g.ellipse(px - s*0.86, py + s*0.45, s*0.16, s*0.12, 0, 0, Math.PI*2);
-  g.ellipse(px + s*0.86, py + s*0.45, s*0.16, s*0.12, 0, 0, Math.PI*2);
-  g.fill();
+    // hands
+    g.fillStyle = skin;
+    g.beginPath();
+    g.ellipse(px - s*0.86, py + s*0.45, s*0.16, s*0.12, 0, 0, Math.PI*2);
+    g.ellipse(px + s*0.86, py + s*0.45, s*0.16, s*0.12, 0, 0, Math.PI*2);
+    g.fill();
 
-  // legs
-  g.fillStyle = fur;
-  g.beginPath();
-  g.ellipse(px - s*0.35, py + s*0.78, s*0.22, s*0.38, 0, 0, Math.PI*2);
-  g.ellipse(px + s*0.35, py + s*0.78, s*0.22, s*0.38, 0, 0, Math.PI*2);
-  g.fill();
+    // legs
+    g.fillStyle = fur;
+    g.beginPath();
+    g.ellipse(px - s*0.35, py + s*0.78, s*0.22, s*0.38, 0, 0, Math.PI*2);
+    g.ellipse(px + s*0.35, py + s*0.78, s*0.22, s*0.38, 0, 0, Math.PI*2);
+    g.fill();
 
-  // head
-  g.fillStyle = fur;
-  g.beginPath();
-  g.ellipse(px, py - s*0.92, s*0.60, s*0.55, 0, 0, Math.PI*2);
-  g.fill();
+    // head
+    g.fillStyle = fur;
+    g.beginPath();
+    g.ellipse(px, py - s*0.92, s*0.60, s*0.55, 0, 0, Math.PI*2);
+    g.fill();
 
-  // ears
-  g.fillStyle = fur2;
-  g.beginPath();
-  g.ellipse(px - s*0.62, py - s*0.92, s*0.14, s*0.18, 0, 0, Math.PI*2);
-  g.ellipse(px + s*0.62, py - s*0.92, s*0.14, s*0.18, 0, 0, Math.PI*2);
-  g.fill();
+    // ears
+    g.fillStyle = fur2;
+    g.beginPath();
+    g.ellipse(px - s*0.62, py - s*0.92, s*0.14, s*0.18, 0, 0, Math.PI*2);
+    g.ellipse(px + s*0.62, py - s*0.92, s*0.14, s*0.18, 0, 0, Math.PI*2);
+    g.fill();
 
-  // face mask
-  g.fillStyle = skin;
-  g.beginPath();
-  g.ellipse(px, py - s*0.82, s*0.40, s*0.34, 0, 0, Math.PI*2);
-  g.fill();
+    // face mask
+    g.fillStyle = skin;
+    g.beginPath();
+    g.ellipse(px, py - s*0.82, s*0.40, s*0.34, 0, 0, Math.PI*2);
+    g.fill();
 
-  // nose/mouth
-  g.fillStyle = dark;
-  g.beginPath();
-  g.ellipse(px, py - s*0.78, s*0.10, s*0.07, 0, 0, Math.PI*2);
-  g.fill();
-  g.fillRect(px - s*0.16, py - s*0.70, s*0.32, s*0.05);
+    // nose/mouth
+    g.fillStyle = dark;
+    g.beginPath();
+    g.ellipse(px, py - s*0.78, s*0.10, s*0.07, 0, 0, Math.PI*2);
+    g.fill();
+    g.fillRect(px - s*0.16, py - s*0.70, s*0.32, s*0.05);
 
-  // eyes
-  g.fillStyle = dark;
-  g.beginPath();
-  g.ellipse(px - s*0.20, py - s*0.96, s*0.06, s*0.06, 0, 0, Math.PI*2);
-  g.ellipse(px + s*0.20, py - s*0.96, s*0.06, s*0.06, 0, 0, Math.PI*2);
-  g.fill();
+    // eyes
+    g.fillStyle = dark;
+    g.beginPath();
+    g.ellipse(px - s*0.20, py - s*0.96, s*0.06, s*0.06, 0, 0, Math.PI*2);
+    g.ellipse(px + s*0.20, py - s*0.96, s*0.06, s*0.06, 0, 0, Math.PI*2);
+    g.fill();
 
-  // outfit overlays
-  drawOutfit(g, px, py, s);
+    // outfit
+    drawOutfit(g, px, py, s);
 
-  // fat danger ring
-  if(!isPreview){
+    // fat ring warning
     const fatPct = Math.min(100, Math.floor((player.fat/140)*100));
     if(fatPct > 60){
       g.strokeStyle = `rgba(255,42,42,${(fatPct-60)/60})`;
@@ -813,489 +1041,110 @@ const s = base * fatScale * shrinkScale;
       g.arc(px, py, s*1.05, 0, Math.PI*2);
       g.stroke();
     }
+
+    g.restore();
   }
 
-  g.restore();
-}
-
-function drawOutfit(g, px, py, s){
-  // Fit
-  if(outfit.fit === "hoodie"){
-    g.fillStyle = "rgba(0,0,0,.90)";
-    roundRect(g, px - s*0.76, py - s*0.25, s*1.52, s*0.78, s*0.22, true);
-    g.strokeStyle = "rgba(138,46,255,.45)";
-    g.lineWidth = 2;
-    g.beginPath();
-    g.moveTo(px - s*0.12, py - s*0.02);
-    g.lineTo(px + s*0.12, py - s*0.02);
-    g.stroke();
-  }else if(outfit.fit === "jacket"){
-    g.fillStyle = "rgba(255,255,255,.06)";
-    roundRect(g, px - s*0.78, py - s*0.28, s*1.56, s*0.86, s*0.18, true);
-    g.strokeStyle = "rgba(255,255,255,.14)";
-    g.lineWidth = 1;
-    roundRect(g, px - s*0.78, py - s*0.28, s*1.56, s*0.86, s*0.18, false);
-  }else{
-    g.fillStyle = "rgba(255,255,255,.04)";
-    roundRect(g, px - s*0.72, py - s*0.18, s*1.44, s*0.70, s*0.20, true);
+  /* ============== DAMAGE / LIFE ============== */
+  function loseLife(){
+    if(player.invuln > 0) return;
+    player.lives--;
+    player.invuln = 80;
+    burst(player.x, player.y-20, "rgba(255,42,42,.95)", 28, 9);
+    blip(140,0.08,0.06);
+    if(player.lives <= 0) endGame(false);
+  }
+  function gainLife(){
+    if(player.lives < 2) player.lives++;
   }
 
-  // Chain
-  if(outfit.chain !== "none"){
-    g.strokeStyle = (outfit.chain==="gold") ? "rgba(255,230,0,.95)" : "rgba(220,220,255,.92)";
-    g.lineWidth = 3;
-    g.beginPath();
-    g.arc(px, py - s*0.05, s*0.30, Math.PI*0.20, Math.PI*0.80);
-    g.stroke();
-    g.fillStyle = (outfit.chain==="gold") ? "rgba(255,230,0,.95)" : "rgba(220,220,255,.92)";
-    g.fillRect(px - s*0.06, py + s*0.14, s*0.12, s*0.12);
-  }
+  /* ============== START / RESET / END ============== */
+  function resetGame(){
+    pills = []; hearts = []; hazards = []; particles = [];
+    score = 0; globalTicks = 0; levelTicks = 0;
+    level = 1;
 
-  // Shades
-  if(outfit.shades !== "none"){
-    const col = (outfit.shades==="violet") ? "rgba(138,46,255,.95)" : "rgba(0,0,0,.95)";
-    g.fillStyle = col;
-    g.fillRect(px - s*0.34, py - s*1.02, s*0.30, s*0.10);
-    g.fillRect(px + s*0.04, py - s*1.02, s*0.30, s*0.10);
-    g.fillRect(px - s*0.05, py - s*0.98, s*0.10, s*0.04);
-  }
+    player.x = W/2;
+    player.y = H - 150;
+    player.size = 30;
+    player.fat = 0;
+    player.lives = 2;
+    player.invuln = 0;
+    player.shrink = 0;
 
-  // Hat
-  if(outfit.hat !== "none"){
-    if(outfit.hat === "cap"){
-      g.fillStyle = "rgba(0,0,0,.95)";
-      roundRect(g, px - s*0.42, py - s*1.26, s*0.84, s*0.18, s*0.10, true);
-      g.fillRect(px - s*0.10, py - s*1.08, s*0.62, s*0.06);
-    }else{
-      g.fillStyle = "rgba(0,0,0,.85)";
-      roundRect(g, px - s*0.40, py - s*1.28, s*0.80, s*0.24, s*0.14, true);
-      g.fillStyle = "rgba(138,46,255,.45)";
-      g.fillRect(px - s*0.40, py - s*1.14, s*0.80, s*0.05);
-    }
-  }
-}
-
-/* Preview draw */
-function drawPreview(){
-  pctx.clearRect(0,0,pc.width,pc.height);
-
-  const g = pctx.createRadialGradient(70,40,10, 110,70, 220);
-  g.addColorStop(0,"rgba(138,46,255,.18)");
-  g.addColorStop(1,"rgba(0,0,0,0)");
-  pctx.fillStyle = "#000";
-  pctx.fillRect(0,0,pc.width,pc.height);
-  pctx.fillStyle = g;
-  pctx.fillRect(0,0,pc.width,pc.height);
-
-  // stable preview pose regardless of current fat/shrink
-previewState.fat = 22;
-previewState.shrink = 0;
-drawChimp(pctx, pc.width/2, pc.height/2 + 40, 30, true);
-
-  pctx.fillStyle = "rgba(255,255,255,.70)";
-  pctx.font = "10px ui-monospace, monospace";
-  pctx.textAlign = "center";
-  pctx.fillText("CHIMP PREVIEW", pc.width/2, 16);
-}
-drawPreview();
-
-/* =========================
-   SPAWNS
-========================= */
-function spawnPill(kind="pill"){
-  const r = rand(10,16);
-  pills.push({
-    kind,
-    x: Math.random()*innerWidth,
-    y: -40,
-    r,
-    v: fallSpeed + rand(0.2,2.2),
-    h: Math.random()*360,
-    wobble: rand(-1.1,1.1)
-  });
-}
-function spawnHeart(){
-  hearts.push({
-    x: Math.random()*innerWidth,
-    y: -40,
-    r: 14,
-    v: fallSpeed*0.95 + rand(0.1,0.9),
-    t: 0
-  });
-}
-function spawnHazard(kind){
-  hazards.push({
-    kind,
-    x: Math.random()*innerWidth,
-    y: -40,
-    r: (kind==="needle")? 10 : (kind==="skull")? 14 : 12,
-    v: fallSpeed*1.35 + rand(0.4,2.8),
-    a: rand(0,Math.PI*2)
-  });
-}
-
-/* =========================
-   LEVEL SETTINGS (FAST + HARD)
-========================= */
-function applyLevelSettings(){
-  const L = level;
-
-  spawnRate = Math.max(12, 26 - Math.floor(L*1.2));
-  fallSpeed = 4.2 + L*0.55;
-  heartRate = Math.max(140, 260 - L*10);
-  nearMissBonus = 4 + Math.floor(L/2);
-
-  uiTip.textContent =
-    boss ? "TIP: BOSSES CHEAT" :
-    (L<=2 ? "TIP: STAY LOW" :
-     L<=5 ? "TIP: HEARTS HEAL + SHRINK" :
-     L<=8 ? "TIP: DONT GREED" :
-     "TIP: THREAD NEAR MISSES");
-
-  showBanner(`LEVEL ${L}`);
-}
-
-/* =========================
-   BOSSES
-========================= */
-function spawnBoss(type){
-  const baseHP = ({
-    "GHOST":   120,
-    "DOCTOR":  150,
-    "THUG":    170,
-    "GORILLA": 220,
-    "DEVIL":   320
-  })[type] || 140;
-
-  boss = {
-    type,
-    hp: baseHP,
-    max: baseHP,
-    t: 0,
-    x: innerWidth/2,
-    y: -180,
-    r: (type==="GORILLA")? 150 : (type==="DEVIL")? 170 : 120,
-    phase: 1
-  };
-
-  uiBoss.textContent = `BOSS: ${type}`;
-  showBanner(`${type} BOSS`);
-  blip(120,0.12,0.06);
-}
-
-function bossUpdate(){
-  if(!boss) return;
-  boss.t++;
-
-  if(boss.y < 170) boss.y += 1.8;
-
-  if(boss.type === "GHOST"){
-    boss.x = innerWidth/2 + Math.sin(boss.t*0.02) * 180;
-  }else if(boss.type === "DOCTOR"){
-    boss.x = innerWidth/2 + Math.sin(boss.t*0.03) * 120;
-  }else if(boss.type === "THUG"){
-    boss.x = innerWidth/2 + Math.sin(boss.t*0.04) * 220;
-  }else if(boss.type === "GORILLA"){
-    boss.x = innerWidth/2 + Math.sin(boss.t*0.018) * 140;
-  }else{
-    boss.x = innerWidth/2 + Math.sin(boss.t*0.022) * 240;
-  }
-
-  const hpPct = boss.hp / boss.max;
-  if(hpPct < 0.70) boss.phase = 2;
-  if(hpPct < 0.40) boss.phase = 3;
-  if(hpPct < 0.18) boss.phase = 4;
-
-  const p = boss.phase;
-  const pillEvery = Math.max(6, 14 - p*2);
-  const hazardEvery = Math.max(8, 18 - p*3);
-
-  if(boss.t % pillEvery === 0){
-    spawnPill("bossPill");
-    if(boss.type === "THUG" && boss.t % (pillEvery*2) === 0) spawnPill("bossPill");
-    if(boss.type === "DEVIL" && boss.t % (pillEvery*2) === 0) spawnPill("bossPill");
-  }
-
-  if(boss.t % hazardEvery === 0){
-    if(boss.type === "GHOST"){
-      spawnHazard("shard");
-      if(p>=3) spawnHazard("shard");
-    }else if(boss.type === "DOCTOR"){
-      spawnHazard("needle");
-      if(p>=3) spawnHazard("needle");
-    }else if(boss.type === "THUG"){
-      spawnHazard("brick");
-      if(p>=3) spawnHazard("brick");
-    }else if(boss.type === "GORILLA"){
-      spawnHazard("banana");
-      spawnHazard("shard");
-    }else if(boss.type === "DEVIL"){
-      spawnHazard("skull");
-      spawnHazard("shard");
-      if(p>=3) spawnHazard("needle");
-      if(p>=4) spawnHazard("skull");
-    }
-  }
-
-  if((boss.type === "GHOST" || boss.type==="DEVIL") && boss.t % Math.max(22, 34 - p*4) === 0){
-    spawnHazard("fakeheart");
-  }
-
-  // damage boss by threading near boss ring
-  const dx = player.x - boss.x;
-  const dy = (player.y-30) - boss.y;
-  const dist = Math.hypot(dx, dy);
-  const outer = boss.r + 54;
-  const inner = boss.r + 18;
-
-  if(dist < outer && dist > inner){
-    const dmg = (boss.type==="DEVIL") ? 0.9 : (boss.type==="GORILLA") ? 0.75 : 0.6;
-    boss.hp -= dmg;
-    score += 6;
-    if(boss.t % 5 === 0) burst(player.x, player.y-30, "rgba(138,46,255,.9)", 6, 4);
-  }
-
-  if(boss.hp <= 0){
-    score += (boss.type==="DEVIL") ? 6000 : 2500;
-    burst(boss.x, boss.y, "rgba(138,46,255,.95)", 80, 12);
-    burst(boss.x, boss.y, "rgba(255,255,255,.85)", 50, 10);
-    blip(680,0.09,0.06);
+    mx = player.x;
     boss = null;
-    uiBoss.textContent = "BOSS: --";
-    showBanner("BOSS DOWN");
-  }
-}
+    ended = false;
+    paused = false;
 
-function drawBoss(){
-  if(!boss) return;
-
-  // aura
-  ctx.save();
-  ctx.globalAlpha = 0.18;
-  ctx.fillStyle = "rgba(138,46,255,.9)";
-  ctx.beginPath();
-  ctx.arc(boss.x, boss.y, boss.r*1.35, 0, Math.PI*2);
-  ctx.fill();
-  ctx.restore();
-
-  if(boss.type === "GHOST"){
-    ctx.strokeStyle = "rgba(185,140,255,.85)";
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
-    ctx.stroke();
-
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = "rgba(185,140,255,.55)";
-    ctx.beginPath();
-    ctx.arc(boss.x, boss.y, boss.r*0.72, 0, Math.PI*2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
-  }else if(boss.type === "DOCTOR"){
-    ctx.strokeStyle = "rgba(255,255,255,.85)";
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
-    ctx.stroke();
-
-    ctx.fillStyle = "rgba(0,0,0,.85)";
-    ctx.beginPath();
-    ctx.arc(boss.x, boss.y, boss.r*0.62, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.fillStyle = "rgba(255,255,255,.85)";
-    ctx.fillRect(boss.x - 10, boss.y - 34, 20, 68);
-    ctx.fillRect(boss.x - 34, boss.y - 10, 68, 20);
-
-  }else if(boss.type === "THUG"){
-    ctx.strokeStyle = "rgba(255,255,255,.55)";
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
-    ctx.stroke();
-
-    ctx.fillStyle = "rgba(0,0,0,.90)";
-    ctx.beginPath();
-    ctx.arc(boss.x, boss.y, boss.r*0.68, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.fillStyle = "rgba(255,42,42,.85)";
-    ctx.fillRect(boss.x - boss.r*0.40, boss.y - 8, boss.r*0.80, 16);
-
-  }else if(boss.type === "GORILLA"){
-    ctx.strokeStyle = "rgba(255,255,255,.22)";
-    ctx.lineWidth = 10;
-    ctx.beginPath();
-    ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
-    ctx.stroke();
-
-    ctx.fillStyle = "rgba(60,60,60,.92)";
-    ctx.beginPath();
-    ctx.arc(boss.x, boss.y, boss.r*0.78, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.fillStyle = "rgba(0,0,0,.85)";
-    ctx.beginPath();
-    ctx.arc(boss.x, boss.y+18, boss.r*0.42, 0, Math.PI*2);
-    ctx.fill();
-
-  }else{
-    ctx.strokeStyle = "rgba(255,42,42,.85)";
-    ctx.lineWidth = 9;
-    ctx.beginPath();
-    ctx.arc(boss.x, boss.y, boss.r, 0, Math.PI*2);
-    ctx.stroke();
-
-    ctx.fillStyle = "rgba(0,0,0,.90)";
-    ctx.beginPath();
-    ctx.arc(boss.x, boss.y, boss.r*0.70, 0, Math.PI*2);
-    ctx.fill();
-
-    // horns
-    ctx.fillStyle = "rgba(255,42,42,.85)";
-    ctx.beginPath();
-    ctx.moveTo(boss.x - 60, boss.y - 80);
-    ctx.lineTo(boss.x - 110, boss.y - 140);
-    ctx.lineTo(boss.x - 40, boss.y - 120);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(boss.x + 60, boss.y - 80);
-    ctx.lineTo(boss.x + 110, boss.y - 140);
-    ctx.lineTo(boss.x + 40, boss.y - 120);
-    ctx.closePath();
-    ctx.fill();
+    applyLevelSettings();
   }
 
-  // HP bar (slightly nicer)
-  const hpW = Math.min(320, innerWidth - 40);
-  const hpPct = Math.max(0, boss.hp / boss.max);
-  ctx.fillStyle = "rgba(255,255,255,.10)";
-  roundRect(ctx, innerWidth/2 - hpW/2, 16, hpW, 10, 6, true);
+  function endGame(win){
+    running = false;
+    ended = true;
 
-  ctx.fillStyle = (boss.type==="DEVIL") ? "rgba(255,42,42,.85)" : "rgba(138,46,255,.85)";
-  roundRect(ctx, innerWidth/2 - hpW/2, 16, hpW*hpPct, 10, 6, true);
-}
+    addScoreToLB(playerName, Math.floor(score));
+    renderLB();
+    board.style.display = "block";
 
-/* =========================
-   DAMAGE / LIFE
-========================= */
-function loseLife(){
-  if(player.invuln > 0) return;
-  player.lives--;
-  player.invuln = 80;
-  burst(player.x, player.y-20, "rgba(255,42,42,.95)", 28, 9);
-  blip(140,0.08,0.06);
+    overlay.style.display = "flex";
+    overlay.querySelector(".title").textContent = win ? "YOU ESCAPED" : "OVERDOSE";
+    document.getElementById("subtitle").textContent = win
+      ? "You survived all levels + bosses. Score locked."
+      : "Too many pills. The chimp exploded. Score locked.";
 
-  if(player.lives <= 0){
-    endGame(false);
+    startBtn.textContent = "PLAY AGAIN";
   }
-}
-function gainLife(){
-  if(player.lives < 2) player.lives++;
-}
 
-/* =========================
-   START / RESET / END
-========================= */
-function resetGame(){
-  pills = [];
-  hearts = [];
-  hazards = [];
-  particles = [];
+  startBtn.addEventListener("click", ()=>{
+    try{
+      // Unlock iOS audio
+      if(!audioUnlocked){
+        audioUnlocked = true;
+        blip(300,0.03,0.03);
+        startPlaylist();
+      }
 
-  score = 0;
-  globalTicks = 0;
-  levelTicks = 0;
+      playerName = (nameInput.value || "PLAYER").slice(0,12).toUpperCase();
+      chimpTone = colorPick.value || "brown";
 
-  level = 1;
+      uiName.textContent = playerName;
 
-  player.x = innerWidth/2;
-  player.y = innerHeight - 150;
-  player.size = 30;
-  player.fat = 0;
-  player.lives = 2;
-  player.invuln = 0;
-  player.shrink = 0;
+      errBox.style.display = "none";
+      overlay.style.display = "none";
 
-  boss = null;
-  ended = false;
-  paused = false;
+      resetGame();
+      running = true;
 
-  applyLevelSettings();
-}
-
-function endGame(win){
-  running = false;
-  ended = true;
-
-  addScoreToLB(playerName, Math.floor(score));
-  renderLB();
-  board.style.display = "block";
-
-  overlay.style.display = "flex";
-  const p = overlay.querySelector(".panel");
-  p.querySelector(".title").textContent = win ? "YOU ESCAPED" : "OVERDOSE";
-  p.querySelector("#subtitle").innerHTML = win
-    ? `You survived all levels + bosses. Score locked.`
-    : `Too many pills. The chimp exploded. Score locked.`;
-
-  startBtn.textContent = "PLAY AGAIN";
-}
-
-/* Start click unlocks iPhone audio */
-startBtn.onclick = ()=>{
-  try{
-    if(!audioUnlocked){
-      audioUnlocked = true;
-      blip(300,0.03,0.03);
-      startPlaylist();
+      requestAnimationFrame(loop);
+    }catch(e){
+      showErr("START failed:\n" + (e.message || e));
     }
+  });
 
-    playerName = (nameInput.value || "PLAYER").slice(0,12).toUpperCase();
-    uiName.textContent = playerName;
+  /* ============== MAIN LOOP ============== */
+  function loop(){
+    if(!running || paused) return;
 
-    overlay.style.display = "none";
-    errBox.style.display = "none"; // hide any prior error
-    resetGame();
-    running = true;
+    globalTicks++;
+    levelTicks++;
 
-    // prevent scroll while playing
-    document.body.style.overscrollBehavior = "none";
+    // background
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0,0,W,H);
 
-    requestAnimationFrame(loop);
-  }catch(e){
-    showErr("START failed:\n" + (e.message || e));
-  }
-};
+    // drifting glow field
+    const gx = (Math.sin(globalTicks*0.006)*0.5+0.5)*W;
+    const gy = (Math.cos(globalTicks*0.005)*0.5+0.5)*H*0.6;
+    const grd = ctx.createRadialGradient(gx,gy,10,gx,gy,Math.max(W,H)*0.75);
+    grd.addColorStop(0, "rgba(138,46,255,.10)");
+    grd.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grd;
+    ctx.fillRect(0,0,W,H);
 
-/* =========================
-   MAIN LOOP
-========================= */
-function loop(){
-  if(!running || paused) return;
-
-  globalTicks++;
-  levelTicks++;
-
-  // background
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0,0,innerWidth,innerHeight);
-
-  // drifting field
-  const gx = (Math.sin(globalTicks*0.006)*0.5+0.5)*innerWidth;
-  const gy = (Math.cos(globalTicks*0.005)*0.5+0.5)*innerHeight*0.6;
-  const grd = ctx.createRadialGradient(gx,gy,10,gx,gy,Math.max(innerWidth,innerHeight)*0.75);
-  grd.addColorStop(0, "rgba(138,46,255,.10)");
-  grd.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = grd;
-  ctx.fillRect(0,0,innerWidth,innerHeight);
-
-  // Level progression
-  if(!boss){
-    if(levelTicks > LEVEL_FRAMES){
+    // Level progression
+    if(!boss && levelTicks > LEVEL_FRAMES){
       level++;
       levelTicks = 0;
 
@@ -1305,219 +1154,207 @@ function loop(){
         if(level <= MAX_LEVEL) applyLevelSettings();
       }
     }
-  }
 
-  // spawns
-  if(!boss){
-    if(globalTicks % spawnRate === 0) spawnPill("pill");
-    if(globalTicks % heartRate === 0) spawnHeart();
-  }else{
-    bossUpdate();
-    if(globalTicks % Math.max(190, heartRate) === 0) spawnHeart();
-  }
-
-  // movement
-  if(keyDir !== 0){
-    mx += keyDir * 18;
-  }
-
-  player.x += (mx - player.x) * 0.22;
-  player.x = Math.max(30, Math.min(innerWidth-30, player.x));
-  player.y = innerHeight - 150;
-
-  if(player.invuln > 0) player.invuln--;
-
-  // pills
-  for(let i=pills.length-1;i>=0;i--){
-    const p = pills[i];
-    p.y += p.v;
-    p.x += p.wobble;
-
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    ctx.rotate(Math.sin((p.y+p.h)*0.012)*0.6);
-    ctx.fillStyle = `hsl(${p.h},90%,60%)`;
-    roundRect(ctx, -p.r*1.2, -p.r*0.65, p.r*2.4, p.r*1.3, p.r*0.6, true);
-    ctx.fillStyle = "rgba(255,255,255,.35)";
-    roundRect(ctx, -p.r*1.05, -p.r*0.12, p.r*2.1, p.r*0.20, p.r*0.2, true);
-    ctx.restore();
-
-    const hit = hitCircle(p.x,p.y,p.r, player.x, player.y-30, player.size);
-
-    const dist = Math.hypot(p.x-player.x, p.y-(player.y-30));
-    const near = (dist < p.r + player.size + 44) && !hit && dist > p.r + player.size + 8;
-    if(near){
-      score += nearMissBonus;
-      if(globalTicks % 7 === 0) burst(player.x, player.y-30, "rgba(255,255,255,.7)", 3, 3);
-    }
-
-    if(hit){
-      pills.splice(i,1);
-      player.fat += (p.kind==="bossPill") ? 13 : 10;
-      if(p.kind==="bossPill" && Math.random() < 0.12) loseLife();
-      blip(220,0.05,0.05);
-      burst(p.x,p.y,"rgba(255,255,255,.9)",18,7);
-    }
-
-    if(p.y > innerHeight + 90) pills.splice(i,1);
-  }
-
-  // hearts (good)
-  for(let i=hearts.length-1;i>=0;i--){
-    const h = hearts[i];
-    h.y += h.v;
-    h.t++;
-
-    ctx.save();
-    ctx.translate(h.x,h.y);
-    ctx.scale(1 + Math.sin(h.t*0.12)*0.06, 1 + Math.cos(h.t*0.12)*0.06);
-    ctx.fillStyle = "rgba(0,255,156,.92)";
-    ctx.fillRect(-8,-2,4,4); ctx.fillRect(4,-2,4,4);
-    ctx.fillRect(-12,2,28,6);
-    ctx.fillRect(-10,8,24,6);
-    ctx.fillRect(-6,14,16,6);
-    ctx.restore();
-
-    if(hitCircle(h.x,h.y,h.r, player.x, player.y-30, player.size)){
-      hearts.splice(i,1);
-      player.shrink = Math.min(12, player.shrink + 2);
-      player.fat = Math.max(0, player.fat - 22);
-      gainLife();
-      blip(620,0.06,0.05);
-      burst(h.x,h.y,"rgba(0,255,156,.95)",22,7);
-    }
-
-    if(h.y > innerHeight + 90) hearts.splice(i,1);
-  }
-
-  // hazards
-  for(let i=hazards.length-1;i>=0;i--){
-    const h = hazards[i];
-    h.y += h.v;
-    h.a += 0.10;
-
-    ctx.save();
-    ctx.translate(h.x,h.y);
-    ctx.rotate(h.a);
-
-    if(h.kind === "shard"){
-      ctx.fillStyle = "rgba(185,140,255,.78)";
-      ctx.beginPath();
-      ctx.moveTo(0,-h.r);
-      ctx.lineTo(h.r, h.r);
-      ctx.lineTo(-h.r, h.r);
-      ctx.closePath();
-      ctx.fill();
-    }else if(h.kind === "needle"){
-      ctx.fillStyle = "rgba(255,255,255,.85)";
-      ctx.fillRect(-2, -h.r*1.6, 4, h.r*3.2);
-      ctx.fillStyle = "rgba(255,42,42,.85)";
-      ctx.fillRect(-2, h.r*1.2, 4, h.r*0.4);
-    }else if(h.kind === "brick"){
-      ctx.fillStyle = "rgba(255,255,255,.20)";
-      ctx.fillRect(-h.r, -h.r, h.r*2, h.r*2);
-      ctx.strokeStyle = "rgba(255,42,42,.65)";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-h.r, -h.r, h.r*2, h.r*2);
-    }else if(h.kind === "banana"){
-      ctx.fillStyle = "rgba(255,230,0,.85)";
-      ctx.beginPath();
-      ctx.ellipse(0,0,h.r*1.2,h.r*0.6,0.6,0,Math.PI*2);
-      ctx.fill();
-    }else if(h.kind === "skull"){
-      ctx.fillStyle = "rgba(255,42,42,.85)";
-      ctx.beginPath();
-      ctx.arc(0,0,h.r,0,Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = "rgba(0,0,0,.90)";
-      ctx.beginPath();
-      ctx.arc(-h.r*0.35,-h.r*0.15,h.r*0.22,0,Math.PI*2);
-      ctx.arc(h.r*0.35,-h.r*0.15,h.r*0.22,0,Math.PI*2);
-      ctx.fill();
+    // Spawns
+    if(!boss){
+      if(globalTicks % spawnRate === 0) spawnPill("pill");
+      if(globalTicks % heartRate === 0) spawnHeart();
     }else{
-      ctx.fillStyle = "rgba(255,42,42,.92)";
+      bossUpdate();
+      if(globalTicks % Math.max(190, heartRate) === 0) spawnHeart();
+    }
+
+    // movement
+    if(keyDir !== 0) mx += keyDir * 18;
+
+    player.x += (mx - player.x) * 0.22;
+    player.x = Math.max(30, Math.min(W-30, player.x));
+    player.y = H - 150;
+
+    if(player.invuln > 0) player.invuln--;
+
+    // pills
+    for(let i=pills.length-1;i>=0;i--){
+      const p = pills[i];
+      p.y += p.v;
+      p.x += p.wobble;
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(Math.sin((p.y+p.h)*0.012)*0.6);
+      ctx.fillStyle = `hsl(${p.h},90%,60%)`;
+      roundRect(ctx, -p.r*1.2, -p.r*0.65, p.r*2.4, p.r*1.3, p.r*0.6, true);
+      ctx.fillStyle = "rgba(255,255,255,.35)";
+      roundRect(ctx, -p.r*1.05, -p.r*0.12, p.r*2.1, p.r*0.20, p.r*0.2, true);
+      ctx.restore();
+
+      const hit = hitCircle(p.x,p.y,p.r, player.x, player.y-30, player.size);
+
+      const dist = Math.hypot(p.x-player.x, p.y-(player.y-30));
+      const near = (dist < p.r + player.size + 44) && !hit && dist > p.r + player.size + 8;
+      if(near){
+        score += nearMissBonus;
+        if(globalTicks % 7 === 0) burst(player.x, player.y-30, "rgba(255,255,255,.7)", 3, 3);
+      }
+
+      if(hit){
+        pills.splice(i,1);
+        player.fat += (p.kind==="bossPill") ? 13 : 10;
+        if(p.kind==="bossPill" && Math.random() < 0.12) loseLife();
+        blip(220,0.05,0.05);
+        burst(p.x,p.y,"rgba(255,255,255,.9)",18,7);
+      }
+
+      if(p.y > H + 90) pills.splice(i,1);
+    }
+
+    // hearts
+    for(let i=hearts.length-1;i>=0;i--){
+      const h = hearts[i];
+      h.y += h.v;
+      h.t++;
+
+      ctx.save();
+      ctx.translate(h.x,h.y);
+      ctx.scale(1 + Math.sin(h.t*0.12)*0.06, 1 + Math.cos(h.t*0.12)*0.06);
+      ctx.fillStyle = "rgba(0,255,156,.92)";
       ctx.fillRect(-8,-2,4,4); ctx.fillRect(4,-2,4,4);
       ctx.fillRect(-12,2,28,6);
       ctx.fillRect(-10,8,24,6);
       ctx.fillRect(-6,14,16,6);
-    }
+      ctx.restore();
 
-    ctx.restore();
-
-    if(hitCircle(h.x,h.y,h.r, player.x, player.y-30, player.size)){
-      hazards.splice(i,1);
-      if(h.kind === "fakeheart"){
-        player.fat += 18;
-        loseLife();
-      }else{
-        player.fat += 8;
-        loseLife();
+      if(hitCircle(h.x,h.y,h.r, player.x, player.y-30, player.size)){
+        hearts.splice(i,1);
+        player.shrink = Math.min(12, player.shrink + 2);
+        player.fat = Math.max(0, player.fat - 22);
+        gainLife();
+        blip(620,0.06,0.05);
+        burst(h.x,h.y,"rgba(0,255,156,.95)",22,7);
       }
-      burst(h.x,h.y,"rgba(255,42,42,.95)",22,8);
+
+      if(h.y > H + 90) hearts.splice(i,1);
     }
 
-    if(h.y > innerHeight + 90) hazards.splice(i,1);
+    // hazards
+    for(let i=hazards.length-1;i>=0;i--){
+      const h = hazards[i];
+      h.y += h.v;
+      h.a += 0.10;
+
+      ctx.save();
+      ctx.translate(h.x,h.y);
+      ctx.rotate(h.a);
+
+      if(h.kind === "shard"){
+        ctx.fillStyle = "rgba(185,140,255,.78)";
+        ctx.beginPath();
+        ctx.moveTo(0,-h.r);
+        ctx.lineTo(h.r, h.r);
+        ctx.lineTo(-h.r, h.r);
+        ctx.closePath();
+        ctx.fill();
+      }else if(h.kind === "needle"){
+        ctx.fillStyle = "rgba(255,255,255,.85)";
+        ctx.fillRect(-2, -h.r*1.6, 4, h.r*3.2);
+        ctx.fillStyle = "rgba(255,42,42,.85)";
+        ctx.fillRect(-2, h.r*1.2, 4, h.r*0.4);
+      }else if(h.kind === "brick"){
+        ctx.fillStyle = "rgba(255,255,255,.20)";
+        ctx.fillRect(-h.r, -h.r, h.r*2, h.r*2);
+        ctx.strokeStyle = "rgba(255,42,42,.65)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-h.r, -h.r, h.r*2, h.r*2);
+      }else if(h.kind === "banana"){
+        ctx.fillStyle = "rgba(255,230,0,.85)";
+        ctx.beginPath();
+        ctx.ellipse(0,0,h.r*1.2,h.r*0.6,0.6,0,Math.PI*2);
+        ctx.fill();
+      }else if(h.kind === "skull"){
+        ctx.fillStyle = "rgba(255,42,42,.85)";
+        ctx.beginPath();
+        ctx.arc(0,0,h.r,0,Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(0,0,0,.90)";
+        ctx.beginPath();
+        ctx.arc(-h.r*0.35,-h.r*0.15,h.r*0.22,0,Math.PI*2);
+        ctx.arc(h.r*0.35,-h.r*0.15,h.r*0.22,0,Math.PI*2);
+        ctx.fill();
+      }else{ // fakeheart
+        ctx.fillStyle = "rgba(255,42,42,.92)";
+        ctx.fillRect(-8,-2,4,4); ctx.fillRect(4,-2,4,4);
+        ctx.fillRect(-12,2,28,6);
+        ctx.fillRect(-10,8,24,6);
+        ctx.fillRect(-6,14,16,6);
+      }
+
+      ctx.restore();
+
+      if(hitCircle(h.x,h.y,h.r, player.x, player.y-30, player.size)){
+        hazards.splice(i,1);
+        if(h.kind === "fakeheart"){
+          player.fat += 18;
+          loseLife();
+        }else{
+          player.fat += 8;
+          loseLife();
+        }
+        burst(h.x,h.y,"rgba(255,42,42,.95)",22,8);
+      }
+
+      if(h.y > H + 90) hazards.splice(i,1);
+    }
+
+    // draw boss + chimp
+    drawBoss();
+    drawChimp(ctx, player.x, player.y-10, player.size);
+
+    // particles
+    for(let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy;
+      p.vx *= 0.98; p.vy *= 0.98;
+      p.life--;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x,p.y,3,3);
+      if(p.life <= 0) particles.splice(i,1);
+    }
+
+    // score tick
+    score += 1;
+
+    // explode if fat too high
+    if(player.fat >= 140){
+      burst(player.x, player.y-30, "rgba(255,255,255,.95)", 90, 12);
+      burst(player.x, player.y-30, "rgba(138,46,255,.95)", 70, 10);
+      blip(90,0.16,0.08);
+      endGame(false);
+      return;
+    }
+
+    // win: max level reached and no boss alive
+    if(level >= MAX_LEVEL && !boss){
+      endGame(true);
+      return;
+    }
+
+    // UI update
+    uiLevel.textContent = boss ? "BOSS" : `LEVEL ${Math.min(level,MAX_LEVEL)}`;
+    uiLives.textContent = `LIVES ${player.lives}`;
+    uiScore.textContent = `SCORE ${Math.floor(score)}`;
+    const hi = loadLB()[0]?.score || 0;
+    uiHi.textContent = `HI ${hi}`;
+    uiFat.textContent = `FAT ${Math.min(100, Math.floor((player.fat/140)*100))}%`;
+    uiBoss.textContent = boss ? `BOSS ${boss.type} HP ${Math.max(0, Math.floor(boss.hp))}` : "BOSS: --";
+
+    requestAnimationFrame(loop);
   }
 
-  // Draw boss + player
-  drawBoss();
-  drawChimp(ctx, player.x, player.y-10, player.size, false);
+  // init
+  applyLevelSettings();
+  renderLB();
 
-  // particles
-  for(let i=particles.length-1;i>=0;i--){
-    const p = particles[i];
-    p.x += p.vx; p.y += p.vy;
-    p.vx *= 0.98; p.vy *= 0.98;
-    p.life--;
-    ctx.fillStyle = p.color;
-    ctx.fillRect(p.x,p.y,3,3);
-    if(p.life <= 0) particles.splice(i,1);
-  }
-
-  // score ticks
-  score += 1;
-
-  // explode if fat too high
-  if(player.fat >= 140){
-    burst(player.x, player.y-30, "rgba(255,255,255,.95)", 90, 12);
-    burst(player.x, player.y-30, "rgba(138,46,255,.95)", 70, 10);
-    blip(90,0.16,0.08);
-    endGame(false);
-    return;
-  }
-
-  // win condition: beat DEVIL then survive remainder (DEVIL appears at lvl 12)
-  if(level >= MAX_LEVEL && !boss){
-    // If devil was spawned and beaten, boss becomes null. At that point, win.
-    // Keep it clean: if we've hit max level and there's no boss, you win.
-    endGame(true);
-    return;
-  }
-
-  // UI update
-  uiLevel.textContent = boss ? "BOSS" : `LEVEL ${Math.min(level,MAX_LEVEL)}`;
-  uiLives.textContent = `LIVES ${player.lives}`;
-  uiScore.textContent = `SCORE ${Math.floor(score)}`;
-  const hi = loadLB()[0]?.score || 0;
-  uiHi.textContent = `HI ${hi}`;
-  uiFat.textContent = `FAT ${Math.min(100, Math.floor((player.fat/140)*100))}%`;
-  uiBoss.textContent = boss ? `BOSS ${boss.type} HP ${Math.max(0, Math.floor(boss.hp))}` : "BOSS: --";
-
-  requestAnimationFrame(loop);
-}
-
-/* initial */
-applyLevelSettings();
-renderLB();
-
-/* Prevent page scroll during active gameplay (mobile) */
-addEventListener("touchmove", (e)=>{
-  if(running && !overlay || (running && overlay.style.display === "none")){
-    e.preventDefault();
-  }
-}, { passive:false });
-
-}); // DOMContentLoaded
+})();
 </script>
 </body>
 </html>
