@@ -12,6 +12,7 @@
 --violet:#8a2eff;
 --max:1100px;
 --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+--lyric: "Georgia","Times New Roman",serif;
 }
 
 *{box-sizing:border-box}
@@ -65,13 +66,13 @@ text-align:center;
 position:relative;
 }
 
-/* spotlight */
+/* softer spotlight */
 .hero::before{
 content:"";
 position:absolute;
 inset:0;
 pointer-events:none;
-background:radial-gradient(circle at var(--x,50%) var(--y,50%), rgba(138,46,255,.18), transparent 45%);
+background:radial-gradient(circle at var(--x,50%) var(--y,50%), rgba(138,46,255,.10), transparent 55%);
 mix-blend-mode:screen;
 }
 
@@ -82,26 +83,38 @@ position:absolute;
 inset:0;
 pointer-events:none;
 background:
-radial-gradient(circle at 30% 30%,rgba(138,46,255,.18),transparent 40%),
-radial-gradient(circle at 70% 40%,rgba(138,46,255,.12),transparent 40%);
+radial-gradient(circle at 30% 30%,rgba(138,46,255,.16),transparent 40%),
+radial-gradient(circle at 70% 40%,rgba(138,46,255,.10),transparent 40%);
 animation:storm 7s ease-in-out infinite;
 mix-blend-mode:screen;
 }
-@keyframes storm{50%{opacity:.35}}
+@keyframes storm{50%{opacity:.25}}
 
 /* LOGO */
 .logo{
 font-size:clamp(48px,10vw,92px);
 letter-spacing:.34em;
 text-transform:uppercase;
+cursor:pointer;
 text-shadow:
-0 0 14px rgba(138,46,255,.4),
-0 0 50px rgba(138,46,255,.2);
-animation:logoPulse 2.5s ease-in-out infinite;
+0 0 14px rgba(138,46,255,.35),
+0 0 40px rgba(138,46,255,.18);
+animation:logoPulse 4.2s ease-in-out infinite;
 }
 @keyframes logoPulse{
 0%,100%{transform:scale(1)}
-50%{transform:scale(1.04) rotate(.3deg)}
+50%{transform:scale(1.015)}
+}
+
+/* lightning flash */
+.logo.flash{
+animation:flash .35s linear;
+}
+@keyframes flash{
+0%{filter:brightness(1)}
+30%{filter:brightness(2.5)}
+60%{filter:brightness(.5)}
+100%{filter:brightness(1)}
 }
 
 /* BLOCK */
@@ -184,8 +197,20 @@ letter-spacing:.2em;
 font-size:12px;
 cursor:pointer;
 display:inline-block;
+transition:.3s;
 }
 .btn:hover{background:rgba(138,46,255,.28)}
+
+.btn.rainbow{
+animation:rainbow 4s linear infinite;
+}
+@keyframes rainbow{
+0%{color:#ff2a2a;border-color:#ff2a2a}
+25%{color:#ffe600;border-color:#ffe600}
+50%{color:#00ff9c;border-color:#00ff9c}
+75%{color:#4aa3ff;border-color:#4aa3ff}
+100%{color:#ff2aff;border-color:#ff2aff}
+}
 
 /* VISUALS */
 .videoGrid{
@@ -209,11 +234,12 @@ border:0;
 /* LYRIC ROTATOR */
 .lyric{
 text-align:center;
-font-size:clamp(18px,2.5vw,26px);
+font-size:clamp(15px,2vw,22px);
 margin-top:30px;
-line-height:1.6;
+line-height:1.7;
+font-family:var(--lyric);
 opacity:1;
-transition:opacity .8s;
+transition:opacity 1.6s;
 }
 .lyric.fade{opacity:0}
 
@@ -237,20 +263,13 @@ animation:pop 2s infinite;
 }
 @keyframes pop{50%{transform:scale(1.08)}}
 
-/* EAT ME rainbow */
+/* EAT */
 .eat{
 display:block;
 margin:70px auto 0;
 font-size:15px;
 letter-spacing:.3em;
 animation:rainbow 4s linear infinite;
-}
-@keyframes rainbow{
-0%{color:#ff2a2a}
-25%{color:#ffe600}
-50%{color:#00ff9c}
-75%{color:#4aa3ff}
-100%{color:#ff2aff}
 }
 
 footer{
@@ -277,7 +296,7 @@ text-align:center;
 <main class="wrap">
 
 <section class="hero">
-<div class="logo">CLAWBOI</div>
+<div class="logo" id="logo">CLAWBOI</div>
 </section>
 
 <section class="block">
@@ -293,12 +312,10 @@ text-align:center;
 <h2 class="releaseTitle">Two Times</h2>
 <div class="releaseMeta">emo trap / lonely flex</div>
 
-<button class="btn" id="playBtn">PLAY</button>
+<button class="btn rainbow" id="playBtn">PLAY</button>
 <a class="btn" href="https://youtu.be/DEdhtI3LMS4" target="_blank">YOUTUBE</a>
 
-<audio id="audio" playsinline preload="auto">
-<source src="audio/latest.mp3" type="audio/mpeg">
-</audio>
+<audio id="audio" playsinline preload="auto" src="audio/latest.mp3"></audio>
 
 </div>
 </div>
@@ -333,30 +350,42 @@ text-align:center;
 <script>
 document.getElementById("y").textContent=new Date().getFullYear();
 
-/* spotlight follow */
+/* spotlight */
 document.addEventListener("pointermove",e=>{
 document.documentElement.style.setProperty("--x",(e.clientX/window.innerWidth)*100+"%");
 document.documentElement.style.setProperty("--y",(e.clientY/window.innerHeight)*100+"%");
 });
 
-/* AUDIO FIX */
+/* logo lightning */
+const logo=document.getElementById("logo");
+logo.onclick=()=>{
+logo.classList.add("flash");
+setTimeout(()=>logo.classList.remove("flash"),350);
+};
+
+/* AUDIO FIX (iPhone safe) */
 const btn=document.getElementById("playBtn");
 const audio=document.getElementById("audio");
 
-btn.addEventListener("click",async()=>{
+btn.onclick=async()=>{
 try{
 if(audio.paused){
 await audio.play();
 btn.textContent="STOP";
+btn.classList.remove("rainbow");
+btn.style.background="#000";
+btn.style.color="#fff";
 }else{
 audio.pause();
 audio.currentTime=0;
 btn.textContent="PLAY";
+btn.classList.add("rainbow");
+btn.style.background="";
 }
-}catch(err){
-alert("Audio failed to play — check file path: audio/latest.mp3");
+}catch(e){
+alert("Audio path issue. Verify file exists at: audio/latest.mp3");
 }
-});
+};
 
 /* LYRIC ROTATOR */
 const lyrics=[
@@ -376,8 +405,8 @@ setTimeout(()=>{
 i=(i+1)%lyrics.length;
 box.innerHTML="“"+lyrics[i]+"”";
 box.classList.remove("fade");
-},700);
-},6000);
+},1200);
+},7000);
 </script>
 
 </body>
