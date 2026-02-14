@@ -25,8 +25,19 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     color:var(--fg);
     -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   canvas{display:block}
+
+  /* GAME CANVAS LAYER */
+  #game{
+    position:fixed;
+    inset:0;
+    z-index:1;
+    width:100vw;
+    height:100vh;
+  }
 
   /* HUD */
   #ui{
@@ -37,7 +48,7 @@
     text-align:center;
     letter-spacing:.18em;
     font-size:12px;
-    opacity:.96;
+    opacity:.98;
     z-index:5;
     user-select:none;
     pointer-events:none;
@@ -46,6 +57,7 @@
     border-radius:16px;
     background:rgba(0,0,0,.35);
     backdrop-filter: blur(8px);
+    box-shadow: 0 0 0 10px rgba(138,46,255,.035);
   }
   #ui .row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
   .tag{
@@ -70,15 +82,17 @@
     background:#000;
     z-index:10;
     padding:18px;
+    pointer-events:auto;
   }
   .panel{
-    width:min(820px, 94vw);
+    width:min(860px, 94vw);
     border:1px solid rgba(255,255,255,.12);
     border-radius:22px;
     padding:18px;
     background:rgba(255,255,255,.02);
     position:relative;
     overflow:hidden;
+    pointer-events:auto;
   }
   .panel:before{
     content:"";
@@ -161,10 +175,11 @@
     border:1px solid rgba(255,255,255,.14);
     background:rgba(255,255,255,.03);
     color:rgba(255,255,255,.9);
-    transition: transform .14s ease, border-color .14s ease, background .14s ease;
+    transition: transform .14s ease, border-color .14s ease, background .14s ease, filter .14s ease;
+    pointer-events:auto;
   }
   .chip:hover{ transform: translateY(-1px); border-color: rgba(138,46,255,.45); background: rgba(138,46,255,.06); }
-  .chip.on{ border-color: rgba(0,255,156,.5); background: rgba(0,255,156,.08); }
+  .chip.on{ border-color: rgba(0,255,156,.5); background: rgba(0,255,156,.08); filter: brightness(1.06); }
 
   .btnRow{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
   button{
@@ -180,6 +195,7 @@
     background:#fff;
     color:#000;
     transition: transform .14s ease, filter .14s ease;
+    pointer-events:auto;
   }
   button:hover{ transform: translateY(-1px); filter:brightness(1.06); }
   button.secondary{
@@ -211,6 +227,21 @@
     color:rgba(255,255,255,.72);
     line-height:1.5;
     margin:0;
+  }
+
+  /* Visible error box (so you never get “dead UI” with no clue) */
+  #err{
+    display:none;
+    margin:10px 0 0;
+    padding:10px 12px;
+    border-radius:14px;
+    border:1px solid rgba(255,42,42,.35);
+    background: rgba(255,42,42,.08);
+    color: rgba(255,255,255,.9);
+    letter-spacing:.12em;
+    font-size:12px;
+    line-height:1.4;
+    white-space:pre-wrap;
   }
 
   /* Level banner */
@@ -261,11 +292,13 @@
 
 <div id="overlay">
   <div class="panel">
-    <div class="title"></div>
-    <p class="sub">
+    <div class="title">DREAM</div>
+    <p class="sub" id="subtitle">
       12 fast levels. 2 lives. Less overdose limit. Bosses: Ghost → Doctor → Thug → Gorilla → Devil.
       Hearts heal + shrink. Pills bloat. Explode if you overeat. 🐒💊
     </p>
+
+    <div id="err"></div>
 
     <div class="grid">
       <div class="opts">
@@ -277,12 +310,13 @@
             <div class="btnRow">
               <button id="startBtn">START</button>
               <button class="secondary" id="toggleBoard">LEADERBOARD</button>
+              <button class="secondary" id="clearBoardBtn" title="Clear local leaderboard">CLEAR</button>
             </div>
             <p class="tiny">
-              Audio on iPhone: START is your “unlock tap”. Playlist will run: dream1 → dream2.
+              iPhone audio: START is your “unlock tap”. Playlist runs: dream1 → dream2 (loops).
             </p>
             <p class="tiny" style="margin-top:8px;">
-              Controls: move left/right with mouse/touch. Survive. Thread near-misses for points.
+              Controls: drag/touch or mouse to move. Bonus keys: ← → / A D. Pause: P.
             </p>
 
             <div id="board">
@@ -318,7 +352,7 @@
         <p class="sub" style="margin-top:10px;">
           Lives: <span style="color:var(--bad)">2</span>.
           Hearts: heal + shrink + reduce fat.
-          Bosses are mean. Devil is worse.
+          Bosses cheat. Devil files your taxes.
         </p>
       </div>
     </div>
@@ -348,17 +382,61 @@
 <audio id="music" preload="none" playsinline></audio>
 
 <script>
+window.addEventListener("DOMContentLoaded", () => {
 /* =========================
-   CANVAS
+   CRASH DETECTOR (VISIBLE)
+========================= */
+const errBox = document.getElementById("err");
+function showErr(msg){
+  try{
+    errBox.style.display = "block";
+    errBox.textContent = String(msg || "Unknown error.");
+  }catch(e){}
+}
+window.addEventListener("error", (e)=>{
+  showErr("JS ERROR:\n" + (e.message || e.type) + "\n" + (e.filename || "") + ":" + (e.lineno || ""));
+  console.error(e);
+});
+window.addEventListener("unhandledrejection", (e)=>{
+  showErr("PROMISE ERROR:\n" + (e.reason?.message || e.reason || "Unknown rejection"));
+  console.error(e);
+});
+
+/* =========================
+   CANVAS (SAFARI SAFE)
 ========================= */
 const c = document.getElementById("game");
-const ctx = c.getContext("2d", { alpha:false });
-function resize(){ c.width = innerWidth; c.height = innerHeight; }
-resize(); addEventListener("resize", resize);
+
+// Try options, then fallback (Safari sometimes returns null)
+let ctx = null;
+try { ctx = c.getContext("2d", { alpha:false }); } catch(e) {}
+if(!ctx) ctx = c.getContext("2d");
+
+if(!ctx){
+  showErr("Canvas init failed: could not get 2D context for #game.\nTry a different browser or iOS update.");
+  return;
+}
+
+function resize(){
+  // Set real pixel size for crispness
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  c.width = Math.floor(innerWidth * dpr);
+  c.height = Math.floor(innerHeight * dpr);
+  c.style.width = innerWidth + "px";
+  c.style.height = innerHeight + "px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+resize();
+addEventListener("resize", resize, { passive:true });
 
 /* Preview canvas */
 const pc = document.getElementById("preview");
-const pctx = pc.getContext("2d");
+let pctx = null;
+try { pctx = pc.getContext("2d"); } catch(e) {}
+if(!pctx){
+  showErr("Preview init failed: could not get 2D context for #preview.");
+  return;
+}
 
 /* =========================
    TINY BEEP (optional)
@@ -396,13 +474,15 @@ const nameInput = document.getElementById("nameInput");
 const levelBanner = document.getElementById("levelBanner");
 const levelText = document.getElementById("levelText");
 const boardBtn = document.getElementById("toggleBoard");
+const clearBoardBtn = document.getElementById("clearBoardBtn");
 const board = document.getElementById("board");
 const lbList = document.getElementById("lbList");
+const subtitle = document.getElementById("subtitle");
 
 /* =========================
-   LEADERBOARD
+   LEADERBOARD (LOCAL)
 ========================= */
-const LB_KEY = "clawboi__lb_v2";
+const LB_KEY = "clawboi_dream_lb_v3";
 function loadLB(){
   try{ return JSON.parse(localStorage.getItem(LB_KEY) || "[]"); }
   catch(e){ return []; }
@@ -427,7 +507,9 @@ function renderLB(){
   list.slice(0,10).forEach((e, idx)=>{
     const row = document.createElement("div");
     row.className = "lb";
-    row.innerHTML = `<strong>#${idx+1}</strong><span>${escapeHtml(e.name)}</span><span>${e.score}</span>`;
+    const date = new Date(e.t);
+    const stamp = `${date.getMonth()+1}/${date.getDate()}`;
+    row.innerHTML = `<strong>#${idx+1}</strong><span>${escapeHtml(e.name)}</span><span>${e.score} <span style="opacity:.55">${stamp}</span></span>`;
     lbList.appendChild(row);
   });
 }
@@ -435,12 +517,18 @@ boardBtn.onclick = ()=>{
   board.style.display = (board.style.display === "block") ? "none" : "block";
   if(board.style.display === "block") renderLB();
 };
+clearBoardBtn.onclick = ()=>{
+  localStorage.removeItem(LB_KEY);
+  renderLB();
+  blip(180,0.06,0.05);
+};
 
 /* =========================
    OUTFIT
 ========================= */
 const outfit = { hat:"none", shades:"none", chain:"none", fit:"hoodie" };
 const chips = Array.from(document.querySelectorAll(".chip"));
+
 function setChipState(){
   chips.forEach(ch=>{
     const part = ch.dataset.part;
@@ -449,6 +537,7 @@ function setChipState(){
   });
   drawPreview();
 }
+
 document.getElementById("outfitChoices").addEventListener("click",(e)=>{
   const ch = e.target.closest(".chip");
   if(!ch) return;
@@ -456,6 +545,7 @@ document.getElementById("outfitChoices").addEventListener("click",(e)=>{
   setChipState();
   blip(420,0.04,0.04);
 });
+
 setChipState();
 
 /* =========================
@@ -465,7 +555,6 @@ const music = document.getElementById("music");
 const playlist = [
   "audio/dream1.mp3?v=1",
   "audio/dream2.mp3?v=1"
-  "audio/dream3.mp3?v=1"
 ];
 let trackIndex = 0;
 let audioUnlocked = false;
@@ -485,7 +574,6 @@ music.addEventListener("ended", ()=>{
     loadTrack(trackIndex + 1);
     music.play().catch(()=>{});
   }else{
-    // loop playlist
     loadTrack(0);
     music.play().catch(()=>{});
   }
@@ -496,6 +584,7 @@ music.addEventListener("ended", ()=>{
 ========================= */
 let running = false;
 let ended = false;
+let paused = false;
 let playerName = "PLAYER";
 
 const player = {
@@ -509,8 +598,32 @@ const player = {
 };
 
 let mx = player.x;
-addEventListener("mousemove", e=> mx = e.clientX);
+let usingTouch = false;
+let keyDir = 0; // -1 left, 1 right
+
+addEventListener("mousemove", e=> { if(!usingTouch) mx = e.clientX; }, { passive:true });
+addEventListener("touchstart", e=> { usingTouch = true; mx = e.touches[0].clientX; }, { passive:true });
 addEventListener("touchmove", e=> { mx = e.touches[0].clientX; }, { passive:true });
+
+addEventListener("keydown", (e)=>{
+  if(e.key === "ArrowLeft" || e.key.toLowerCase() === "a") keyDir = -1;
+  if(e.key === "ArrowRight" || e.key.toLowerCase() === "d") keyDir = 1;
+  if(e.key.toLowerCase() === "p" && running){
+    paused = !paused;
+    blip(paused ? 240 : 520, 0.05, 0.05);
+    if(!paused) requestAnimationFrame(loop);
+  }
+}, { passive:true });
+
+addEventListener("keyup", (e)=>{
+  const k = e.key.toLowerCase();
+  if(k === "arrowleft" || k === "a"){
+    if(keyDir === -1) keyDir = 0;
+  }
+  if(k === "arrowright" || k === "d"){
+    if(keyDir === 1) keyDir = 0;
+  }
+}, { passive:true });
 
 let pills = [];
 let hearts = [];
@@ -523,7 +636,7 @@ let levelTicks = 0;
 
 let level = 1;                 // 1..12
 const MAX_LEVEL = 12;
-const LEVEL_SECONDS = 9;        // faster levels
+const LEVEL_SECONDS = 9;        // fast levels
 const LEVEL_FRAMES = 60 * LEVEL_SECONDS;
 
 let spawnRate = 26;             // hard
@@ -580,11 +693,10 @@ function roundRect(g, x,y,w,h,r, fill){
 }
 
 /* =========================
-   CHIMP DRAW (ACTUAL CHIMP VIBE)
-   Brown fur, head/torso/arms/legs, face mask, ears, hands.
+   CHIMP DRAW
 ========================= */
 function drawChimp(g, px, py, base, isPreview=false){
-  const fatScale = 1 + player.fat/200;           // grows
+  const fatScale = 1 + player.fat/200;
   const shrinkScale = Math.max(0.78, 1 - player.shrink*0.02);
   const s = base * fatScale * shrinkScale;
 
@@ -593,8 +705,8 @@ function drawChimp(g, px, py, base, isPreview=false){
   const skin = "#d4b08a";
   const dark = "#0b0b0b";
 
-  // glow aura (subtle)
   g.save();
+
   if(!isPreview){
     g.globalAlpha = 0.12;
     g.fillStyle = "rgba(138,46,255,.9)";
@@ -602,9 +714,7 @@ function drawChimp(g, px, py, base, isPreview=false){
     g.arc(px, py-30, s*1.8, 0, Math.PI*2);
     g.fill();
   }
-  g.restore();
 
-  // invuln flicker
   if(!isPreview && player.invuln > 0 && (player.invuln % 10) < 5){
     g.globalAlpha = 0.45;
   }else{
@@ -617,7 +727,7 @@ function drawChimp(g, px, py, base, isPreview=false){
   g.ellipse(px, py, s*0.72, s*0.78, 0, 0, Math.PI*2);
   g.fill();
 
-  // belly fur
+  // belly
   g.fillStyle = fur2;
   g.beginPath();
   g.ellipse(px, py+8, s*0.46, s*0.52, 0, 0, Math.PI*2);
@@ -692,7 +802,7 @@ function drawChimp(g, px, py, base, isPreview=false){
     }
   }
 
-  g.globalAlpha = 1;
+  g.restore();
 }
 
 function drawOutfit(g, px, py, s){
@@ -755,7 +865,7 @@ function drawOutfit(g, px, py, s){
 /* Preview draw */
 function drawPreview(){
   pctx.clearRect(0,0,pc.width,pc.height);
-  // subtle gradient
+
   const g = pctx.createRadialGradient(70,40,10, 110,70, 220);
   g.addColorStop(0,"rgba(138,46,255,.18)");
   g.addColorStop(1,"rgba(0,0,0,0)");
@@ -764,7 +874,7 @@ function drawPreview(){
   pctx.fillStyle = g;
   pctx.fillRect(0,0,pc.width,pc.height);
 
-  // pretend fat/shrink baseline for preview
+  // stable preview pose regardless of current fat/shrink
   const savedFat = player.fat, savedShrink = player.shrink;
   player.fat = 22;
   player.shrink = 0;
@@ -785,7 +895,7 @@ function spawnPill(kind="pill"){
   const r = rand(10,16);
   pills.push({
     kind,
-    x: Math.random()*c.width,
+    x: Math.random()*innerWidth,
     y: -40,
     r,
     v: fallSpeed + rand(0.2,2.2),
@@ -795,7 +905,7 @@ function spawnPill(kind="pill"){
 }
 function spawnHeart(){
   hearts.push({
-    x: Math.random()*c.width,
+    x: Math.random()*innerWidth,
     y: -40,
     r: 14,
     v: fallSpeed*0.95 + rand(0.1,0.9),
@@ -805,7 +915,7 @@ function spawnHeart(){
 function spawnHazard(kind){
   hazards.push({
     kind,
-    x: Math.random()*c.width,
+    x: Math.random()*innerWidth,
     y: -40,
     r: (kind==="needle")? 10 : (kind==="skull")? 14 : 12,
     v: fallSpeed*1.35 + rand(0.4,2.8),
@@ -819,8 +929,7 @@ function spawnHazard(kind){
 function applyLevelSettings(){
   const L = level;
 
-  // Faster escalation
-  spawnRate = Math.max(12, 26 - Math.floor(L*1.2));   // gets wild
+  spawnRate = Math.max(12, 26 - Math.floor(L*1.2));
   fallSpeed = 4.2 + L*0.55;
   heartRate = Math.max(140, 260 - L*10);
   nearMissBonus = 4 + Math.floor(L/2);
@@ -836,10 +945,9 @@ function applyLevelSettings(){
 }
 
 /* =========================
-   BOSSES (MULTIPLE)
+   BOSSES
 ========================= */
 function spawnBoss(type){
-  // Base boss stats: hard by default
   const baseHP = ({
     "GHOST":   120,
     "DOCTOR":  150,
@@ -853,7 +961,7 @@ function spawnBoss(type){
     hp: baseHP,
     max: baseHP,
     t: 0,
-    x: c.width/2,
+    x: innerWidth/2,
     y: -180,
     r: (type==="GORILLA")? 150 : (type==="DEVIL")? 170 : 120,
     phase: 1
@@ -864,39 +972,33 @@ function spawnBoss(type){
   blip(120,0.12,0.06);
 }
 
-/* Boss update + attack patterns */
 function bossUpdate(){
   if(!boss) return;
   boss.t++;
 
-  // Enter
   if(boss.y < 170) boss.y += 1.8;
 
-  // Movement style per boss
   if(boss.type === "GHOST"){
-    boss.x = c.width/2 + Math.sin(boss.t*0.02) * 180;
+    boss.x = innerWidth/2 + Math.sin(boss.t*0.02) * 180;
   }else if(boss.type === "DOCTOR"){
-    boss.x = c.width/2 + Math.sin(boss.t*0.03) * 120;
+    boss.x = innerWidth/2 + Math.sin(boss.t*0.03) * 120;
   }else if(boss.type === "THUG"){
-    boss.x = c.width/2 + Math.sin(boss.t*0.04) * 220;
+    boss.x = innerWidth/2 + Math.sin(boss.t*0.04) * 220;
   }else if(boss.type === "GORILLA"){
-    boss.x = c.width/2 + Math.sin(boss.t*0.018) * 140;
-  }else{ // DEVIL
-    boss.x = c.width/2 + Math.sin(boss.t*0.022) * 240;
+    boss.x = innerWidth/2 + Math.sin(boss.t*0.018) * 140;
+  }else{
+    boss.x = innerWidth/2 + Math.sin(boss.t*0.022) * 240;
   }
 
-  // Phase thresholds
   const hpPct = boss.hp / boss.max;
   if(hpPct < 0.70) boss.phase = 2;
   if(hpPct < 0.40) boss.phase = 3;
   if(hpPct < 0.18) boss.phase = 4;
 
-  // Attack cadence increases with phase
   const p = boss.phase;
   const pillEvery = Math.max(6, 14 - p*2);
   const hazardEvery = Math.max(8, 18 - p*3);
 
-  // Boss adds custom hazards
   if(boss.t % pillEvery === 0){
     spawnPill("bossPill");
     if(boss.type === "THUG" && boss.t % (pillEvery*2) === 0) spawnPill("bossPill");
@@ -924,12 +1026,11 @@ function bossUpdate(){
     }
   }
 
-  // Occasional fake hearts (evil)
   if((boss.type === "GHOST" || boss.type==="DEVIL") && boss.t % Math.max(22, 34 - p*4) === 0){
     spawnHazard("fakeheart");
   }
 
-  // Damage mechanic: thread near boss ring (dangerously close)
+  // damage boss by threading near boss ring
   const dx = player.x - boss.x;
   const dy = (player.y-30) - boss.y;
   const dist = Math.hypot(dx, dy);
@@ -943,7 +1044,6 @@ function bossUpdate(){
     if(boss.t % 5 === 0) burst(player.x, player.y-30, "rgba(138,46,255,.9)", 6, 4);
   }
 
-  // Win boss
   if(boss.hp <= 0){
     score += (boss.type==="DEVIL") ? 6000 : 2500;
     burst(boss.x, boss.y, "rgba(138,46,255,.95)", 80, 12);
@@ -955,7 +1055,6 @@ function bossUpdate(){
   }
 }
 
-/* Boss draw */
 function drawBoss(){
   if(!boss) return;
 
@@ -968,7 +1067,6 @@ function drawBoss(){
   ctx.fill();
   ctx.restore();
 
-  // body styles
   if(boss.type === "GHOST"){
     ctx.strokeStyle = "rgba(185,140,255,.85)";
     ctx.lineWidth = 7;
@@ -984,7 +1082,6 @@ function drawBoss(){
     ctx.globalAlpha = 1;
 
   }else if(boss.type === "DOCTOR"){
-    // mask + cross
     ctx.strokeStyle = "rgba(255,255,255,.85)";
     ctx.lineWidth = 7;
     ctx.beginPath();
@@ -1032,7 +1129,7 @@ function drawBoss(){
     ctx.arc(boss.x, boss.y+18, boss.r*0.42, 0, Math.PI*2);
     ctx.fill();
 
-  }else{ // DEVIL
+  }else{
     ctx.strokeStyle = "rgba(255,42,42,.85)";
     ctx.lineWidth = 9;
     ctx.beginPath();
@@ -1061,14 +1158,14 @@ function drawBoss(){
     ctx.fill();
   }
 
-  // HP bar
-  const hpW = 260;
+  // HP bar (slightly nicer)
+  const hpW = Math.min(320, innerWidth - 40);
   const hpPct = Math.max(0, boss.hp / boss.max);
   ctx.fillStyle = "rgba(255,255,255,.10)";
-  roundRect(ctx, c.width/2 - hpW/2, 16, hpW, 10, 6, true);
+  roundRect(ctx, innerWidth/2 - hpW/2, 16, hpW, 10, 6, true);
 
   ctx.fillStyle = (boss.type==="DEVIL") ? "rgba(255,42,42,.85)" : "rgba(138,46,255,.85)";
-  roundRect(ctx, c.width/2 - hpW/2, 16, hpW*hpPct, 10, 6, true);
+  roundRect(ctx, innerWidth/2 - hpW/2, 16, hpW*hpPct, 10, 6, true);
 }
 
 /* =========================
@@ -1086,7 +1183,6 @@ function loseLife(){
   }
 }
 function gainLife(){
-  // In hard mode, cap at 2
   if(player.lives < 2) player.lives++;
 }
 
@@ -1105,8 +1201,8 @@ function resetGame(){
 
   level = 1;
 
-  player.x = c.width/2;
-  player.y = c.height - 150;
+  player.x = innerWidth/2;
+  player.y = innerHeight - 150;
   player.size = 30;
   player.fat = 0;
   player.lives = 2;
@@ -1115,6 +1211,7 @@ function resetGame(){
 
   boss = null;
   ended = false;
+  paused = false;
 
   applyLevelSettings();
 }
@@ -1130,7 +1227,7 @@ function endGame(win){
   overlay.style.display = "flex";
   const p = overlay.querySelector(".panel");
   p.querySelector(".title").textContent = win ? "YOU ESCAPED" : "OVERDOSE";
-  p.querySelector(".sub").innerHTML = win
+  p.querySelector("#subtitle").innerHTML = win
     ? `You survived all levels + bosses. Score locked.`
     : `Too many pills. The chimp exploded. Score locked.`;
 
@@ -1139,80 +1236,83 @@ function endGame(win){
 
 /* Start click unlocks iPhone audio */
 startBtn.onclick = ()=>{
-  if(!audioUnlocked){
-    audioUnlocked = true;
-    // unlock web audio context
-    blip(300,0.03,0.03);
+  try{
+    if(!audioUnlocked){
+      audioUnlocked = true;
+      blip(300,0.03,0.03);
+      startPlaylist();
+    }
 
-    // start playlist (user gesture)
-    startPlaylist();
+    playerName = (nameInput.value || "PLAYER").slice(0,12).toUpperCase();
+    uiName.textContent = playerName;
+
+    overlay.style.display = "none";
+    errBox.style.display = "none"; // hide any prior error
+    resetGame();
+    running = true;
+
+    // prevent scroll while playing
+    document.body.style.overscrollBehavior = "none";
+
+    requestAnimationFrame(loop);
+  }catch(e){
+    showErr("START failed:\n" + (e.message || e));
   }
-
-  playerName = (nameInput.value || "PLAYER").slice(0,12).toUpperCase();
-  uiName.textContent = playerName;
-
-  overlay.style.display = "none";
-  resetGame();
-  running = true;
-  loop();
 };
 
 /* =========================
    MAIN LOOP
 ========================= */
 function loop(){
-  if(!running) return;
+  if(!running || paused) return;
 
   globalTicks++;
   levelTicks++;
 
   // background
   ctx.fillStyle = "#000";
-  ctx.fillRect(0,0,c.width,c.height);
+  ctx.fillRect(0,0,innerWidth,innerHeight);
 
-  // soft drifting field
-  const gx = (Math.sin(globalTicks*0.006)*0.5+0.5)*c.width;
-  const gy = (Math.cos(globalTicks*0.005)*0.5+0.5)*c.height*0.6;
-  const grd = ctx.createRadialGradient(gx,gy,10,gx,gy,Math.max(c.width,c.height)*0.75);
+  // drifting field
+  const gx = (Math.sin(globalTicks*0.006)*0.5+0.5)*innerWidth;
+  const gy = (Math.cos(globalTicks*0.005)*0.5+0.5)*innerHeight*0.6;
+  const grd = ctx.createRadialGradient(gx,gy,10,gx,gy,Math.max(innerWidth,innerHeight)*0.75);
   grd.addColorStop(0, "rgba(138,46,255,.10)");
   grd.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = grd;
-  ctx.fillRect(0,0,c.width,c.height);
+  ctx.fillRect(0,0,innerWidth,innerHeight);
 
-  // Level progression (fast)
+  // Level progression
   if(!boss){
     if(levelTicks > LEVEL_FRAMES){
       level++;
       levelTicks = 0;
 
-      // spawn boss if scheduled for that level
       if(bossAtLevels.has(level)){
         spawnBoss(bossAtLevels.get(level));
       }else{
         if(level <= MAX_LEVEL) applyLevelSettings();
       }
-
-      if(level > MAX_LEVEL){
-        // if devil already beaten, win condition
-        // (devil is at level 12 via schedule)
-      }
     }
   }
 
-  // spawns (boss changes cadence via bossUpdate)
+  // spawns
   if(!boss){
     if(globalTicks % spawnRate === 0) spawnPill("pill");
     if(globalTicks % heartRate === 0) spawnHeart();
   }else{
     bossUpdate();
-    // still drop rare hearts during boss
     if(globalTicks % Math.max(190, heartRate) === 0) spawnHeart();
   }
 
   // movement
+  if(keyDir !== 0){
+    mx += keyDir * 18;
+  }
+
   player.x += (mx - player.x) * 0.22;
-  player.x = Math.max(30, Math.min(c.width-30, player.x));
-  player.y = c.height - 150;
+  player.x = Math.max(30, Math.min(innerWidth-30, player.x));
+  player.y = innerHeight - 150;
 
   if(player.invuln > 0) player.invuln--;
 
@@ -1222,7 +1322,6 @@ function loop(){
     p.y += p.v;
     p.x += p.wobble;
 
-    // draw pill capsule
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate(Math.sin((p.y+p.h)*0.012)*0.6);
@@ -1234,7 +1333,6 @@ function loop(){
 
     const hit = hitCircle(p.x,p.y,p.r, player.x, player.y-30, player.size);
 
-    // near miss
     const dist = Math.hypot(p.x-player.x, p.y-(player.y-30));
     const near = (dist < p.r + player.size + 44) && !hit && dist > p.r + player.size + 8;
     if(near){
@@ -1244,14 +1342,13 @@ function loop(){
 
     if(hit){
       pills.splice(i,1);
-      // eating is BAD: fat up + sometimes hurts
       player.fat += (p.kind==="bossPill") ? 13 : 10;
       if(p.kind==="bossPill" && Math.random() < 0.12) loseLife();
       blip(220,0.05,0.05);
       burst(p.x,p.y,"rgba(255,255,255,.9)",18,7);
     }
 
-    if(p.y > c.height + 90) pills.splice(i,1);
+    if(p.y > innerHeight + 90) pills.splice(i,1);
   }
 
   // hearts (good)
@@ -1260,7 +1357,6 @@ function loop(){
     h.y += h.v;
     h.t++;
 
-    // draw pixel heart
     ctx.save();
     ctx.translate(h.x,h.y);
     ctx.scale(1 + Math.sin(h.t*0.12)*0.06, 1 + Math.cos(h.t*0.12)*0.06);
@@ -1280,10 +1376,10 @@ function loop(){
       burst(h.x,h.y,"rgba(0,255,156,.95)",22,7);
     }
 
-    if(h.y > c.height + 90) hearts.splice(i,1);
+    if(h.y > innerHeight + 90) hearts.splice(i,1);
   }
 
-  // hazards (boss extras)
+  // hazards
   for(let i=hazards.length-1;i>=0;i--){
     const h = hazards[i];
     h.y += h.v;
@@ -1327,7 +1423,7 @@ function loop(){
       ctx.arc(-h.r*0.35,-h.r*0.15,h.r*0.22,0,Math.PI*2);
       ctx.arc(h.r*0.35,-h.r*0.15,h.r*0.22,0,Math.PI*2);
       ctx.fill();
-    }else{ // fakeheart
+    }else{
       ctx.fillStyle = "rgba(255,42,42,.92)";
       ctx.fillRect(-8,-2,4,4); ctx.fillRect(4,-2,4,4);
       ctx.fillRect(-12,2,28,6);
@@ -1339,7 +1435,6 @@ function loop(){
 
     if(hitCircle(h.x,h.y,h.r, player.x, player.y-30, player.size)){
       hazards.splice(i,1);
-      // fake heart is extra evil
       if(h.kind === "fakeheart"){
         player.fat += 18;
         loseLife();
@@ -1350,7 +1445,7 @@ function loop(){
       burst(h.x,h.y,"rgba(255,42,42,.95)",22,8);
     }
 
-    if(h.y > c.height + 90) hazards.splice(i,1);
+    if(h.y > innerHeight + 90) hazards.splice(i,1);
   }
 
   // Draw boss + player
@@ -1371,7 +1466,7 @@ function loop(){
   // score ticks
   score += 1;
 
-  // explode if fat too high (harder cap)
+  // explode if fat too high
   if(player.fat >= 140){
     burst(player.x, player.y-30, "rgba(255,255,255,.95)", 90, 12);
     burst(player.x, player.y-30, "rgba(138,46,255,.95)", 70, 10);
@@ -1380,9 +1475,10 @@ function loop(){
     return;
   }
 
-  // win condition: beat DEVIL and reach end of level 12
-  if(level >= MAX_LEVEL && !boss && bossAtLevels.get(12)==="DEVIL"){
-    // Devil beaten already, now win
+  // win condition: beat DEVIL then survive remainder (DEVIL appears at lvl 12)
+  if(level >= MAX_LEVEL && !boss){
+    // If devil was spawned and beaten, boss becomes null. At that point, win.
+    // Keep it clean: if we've hit max level and there's no boss, you win.
     endGame(true);
     return;
   }
@@ -1402,6 +1498,15 @@ function loop(){
 /* initial */
 applyLevelSettings();
 renderLB();
+
+/* Prevent page scroll during active gameplay (mobile) */
+addEventListener("touchmove", (e)=>{
+  if(running && !overlay || (running && overlay.style.display === "none")){
+    e.preventDefault();
+  }
+}, { passive:false });
+
+}); // DOMContentLoaded
 </script>
 </body>
 </html>
