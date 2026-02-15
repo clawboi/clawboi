@@ -1,3 +1,4 @@
+<!-- vault.html (or whatever your VAULT page filename is) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -193,9 +194,44 @@ STATUS: <span class="corrupt">CORRUPT</span>
     <div class="card">
       <div class="label">DREAM LOGS</div>
       <div class="mono" id="logs">
-02:11AM  “THE ROOM HAD NO DOOR.”
-03:09AM  “I HEARD BASS BEHIND THE WALLS.”
-04:44AM  “MY NAME LOOKED BACK AT ME.”
+3:17 AM  “new place to drown / hearts lost ain’t found”
+1:02 AM  “I fake my smile they ain’t even know”
+4:44 AM  “all this pain never leave it’s gon show”
+2:28 AM  “hear voices like I’m schizo baby”
+5:11 AM  “I lost my hope while looking for hoes”
+12:09 AM “stars gonna shine when the pills in my eyes”
+6:33 AM  “I’m still in a sad world it keep haunting”
+3:59 AM  “I knew I was a star I heard that right from mommy”
+2:06 AM  “I’ve been praying for some peace but all this pain stuck beside me”
+11:48 PM “I stay out the way make me tired yuh”
+4:01 AM  “lost in my mind don’t remind me yuh”
+12:55 AM “I’m coping with all these drugs just to go keep it down”
+2:44 AM  “brain gon cold can’t catch that low”
+5:52 AM  “I laugh it up with my pain I don’t even understand”
+3:33 AM  “I got ghosts on my back and I really feel like I’m the vamp”
+1:29 AM  “I’m feeling so damn sick of all these people tryna love me”
+6:08 AM  “too many nights I was dying yuh”
+4:19 AM  “I just look in my bank that’s a lot in my checking”
+2:50 AM  “I’m in the dark no lamp”
+3:07 AM  “she just like the image not the message I just sent”
+5:00 AM  “I don’t trust a single word that you gon drop”
+12:41 AM “ain’t trusting my soul cause my shadow stay on me so tight”
+1:58 AM  “hide in the car from these demons I’m losing my sight”
+6:12 AM  “I lost three years of my life”
+2:11 AM  “staying myself can’t keep quiet”
+4:23 AM  “I feel so damn sick I had to get out my rage”
+3:38 AM  “taking these drugs I’m feeling strange”
+12:14 AM “I just lost my damn mind”
+5:26 AM  “I might not be worth all your time”
+1:13 AM  “she killing me with them notions”
+2:32 AM  “I’m drowning I’m like oh yeah”
+3:49 AM  “I can’t find my soul I look in the lost n found”
+4:57 AM  “thinking I’m ignoring you I wonder why”
+6:40 AM  “I gotta get sober”
+1:45 AM  “my sin gon come back quick when I’m in that mode”
+2:59 AM  “I’m flexing on these hoes / flexing on these bros”
+3:21 AM  “I’m tripping off that back door”
+5:33 AM  “cannot go back cycle now I’m going psycho”
       </div>
       <div class="btnRow">
         <button class="btn" id="newLog">ADD LOG</button>
@@ -224,6 +260,7 @@ THIS PAGE WILL UPDATE ITSELF.
       <div class="mono">
 TYPE: “SIGNAL” TO RETURN TO TRANSMISSION
 TYPE: “HOME” TO EXIT
+TYPE: “BMA” TO OPEN BROKEN MINDS ANONYMOUS
       </div>
       <div class="note">YOU CAN HIDE A REAL PASSWORD HERE LATER (FOR A PRIVATE LINK, DROPBOX, UNLISTED VIDEO, ETC.)</div>
     </div>
@@ -231,30 +268,16 @@ TYPE: “HOME” TO EXIT
 </div>
 
 <script>
-/* Fake decrypt that reveals “made up” lore lines */
+/* Buttons */
 const decryptBtn = document.getElementById("decrypt");
 const wipeBtn = document.getElementById("wipe");
 const frags = document.getElementById("frags");
 const logs = document.getElementById("logs");
 const newLog = document.getElementById("newLog");
 
-const decryptLines = [
-  "DECRYPTING…",
-  "KEY: VIOLET STATIC",
-  "FOUND: “TOUR IS A LIE UNTIL A CROWD BREATHES.”",
-  "FOUND: “THE NEXT TRACK OPENS A DOOR.”",
-  "DONE. (NOT REALLY.)"
-];
-
+/* DECRYPT now routes to matrix page */
 decryptBtn.onclick = ()=>{
-  let i = 0;
-  const base = frags.textContent.trim().split("\n").slice(0,4).join("\n");
-  frags.textContent = base + "\n\n" + decryptLines[0];
-  const t = setInterval(()=>{
-    i++;
-    frags.textContent = base + "\n\n" + decryptLines.slice(0, i+1).join("\n");
-    if(i >= decryptLines.length-1) clearInterval(t);
-  }, 260);
+  window.location.href = "decrypt.html";
 };
 
 wipeBtn.onclick = ()=>{
@@ -288,8 +311,8 @@ document.addEventListener("keydown",(e)=>{
 
   if(buf.endsWith("SIGNAL")) window.location.href = "secret.html";
   if(buf.endsWith("HOME")) window.location.href = "index.html";
+  if(buf.endsWith("BMA")) window.location.href = "bma.html";
 });
 </script>
 </body>
 </html>
-
