@@ -12,7 +12,7 @@
   --violet:#8a2eff;
   --max:1100px;
   --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  --lyric: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; /* same vibe as EAT ME */
+  --lyric: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; /* overridden below to match title */
 }
 
 *{box-sizing:border-box}
@@ -22,6 +22,22 @@ body{
   color:#fff;
   font-family:var(--sans);
   overflow-x:hidden;
+
+  /* NEW: global violet glow across whole page */
+  position:relative;
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:-10%;
+  pointer-events:none;
+  z-index:0;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(138,46,255,.18), transparent 62%),
+    radial-gradient(circle at 78% 34%, rgba(138,46,255,.12), transparent 66%),
+    radial-gradient(circle at 44% 88%, rgba(138,46,255,.10), transparent 68%);
+  mix-blend-mode:screen;
+  filter:saturate(1.1);
 }
 
 a{color:#fff;text-decoration:none}
@@ -33,7 +49,7 @@ header{
   display:flex;justify-content:center;gap:40px;
   background:rgba(0,0,0,.55);
   backdrop-filter:blur(10px);
-  border-bottom:1px solid rgba(255,255,255,.08);
+  /* removed border */
   padding:16px;
   z-index:9;
 }
@@ -64,8 +80,8 @@ header a:hover{opacity:1}
   padding-top:80px;
   text-align:center;
   position:relative;
-  
-  /* NEW — makes violet background full screen width */
+
+  /* full screen width stays */
   width:100vw;
   margin-left:calc(50% - 50vw);
   margin-right:calc(50% - 50vw);
@@ -123,7 +139,7 @@ header a:hover{opacity:1}
 
 /* BLOCK */
 .block{
-  border-top:1px solid rgba(255,255,255,.08);
+  /* removed borders so it feels like one page */
   padding:50px 0;
 }
 
@@ -140,7 +156,7 @@ header a:hover{opacity:1}
   display:flex;
   gap:18px;
   align-items:center;
-  border:1px solid rgba(138,46,255,.35);
+  /* removed border */
   background:rgba(138,46,255,.06);
   border-radius:22px;
   padding:18px;
@@ -168,7 +184,7 @@ header a:hover{opacity:1}
   width:110px;height:110px;
   border-radius:16px;
   overflow:hidden;
-  border:1px solid rgba(255,255,255,.1);
+  /* removed border */
   flex-shrink:0;
 }
 .cover img{
@@ -208,22 +224,21 @@ header a:hover{opacity:1}
   letter-spacing:.2em;
   font-size:11px;
   text-transform:uppercase;
-  border:1px solid rgba(255,255,255,.14);
+  border:0; /* removed borders */
   background:rgba(255,255,255,.03);
   color:rgba(255,255,255,.92);
 }
 .pill.violet{
-  border-color: rgba(138,46,255,.45);
   background: rgba(138,46,255,.10);
 }
 
 .pill.rainbow{ animation:rainbow 4s linear infinite; }
 @keyframes rainbow{
-  0%{color:#ff2a2a;border-color:#ff2a2a}
-  25%{color:#ffe600;border-color:#ffe600}
-  50%{color:#00ff9c;border-color:#00ff9c}
-  75%{color:#4aa3ff;border-color:#4aa3ff}
-  100%{color:#ff2aff;border-color:#ff2aff}
+  0%{color:#ff2a2a}
+  25%{color:#ffe600}
+  50%{color:#00ff9c}
+  75%{color:#4aa3ff}
+  100%{color:#ff2aff}
 }
 
 /* VISUALS */
@@ -235,7 +250,7 @@ header a:hover{opacity:1}
 @media(max-width:800px){.videoGrid{grid-template-columns:1fr}}
 
 .videoCard{
-  border:1px solid rgba(255,255,255,.1);
+  /* removed border */
   border-radius:20px;
   overflow:hidden;
 }
@@ -245,14 +260,37 @@ header a:hover{opacity:1}
   border:0;
 }
 
+/* NEW: pager under videos */
+.videoPager{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  margin-top:16px;
+}
+.pageBtn{
+  appearance:none;
+  border:0;
+  cursor:pointer;
+  padding:12px 18px;
+  border-radius:999px;
+  background:rgba(255,255,255,.06);
+  color:#fff;
+  letter-spacing:.22em;
+  font-size:11px;
+  text-transform:uppercase;
+}
+.pageBtn:hover{filter:brightness(1.06)}
+
 /* LYRIC ROTATOR */
 .lyric{
   text-align:center;
   font-size:clamp(14px,1.9vw,20px);
   margin-top:30px;
   line-height:1.7;
-  font-family:var(--lyric);
-  letter-spacing:.02em;
+  /* make lyric font exactly like title */
+  font-family:var(--sans);
+  letter-spacing:.34em;
+  text-transform:uppercase;
   opacity:1;
   transition:opacity 2.2s;
 }
@@ -261,6 +299,7 @@ header a:hover{opacity:1}
 .lyric em{
   color:var(--violet);
   text-shadow:0 0 18px rgba(138,46,255,.35);
+  font-style:normal;
 }
 
 /* FOLLOW */
@@ -282,15 +321,19 @@ header a:hover{opacity:1}
 .eat{
   display:block;
   margin:70px auto 0;
-  font-size:15px;
+  font-size:13px; /* slightly smaller */
   letter-spacing:.3em;
-  animation:rainbow 4s linear infinite;
+  animation:eatBounce 2.6s ease-in-out infinite, rainbow 4s linear infinite;
+}
+@keyframes eatBounce{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-6px)}
 }
 
 footer{
   margin-top:40px;
   padding-top:20px;
-  border-top:1px solid rgba(255,255,255,.08);
+  /* removed border */
   font-size:11px;
   letter-spacing:.2em;
   opacity:.6;
@@ -349,13 +392,18 @@ footer{
 <section id="visuals" class="block">
   <div class="kicker">Visuals</div>
 
-  <div class="videoGrid">
+  <div class="videoGrid" id="videoGrid">
     <div class="videoCard">
       <iframe src="https://www.youtube.com/embed/uVcRKlRVFgs" allowfullscreen></iframe>
     </div>
     <div class="videoCard">
       <iframe src="https://www.youtube.com/embed/OJlGBxj3T0U" allowfullscreen></iframe>
     </div>
+  </div>
+
+  <div class="videoPager">
+    <button class="pageBtn" id="prevVideos" aria-label="Previous videos">◀</button>
+    <button class="pageBtn" id="nextVideos" aria-label="Next videos">▶</button>
   </div>
 </section>
 
@@ -452,6 +500,53 @@ setInterval(()=>{
     lyricBox.classList.remove("fade");
   },1700);
 },8500);
+
+/* VIDEO PAGER: shows 2 at a time */
+const videoPages = [
+  [
+    "https://www.youtube.com/embed/uVcRKlRVFgs",
+    "https://www.youtube.com/embed/OJlGBxj3T0U"
+  ],
+  [
+    "https://www.youtube.com/embed/AYGTVx6F-QY",
+    "https://www.youtube.com/embed/kHzCjDuKYTQ"
+  ],
+  [
+    "https://www.youtube.com/embed/ljHghBupoIE",
+    "https://www.youtube.com/embed/u2UbYB2gQ78"
+  ],
+  [
+    "https://www.youtube.com/embed/52cAZvRj_Js",
+    "https://www.youtube.com/embed/ZXxUF1FeqDI"
+  ],
+  [
+    "https://www.youtube.com/embed/l5UzyZNnnqM",
+    "https://www.youtube.com/embed/p2sGZUEJcs4"
+  ]
+];
+
+let page = 0;
+const grid = document.getElementById("videoGrid");
+const prevBtn = document.getElementById("prevVideos");
+const nextBtn = document.getElementById("nextVideos");
+
+function renderVideos(){
+  const [a,b] = videoPages[page];
+  grid.innerHTML = `
+    <div class="videoCard"><iframe src="${a}" allowfullscreen></iframe></div>
+    <div class="videoCard"><iframe src="${b}" allowfullscreen></iframe></div>
+  `;
+}
+
+prevBtn.addEventListener("click", ()=>{
+  page = (page - 1 + videoPages.length) % videoPages.length;
+  renderVideos();
+});
+
+nextBtn.addEventListener("click", ()=>{
+  page = (page + 1) % videoPages.length;
+  renderVideos();
+});
 </script>
 
 </body>
