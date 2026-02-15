@@ -1,141 +1,270 @@
-<!-- bma.html -->
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>BMA</title>
+<title>BACKROOM NODE</title>
+
 <style>
 :root{--bg:#000;--fg:#fff;--violet:#8a2eff;}
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0;
-  background:var(--bg);
-  color:var(--fg);
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  overflow:hidden;
-  position:relative;
+margin:0;
+background:var(--bg);
+color:var(--fg);
+font-family:ui-monospace,Menlo,monospace;
+overflow:hidden;
 }
+
+/* atmosphere */
 body:before{
-  content:"";
-  position:fixed;
-  inset:-25%;
-  pointer-events:none;
-  background:
-    radial-gradient(circle at 18% 22%, rgba(138,46,255,.22), transparent 60%),
-    radial-gradient(circle at 78% 34%, rgba(138,46,255,.14), transparent 70%),
-    radial-gradient(circle at 50% 86%, rgba(138,46,255,.10), transparent 72%);
-  mix-blend-mode:screen;
-  filter:blur(42px) saturate(1.2);
+content:"";
+position:fixed;
+inset:-25%;
+pointer-events:none;
+background:
+radial-gradient(circle at 20% 20%, rgba(138,46,255,.22), transparent 60%),
+radial-gradient(circle at 80% 30%, rgba(138,46,255,.14), transparent 70%),
+radial-gradient(circle at 50% 90%, rgba(138,46,255,.10), transparent 72%);
+mix-blend-mode:screen;
+filter:blur(40px);
 }
-a{color:#fff;text-decoration:none}
+
+/* scanlines */
+.scan{
+position:fixed; inset:0;
+pointer-events:none;
+opacity:.07;
+background:repeating-linear-gradient(to bottom, rgba(255,255,255,.05) 0px, rgba(255,255,255,.05) 1px, transparent 3px, transparent 6px);
+}
+
+/* brand */
 .brand{
-  position:fixed;top:14px;left:14px;z-index:9;
-  font-size:11px;letter-spacing:.34em;text-transform:uppercase;
-  opacity:.75;text-shadow:0 0 18px rgba(138,46,255,.25);
+position:fixed; top:14px; left:14px;
+font-size:11px;
+letter-spacing:.34em;
+text-transform:uppercase;
+opacity:.75;
+z-index:9;
+text-shadow:0 0 18px rgba(138,46,255,.35);
 }
-.brand:hover{opacity:1}
+.brand a{color:#fff;text-decoration:none}
+
+/* layout */
 .wrap{
-  position:relative;
-  z-index:2;
-  height:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:80px 18px;
+position:relative;
+z-index:2;
+height:100%;
+display:flex;
+align-items:center;
+justify-content:center;
+padding:80px 20px;
 }
-.card{
-  width:min(820px, 100%);
-  background:rgba(255,255,255,.03);
-  border-radius:18px;
-  padding:18px;
-  backdrop-filter: blur(12px);
+
+.panel{
+width:min(900px,100%);
+background:rgba(255,255,255,.03);
+border-radius:18px;
+padding:20px;
+backdrop-filter:blur(12px);
+box-shadow:0 0 60px rgba(138,46,255,.15);
 }
+
+/* headings */
 .h1{
-  font-size:clamp(16px,3.6vw,34px);
-  letter-spacing:.46em;
-  text-transform:uppercase;
-  text-shadow:0 0 18px rgba(138,46,255,.35);
+font-size:clamp(18px,4vw,34px);
+letter-spacing:.46em;
+text-transform:uppercase;
+text-shadow:0 0 18px rgba(138,46,255,.35);
 }
 .sub{
-  margin-top:10px;
-  font-size:11px;
-  letter-spacing:.30em;
-  text-transform:uppercase;
-  opacity:.62;
-  line-height:1.7;
+margin-top:10px;
+font-size:11px;
+letter-spacing:.30em;
+text-transform:uppercase;
+opacity:.6;
 }
-.mono{
-  margin-top:16px;
-  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  font-size:12px;
-  letter-spacing:.08em;
-  opacity:.82;
-  line-height:1.65;
-  white-space:pre-wrap;
+
+/* terminal */
+.term{
+margin-top:18px;
+background:#000;
+border-radius:14px;
+padding:14px;
+height:260px;
+overflow:auto;
+font-size:12px;
+line-height:1.6;
+border:1px solid rgba(255,255,255,.05);
 }
-.row{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
-.btn{
-  appearance:none;border:0;cursor:pointer;
-  padding:12px 14px;border-radius:999px;
-  background:rgba(138,46,255,.16);color:#fff;
-  letter-spacing:.22em;font-size:11px;text-transform:uppercase;
+
+.line{opacity:.85}
+.sys{color:#9d6cff}
+.err{color:#ff4a7a}
+
+/* input */
+.row{
+margin-top:14px;
+display:flex;
+gap:10px;
 }
-.btn.alt{background:rgba(255,255,255,.06)}
-.btn:hover{filter:brightness(1.06)}
-.blink{display:inline-block;animation:blink 1.2s steps(2,end) infinite}
-@keyframes blink{50%{opacity:.22}}
+
+input{
+flex:1;
+background:#000;
+border:1px solid rgba(255,255,255,.1);
+border-radius:10px;
+padding:12px;
+color:#fff;
+font-family:inherit;
+letter-spacing:.15em;
+}
+
+button{
+border:0;
+cursor:pointer;
+padding:12px 16px;
+border-radius:999px;
+background:rgba(138,46,255,.18);
+color:#fff;
+letter-spacing:.22em;
+font-size:11px;
+text-transform:uppercase;
+}
+button:hover{filter:brightness(1.1)}
+
+.back{
+margin-top:16px;
+text-align:right;
+}
+.back a{
+font-size:10px;
+letter-spacing:.3em;
+opacity:.65;
+text-decoration:none;
+color:#fff;
+}
+.back a:hover{opacity:1}
+
+/* pulse */
+@keyframes pulse{
+50%{opacity:.4}
+}
+.pulse{animation:pulse 1.4s infinite}
 </style>
 </head>
+
 <body>
-<a class="brand" href="vault.html">CLAWBOI</a>
+<div class="scan"></div>
+
+<div class="brand"><a href="vault.html">CLAWBOI</a></div>
 
 <div class="wrap">
-  <div class="card">
-    <div class="h1">BROKEN MINDS ANONYMOUS</div>
-    <div class="sub">NO LOGINS. NO NAMES. JUST SIGNALS. <span class="blink">▮</span></div>
+<div class="panel">
 
-    <div class="mono">
-RULES:
-1) YOU CAN BE LOUD HERE.
-2) YOU CAN BE QUIET HERE.
-3) YOU DON’T HAVE TO EXPLAIN THE WHOLE STORM.
+<div class="h1">BACKROOM NODE</div>
+<div class="sub">UNAUTHORIZED SIGNAL DETECTED <span class="pulse">▮</span></div>
 
-STATUS: PRIVATE ROOM (PLACEHOLDER)
-NEXT: IF YOU WANT THIS TO SAVE REAL POSTS WITHOUT LOGINS,
-WE’LL USE A FREE “GUESTBOOK” BACKEND OR CLOUDFLARE WORKERS + KV.
-    </div>
+<div class="term" id="term">
+<div class="line sys">NODE BOOTING...</div>
+<div class="line">SEARCHING FOR USER ID...</div>
+<div class="line err">ERROR: USER NOT FOUND</div>
+<div class="line">ASSIGNING TEMPORARY ID...</div>
+<div class="line sys">WELCOME, UNKNOWN ENTITY.</div>
+<div class="line">TYPE A COMMAND.</div>
+</div>
 
-    <div class="row">
-      <button class="btn" id="confess">DROP A LINE</button>
-      <a class="btn alt" href="vault.html" style="display:inline-flex;align-items:center;justify-content:center;">BACK</a>
-    </div>
+<div class="row">
+<input id="cmd" placeholder="ENTER COMMAND"/>
+<button id="send">RUN</button>
+</div>
 
-    <div class="mono" id="feed" style="margin-top:14px;opacity:.78;">
-[NO ENTRIES YET]
-    </div>
-  </div>
+<div class="back">
+<a href="secret.html">RETURN TO TRANSMISSION</a>
+</div>
+
+</div>
 </div>
 
 <script>
-const feed = document.getElementById("feed");
-document.getElementById("confess").onclick = ()=>{
-  const lines = [
-    "I BEEN HIDING IN THE MUSIC LIKE IT’S A BASEMENT.",
-    "SOME NIGHTS FEEL LIKE A LOOP I CAN’T BREAK.",
-    "I MISS WHO I WAS BEFORE I NEEDED NUMB.",
-    "I’M STILL HERE. THAT’S THE POST.",
-    "IF YOU HEAR THIS, YOU’RE NOT ALONE IN IT."
-  ];
-  const pick = lines[Math.floor(Math.random()*lines.length)];
-  const now = new Date();
-  const stamp = now.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
-  const entry = `${stamp}  ${pick}`;
-  if(feed.textContent.includes("[NO ENTRIES YET]")) feed.textContent = entry;
-  else feed.textContent = feed.textContent.trim() + "\n" + entry;
+const term=document.getElementById("term");
+const input=document.getElementById("cmd");
+const btn=document.getElementById("send");
+
+function log(text,cls="line"){
+const d=document.createElement("div");
+d.className=cls;
+d.textContent=text;
+term.appendChild(d);
+term.scrollTop=term.scrollHeight;
+}
+
+const responses={
+HELP:[
+"AVAILABLE COMMANDS:",
+"HELP",
+"SCAN",
+"WHOAMI",
+"OPEN",
+"BMA",
+"CLEAR"
+],
+SCAN:[
+"SCANNING NODE...",
+"FOUND: MEMORY FRAGMENTS",
+"FOUND: AUDIO GHOSTS",
+"FOUND: OBSERVER SIGNAL",
+"WARNING: SOMETHING IS WATCHING BACK"
+],
+WHOAMI:[
+"YOU ARE:",
+"A SIGNAL",
+"A LISTENER",
+"A GLITCH",
+"NOT A BODY"
+],
+OPEN:[
+"ATTEMPTING DOOR ACCESS...",
+"LOCKED",
+"LOCKED",
+"LOCKED",
+"...",
+"ONE DAY IT WILL OPEN"
+],
+BMA:[
+"ACCESSING BMA ARCHIVE...",
+"LOADING...",
+"--- BROKEN MINDS ANONYMOUS ---",
+"THIS ROOM STILL EXISTS.",
+"THE SIGNAL NEVER LEFT.",
+"YOU ARE NOT ALONE HERE."
+]
 };
+
+function run(){
+const val=input.value.trim().toUpperCase();
+if(!val)return;
+log("> "+val,"line");
+input.value="";
+
+if(val==="CLEAR"){
+term.innerHTML="";
+return;
+}
+
+if(responses[val]){
+responses[val].forEach((l,i)=>
+setTimeout(()=>log(l,val==="SCAN"?"sys":"line"), i*160)
+);
+}else{
+log("UNKNOWN COMMAND","err");
+}
+}
+
+btn.onclick=run;
+input.addEventListener("keydown",e=>{if(e.key==="Enter")run()});
 </script>
+
 </body>
 </html>
-
