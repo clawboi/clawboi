@@ -69,7 +69,7 @@ a{color:#fff;text-decoration:none}
   opacity:.55;
 }
 
-/* NEW: mini player + visualizer */
+/* mini player + visualizer */
 .player{
   margin-top:12px;
   display:flex;
@@ -100,14 +100,15 @@ a{color:#fff;text-decoration:none}
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
 }
 
-/* small player hint */
-.pnote{
-  margin-top:8px;
+/* now playing line */
+.now{
+  margin-top:10px;
   font-size:10px;
   letter-spacing:.30em;
   text-transform:uppercase;
-  opacity:.5;
+  opacity:.55;
 }
+.now b{opacity:.9; letter-spacing:.34em}
 
 canvas{position:fixed;inset:0}
 .scan{
@@ -128,48 +129,46 @@ canvas{position:fixed;inset:0}
   <div class="title">LOST SONG FILES</div>
 
   <div class="files" id="files">
-    <div class="file" data-song="backdoor">
-      <div class="name">UNTITLED_03_BACKDOOR.wav</div>
-      <div class="tag">RECOVER</div>
+    <div class="file" data-song="untitled.01">
+      <div class="name">untitled.01</div>
+      <div class="tag">PLAY</div>
     </div>
-    <div class="file" data-song="untitled01">
-      <div class="name">UNTITLED_01.wav</div>
-      <div class="tag">BROKEN</div>
+    <div class="file" data-song="untitled.02">
+      <div class="name">untitled.02</div>
+      <div class="tag">PLAY</div>
     </div>
-    <div class="file" data-song="untitled02">
-      <div class="name">UNTITLED_02.wav</div>
-      <div class="tag">GLITCH</div>
+    <div class="file" data-song="untitled.03">
+      <div class="name">untitled.03</div>
+      <div class="tag">PLAY</div>
     </div>
-    <div class="file" data-song="untitled04">
-      <div class="name">UNTITLED_04.wav</div>
-      <div class="tag">MISSING</div>
+    <div class="file" data-song="untitled.04">
+      <div class="name">untitled.04</div>
+      <div class="tag">PLAY</div>
     </div>
   </div>
 
-  <!-- NEW: audio + bouncing visual effect over the matrix -->
   <div class="player">
     <button class="pbtn alt" id="stopAmb">STOP</button>
     <a class="pbtn alt" href="secret.html">RETURN TO TRANSMISSION</a>
 
-    <!-- hidden audio element (swap src later if you want) -->
-    <audio id="amb" preload="auto" loop>
-      <source src="audio/ambient-space.mp3?v=1" type="audio/mpeg">
-    </audio>
+    <!-- single audio element used for all tracks -->
+    <audio id="amb" preload="auto" crossorigin="anonymous"></audio>
 
     <canvas class="viz" id="viz" aria-hidden="true"></canvas>
   </div>
-  <div class="pnote">TIP: IF AUDIO DOESN’T START, TAP ANYWHERE.</div>
+
+  <div class="now" id="now">NOW PLAYING: <b>NONE</b></div>
 </div>
 
 <script>
 /* Matrix rain */
 const c = document.getElementById("c");
 const ctx = c.getContext("2d");
-let w,h,cols,ys,font=16;
+let cols,ys,font=16;
 
 function resize(){
-  w=c.width=window.innerWidth*devicePixelRatio;
-  h=c.height=window.innerHeight*devicePixelRatio;
+  c.width=window.innerWidth*devicePixelRatio;
+  c.height=window.innerHeight*devicePixelRatio;
   ctx.setTransform(1,0,0,1,0,0);
   ctx.scale(devicePixelRatio,devicePixelRatio);
   cols = Math.floor(window.innerWidth / font);
@@ -178,9 +177,13 @@ function resize(){
 window.addEventListener("resize", resize);
 resize();
 
-/* --- NEW: audio-reactive bounce (no change to your 0/1 vibe, just motion + pulse) --- */
+/* audio analyser */
 let aCtx, analyser, srcNode, data;
-let amp = 0; // smoothed amplitude 0..1
+let amp = 0;        // smoothed amplitude 0..1
+let playing = false;
+
+const amb = document.getElementById("amb");
+const nowEl = document.getElementById("now");
 
 function setupAudio(){
   if(aCtx) return;
@@ -189,11 +192,10 @@ function setupAudio(){
   analyser.fftSize = 1024;
   data = new Uint8Array(analyser.frequencyBinCount);
 
-  const audioEl = document.getElementById("amb");
-  srcNode = aCtx.createMediaElementSource(audioEl);
+  srcNode = aCtx.createMediaElementSource(amb);
 
   const gain = aCtx.createGain();
-  gain.gain.value = 0.9;
+  gain.gain.value = 0.95;
 
   srcNode.connect(analyser);
   analyser.connect(gain);
@@ -201,33 +203,17 @@ function setupAudio(){
 }
 
 function getAmp(){
-  if(!analyser) return 0;
+  if(!analyser || !playing) return amp*0.92; // decay when stopped
   analyser.getByteFrequencyData(data);
+
   let sum=0;
-  const start=2, end=Math.min(48, data.length);
+  const start=2, end=Math.min(64, data.length);
   for(let i=start;i<end;i++) sum += data[i];
   const avg = sum / (end-start) / 255;
-  amp = amp*0.85 + avg*0.15;
+
+  amp = amp*0.82 + avg*0.18;
   return amp;
 }
-
-/* Auto-start audio on first user gesture (no play button) */
-const amb = document.getElementById("amb");
-let started = false;
-
-async function startIfNeeded(){
-  if(started) return;
-  try{
-    setupAudio();
-    if(aCtx.state === "suspended") await aCtx.resume();
-    await amb.play();
-    started = true;
-  }catch(e){
-    // silent fail
-  }
-}
-document.addEventListener("pointerdown", startIfNeeded, {passive:true});
-document.addEventListener("keydown", startIfNeeded);
 
 /* HUD flicker */
 const hud = document.getElementById("hud");
@@ -235,7 +221,7 @@ const hudLines = ["DECRYPTING…","PACKETS LOST…","REBUILDING INDEX…","SIGNA
 let hi=0;
 setInterval(()=>{hi=(hi+1)%hudLines.length; hud.textContent=hudLines[hi];}, 1100);
 
-/* Visualizer canvas (bounces to music) */
+/* Visualizer canvas */
 const viz = document.getElementById("viz");
 const vctx = viz.getContext("2d");
 function fitViz(){
@@ -259,16 +245,17 @@ function drawViz(){
   const bw = (W - gap*(bars-1)) / bars;
 
   for(let i=0;i<bars;i++){
-    const idx = analyser ? Math.min(data.length-1, Math.floor(i*(data.length/bars))) : i;
-    const raw = analyser ? (data[idx]/255) : 0;
-    const hh = Math.max(2, (raw*0.65 + level*0.35) * (H-6));
+    const idx = analyser && data ? Math.min(data.length-1, Math.floor(i*(data.length/bars))) : i;
+    const raw = (analyser && data && playing) ? (data[idx]/255) : 0;
+
+    const hh = Math.max(2, (raw*0.55 + level*0.65) * (H-6));
     const x = i*(bw+gap);
     const y = H - hh;
 
-    vctx.fillStyle = `rgba(255,255,255,${0.18 + raw*0.35})`;
+    vctx.fillStyle = `rgba(255,255,255,${0.12 + raw*0.35 + level*0.18})`;
     vctx.fillRect(x, y, bw, hh);
 
-    vctx.fillStyle = `rgba(138,46,255,${0.10 + raw*0.40})`;
+    vctx.fillStyle = `rgba(138,46,255,${0.10 + raw*0.40 + level*0.22})`;
     vctx.fillRect(x, y, bw, hh*0.92);
   }
 
@@ -276,11 +263,11 @@ function drawViz(){
 }
 drawViz();
 
-/* Matrix tick now reacts to audio: speed + brightness + subtle “bounce” */
+/* Matrix tick reacts to audio */
 function tick(){
   const level = getAmp();
 
-  const fade = 0.08 + level*0.08;
+  const fade = 0.08 + level*0.09;
   ctx.fillStyle = `rgba(0,0,0,${fade})`;
   ctx.fillRect(0,0,window.innerWidth,window.innerHeight);
 
@@ -288,14 +275,14 @@ function tick(){
   ctx.fillStyle = `rgba(138,46,255,${a})`;
   ctx.font = font+"px ui-monospace, Menlo, monospace";
 
-  const speed = 1 + level*2.4;
+  const speed = 1 + level*2.8;
 
   for(let i=0;i<cols;i++){
     const x=i*font;
     const y=ys[i];
     const ch = Math.random() > 0.5 ? "0" : "1";
 
-    const wobble = Math.sin((i*0.7) + performance.now()*0.002) * (level*3.5);
+    const wobble = Math.sin((i*0.7) + performance.now()*0.002) * (level*4.4);
     ctx.fillText(ch, x + wobble, y);
 
     ys[i] = y + font*speed;
@@ -305,24 +292,48 @@ function tick(){
 }
 tick();
 
-/* Stop button */
-const stopBtn = document.getElementById("stopAmb");
-stopBtn.onclick = ()=>{
+/* play a selected file (stays on page) */
+async function playTrack(name){
+  try{
+    setupAudio();
+    if(aCtx.state === "suspended") await aCtx.resume();
+
+    playing = false;          // prevents analyser reading old data
+    amb.pause();
+    amb.currentTime = 0;
+
+    amb.src = `audio/${name}.mp3?v=1`;
+    await amb.play();
+
+    playing = true;
+    nowEl.innerHTML = `NOW PLAYING: <b>${name}</b>`;
+  }catch(e){
+    playing = false;
+    nowEl.innerHTML = `NOW PLAYING: <b>ERROR</b>`;
+  }
+}
+
+/* Stop button stops whatever is playing */
+document.getElementById("stopAmb").onclick = ()=>{
   amb.pause();
   amb.currentTime = 0;
-  started = false; // allows re-start on next tap
+  playing = false;
+  nowEl.innerHTML = `NOW PLAYING: <b>NONE</b>`;
 };
 
-/* File click behavior: goes to placeholders you can swap later */
+/* click files to play (no redirects) */
 document.getElementById("files").addEventListener("click",(e)=>{
   const row = e.target.closest(".file");
   if(!row) return;
   const key = row.getAttribute("data-song");
-  if(key === "backdoor"){
-    window.location.href = "backdoor.html";
-  }else{
-    window.location.href = "lostfile.html";
-  }
+  if(!key) return;
+  playTrack(key);
+});
+
+/* when track ends, reset state */
+amb.addEventListener("ended", ()=>{
+  playing = false;
+  nowEl.innerHTML = `NOW PLAYING: <b>NONE</b>`;
 });
 </script>
 </body>
