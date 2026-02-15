@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CLAWBOI UNIVERSE</title>
+
+<style>
+:root{
+  --bg:#070707;
+  --fg:#fff;
+  --violet:#8a2eff;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  overflow:hidden;
+  position:relative;
+}
+
+/* violet atmosphere */
+body::before{
+  content:"";
+  position:fixed;
+  inset:-25%;
+  pointer-events:none;
+  z-index:0;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(138,46,255,.22), transparent 60%),
+    radial-gradient(circle at 78% 34%, rgba(138,46,255,.14), transparent 68%),
+    radial-gradient(circle at 44% 88%, rgba(138,46,255,.12), transparent 72%),
+    radial-gradient(circle at 60% 55%, rgba(255,255,255,.04), transparent 72%);
+  mix-blend-mode:screen;
+  filter:blur(36px) saturate(1.15);
+}
+
+/* top brand link */
+.brand{
+  position:fixed;
+  top:16px; left:16px;
+  z-index:9;
+  font-size:11px;
+  letter-spacing:.34em;
+  text-transform:uppercase;
+  color:#fff;
+  text-decoration:none;
+  opacity:.78;
+  text-shadow:0 0 18px rgba(138,46,255,.25);
+}
+.brand:hover{opacity:1}
+
+/* label */
+.hud{
+  position:fixed;
+  top:18px;
+  right:16px;
+  z-index:9;
+  text-align:right;
+}
+.hud .t{
+  font-size:11px;
+  letter-spacing:.34em;
+  text-transform:uppercase;
+  opacity:.7;
+}
+.hud .s{
+  margin-top:6px;
+  font-size:10px;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  opacity:.55;
+}
+
+/* universe stage */
+.stage{
+  position:relative;
+  z-index:2;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.system{
+  width:min(92vw, 720px);
+  aspect-ratio:1/1;
+  position:relative;
+}
+
+/* stars */
+.star{
+  position:absolute;
+  width:2px;height:2px;
+  background:rgba(255,255,255,.75);
+  border-radius:50%;
+  opacity:.35;
+  filter:blur(.2px);
+  animation:tw 4s ease-in-out infinite;
+}
+@keyframes tw{50%{opacity:.8; transform:scale(1.4)}}
+
+/* sun */
+.sun{
+  position:absolute;
+  left:50%; top:50%;
+  width:70px; height:70px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:rgba(138,46,255,.22);
+  box-shadow:
+    0 0 28px rgba(138,46,255,.35),
+    0 0 100px rgba(138,46,255,.12);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  letter-spacing:.34em;
+  text-transform:uppercase;
+  font-size:10px;
+  opacity:.95;
+}
+
+/* orbits */
+.orbit{
+  position:absolute;
+  left:50%; top:50%;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,.08);
+  pointer-events:none;
+}
+
+.r1{width:180px;height:180px}
+.r2{width:280px;height:280px}
+.r3{width:390px;height:390px}
+.r4{width:520px;height:520px}
+
+@media(max-width:520px){
+  .r1{width:160px;height:160px}
+  .r2{width:250px;height:250px}
+  .r3{width:340px;height:340px}
+  .r4{width:450px;height:450px}
+}
+
+/* planet wrappers rotate */
+.spin{
+  position:absolute;
+  left:50%; top:50%;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  animation:spin linear infinite;
+}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+.spin.r1{width:180px;height:180px; animation-duration:16s}
+.spin.r2{width:280px;height:280px; animation-duration:22s}
+.spin.r3{width:390px;height:390px; animation-duration:30s}
+.spin.r4{width:520px;height:520px; animation-duration:42s}
+
+/* planets */
+.planet{
+  position:absolute;
+  left:50%; top:0%;
+  transform:translate(-50%,-50%);
+  width:18px;height:18px;
+  border-radius:50%;
+  cursor:pointer;
+  pointer-events:auto;
+  background:rgba(255,255,255,.18);
+  box-shadow:0 0 20px rgba(138,46,255,.22);
+  border:1px solid rgba(255,255,255,.14);
+}
+
+.planet.big{width:24px;height:24px}
+.planet.ring{width:22px;height:22px}
+
+.planet::after{
+  content:attr(data-name);
+  position:absolute;
+  left:50%;
+  top:28px;
+  transform:translateX(-50%);
+  font-size:9px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  white-space:nowrap;
+  opacity:.0;
+  transition:opacity .15s;
+}
+.planet:hover::after{opacity:.7}
+
+.planet.active{
+  box-shadow:
+    0 0 18px rgba(255,255,255,.12),
+    0 0 42px rgba(138,46,255,.35),
+    0 0 110px rgba(138,46,255,.18);
+  border-color: rgba(138,46,255,.55);
+}
+
+/* a ring effect */
+.planet.ring::before{
+  content:"";
+  position:absolute;
+  inset:-6px;
+  border-radius:50%;
+  border:1px solid rgba(138,46,255,.25);
+  transform:rotate(24deg);
+}
+
+/* bottom info */
+.panel{
+  position:fixed;
+  left:50%;
+  bottom:18px;
+  transform:translateX(-50%);
+  z-index:9;
+  width:min(92vw, 720px);
+  padding:14px 14px;
+  border-radius:18px;
+  background:rgba(255,255,255,.03);
+}
+.panel .now{
+  font-size:11px;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  opacity:.75;
+}
+.panel .desc{
+  margin-top:8px;
+  font-size:11px;
+  letter-spacing:.14em;
+  opacity:.55;
+  line-height:1.6;
+}
+.panel .tips{
+  margin-top:10px;
+  font-size:10px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  opacity:.45;
+}
+</style>
+</head>
+
+<body>
+<a class="brand" href="index.html">CLAWBOI</a>
+
+<div class="hud">
+  <div class="t">UNIVERSE</div>
+  <div class="s">CLICK A WORLD TO PLAY</div>
+</div>
+
+<div class="stage">
+  <div class="system" id="system">
+    <!-- stars (JS will sprinkle more) -->
+    <div class="sun">ROOT</div>
+
+    <div class="orbit r1"></div>
+    <div class="orbit r2"></div>
+    <div class="orbit r3"></div>
+    <div class="orbit r4"></div>
+
+    <div class="spin r1">
+      <div class="planet" data-track="two-times" data-name="TW0 TIMES" style="top:0%; left:50%;"></div>
+    </div>
+
+    <div class="spin r2">
+      <div class="planet big" data-track="body-count" data-name="BODY COUNT" style="top:0%; left:50%;"></div>
+    </div>
+
+    <div class="spin r3">
+      <div class="planet ring" data-track="club-decay" data-name="CLUB DECAY" style="top:0%; left:50%;"></div>
+    </div>
+
+    <div class="spin r4">
+      <div class="planet" data-track="dream-signal" data-name="DREAM SIGNAL" style="top:0%; left:50%;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="now" id="now">NO WORLD SELECTED</div>
+  <div class="desc" id="desc">This is the Clawboi solar system. Each world is a track. Tap one to hear a preview.</div>
+  <div class="tips" id="tips">TIP: iPhone needs one tap to unlock audio</div>
+</div>
+
+<!-- Audio pool (swap these files whenever) -->
+<audio id="player" preload="metadata" playsinline></audio>
+
+<script>
+/* sprinkle stars */
+const system = document.getElementById("system");
+for(let i=0;i<55;i++){
+  const s = document.createElement("div");
+  s.className = "star";
+  s.style.left = (Math.random()*100).toFixed(2)+"%";
+  s.style.top  = (Math.random()*100).toFixed(2)+"%";
+  s.style.animationDelay = (Math.random()*4).toFixed(2)+"s";
+  s.style.opacity = (0.15 + Math.random()*0.6).toFixed(2);
+  system.appendChild(s);
+}
+
+/* tracks */
+const TRACKS = {
+  "two-times":   { title:"TW0 TIMES",   file:"audio/latest.mp3?v=1", desc:"Lonely flex. Violet static in the lungs." },
+  "body-count":  { title:"BODY COUNT",  file:"audio/universe/body-count.mp3?v=1", desc:"Club decay energy. Ghost confidence." },
+  "club-decay":  { title:"CLUB DECAY",  file:"audio/universe/club-decay.mp3?v=1", desc:"Neon bruises. Pressure in the bass." },
+  "dream-signal":{ title:"DREAM SIGNAL",file:"audio/universe/dream-signal.mp3?v=1", desc:"Sleepwalking through a strobe-lit prophecy." }
+};
+
+const player = document.getElementById("player");
+const now = document.getElementById("now");
+const desc = document.getElementById("desc");
+const tips = document.getElementById("tips");
+
+let activePlanet = null;
+
+function setActive(el){
+  document.querySelectorAll(".planet").forEach(p=>p.classList.remove("active"));
+  el.classList.add("active");
+  activePlanet = el;
+}
+
+async function playTrack(key, planetEl){
+  const t = TRACKS[key];
+  if(!t) return;
+
+  setActive(planetEl);
+
+  now.textContent = "NOW PLAYING: " + t.title;
+  desc.textContent = t.desc;
+  tips.textContent = "TAP A DIFFERENT WORLD TO SWITCH";
+
+  // same track toggle behavior: tap again to stop
+  if(player.dataset.key === key && !player.paused){
+    player.pause();
+    player.currentTime = 0;
+    now.textContent = "PAUSED: " + t.title;
+    tips.textContent = "TAP A WORLD TO PLAY";
+    return;
+  }
+
+  player.src = t.file;
+  player.dataset.key = key;
+
+  try{
+    await player.play();
+  }catch(e){
+    tips.textContent = "AUDIO BLOCKED. TAP AGAIN.";
+  }
+}
+
+document.querySelectorAll(".planet").forEach(p=>{
+  p.addEventListener("click", ()=>{
+    const key = p.getAttribute("data-track");
+    playTrack(key, p);
+  });
+});
+
+/* optional: stop on background tap (not on planet) */
+document.addEventListener("click",(e)=>{
+  if(e.target.classList.contains("planet")) return;
+  if(e.target.closest(".panel")) return;
+  if(!player.paused){
+    player.pause();
+    player.currentTime = 0;
+    tips.textContent = "TAP A WORLD TO PLAY";
+    if(activePlanet){
+      now.textContent = "SIGNAL MUTED";
+    }
+  }
+});
+</script>
+</body>
+</html>
