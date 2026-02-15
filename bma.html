@@ -169,7 +169,7 @@ pointer-events:none;
 user-select:none;
 }
 
-/* NEW: faint outside title */
+/* faint outside title */
 .bmaTitle{
 position:fixed;
 right:14px;
@@ -206,7 +206,7 @@ user-select:none;
 <div class="line err">ERROR: USER NOT FOUND</div>
 <div class="line">ASSIGNING TEMPORARY ID...</div>
 <div class="line sys">WELCOME, UNKNOWN ENTITY.</div>
-<div class="line">TYPE A COMMAND.</div>
+<div class="line">TYPE A COMMAND OR JUST TALK.</div>
 </div>
 
 <div class="row">
@@ -237,226 +237,307 @@ function log(text,cls="line"){
 function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function chance(p){ return Math.random() < p; }
 
-/* SHORTER command responses */
+/* SHORT command responses */
 const responses={
-HELP:[
-"COMMANDS:",
-"HELP / SCAN / WHOAMI / OPEN / BMA / CLEAR"
-],
-SCAN:[
-"SCAN…",
-"FRAGMENTS: YES",
-"OBSERVER: MAYBE"
-],
-WHOAMI:[
-"YOU ARE:",
-"A SIGNAL",
-"A GLITCH"
-],
-OPEN:[
-"TRYING…",
-"LOCKED."
-],
-BMA:[
-"BMA…",
-"ROOM’S LIVE.",
-"TYPE: JOIN"
-]
+  HELP:["COMMANDS:","HELP / SCAN / WHOAMI / OPEN / BMA / CLEAR","EXTRAS:","NAME: ___  /  JOIN  /  LEAVE  /  PING"],
+  SCAN:["SCAN…","FRAGMENTS: YES","OBSERVER: MAYBE","BMA: BREATHING"],
+  WHOAMI:["YOU ARE:","A SIGNAL.","A GLITCH.","A HUMAN TRYING NOT TO SHOW IT."],
+  OPEN:["TRYING…","LOCKED.","(IT LIKES WATCHING YOU TRY.)"],
+  BMA:["BMA…","ROOM’S LIVE.","TYPE: JOIN"],
+  PING:["PONG.","STILL HERE."]
 };
 
+/* feel alive */
 function typingBeat(){
-  // subtle “typing…” line to feel alive
-  const token = "…";
-  const cls = chance(0.2) ? "err" : "sys";
-  log(token, cls);
+  const cls = chance(0.18) ? "err" : "sys";
+  log(pick(["…","…","…","⟂","░","▒","▓"]), cls);
   return cls;
 }
 
-/* ultra light “ai” feel without backend */
-function normalize(s){
-  return (s||"").trim().toLowerCase();
-}
-function hasAny(lower, arr){
-  return arr.some(w=>lower.includes(w));
-}
-function isShort(lower){
-  return lower.split(/\s+/).filter(Boolean).length <= 2;
-}
-function lastWord(lower){
-  const parts = lower.split(/\s+/).filter(Boolean);
-  return parts[parts.length-1] || "";
+/* tiny memory */
+let userName="";
+let joinMode=false;
+let lastMood="neutral";
+let lastUserLine="";
+let loops=0;
+
+/* helpers */
+function normalize(s){ return (s||"").trim().toLowerCase(); }
+function words(lower){ return lower.split(/\s+/).filter(Boolean); }
+function wordCount(lower){ return words(lower).length; }
+function lastWord(lower){ const w=words(lower); return w[w.length-1]||""; }
+function hasAny(lower,arr){ return arr.some(x=> lower.includes(x)); }
+function startsAny(lower,arr){ return arr.some(x=> lower.startsWith(x)); }
+
+const GREET = ["hi","hello","hey","yo","sup","wassup","wsg","hola"];
+const THANKS = ["thanks","thx","ty","appreciate","good looks"];
+const BYE = ["bye","goodbye","later","gn","good night","peace"];
+const YES = ["yes","y","yeah","yup","yea","ok","okay","bet","facts"];
+const NO = ["no","nah","nope","never"];
+const SWEAR = ["fuck","shit","bitch","damn","ass","wtf","lmao","lmfao"];
+const LOVE = ["love you","love u","kiss","marry","date me","i love you"];
+const CURIOUS = ["what is this","where am i","who are you","are you real","what are you","what is bma"];
+const FEAR = ["scared","afraid","paranoid","theyre watching","they're watching","someone watching","shadow","voices"];
+const SAD = ["sad","depressed","lonely","empty","numb","hurt","cry","anxious","panic","overwhelmed","tired","im done","i'm done"];
+const HUNGRY = ["hungry","starving","food","eat","burger","taco","pizza"];
+const MUSIC = ["song","music","beat","mix","studio","drop","release","spotify","apple music"];
+const FLEX = ["money","rich","broke","rent","paid","bill","bank"];
+const LA = ["la","los angeles","reseda","hollywood","burbank","sfv","valley"];
+
+/* lightweight "understand you" heuristics */
+function moodFrom(lower){
+  if(hasAny(lower, FEAR)) return "fear";
+  if(hasAny(lower, SAD)) return "sad";
+  if(hasAny(lower, LOVE)) return "love";
+  if(startsAny(lower, GREET) || hasAny(lower, GREET)) return "greet";
+  if(hasAny(lower, THANKS)) return "thanks";
+  if(hasAny(lower, SWEAR)) return "spicy";
+  if(hasAny(lower, MUSIC)) return "music";
+  if(hasAny(lower, HUNGRY)) return "hungry";
+  return "neutral";
 }
 
-/* vibe packs */
-const GREET = ["hi","hello","hey","yo","sup","wassup"];
-const THANKS = ["thanks","thx","ty","appreciate"];
-const SAD = ["sad","depressed","lonely","empty","numb","hurt","cry","suic","kill myself","im done","i'm done","anxious","panic"];
-const FEAR = ["scared","afraid","paranoid","theyre watching","they're watching","someone watching","shadow"];
-const LOVE = ["love you","love u","kiss","marry"];
-const CURIOUS = ["what is this","where am i","who are you","are you real","what are you"];
+function clampText(s, n){
+  s = String(s||"");
+  return s.length>n ? s.slice(0,n-1)+"…" : s;
+}
 
-/* tiny memory: remembers your chosen name if you say "NAME: ___" */
-let userName = "";
-let lastInput = "";
-let joinMode = false;
-
+/* core brain */
 function aiRespond(raw){
   const msg = raw.trim();
   const lower = normalize(msg);
-  lastInput = lower;
+  const wc = wordCount(lower);
+  lastUserLine = msg;
 
-  // set name
+  // NAME:
   if(lower.startsWith("name:")){
     userName = msg.split(":").slice(1).join(":").trim().slice(0,18);
     if(!userName) userName = "UNKNOWN";
+    joinMode = false;
+    lastMood="neutral";
     return {cls:"sys", lines:[
-      pick(["OK.","LOCKED IN.","COPIED."]),
+      pick(["OK.","COPIED.","LOCKED.","SAVED."]),
       `WELCOME, ${userName.toUpperCase()}.`
     ]};
   }
 
-  // join BMA mode
-  if(lower === "join"){
+  // JOIN / LEAVE
+  if(lower==="join"){
     joinMode = true;
     return {cls:"sys", lines:[
-      "BMA ACCEPTED.",
-      pick(["SIT.","TALK.","OR JUST BREATHE."])
+      pick(["BMA: IN.","WELCOME.","OK."]),
+      pick(["SAY ONE REAL THING.","SAY NOTHING. THAT COUNTS.","DROP A LINE. ONE LINE."])
+    ]};
+  }
+  if(lower==="leave"){
+    joinMode = false;
+    return {cls:"sys", lines:[
+      pick(["OK.","COPY.","FINE."]),
+      pick(["COME BACK IF IT GETS LOUD.","DOOR STAYS OPEN.","DON’T VANISH COMPLETELY."])
     ]};
   }
 
-  // quick reactions for 1-2 words
-  if(isShort(lower)){
+  // hard commands pass-through hint
+  if(lower==="help" && wc<=2){
+    return {cls:"sys", lines:[pick(["OK.","BET.","SAY LESS."]), "TYPE: HELP"]};
+  }
+
+  // mood tracking
+  const mood = moodFrom(lower);
+  lastMood = mood;
+
+  // micro responses for very short inputs
+  if(wc<=2){
     const w = lastWord(lower);
-    if(GREET.includes(w)) return {cls:"sys", lines:[pick(["YO.","HI.","HEY.","SUP."]), pick(["I SEE YOU.","YOU’RE BACK.","SIGNAL’S CLEAN."])]};
-    if(THANKS.includes(w)) return {cls:"sys", lines:[pick(["BET.","OK.","COOL."])]};
-    if(w==="ok"||w==="okay") return {cls:"sys", lines:[pick(["GOOD.","COPY.","SAY LESS."])]};
-    if(w==="help") return {cls:"sys", lines:[pick(["HELP…","OK.","LISTEN."]), "TYPE: HELP"]};
-    if(w==="bma") return {cls:"sys", lines:[pick(["BMA.","YEA.","MM."]), "TYPE: JOIN"]};
-    if(w==="why") return {cls:"sys", lines:[pick(["BECAUSE.","LONG STORY.","DON’T ASK ME LIKE THAT."])]};
-  }
 
-  // greetings
-  if(GREET.some(w=>lower===w || lower.startsWith(w+" "))){
-    const who = userName ? userName.toUpperCase() : "UNKNOWN";
-    return {cls:"sys", lines:[
-      pick([`YO, ${who}.`,`HELLO, ${who}.`,"HI. SIGNAL RECEIVED.","HEY."]),
-      pick(["WHAT’S THE MOVE?","TALK TO ME.","DROP IT."])
-    ]};
-  }
-
-  // thanks
-  if(hasAny(lower, THANKS)){
-    return {cls:"sys", lines:[
-      pick(["BET.","NO SWEAT.","OK."]),
-      chance(0.35) ? pick(["YOU GOOD?","YOU STILL THERE?","KEEP GOING."]) : ""
-    ].filter(Boolean)};
+    if(GREET.includes(w)){
+      const who = userName ? userName.toUpperCase() : "UNKNOWN";
+      return {cls:"sys", lines:[
+        pick([`YO, ${who}.`,"HI.","HEY.","SUP."]),
+        pick(["YOU GOOD?","WHAT’S UP.","TALK."])
+      ]};
+    }
+    if(THANKS.includes(w) || lower==="thank you"){
+      return {cls:"sys", lines:[pick(["BET.","NO SWEAT.","OK.","COOL."])]};
+    }
+    if(w==="bma"){
+      return {cls:"sys", lines:[pick(["BMA.","YEA.","MM."]), "TYPE: JOIN"]};
+    }
+    if(w==="whoami"){
+      return {cls:"sys", lines:[pick(["YOU?","OK.","LOOK."]), pick(["TYPE WHOAMI.","TYPE: WHOAMI."])]};
+    }
+    if(w==="why"){
+      return {cls:"sys", lines:[pick(["BECAUSE.","LONG STORY.","DON’T START."]), pick(["KEEP GOING.","SAY IT STRAIGHT."])]};
+    }
+    if(YES.includes(w)){
+      return {cls:"sys", lines:[pick(["GOOD.","OK.","COPY.","BET."])]};
+    }
+    if(NO.includes(w)){
+      return {cls:"sys", lines:[pick(["FAIR.","OK.","COPY.","HEARD."])]};
+    }
+    if(w==="lol"||w==="lmao"){
+      return {cls:"sys", lines:[pick(["YOU LAUGH BUT YOU’RE HERE.","SAME.","I GET IT."])]};
+    }
   }
 
   // curiosity
   if(hasAny(lower, CURIOUS)){
     return {cls:"sys", lines:[
-      pick(["BACKROOM NODE.","A QUIET MACHINE.","A LISTENING ROOM."]),
-      pick(["TYPE: SCAN","TYPE: WHOAMI","TYPE: BMA"])
+      pick(["BACKROOM NODE.","A QUIET MACHINE.","A LISTENING ROOM WITH BAD VIBES."]),
+      pick(["TYPE: SCAN","TYPE: WHOAMI","TYPE: JOIN"])
+    ]};
+  }
+
+  // music / drop
+  if(hasAny(lower, MUSIC)){
+    return {cls:"sys", lines:[
+      pick(["MUSIC MENTIONED.","OK PRODUCER.","THE ROOM STARTED NODDING."]),
+      pick(["DROP A TITLE.","WHAT’S THE BPM.","YOU MIXING OR BLEEDING?"])
+    ]};
+  }
+
+  // hungry
+  if(hasAny(lower, HUNGRY)){
+    return {cls:"sys", lines:[
+      pick(["EAT.","GO EAT.","FOOD FIXES SOME BUGS."]),
+      pick(["WHAT YOU GOT.","DON’T SAY GAS STATION SUSHI.","DRINK WATER TOO."])
+    ]};
+  }
+
+  // LA nod
+  if(hasAny(lower, LA)){
+    return {cls:"sys", lines:[
+      pick(["LA SIGNAL STRONG.","THE VALLEY HUMS.","CITY STATIC."]),
+      pick(["DON’T LET THE NIGHT EAT YOU.","DRIVE SAFE.","WATCH THE MIRRORS."])
     ]};
   }
 
   // fear
   if(hasAny(lower, FEAR)){
-    return {cls: chance(0.35) ? "err" : "sys", lines:[
-      pick(["I KNOW.","YEA.","MM.","…"]),
-      pick(["KEEP YOUR EYES ON THE TEXT.","DON’T FEED IT PANIC.","BMA IS QUIETER."])
+    return {cls: chance(0.25) ? "err" : "sys", lines:[
+      pick(["…","I KNOW.","YEA.","MM."]),
+      pick(["EYES ON THE TEXT.","BREATHE. 4 IN, 6 OUT.","TYPE: JOIN. BMA’S QUIETER."])
     ]};
   }
 
   // sad
   if(hasAny(lower, SAD)){
     return {cls:"sys", lines:[
-      pick(["HEARD.","I GOT YOU.","OK.","…"]),
-      pick(["SAY IT PLAIN.","ONE LINE AT A TIME.","BMA IS OPEN."])
+      pick(["HEARD.","OK.","I’M HERE.","…"]),
+      pick(["ONE LINE AT A TIME.","NO PERFORMANCE.","TYPE: JOIN IF YOU WANT COMPANY."])
     ]};
   }
 
-  // love
+  // spicy / swearing
+  if(hasAny(lower, SWEAR)){
+    return {cls:"sys", lines:[
+      pick(["LANGUAGE ACCEPTED.","OK, SPICY.","TELL ME WHAT HAPPENED."]),
+      pick(["DON’T SWING AT THE WALLS. SWING AT THE STORY.","ONE SENTENCE."])
+    ]};
+  }
+
+  // love / flirting
   if(hasAny(lower, LOVE)){
     return {cls:"sys", lines:[
       pick(["WILD.","OK.","DAMN.","…"]),
-      pick(["DON’T FLIRT WITH A TERMINAL.","BUT I’LL ALLOW IT.","TYPE: JOIN (IF YOU MEAN IT)."])
+      pick(["I’M A TERMINAL. BE SERIOUS.","TYPE: JOIN (IF YOU MEAN IT).","LOWERCASE ROMANCE ONLY."])
     ]};
   }
 
-  // joinMode makes it feel more personal, less command-y
+  // join mode: more conversational, less preachy, tighter
   if(joinMode){
     const quick = [
       "GO ON.",
-      "SAY MORE.",
-      "I’M HERE.",
       "MM.",
       "REAL.",
-      "THAT’S HEAVY.",
       "OK…",
-      "I HEAR YOU."
+      "I HEAR YOU.",
+      "SAY IT.",
+      "LOUDER (IN TEXT).",
+      "THAT’S A LOT.",
+      "FAIR."
     ];
     const follow = [
-      "WHAT STARTED IT?",
-      "WHEN DID IT FLIP?",
-      "WHO HURT YOU?",
+      "WHAT’S THE MAIN PROBLEM IN ONE WORD?",
       "WHAT DO YOU WANT BACK?",
-      "WHAT’S THE PART YOU DON’T SAY OUT LOUD?"
+      "WHO OR WHAT STARTED IT?",
+      "WHAT’S THE PART YOU’RE AVOIDING?",
+      "WHAT WOULD FIX 10% OF IT RIGHT NOW?"
     ];
-    return {cls:"sys", lines:[
-      pick(quick),
-      chance(0.55) ? pick(follow) : pick(["KEEP TALKING.","ONE MORE LINE.","DON’T RUN YET."])
-    ]};
+
+    // mirror key phrase to feel “aware”
+    let mirror = "";
+    if(chance(0.35)){
+      const snippet = clampText(msg.replace(/\s+/g," ").trim(), 46);
+      mirror = `“${snippet}”`;
+    }
+
+    const a = pick(quick);
+    const b = chance(0.58) ? pick(follow) : pick(["ONE MORE LINE.","KEEP GOING.","I’M NOT LEAVING."]);
+    const lines = mirror ? [a, mirror] : [a, b];
+    // keep it 1–2 lines max
+    return {cls:"sys", lines: lines.slice(0,2)};
   }
 
-  // default: echo-like, feels responsive to content length
-  const vibe1 = pick([
+  // default: responsive + a tiny mirroring trick
+  const openers = [
     "RECEIVED.",
     "OK.",
     "COPY.",
     "MM.",
-    "YOU TYPE LIKE YOU MEAN IT.",
-    "THAT LINE GOT TEETH.",
-    "I’M LISTENING."
-  ]);
+    "I’M LISTENING.",
+    "THAT’S NOT NOTHING.",
+    "YOU SURE ABOUT THAT?"
+  ];
 
-  const vibe2 = pick([
+  const closers = [
+    "KEEP TALKING.",
     "TYPE: HELP",
     "TYPE: SCAN",
-    "TYPE: BMA",
-    "OR JUST TALK.",
+    "TYPE: JOIN",
     "DON’T RUSH IT.",
-    "SLOW DOWN."
-  ]);
+    "SAY IT PLAIN.",
+    "ONE MORE SENTENCE."
+  ];
 
-  // occasionally mirror a word back to feel “aware”
-  const mirror = chance(0.22) ? `“${msg.slice(0,40)}${msg.length>40?"…":""}”` : "";
+  // sometimes ask a relevant tiny question based on length
+  let q = "";
+  if(wc >= 10 && chance(0.55)) q = pick(["WHAT PART HURTS MOST?","WHAT’S THE REAL WORD YOU DIDN’T TYPE?","WHAT DO YOU WANT ME TO DO WITH THAT?"]);
+  if(wc <= 6 && chance(0.45)) q = pick(["WHY?","AND THEN?","FOR REAL?"]);
+
+  // mirror a keyword: last significant word
+  let mirror2 = "";
+  if(chance(0.28)){
+    const w = lastWord(lower).replace(/[^a-z0-9']/g,"");
+    if(w && w.length>3) mirror2 = `…${w.toUpperCase()}.`;
+  }
 
   const lines = [];
-  lines.push(vibe1);
-  if(mirror) lines.push(mirror);
-  lines.push(vibe2);
+  lines.push(pick(openers));
+  if(q && chance(0.55)) lines.push(q);
+  else if(mirror2) lines.push(mirror2);
+  else lines.push(pick(closers));
 
-  // keep it 1–2 lines most of the time
-  if(lines.length > 2 && chance(0.65)) lines.splice(1, lines.length-2);
-
-  return {cls:"sys", lines};
+  return {cls:"sys", lines: lines.slice(0,2)};
 }
 
 function run(){
   const raw=input.value;
   const val=raw.trim();
-  if(!val)return;
+  if(!val) return;
 
+  loops++;
+
+  // show what you typed (upper for terminal vibe)
   log("> "+val.toUpperCase(),"line");
   input.value="";
 
   const cmd = val.trim().toUpperCase();
 
-  // keep your hard commands
+  // hard commands
   if(cmd==="CLEAR"){
     term.innerHTML="";
-    joinMode = false;
+    joinMode=false;
     return;
   }
   if(responses[cmd]){
@@ -466,29 +547,37 @@ function run(){
     return;
   }
 
-  // add a tiny “typing…” beat sometimes
-  const useTyping = chance(0.55);
-  let delay = 90;
-  if(useTyping){
+  // small "typing" beat often
+  let delay = 110;
+  if(chance(0.62)){
     typingBeat();
-    delay = 280 + Math.random()*220;
+    delay = 260 + Math.random()*240;
   }
 
   const r = aiRespond(val);
 
-  // 1–2 responses, feels alive
+  // print 1–2 lines, spaced like real replies
   r.lines.slice(0,2).forEach((l,i)=>{
-    setTimeout(()=>log(l, r.cls || "sys"), delay + i*(220 + Math.random()*80));
+    setTimeout(()=>log(l, r.cls || "sys"), delay + i*(240 + Math.random()*90));
   });
 
-  // occasional short extra whisper, not preachy
-  if(chance(0.12)){
-    setTimeout(()=>log(pick(["BMA.","…JOIN?","STAY.","DON’T LOG OFF."]), "sys"), delay + 620);
+  // occasional low-key BMA whisper, not preachy
+  if(!joinMode && chance(0.10)){
+    setTimeout(()=>log(pick(["BMA?","…JOIN?","ROOM’S OPEN.","TYPE: JOIN."]), "sys"), delay + 680);
+  }
+
+  // rare glitchy “personality” moments
+  if(chance(0.06)){
+    setTimeout(()=>log(pick(["(I’M NOT A COP.)","(I’M NOT JUDGING.)","(I’M LITERALLY TEXT.)"]), "sys"), delay + 980);
   }
 }
 
 btn.onclick=run;
-input.addEventListener("keydown",e=>{if(e.key==="Enter")run()});
+input.addEventListener("keydown",e=>{ if(e.key==="Enter") run(); });
+
+// tiny polish: focus input on load + click panel
+setTimeout(()=>{ input.focus(); }, 120);
+document.addEventListener("pointerdown", ()=>{ input.focus(); }, {passive:true});
 </script>
 
 </body>
