@@ -12,7 +12,7 @@
   --violet:#8a2eff;
   --max:1100px;
   --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  --lyric: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; /* overridden below to match title */
+  --lyric: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
 }
 
 *{box-sizing:border-box}
@@ -22,22 +22,22 @@ body{
   color:#fff;
   font-family:var(--sans);
   overflow-x:hidden;
-
-  /* NEW: global violet glow across whole page */
   position:relative;
 }
+
+/* FULL PAGE VIOLET ATMOSPHERE */
 body::before{
   content:"";
   position:fixed;
-  inset:-10%;
+  inset:-20%;
   pointer-events:none;
   z-index:0;
   background:
-    radial-gradient(circle at 22% 18%, rgba(138,46,255,.18), transparent 62%),
-    radial-gradient(circle at 78% 34%, rgba(138,46,255,.12), transparent 66%),
-    radial-gradient(circle at 44% 88%, rgba(138,46,255,.10), transparent 68%);
+    radial-gradient(circle at 20% 20%, rgba(138,46,255,.22), transparent 60%),
+    radial-gradient(circle at 80% 30%, rgba(138,46,255,.18), transparent 65%),
+    radial-gradient(circle at 50% 90%, rgba(138,46,255,.16), transparent 70%);
   mix-blend-mode:screen;
-  filter:saturate(1.1);
+  filter:blur(10px) saturate(1.2);
 }
 
 a{color:#fff;text-decoration:none}
@@ -49,7 +49,6 @@ header{
   display:flex;justify-content:center;gap:40px;
   background:rgba(0,0,0,.55);
   backdrop-filter:blur(10px);
-  /* removed border */
   padding:16px;
   z-index:9;
 }
@@ -58,7 +57,6 @@ header a{
   letter-spacing:.25em;
   text-transform:uppercase;
   opacity:.85;
-  color:#fff;
 }
 header a:hover{opacity:1}
 
@@ -80,14 +78,11 @@ header a:hover{opacity:1}
   padding-top:80px;
   text-align:center;
   position:relative;
-
-  /* full screen width stays */
   width:100vw;
   margin-left:calc(50% - 50vw);
   margin-right:calc(50% - 50vw);
 }
 
-/* softer spotlight */
 .hero::before{
   content:"";
   position:absolute;
@@ -97,7 +92,6 @@ header a:hover{opacity:1}
   mix-blend-mode:screen;
 }
 
-/* glow clouds */
 .hero:after{
   content:"";
   position:absolute;
@@ -111,7 +105,6 @@ header a:hover{opacity:1}
 }
 @keyframes storm{50%{opacity:.22}}
 
-/* LOGO */
 .logo{
   font-size:clamp(48px,10vw,92px);
   letter-spacing:.34em;
@@ -128,7 +121,6 @@ header a:hover{opacity:1}
   50%{transform:scale(1.01)}
 }
 
-/* lightning flash */
 .logo.flash{ animation:flash .35s linear; }
 @keyframes flash{
   0%{filter:brightness(1)}
@@ -138,10 +130,7 @@ header a:hover{opacity:1}
 }
 
 /* BLOCK */
-.block{
-  /* removed borders so it feels like one page */
-  padding:50px 0;
-}
+.block{padding:50px 0;}
 
 .kicker{
   font-size:12px;
@@ -156,17 +145,14 @@ header a:hover{opacity:1}
   display:flex;
   gap:18px;
   align-items:center;
-  /* removed border */
   background:rgba(138,46,255,.06);
   border-radius:22px;
   padding:18px;
   position:relative;
   overflow:hidden;
   cursor:pointer;
-  -webkit-tap-highlight-color: transparent;
 }
 
-/* shine */
 .releaseBox:before{
   content:"";
   position:absolute;
@@ -184,14 +170,12 @@ header a:hover{opacity:1}
   width:110px;height:110px;
   border-radius:16px;
   overflow:hidden;
-  /* removed border */
   flex-shrink:0;
 }
 .cover img{
   width:100%;
   height:100%;
   object-fit:cover;
-  display:block;
 }
 
 .releaseTitle{
@@ -206,13 +190,11 @@ header a:hover{opacity:1}
   opacity:.7;
 }
 
-/* small status hint */
 .hintRow{
   margin-top:12px;
   display:flex;
   gap:10px;
   flex-wrap:wrap;
-  align-items:center;
 }
 
 .pill{
@@ -224,13 +206,10 @@ header a:hover{opacity:1}
   letter-spacing:.2em;
   font-size:11px;
   text-transform:uppercase;
-  border:0; /* removed borders */
+  border:0;
   background:rgba(255,255,255,.03);
-  color:rgba(255,255,255,.92);
 }
-.pill.violet{
-  background: rgba(138,46,255,.10);
-}
+.pill.violet{ background: rgba(138,46,255,.10); }
 
 .pill.rainbow{ animation:rainbow 4s linear infinite; }
 @keyframes rainbow{
@@ -241,7 +220,7 @@ header a:hover{opacity:1}
   100%{color:#ff2aff}
 }
 
-/* VISUALS */
+/* VIDEOS */
 .videoGrid{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -249,18 +228,9 @@ header a:hover{opacity:1}
 }
 @media(max-width:800px){.videoGrid{grid-template-columns:1fr}}
 
-.videoCard{
-  /* removed border */
-  border-radius:20px;
-  overflow:hidden;
-}
-.videoCard iframe{
-  width:100%;
-  aspect-ratio:16/9;
-  border:0;
-}
+.videoCard{border-radius:20px;overflow:hidden}
+.videoCard iframe{width:100%;aspect-ratio:16/9;border:0}
 
-/* NEW: pager under videos */
 .videoPager{
   display:flex;
   justify-content:center;
@@ -268,7 +238,6 @@ header a:hover{opacity:1}
   margin-top:16px;
 }
 .pageBtn{
-  appearance:none;
   border:0;
   cursor:pointer;
   padding:12px 18px;
@@ -277,21 +246,17 @@ header a:hover{opacity:1}
   color:#fff;
   letter-spacing:.22em;
   font-size:11px;
-  text-transform:uppercase;
 }
-.pageBtn:hover{filter:brightness(1.06)}
 
-/* LYRIC ROTATOR */
+/* LYRIC — SMALLER */
 .lyric{
   text-align:center;
-  font-size:clamp(14px,1.9vw,20px);
+  font-size:clamp(10px,1.2vw,14px);
   margin-top:30px;
   line-height:1.7;
-  /* make lyric font exactly like title */
   font-family:var(--sans);
   letter-spacing:.34em;
   text-transform:uppercase;
-  opacity:1;
   transition:opacity 2.2s;
 }
 .lyric.fade{opacity:0}
@@ -321,7 +286,7 @@ header a:hover{opacity:1}
 .eat{
   display:block;
   margin:70px auto 0;
-  font-size:13px; /* slightly smaller */
+  font-size:13px;
   letter-spacing:.3em;
   animation:eatBounce 2.6s ease-in-out infinite, rainbow 4s linear infinite;
 }
@@ -333,89 +298,75 @@ header a:hover{opacity:1}
 footer{
   margin-top:40px;
   padding-top:20px;
-  /* removed border */
   font-size:11px;
   letter-spacing:.2em;
   opacity:.6;
   text-align:center;
 }
 
-@media (prefers-reduced-motion: reduce){
-  .logo, .followBtn, .eat, .pill.rainbow, .hero:after{ animation:none !important; }
-}
 </style>
 </head>
-
 <body>
 
 <header>
-  <a href="listen.html">LISTEN</a>
-  <a href="#visuals">VISUALS</a>
-  <a href="shop.html">SHOP</a>
-  <a href="follow.html">FOLLOW</a>
+<a href="listen.html">LISTEN</a>
+<a href="#visuals">VISUALS</a>
+<a href="shop.html">SHOP</a>
+<a href="follow.html">FOLLOW</a>
 </header>
 
 <main class="wrap">
 
 <section class="hero">
-  <div class="logo" id="logo">CLAWBOI</div>
+<div class="logo" id="logo">CLAWBOI</div>
 </section>
 
 <section class="block">
-  <div class="kicker">Latest Release</div>
+<div class="kicker">Latest Release</div>
 
-  <!-- Entire box is the player -->
-  <div class="releaseBox" id="releaseBox" role="button" aria-label="Play or pause latest release">
+<div class="releaseBox" id="releaseBox">
 
-    <div class="cover">
-      <img src="images/latest-cover.jpg" alt="Latest cover">
-    </div>
+<div class="cover">
+<img src="images/latest-cover.jpg">
+</div>
 
-    <div>
-      <h2 class="releaseTitle">Two Times</h2>
-      <div class="releaseMeta">emo trap / lonely flex</div>
+<div>
+<h2 class="releaseTitle">Two Times</h2>
+<div class="releaseMeta">emo trap / lonely flex</div>
 
-      <div class="hintRow">
-        <span class="pill violet" id="tapHint">TAP TO PLAY</span>
-        <a class="pill" href="https://youtu.be/DEdhtI3LMS4" target="_blank" rel="noopener">YOUTUBE</a>
-      </div>
+<div class="hintRow">
+<span class="pill violet" id="tapHint">TAP TO PLAY</span>
+<a class="pill" href="https://youtu.be/DEdhtI3LMS4" target="_blank">YOUTUBE</a>
+</div>
 
-      <!-- Hidden native audio (no controls shown) -->
-      <audio id="audio" playsinline preload="metadata">
-        <source src="audio/latest.mp3?v=1" type="audio/mpeg">
-      </audio>
-    </div>
+<audio id="audio">
+<source src="audio/latest.mp3?v=1" type="audio/mpeg">
+</audio>
 
-  </div>
+</div>
+</div>
 </section>
 
 <section id="visuals" class="block">
-  <div class="kicker">Visuals</div>
+<div class="kicker">Visuals</div>
 
-  <div class="videoGrid" id="videoGrid">
-    <div class="videoCard">
-      <iframe src="https://www.youtube.com/embed/uVcRKlRVFgs" allowfullscreen></iframe>
-    </div>
-    <div class="videoCard">
-      <iframe src="https://www.youtube.com/embed/OJlGBxj3T0U" allowfullscreen></iframe>
-    </div>
-  </div>
+<div class="videoGrid" id="videoGrid"></div>
 
-  <div class="videoPager">
-    <button class="pageBtn" id="prevVideos" aria-label="Previous videos">◀</button>
-    <button class="pageBtn" id="nextVideos" aria-label="Next videos">▶</button>
-  </div>
+<div class="videoPager">
+<button class="pageBtn" id="prevVideos">◀</button>
+<button class="pageBtn" id="nextVideos">▶</button>
+</div>
 </section>
 
 <p class="lyric" id="lyricBox">
-  “I tried everything but <em>nothing’s fixing me</em>.”
+“I tried everything but <em>nothing’s fixing me</em>.”
 </p>
 
 <a href="follow.html" class="followBtn">FOLLOW</a>
 <a href="dream.html" class="eat">EAT ME</a>
 
 <footer>
-  © <span id="y"></span> CLAWBOI
+© <span id="y"></span> CLAWBOI
 </footer>
 
 </main>
@@ -425,128 +376,79 @@ document.getElementById("y").textContent=new Date().getFullYear();
 
 /* spotlight */
 document.addEventListener("pointermove",e=>{
-  document.documentElement.style.setProperty("--x",(e.clientX/window.innerWidth)*100+"%");
-  document.documentElement.style.setProperty("--y",(e.clientY/window.innerHeight)*100+"%");
+document.documentElement.style.setProperty("--x",(e.clientX/window.innerWidth)*100+"%");
+document.documentElement.style.setProperty("--y",(e.clientY/window.innerHeight)*100+"%");
 });
 
-/* logo lightning */
+/* logo flash */
 const logo=document.getElementById("logo");
-logo.addEventListener("click",()=>{
-  logo.classList.add("flash");
-  setTimeout(()=>logo.classList.remove("flash"),350);
-});
-
-/* iPhone-friendly: tap the release box to play/pause */
-const box=document.getElementById("releaseBox");
-const audio=document.getElementById("audio");
-const tapHint=document.getElementById("tapHint");
-
-const setHint = (state) => {
-  if(!tapHint) return;
-  if(state === "playing"){
-    tapHint.textContent = "PLAYING";
-    tapHint.classList.add("rainbow");
-  }else if(state === "paused"){
-    tapHint.textContent = "TAP TO PLAY";
-    tapHint.classList.remove("rainbow");
-  }else if(state === "loading"){
-    tapHint.textContent = "LOADING";
-    tapHint.classList.remove("rainbow");
-  }
+logo.onclick=()=>{
+logo.classList.add("flash");
+setTimeout(()=>logo.classList.remove("flash"),350);
 };
 
-audio.addEventListener("play", ()=> setHint("playing"));
-audio.addEventListener("pause", ()=> setHint("paused"));
-audio.addEventListener("waiting", ()=> setHint("loading"));
-audio.addEventListener("canplay", ()=> { if(!audio.paused) setHint("playing"); });
+/* audio */
+const box=document.getElementById("releaseBox");
+const audio=document.getElementById("audio");
+const hint=document.getElementById("tapHint");
 
-box.addEventListener("click", async (e)=>{
-  // Don’t hijack clicks on the YouTube link
-  const a = e.target.closest("a");
-  if(a) return;
+box.onclick=async e=>{
+if(e.target.closest("a"))return;
+if(audio.paused){
+hint.textContent="PLAYING";
+hint.classList.add("rainbow");
+await audio.play().catch(()=>{});
+}else{
+audio.pause();
+audio.currentTime=0;
+hint.textContent="TAP TO PLAY";
+hint.classList.remove("rainbow");
+}
+};
 
-  try{
-    if(audio.paused){
-      setHint("loading");
-      await audio.play();  // user gesture = click on box
-    }else{
-      audio.pause();
-      audio.currentTime = 0;
-    }
-  }catch(err){
-    // If this triggers, it's almost always path/caching/MIME.
-    setHint("paused");
-    alert("Audio didn’t start. Double-check: /audio/latest.mp3 is under 10–15MB and GitHub Pages is serving it (try hard refresh).");
-  }
-});
-
-/* LYRIC ROTATOR (longer fade) */
+/* lyrics */
 const lyrics=[
-  `I tried everything but <em>nothing’s fixing me</em>.`,
-  `I'm sad just right from <em>head to toe</em>.`,
-  `These people ain't tryna <em>know me</em>.`,
-  `Shadows grow deep and they <em>grow long</em>.`,
-  `I’m riding with only the <em>real ones</em>.`
+`I tried everything but <em>nothing’s fixing me</em>.`,
+`I'm sad just right from <em>head to toe</em>.`,
+`These people ain't tryna <em>know me</em>.`,
+`Shadows grow deep and they <em>grow long</em>.`,
+`I’m riding with only the <em>real ones</em>.`
 ];
 
 let i=0;
-const lyricBox=document.getElementById("lyricBox");
+const boxLy=document.getElementById("lyricBox");
 
 setInterval(()=>{
-  lyricBox.classList.add("fade");
-  setTimeout(()=>{
-    i=(i+1)%lyrics.length;
-    lyricBox.innerHTML="“"+lyrics[i]+"”";
-    lyricBox.classList.remove("fade");
-  },1700);
+boxLy.classList.add("fade");
+setTimeout(()=>{
+i=(i+1)%lyrics.length;
+boxLy.innerHTML="“"+lyrics[i]+"”";
+boxLy.classList.remove("fade");
+},1700);
 },8500);
 
-/* VIDEO PAGER: shows 2 at a time */
-const videoPages = [
-  [
-    "https://www.youtube.com/embed/uVcRKlRVFgs",
-    "https://www.youtube.com/embed/OJlGBxj3T0U"
-  ],
-  [
-    "https://www.youtube.com/embed/AYGTVx6F-QY",
-    "https://www.youtube.com/embed/kHzCjDuKYTQ"
-  ],
-  [
-    "https://www.youtube.com/embed/ljHghBupoIE",
-    "https://www.youtube.com/embed/u2UbYB2gQ78"
-  ],
-  [
-    "https://www.youtube.com/embed/52cAZvRj_Js",
-    "https://www.youtube.com/embed/ZXxUF1FeqDI"
-  ],
-  [
-    "https://www.youtube.com/embed/l5UzyZNnnqM",
-    "https://www.youtube.com/embed/p2sGZUEJcs4"
-  ]
+/* videos */
+const pages=[
+["https://www.youtube.com/embed/uVcRKlRVFgs","https://www.youtube.com/embed/OJlGBxj3T0U"],
+["https://www.youtube.com/embed/AYGTVx6F-QY","https://www.youtube.com/embed/kHzCjDuKYTQ"],
+["https://www.youtube.com/embed/ljHghBupoIE","https://www.youtube.com/embed/u2UbYB2gQ78"],
+["https://www.youtube.com/embed/52cAZvRj_Js","https://www.youtube.com/embed/ZXxUF1FeqDI"],
+["https://www.youtube.com/embed/l5UzyZNnnqM","https://www.youtube.com/embed/p2sGZUEJcs4"]
 ];
 
-let page = 0;
-const grid = document.getElementById("videoGrid");
-const prevBtn = document.getElementById("prevVideos");
-const nextBtn = document.getElementById("nextVideos");
+let page=0;
+const grid=document.getElementById("videoGrid");
 
-function renderVideos(){
-  const [a,b] = videoPages[page];
-  grid.innerHTML = `
-    <div class="videoCard"><iframe src="${a}" allowfullscreen></iframe></div>
-    <div class="videoCard"><iframe src="${b}" allowfullscreen></iframe></div>
-  `;
+function draw(){
+grid.innerHTML=`
+<div class="videoCard"><iframe src="${pages[page][0]}" allowfullscreen></iframe></div>
+<div class="videoCard"><iframe src="${pages[page][1]}" allowfullscreen></iframe></div>
+`;
 }
+draw();
 
-prevBtn.addEventListener("click", ()=>{
-  page = (page - 1 + videoPages.length) % videoPages.length;
-  renderVideos();
-});
-
-nextBtn.addEventListener("click", ()=>{
-  page = (page + 1) % videoPages.length;
-  renderVideos();
-});
+nextVideos.onclick=()=>{page=(page+1)%pages.length;draw();}
+prevVideos.onclick=()=>{page=(page-1+pages.length)%pages.length;draw();}
 </script>
 
 </body>
