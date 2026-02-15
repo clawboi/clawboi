@@ -1,1 +1,713 @@
+<!-- mystery.html -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>MYSTERY</title>
+<style>
+:root{
+  --bg:#000;
+  --fg:#fff;
+  --violet:#8a2eff;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  overflow:hidden;
+}
+
+/* violet fog */
+body:before{
+  content:"";
+  position:fixed;
+  inset:-25%;
+  pointer-events:none;
+  z-index:0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(138,46,255,.24), transparent 60%),
+    radial-gradient(circle at 80% 30%, rgba(138,46,255,.14), transparent 70%),
+    radial-gradient(circle at 48% 88%, rgba(138,46,255,.12), transparent 72%),
+    radial-gradient(circle at 60% 60%, rgba(255,255,255,.04), transparent 72%);
+  mix-blend-mode:screen;
+  filter:blur(40px) saturate(1.2);
+  animation:fog 18s ease-in-out infinite;
+}
+@keyframes fog{
+  0%,100%{transform:translate(0,0) scale(1)}
+  50%{transform:translate(-2.5%,3.5%) scale(1.02)}
+}
+
+/* scanlines */
+.scan{
+  position:fixed; inset:0;
+  pointer-events:none;
+  z-index:6;
+  opacity:.08;
+  mix-blend-mode:overlay;
+  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
+}
+
+/* brand */
+.brand{
+  position:fixed; top:14px; left:14px;
+  z-index:12;
+  font-size:11px;
+  letter-spacing:.34em;
+  text-transform:uppercase;
+  opacity:.78;
+  text-shadow:0 0 18px rgba(138,46,255,.35);
+}
+.brand a{color:#fff;text-decoration:none}
+
+/* bottom back */
+.back{
+  position:fixed;
+  right:16px;
+  bottom:16px;
+  z-index:12;
+  font-size:10px;
+  letter-spacing:.32em;
+  text-transform:uppercase;
+  opacity:.7;
+}
+.back a{color:#fff;text-decoration:none}
+.back a:hover{opacity:1}
+
+/* center */
+.wrap{
+  position:relative;
+  z-index:2;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  text-align:center;
+}
+.title{
+  font-size:clamp(16px,4vw,40px);
+  letter-spacing:.46em;
+  text-transform:uppercase;
+  text-shadow:0 0 18px rgba(138,46,255,.45), 0 0 60px rgba(138,46,255,.18);
+  user-select:none;
+}
+.sub{
+  margin-top:12px;
+  font-size:11px;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+  opacity:.62;
+  line-height:1.7;
+}
+
+/* HUD */
+.hud{
+  position:fixed;
+  left:50%;
+  bottom:18px;
+  transform:translateX(-50%);
+  z-index:11;
+  font-size:10px;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  opacity:.0;
+  transition:opacity .2s;
+  pointer-events:none;
+}
+.hud.on{opacity:.62}
+
+/* secret mark */
+.mark{
+  position:fixed;
+  left:12px;
+  bottom:12px;
+  z-index:8;
+  font-size:9px;
+  letter-spacing:.44em;
+  text-transform:uppercase;
+  opacity:.12;
+  text-shadow:0 0 22px rgba(138,46,255,.45);
+  user-select:none;
+  pointer-events:none;
+}
+
+/* overlay phrases */
+.whisper{
+  position:fixed;
+  inset:auto 0 0 0;
+  z-index:10;
+  padding:18px 16px 26px;
+  text-align:center;
+  font-size:11px;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .12s linear;
+  text-shadow:0 0 18px rgba(138,46,255,.30);
+}
+.whisper.on{opacity:.75}
+
+/* tear bar */
+.tear{
+  position:fixed;
+  left:-10%;
+  width:120%;
+  height:18px;
+  z-index:9;
+  opacity:0;
+  mix-blend-mode:screen;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.12), rgba(138,46,255,.22), rgba(255,255,255,.10), transparent);
+  filter:blur(.2px);
+  transform:skewX(-18deg);
+}
+
+/* flash */
+.flash{
+  position:fixed; inset:0;
+  background:#fff;
+  opacity:0;
+  pointer-events:none;
+  z-index:10;
+}
+.flash.active{animation:flash .14s}
+@keyframes flash{
+  0%{opacity:0}
+  50%{opacity:.35}
+  100%{opacity:0}
+}
+
+/* particles */
+.p{
+  position:fixed;
+  width:10px;height:10px;
+  border-radius:50%;
+  background:rgba(138,46,255,.9);
+  box-shadow:0 0 20px rgba(138,46,255,.35);
+  pointer-events:none;
+  z-index:9;
+  transform:translate(-50%,-50%);
+  opacity:0;
+}
+
+/* terminal */
+.term{
+  margin:18px auto 0;
+  width:min(860px, 100%);
+  text-align:left;
+  background:rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:16px;
+  padding:14px;
+  height:240px;
+  overflow:auto;
+  backdrop-filter: blur(10px);
+  box-shadow:0 0 60px rgba(138,46,255,.10);
+}
+.line{opacity:.86; font-size:12px; letter-spacing:.08em; line-height:1.65; white-space:pre-wrap}
+.sys{color:#9d6cff}
+.err{color:#ff4a7a}
+.dim{opacity:.55}
+
+/* floating “sigil” glyphs */
+.sigil{
+  position:fixed;
+  left:0; top:0;
+  transform:translate(-50%,-50%);
+  z-index:7;
+  font-size:14px;
+  letter-spacing:.22em;
+  opacity:.0;
+  color:#fff;
+  text-shadow:0 0 18px rgba(138,46,255,.55);
+  pointer-events:none;
+  user-select:none;
+  mix-blend-mode:screen;
+}
+
+@media (prefers-reduced-motion: reduce){
+  body:before{animation:none!important}
+}
+</style>
+</head>
+
+<body>
+<div class="scan"></div>
+<div class="flash" id="flash"></div>
+<div class="tear" id="tear"></div>
+<div class="whisper" id="whisper">THE PAGE IS LISTENING</div>
+<div class="hud" id="hud">PRESS KEYS · CLICK · HOLD · DRAG</div>
+<div class="mark" id="mark">MYSTERY</div>
+
+<div class="brand"><a href="index.html">CLAWBOI</a></div>
+<div class="back"><a href="secret.html">RETURN TO TRANSMISSION</a></div>
+
+<div class="wrap">
+  <div style="width:min(980px,100%)">
+    <div class="title" id="title">MYSTERY NODE</div>
+    <div class="sub" id="sub">EVERY INPUT BECOMES A DIFFERENT WORLD. NOTHING REPEATS. <span style="opacity:.65">▮</span></div>
+
+    <div class="term" id="term">
+      <div class="line sys">NODE: MYSTERY.html</div>
+      <div class="line">STATUS: UNSTABLE</div>
+      <div class="line dim">TIP: TYPE ANYTHING. IT WILL ANSWER. (IT LIES SOMETIMES.)</div>
+      <div class="line dim">RARE: SOME KEYS OPEN “EVENTS”. YOU’LL KNOW WHEN IT HAPPENS.</div>
+      <div class="line dim">…</div>
+    </div>
+  </div>
+</div>
+
+<div class="p" id="p"></div>
+
+<script>
+/* ========= UTIL ========= */
+const rand = (a,b)=> a + Math.random()*(b-a);
+const rint = (a,b)=> Math.floor(rand(a,b+1));
+const pick = (arr)=> arr[Math.floor(Math.random()*arr.length)];
+const clamp = (n,a,b)=> Math.max(a, Math.min(b,n));
+const pad2 = (n)=> String(n).padStart(2,"0");
+
+const flash = document.getElementById("flash");
+const tear  = document.getElementById("tear");
+const whisper = document.getElementById("whisper");
+const hud = document.getElementById("hud");
+const term = document.getElementById("term");
+const title = document.getElementById("title");
+const sub = document.getElementById("sub");
+const p = document.getElementById("p");
+
+/* ========= AUDIO (tiny synth, no files needed) ========= */
+let ctx = null, master=null, analyser=null, data=null, audioOn=false;
+function ensureAudio(){
+  if(ctx) return;
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  master = ctx.createGain();
+  master.gain.value = 0.12;
+  analyser = ctx.createAnalyser();
+  analyser.fftSize = 512;
+  data = new Uint8Array(analyser.frequencyBinCount);
+  master.connect(analyser);
+  analyser.connect(ctx.destination);
+}
+async function unlockAudio(){
+  try{
+    ensureAudio();
+    await ctx.resume?.();
+    audioOn = true;
+  }catch(e){}
+}
+window.addEventListener("pointerdown", unlockAudio, {passive:true});
+window.addEventListener("keydown", unlockAudio);
+
+function blip(type="square", base=120, dur=0.09){
+  if(!audioOn || !ctx) return;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = type;
+  o.frequency.value = base;
+  g.gain.value = 0.0001;
+  o.connect(g);
+  g.connect(master);
+  const t = ctx.currentTime;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.18, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.start(t);
+  o.stop(t + dur + 0.02);
+}
+
+function sweep(){
+  if(!audioOn || !ctx) return;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = "sawtooth";
+  o.frequency.setValueAtTime(240, ctx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(38, ctx.currentTime + 0.14);
+  g.gain.value = 0.10;
+  o.connect(g);
+  g.connect(master);
+  o.start();
+  setTimeout(()=>o.stop(), 150);
+}
+
+/* ========= VISUAL GLITCH ========= */
+function hitGlitch(power=1){
+  flash.classList.add("active");
+  setTimeout(()=>flash.classList.remove("active"),120);
+
+  const y = Math.floor(rand(8, 92));
+  tear.style.top = y + "vh";
+  tear.style.opacity = (0.10 + power*0.14).toFixed(2);
+  tear.style.height = Math.floor(10 + power*20) + "px";
+  tear.style.filter = `blur(${(0.1 + power*0.35).toFixed(2)}px)`;
+  setTimeout(()=>{ tear.style.opacity = 0; }, 140);
+}
+
+function pulseWhisper(txt){
+  whisper.textContent = txt;
+  whisper.classList.add("on");
+  setTimeout(()=>whisper.classList.remove("on"), 240);
+}
+
+function spark(x,y,scale=1){
+  p.style.left = x+"px";
+  p.style.top  = y+"px";
+  p.style.opacity = 0.95;
+  p.style.width = (10*scale)+"px";
+  p.style.height= (10*scale)+"px";
+  clearTimeout(p._t);
+  p._t = setTimeout(()=>p.style.opacity=0, 120);
+}
+
+/* ========= TERMINAL ========= */
+function log(text, cls="line"){
+  const d=document.createElement("div");
+  d.className = cls;
+  d.textContent = text;
+  term.appendChild(d);
+  term.scrollTop = term.scrollHeight;
+}
+
+/* ========= THE “HUNDREDS OF OPTIONS” ENGINE ========= */
+const CHARS = "░▒▓█@#%&*+=-?/\\<>[]{}01ZXCVBNM";
+const SIGILS = ["⟡","⌁","⟢","⧖","⦿","⍟","⟁","⟐","⟠","⟣","⟜","⟓","⟂","⌘","⌬","⍉","⍜","⎈","⎊","⎋","⎍","⎔","⏣","⏥","⏧"];
+const MOODS = ["CALM","GLITCHY","HOLLOW","LOUD","SOFT","PARANOID","LUCID","STATIC","NEON","BURIED","FERAL","FLOATING"];
+const DOORS = ["DOOR A","DOOR B","DOOR C","ELEVATOR","VENT","MIRROR","STAIRWELL","FIRE EXIT","CEILING PANEL","FLOOR HATCH"];
+const LIES  = ["TRUST ME.","DON’T TRUST ME.","I’M NOT HERE.","YOU WERE HERE FIRST.","I CAN’T SEE YOU.","I SEE EVERYTHING."];
+const MICRO = [
+  "OK.", "SURE.", "…", "YEAH.", "NAH.", "BET.", "COPY.", "HEARD.", "SILENCE.", "AGAIN.", "WHY?", "GOOD.", "BAD.", "CLOSE."
+];
+
+let seed = Math.floor(Math.random()*1e9);
+function rng(){
+  // xorshift32
+  seed ^= seed << 13; seed |= 0;
+  seed ^= seed >>> 17; seed |= 0;
+  seed ^= seed << 5; seed |= 0;
+  return (seed >>> 0) / 4294967296;
+}
+function prand(a,b){ return a + rng()*(b-a); }
+function print(a,b){ return Math.floor(prand(a,b+1)); }
+function ppick(arr){ return arr[Math.floor(rng()*arr.length)]; }
+
+/* style warps */
+let hue = 0;
+let blur = 0;
+let zoom = 1;
+let invert = 0;
+let shake = 0;
+
+function applyWarp(){
+  document.body.style.filter =
+    `hue-rotate(${hue}deg) blur(${blur}px) invert(${invert}) contrast(${1.05+shake*0.03}) saturate(${1.05+shake*0.04})`;
+  document.body.style.transform = `scale(${zoom})`;
+  document.body.style.transformOrigin = "50% 50%";
+}
+
+function tinyScramble(s, intensity=0.35){
+  let out="";
+  for(let i=0;i<s.length;i++){
+    const ch=s[i];
+    if(ch===" ") {out+=" "; continue;}
+    out += (rng() < intensity) ? CHARS[ Math.floor(rng()*CHARS.length) ] : ch;
+  }
+  return out;
+}
+
+/* spawn floating sigils */
+function spawnSigil(x,y){
+  const el=document.createElement("div");
+  el.className="sigil";
+  el.textContent = ppick(SIGILS) + " " + ppick(SIGILS);
+  el.style.left = x+"px";
+  el.style.top  = y+"px";
+  el.style.opacity = (0.20 + prand(0,0.55)).toFixed(2);
+  el.style.fontSize = print(12,28)+"px";
+  el.style.transform = `translate(-50%,-50%) rotate(${print(-25,25)}deg)`;
+  document.body.appendChild(el);
+  const dx = prand(-90,90);
+  const dy = prand(-90,90);
+  const t0 = performance.now();
+  const life = print(650,1400);
+  function anim(t){
+    const k = (t - t0) / life;
+    if(k >= 1){ el.remove(); return; }
+    const ease = 1 - Math.pow(1-k, 2);
+    el.style.transform = `translate(${dx*ease}px,${dy*ease}px) rotate(${print(-25,25)}deg)`;
+    el.style.opacity = (1-k) * 0.62;
+    requestAnimationFrame(anim);
+  }
+  requestAnimationFrame(anim);
+}
+
+/* rare events */
+const EVENTS = [
+  function eventBlackout(){
+    pulseWhisper("SIGNAL DROP");
+    hitGlitch(2.4);
+    sweep();
+    const prev = document.body.style.filter;
+    document.body.style.filter = "brightness(0.12) contrast(1.2)";
+    setTimeout(()=>{document.body.style.filter = prev;}, 420);
+    log("…", "line dim");
+    log("THE ROOM BLINKED.", "line sys");
+  },
+  function eventDoor(){
+    const door = ppick(DOORS);
+    pulseWhisper("A DOOR APPEARED");
+    hitGlitch(2.0);
+    blip("square", print(80,220), 0.10);
+    log(`FOUND: ${door}`, "line sys");
+    log(ppick(["OPEN IT.","DON’T.","YOU KNOW WHAT’S BEHIND IT.","IT KNOWS YOU."]), "line");
+  },
+  function eventIdentity(){
+    pulseWhisper("FILE FRAGMENT");
+    hitGlitch(1.8);
+    blip("triangle", print(140,420), 0.08);
+    const id = "ID-" + print(100,999) + "-" + ppick(["VIOLET","MAYA","ZERO","MAREK","CLAW","GHOST","NODE"]);
+    log("ACCESS GRANTED: " + id, "line sys");
+    log(ppick(LIES), "line");
+  },
+  function eventCipher(){
+    pulseWhisper("CIPHER MODE");
+    hitGlitch(2.2);
+    const word = ppick(["REMEMBER","FORGET","BREATHE","HIDE","LISTEN","RUN","STAY","RETURN"]);
+    log("CIPHER: " + tinyScramble(word, 0.55), "line sys");
+    log("TYPE IT BACK. (OR DON’T.)", "line dim");
+  }
+];
+
+/* conversational illusion: 1-2 lines that feel “about” what they typed */
+function respondTo(text){
+  const raw = (text||"").trim();
+  const lower = raw.toLowerCase();
+
+  // micro rules
+  const greet = ["hi","hello","yo","sup","hey","wassup"];
+  const yes = ["yes","y","yeah","yup","ok","okay","sure","bet"];
+  const no  = ["no","nah","nope"];
+  const fear = ["scared","afraid","paranoid","watching","they","them","follow"];
+  const sad  = ["sad","depressed","lonely","anxious","panic","hurt","empty","numb","tired","done"];
+  const love = ["love","miss","need you","kiss"];
+  const bma  = ["bma","broken minds anonymous","broken minds","anonymous"];
+
+  // respond “tight”
+  if(greet.includes(lower)){
+    return [
+      ppick(["HI.","YO.","HELLO.","HEARD.","PING."]),
+      ppick(["YOU FEEL REAL TODAY.","YOU SOUND LIKE STATIC.","DON’T FLINCH.","TYPE MORE."])
+    ];
+  }
+  if(yes.includes(lower)) return [ppick(MICRO), ppick(["GOOD.","MOVE.","KEEP GOING.","DON’T STOP."])];
+  if(no.includes(lower))  return [ppick(MICRO), ppick(["FAIR.","STAY HERE.","THEN WAIT.","OK."])];
+
+  if(bma.some(w=>lower.includes(w))){
+    return [
+      ppick(["BMA.","OK.","JOIN.","SURE."]),
+      ppick(["SAY ONE TRUE THING.","DROP A LINE.","NO SPEECHES.","JUST A SIGNAL."])
+    ];
+  }
+
+  if(fear.some(w=>lower.includes(w))){
+    return [
+      ppick(["…","YEAH.","MAYBE.","OK."]),
+      ppick(["DON’T LOOK AWAY FROM THE SCREEN.","KEEP TYPING.","I’M HERE.","BREATHE."])
+    ];
+  }
+
+  if(sad.some(w=>lower.includes(w))){
+    return [
+      ppick(["OK.","HEARD.","…","YEAH."]),
+      ppick(["YOU CAN PUT IT HERE.","NO PERFORMANCE.","STAY.","ONE MORE LINE."])
+    ];
+  }
+
+  if(love.some(w=>lower.includes(w))){
+    return [
+      ppick(["OK.","WOW.","…","YEAH."]),
+      ppick(["KEEP IT SMALL.","TYPE IT AGAIN.","DON’T RUN.","STAY A SECOND."])
+    ];
+  }
+
+  // general: echo a keyword + flip it
+  const words = lower.replace(/[^a-z0-9\s']/g," ").split(/\s+/).filter(Boolean);
+  const key = words.length ? words[Math.floor(rng()*words.length)] : "SIGNAL";
+  return [
+    ppick(["RECEIVED.","OK.","COPY.","…","ARCHIVED."]),
+    ppick([`WHY "${key}"?`, `"${key}" FEELS LOUD.`, `"${key}" DOESN’T BELONG HERE.`, `"${key}" IS A DOOR.`])
+  ];
+}
+
+/* ========= INPUT HANDLERS ========= */
+let buffer = "";
+let holdT = null;
+let lastX = window.innerWidth/2, lastY = window.innerHeight/2;
+
+function doAction(kind, payload){
+  // Every action changes the world a bit
+  hue = (hue + prand(-24,24)) % 360;
+  blur = clamp(blur + prand(-0.35,0.55), 0, 1.6);
+  zoom = clamp(zoom + prand(-0.01,0.02), 0.985, 1.04);
+  invert = clamp(invert + prand(-0.02,0.02), 0, 0.14);
+  shake = clamp(shake + prand(-0.2,0.8), 0, 4);
+  applyWarp();
+
+  if(rng() < 0.26) hitGlitch(1.1);
+  if(rng() < 0.22) pulseWhisper(ppick(["IT HEARD YOU","DON’T BLINK","SIGNAL CUT","SOFT RESET","KEEP GOING","YOU’RE CLOSE","NOTHING IS REAL"]));
+  if(rng() < 0.18) blip(ppick(["square","triangle","sine"]), print(60,520), 0.07);
+
+  // Rare events (feels legendary)
+  if(rng() < 0.06){
+    ppick(EVENTS)();
+  }
+
+  // Terminal output
+  const stamp = new Date();
+  const t = `${pad2(stamp.getHours())}:${pad2(stamp.getMinutes())}:${pad2(stamp.getSeconds())}`;
+
+  if(kind === "key"){
+    const k = payload.key;
+    const raw = payload.raw;
+
+    // secret “ritual” if they type certain sequences
+    buffer = (buffer + k).slice(-12);
+
+    const mood = ppick(MOODS);
+    log(`[${t}] KEY: ${raw}  ·  MOOD: ${mood}`, "line dim");
+
+    // micro response (1-2 lines)
+    const replies = respondTo(raw);
+    setTimeout(()=>log(replies[0], "line sys"), 90);
+    if(replies[1]) setTimeout(()=>log(replies[1], "line"), 210);
+
+    // special sequences (not required, just extra)
+    if(buffer.includes("VAULT")){
+      log("…VAULT WORD DETECTED.", "line sys");
+      pulseWhisper("NOT HERE. NOT TODAY.");
+      hitGlitch(2.3);
+      sweep();
+      buffer = "";
+    }
+    if(buffer.includes("BMA")){
+      log("BMA IS BREATHING.", "line sys");
+      log(ppick(["JOIN?","DROP A LINE?","STAY?"]), "line");
+    }
+  }
+
+  if(kind === "click"){
+    log(`[${t}] TAP: ${Math.floor(payload.x)},${Math.floor(payload.y)}`, "line dim");
+    log(ppick(["SOMETHING MOVED.","OK.","AGAIN.","DON’T STOP."]), "line sys");
+  }
+
+  if(kind === "drag"){
+    log(`[${t}] DRAG: Δ${payload.dx},Δ${payload.dy}`, "line dim");
+    log(ppick(["THE ROOM STRETCHED.","IT LIKES THAT.","YOU PULLED A THREAD."]), "line sys");
+  }
+
+  if(kind === "hold"){
+    log(`[${t}] HOLD: ${payload.ms}ms`, "line dim");
+    log(ppick(["CHARGED.","LOADED.","READY.","…"]), "line sys");
+    if(payload.ms > 650){
+      hitGlitch(2.8);
+      sweep();
+      pulseWhisper("RARE EVENT");
+      log("YOU HELD LONG ENOUGH.", "line sys");
+      log(ppick(["A DOOR REMEMBERED YOU.","THE LIGHTS NOTICED.","SOMETHING UNLOCKED (NOT HERE)."]), "line");
+    }
+  }
+}
+
+/* ===== KEYBOARD: everything becomes different ===== */
+document.addEventListener("keydown",(e)=>{
+  // ignore modifiers alone
+  if(e.key === "Shift" || e.key === "Alt" || e.key === "Control" || e.key === "Meta") return;
+
+  const raw = (e.key || "").toString();
+  const k = raw.toUpperCase();
+
+  // make it feel “reactive” even on space/backspace
+  const text = (raw.length === 1) ? raw : `[${raw}]`;
+
+  // visuals at cursor
+  spawnSigil(lastX, lastY);
+  spark(lastX, lastY, 1.15);
+
+  // HUD flash
+  hud.classList.add("on");
+  clearTimeout(hud._t);
+  hud._t = setTimeout(()=>hud.classList.remove("on"), 220);
+
+  doAction("key", {key:k, raw:text});
+}, {passive:true});
+
+/* ===== POINTER ===== */
+document.addEventListener("pointermove",(e)=>{
+  lastX = e.clientX; lastY = e.clientY;
+}, {passive:true});
+
+document.addEventListener("pointerdown",(e)=>{
+  lastX = e.clientX; lastY = e.clientY;
+  spawnSigil(lastX, lastY);
+  spark(lastX, lastY, 1.25);
+  doAction("click", {x:lastX, y:lastY});
+  holdT = performance.now();
+}, {passive:true});
+
+document.addEventListener("pointerup",(e)=>{
+  if(holdT){
+    const ms = Math.floor(performance.now() - holdT);
+    holdT = null;
+    if(ms > 220){
+      doAction("hold", {ms});
+    }
+  }
+}, {passive:true});
+
+let dragging=false, sx=0, sy=0;
+document.addEventListener("pointerdown",(e)=>{
+  dragging=true;
+  sx=e.clientX; sy=e.clientY;
+}, {passive:true});
+document.addEventListener("pointermove",(e)=>{
+  if(!dragging) return;
+  const dx = Math.floor(e.clientX - sx);
+  const dy = Math.floor(e.clientY - sy);
+  if(Math.abs(dx)+Math.abs(dy) > 36){
+    spawnSigil(e.clientX, e.clientY);
+    doAction("drag", {dx, dy});
+    sx=e.clientX; sy=e.clientY;
+  }
+}, {passive:true});
+document.addEventListener("pointerup",()=>{dragging=false}, {passive:true});
+
+/* ===== idle “breathing” ===== */
+setInterval(()=>{
+  // subtle drift so it feels alive
+  hue = (hue + prand(-2,2)) % 360;
+  blur = clamp(blur + prand(-0.08,0.10), 0, 1.2);
+  zoom = clamp(zoom + prand(-0.002,0.003), 0.99, 1.03);
+  invert = clamp(invert + prand(-0.01,0.01), 0, 0.12);
+  shake = clamp(shake * 0.86, 0, 4);
+  applyWarp();
+
+  if(rng() < 0.08){
+    pulseWhisper(ppick(["TYPE SOMETHING","THE ROOM IS OPEN","DON’T LEAVE YET","I’M HERE","SAY IT AGAIN","SLOW DOWN","ONE MORE"]));
+  }
+  if(rng() < 0.06){
+    hitGlitch(1.0);
+    blip(ppick(["sine","square"]), print(70,420), 0.06);
+  }
+}, 760);
+
+/* ===== intro ===== */
+setTimeout(()=>{ pulseWhisper("PRESS ANY KEY"); }, 250);
+setTimeout(()=>{ log("…", "line dim"); log("THE NODE IS A SLOT MACHINE FOR REALITY.", "line sys"); }, 520);
+</script>
+</body>
+</html>
 
