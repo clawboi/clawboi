@@ -1,4 +1,4 @@
-=<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -415,6 +415,148 @@ reset.addEventListener("click",()=>{
   apply();
 });
 
+/* =========================================================
+   AMBIENT SPACE MUSIC (no file)
+   - tries autoplay
+   - if blocked, starts on first user tap anywhere
+   - no “tap to unlock audio” text
+========================================================= */
+let aCtx, master, started=false;
+
+function startAmbient(){
+  if(started) return;
+  started=true;
+
+  aCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  master = aCtx.createGain();
+  master.gain.value = 0.16; // overall volume
+  master.connect(aCtx.destination);
+
+  // soft drone 1
+  const o1 = aCtx.createOscillator();
+  o1.type = "sine";
+  o1.frequency.value = 55; // A1-ish
+
+  const g1 = aCtx.createGain();
+  g1.gain.value = 0.0;
+
+  // soft drone 2
+  const o2 = aCtx.createOscillator();
+  o2.type = "triangle";
+  o2.frequency.value = 82.41; // E2-ish
+
+  const g2 = aCtx.createGain();
+  g2.gain.value = 0.0;
+
+  // noise bed
+  const noiseBuf = aCtx.createBuffer(1, aCtx.sampleRate * 2, aCtx.sampleRate);
+  const data = noiseBuf.getChannelData(0);
+  for(let i=0;i<data.length;i++){
+    // slightly pink-ish tilt
+    data[i] = (Math.random()*2-1) * (1 - i/data.length) * 0.9;
+  }
+  const noise = aCtx.createBufferSource();
+  noise.buffer = noiseBuf;
+  noise.loop = true;
+
+  const nGain = aCtx.createGain();
+  nGain.gain.value = 0.02;
+
+  const lp = aCtx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 420;
+
+  // slow shimmer (very subtle)
+  const lfo = aCtx.createOscillator();
+  lfo.type = "sine";
+  lfo.frequency.value = 0.06;
+
+  const lfoG = aCtx.createGain();
+  lfoG.gain.value = 0.012; // modulation depth
+
+  // space echo
+  const delay = aCtx.createDelay();
+  delay.delayTime.value = 0.42;
+
+  const fb = aCtx.createGain();
+  fb.gain.value = 0.32;
+
+  const wet = aCtx.createGain();
+  wet.gain.value = 0.28;
+
+  const dry = aCtx.createGain();
+  dry.gain.value = 0.82;
+
+  // routing
+  o1.connect(g1); o2.connect(g2);
+  noise.connect(nGain);
+
+  g1.connect(lp);
+  g2.connect(lp);
+  nGain.connect(lp);
+
+  // split dry/wet
+  lp.connect(dry);
+  lp.connect(delay);
+  delay.connect(fb);
+  fb.connect(delay);
+  delay.connect(wet);
+
+  dry.connect(master);
+  wet.connect(master);
+
+  // LFO to gently move gains
+  lfo.connect(lfoG);
+  lfoG.connect(g1.gain);
+  lfoG.connect(g2.gain);
+
+  // fade in
+  const t = aCtx.currentTime;
+  g1.gain.setValueAtTime(0.0001, t);
+  g1.gain.exponentialRampToValueAtTime(0.08, t + 2.4);
+
+  g2.gain.setValueAtTime(0.0001, t);
+  g2.gain.exponentialRampToValueAtTime(0.06, t + 2.8);
+
+  // slight drift
+  o1.frequency.setValueAtTime(55, t);
+  o1.frequency.linearRampToValueAtTime(56.2, t + 24);
+
+  o2.frequency.setValueAtTime(82.41, t);
+  o2.frequency.linearRampToValueAtTime(81.9, t + 28);
+
+  // start
+  o1.start();
+  o2.start();
+  noise.start();
+  lfo.start();
+
+  // if suspended, attempt resume
+  if(aCtx.state === "suspended"){
+    aCtx.resume().catch(()=>{});
+  }
+}
+
+// try autoplay immediately
+try{
+  startAmbient();
+}catch(e){}
+
+// if iOS blocked, first user interaction will start/resume silently
+function unlockAudio(){
+  try{
+    if(!started) startAmbient();
+    if(aCtx && aCtx.state === "suspended") aCtx.resume().catch(()=>{});
+  }catch(e){}
+  window.removeEventListener("pointerdown", unlockAudio, true);
+  window.removeEventListener("touchstart", unlockAudio, true);
+  window.removeEventListener("click", unlockAudio, true);
+}
+window.addEventListener("pointerdown", unlockAudio, true);
+window.addEventListener("touchstart", unlockAudio, true);
+window.addEventListener("click", unlockAudio, true);
+
 /* --- Legendary cosmos: animated starfields (2 layers, parallax drift) --- */
 function fitCanvas(c){
   const dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -453,6 +595,76 @@ let fw = front.width, fh = front.height;
 
 let starsB = makeStars(220, bw, bh, false);
 let starsF = makeStars(140, fw, fh, true);
+
+/* =========================================================
+   SHOOTING STARS (front layer)
+========================================================= */
+let meteors = [];
+function spawnMeteor(w,h){
+  // start near top/left edges, fly diagonally
+  const fromLeft = Math.random() < 0.55;
+  const x = fromLeft ? -Math.random()*w*0.2 : Math.random()*w;
+  const y = -Math.random()*h*0.25;
+
+  const speed = (Math.random()*1.1 + 1.4) * (window.devicePixelRatio || 1);
+  const ang = (Math.random()*0.25 + 0.72); // radians-ish diagonal
+  const vx = Math.cos(ang) * speed * 4.2;
+  const vy = Math.sin(ang) * speed * 4.2;
+
+  meteors.push({
+    x,y,vx,vy,
+    life: 0,
+    ttl: Math.random()*26 + 28,
+    len: Math.random()*160 + 140
+  });
+  if(meteors.length > 10) meteors.shift();
+}
+
+function drawMeteors(ctx, w, h){
+  // occasional spawn
+  if(Math.random() < 0.018) spawnMeteor(w,h);
+
+  for(const m of meteors){
+    m.x += m.vx;
+    m.y += m.vy;
+    m.life++;
+
+    const p = m.life / m.ttl;
+    const a = Math.max(0, Math.sin(Math.PI * p)) * 0.9;
+
+    // tail direction opposite velocity
+    const nx = -m.vx;
+    const ny = -m.vy;
+    const mag = Math.hypot(nx, ny) || 1;
+    const tx = (nx/mag) * m.len;
+    const ty = (ny/mag) * m.len;
+
+    const grad = ctx.createLinearGradient(m.x, m.y, m.x + tx, m.y + ty);
+    grad.addColorStop(0, `rgba(255,255,255,${a})`);
+    grad.addColorStop(0.35, `rgba(138,46,255,${a*0.55})`);
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(m.x, m.y);
+    ctx.lineTo(m.x + tx, m.y + ty);
+    ctx.stroke();
+
+    // tiny head glow
+    ctx.fillStyle = `rgba(255,255,255,${a})`;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, 1.8, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // cull dead / offscreen
+  meteors = meteors.filter(m=>{
+    if(m.life > m.ttl) return false;
+    if(m.x > w*1.2 || m.y > h*1.2) return false;
+    return true;
+  });
+}
 
 let t=0;
 function drawStars(ctx, stars, w, h, driftX, driftY, glow){
@@ -500,6 +712,9 @@ function loop(){
   drawStars(bctx, starsB, bw, bh, driftBX, driftBY, false);
   drawStars(fctx, starsF, fw, fh, driftFX, driftFY, true);
 
+  // shooting stars on front layer
+  drawMeteors(fctx, fw, fh);
+
   requestAnimationFrame(loop);
 }
 loop();
@@ -511,6 +726,7 @@ addEventListener("resize", ()=>{
   fw = front.width; fh = front.height;
   starsB = makeStars(220, bw, bh, false);
   starsF = makeStars(140, fw, fh, true);
+  meteors = [];
 });
 </script>
 
