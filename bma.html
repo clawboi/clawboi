@@ -1,1 +1,141 @@
+<!-- bma.html -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>BMA</title>
+<style>
+:root{--bg:#000;--fg:#fff;--violet:#8a2eff;}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  overflow:hidden;
+  position:relative;
+}
+body:before{
+  content:"";
+  position:fixed;
+  inset:-25%;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(138,46,255,.22), transparent 60%),
+    radial-gradient(circle at 78% 34%, rgba(138,46,255,.14), transparent 70%),
+    radial-gradient(circle at 50% 86%, rgba(138,46,255,.10), transparent 72%);
+  mix-blend-mode:screen;
+  filter:blur(42px) saturate(1.2);
+}
+a{color:#fff;text-decoration:none}
+.brand{
+  position:fixed;top:14px;left:14px;z-index:9;
+  font-size:11px;letter-spacing:.34em;text-transform:uppercase;
+  opacity:.75;text-shadow:0 0 18px rgba(138,46,255,.25);
+}
+.brand:hover{opacity:1}
+.wrap{
+  position:relative;
+  z-index:2;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:80px 18px;
+}
+.card{
+  width:min(820px, 100%);
+  background:rgba(255,255,255,.03);
+  border-radius:18px;
+  padding:18px;
+  backdrop-filter: blur(12px);
+}
+.h1{
+  font-size:clamp(16px,3.6vw,34px);
+  letter-spacing:.46em;
+  text-transform:uppercase;
+  text-shadow:0 0 18px rgba(138,46,255,.35);
+}
+.sub{
+  margin-top:10px;
+  font-size:11px;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+  opacity:.62;
+  line-height:1.7;
+}
+.mono{
+  margin-top:16px;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:12px;
+  letter-spacing:.08em;
+  opacity:.82;
+  line-height:1.65;
+  white-space:pre-wrap;
+}
+.row{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
+.btn{
+  appearance:none;border:0;cursor:pointer;
+  padding:12px 14px;border-radius:999px;
+  background:rgba(138,46,255,.16);color:#fff;
+  letter-spacing:.22em;font-size:11px;text-transform:uppercase;
+}
+.btn.alt{background:rgba(255,255,255,.06)}
+.btn:hover{filter:brightness(1.06)}
+.blink{display:inline-block;animation:blink 1.2s steps(2,end) infinite}
+@keyframes blink{50%{opacity:.22}}
+</style>
+</head>
+<body>
+<a class="brand" href="vault.html">CLAWBOI</a>
+
+<div class="wrap">
+  <div class="card">
+    <div class="h1">BROKEN MINDS ANONYMOUS</div>
+    <div class="sub">NO LOGINS. NO NAMES. JUST SIGNALS. <span class="blink">▮</span></div>
+
+    <div class="mono">
+RULES:
+1) YOU CAN BE LOUD HERE.
+2) YOU CAN BE QUIET HERE.
+3) YOU DON’T HAVE TO EXPLAIN THE WHOLE STORM.
+
+STATUS: PRIVATE ROOM (PLACEHOLDER)
+NEXT: IF YOU WANT THIS TO SAVE REAL POSTS WITHOUT LOGINS,
+WE’LL USE A FREE “GUESTBOOK” BACKEND OR CLOUDFLARE WORKERS + KV.
+    </div>
+
+    <div class="row">
+      <button class="btn" id="confess">DROP A LINE</button>
+      <a class="btn alt" href="vault.html" style="display:inline-flex;align-items:center;justify-content:center;">BACK</a>
+    </div>
+
+    <div class="mono" id="feed" style="margin-top:14px;opacity:.78;">
+[NO ENTRIES YET]
+    </div>
+  </div>
+</div>
+
+<script>
+const feed = document.getElementById("feed");
+document.getElementById("confess").onclick = ()=>{
+  const lines = [
+    "I BEEN HIDING IN THE MUSIC LIKE IT’S A BASEMENT.",
+    "SOME NIGHTS FEEL LIKE A LOOP I CAN’T BREAK.",
+    "I MISS WHO I WAS BEFORE I NEEDED NUMB.",
+    "I’M STILL HERE. THAT’S THE POST.",
+    "IF YOU HEAR THIS, YOU’RE NOT ALONE IN IT."
+  ];
+  const pick = lines[Math.floor(Math.random()*lines.length)];
+  const now = new Date();
+  const stamp = now.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  const entry = `${stamp}  ${pick}`;
+  if(feed.textContent.includes("[NO ENTRIES YET]")) feed.textContent = entry;
+  else feed.textContent = feed.textContent.trim() + "\n" + entry;
+};
+</script>
+</body>
+</html>
 
