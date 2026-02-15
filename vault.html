@@ -1,4 +1,4 @@
-<!-- vault.html (or whatever your VAULT page filename is) -->
+<!-- vault.html -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,310 +8,302 @@
 
 <style>
 :root{
-  --violet:#8a2eff;
-  --bg:#000;
-  --fg:#fff;
+ --violet:#8a2eff;
+ --bg:#000;
+ --fg:#fff;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0;
-  background:var(--bg);
-  color:var(--fg);
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  overflow-x:hidden;
-  position:relative;
+ margin:0;
+ background:var(--bg);
+ color:var(--fg);
+ font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+ overflow-x:hidden;
+ position:relative;
 }
 
-/* brand link */
 .brand{
-  position:fixed;
-  top:14px;
-  left:14px;
-  z-index:9;
-  font-size:11px;
-  letter-spacing:.34em;
-  text-transform:uppercase;
-  color:#fff;
-  text-decoration:none;
-  opacity:.72;
-  text-shadow:0 0 18px rgba(138,46,255,.25);
+ position:fixed;
+ top:14px;
+ left:14px;
+ z-index:9;
+ font-size:11px;
+ letter-spacing:.34em;
+ text-transform:uppercase;
+ color:#fff;
+ text-decoration:none;
+ opacity:.72;
+ text-shadow:0 0 18px rgba(138,46,255,.25);
 }
 .brand:hover{opacity:1}
 
-/* violet haze */
 body::before{
-  content:"";
-  position:fixed;
-  inset:-25%;
-  pointer-events:none;
-  z-index:0;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(138,46,255,.22), transparent 60%),
-    radial-gradient(circle at 80% 34%, rgba(138,46,255,.15), transparent 68%),
-    radial-gradient(circle at 44% 88%, rgba(138,46,255,.12), transparent 72%);
-  mix-blend-mode:screen;
-  filter:blur(38px) saturate(1.2);
+ content:"";
+ position:fixed;
+ inset:-25%;
+ pointer-events:none;
+ z-index:0;
+ background:
+ radial-gradient(circle at 20% 20%, rgba(138,46,255,.22), transparent 60%),
+ radial-gradient(circle at 80% 34%, rgba(138,46,255,.15), transparent 68%),
+ radial-gradient(circle at 44% 88%, rgba(138,46,255,.12), transparent 72%);
+ mix-blend-mode:screen;
+ filter:blur(38px) saturate(1.2);
 }
 
-/* scanlines */
 .scan{
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:6;
-  opacity:.08;
-  mix-blend-mode:overlay;
-  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
+ position:fixed;
+ inset:0;
+ pointer-events:none;
+ z-index:6;
+ opacity:.08;
+ mix-blend-mode:overlay;
+ background:repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
 }
 
 .wrap{
-  position:relative;
-  z-index:2;
-  padding:90px 18px 60px;
-  max-width:980px;
-  margin:0 auto;
+ position:relative;
+ z-index:2;
+ padding:90px 18px 60px;
+ max-width:980px;
+ margin:0 auto;
 }
 
 .h1{
-  font-size:clamp(18px,4vw,42px);
-  letter-spacing:.46em;
-  text-transform:uppercase;
-  text-shadow:0 0 18px rgba(138,46,255,.35);
+ font-size:clamp(18px,4vw,42px);
+ letter-spacing:.46em;
+ text-transform:uppercase;
+ text-shadow:0 0 18px rgba(138,46,255,.35);
 }
 
 .sub{
-  margin-top:10px;
-  font-size:11px;
-  letter-spacing:.30em;
-  text-transform:uppercase;
-  opacity:.62;
-  line-height:1.7;
+ margin-top:10px;
+ font-size:11px;
+ letter-spacing:.30em;
+ text-transform:uppercase;
+ opacity:.62;
+ line-height:1.7;
 }
 
 .grid{
-  margin-top:26px;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:14px;
+ margin-top:26px;
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:14px;
 }
 @media(max-width:860px){.grid{grid-template-columns:1fr}}
 
 .card{
-  background:rgba(255,255,255,.03);
-  border-radius:18px;
-  padding:16px;
-  position:relative;
-  overflow:hidden;
+ background:rgba(255,255,255,.03);
+ border-radius:18px;
+ padding:16px;
+ position:relative;
+ overflow:hidden;
 }
 
-/* glitchy divider */
 .card:before{
-  content:"";
-  position:absolute;
-  left:-20%;
-  top:0;
-  width:140%;
-  height:1px;
-  background:linear-gradient(90deg, transparent, rgba(138,46,255,.55), transparent);
-  opacity:.35;
+ content:"";
+ position:absolute;
+ left:-20%;
+ top:0;
+ width:140%;
+ height:1px;
+ background:linear-gradient(90deg, transparent, rgba(138,46,255,.55), transparent);
+ opacity:.35;
 }
 
 .label{
-  font-size:10px;
-  letter-spacing:.34em;
-  text-transform:uppercase;
-  opacity:.7;
+ font-size:10px;
+ letter-spacing:.34em;
+ text-transform:uppercase;
+ opacity:.7;
 }
 .mono{
-  margin-top:10px;
-  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  font-size:12px;
-  letter-spacing:.08em;
-  opacity:.78;
-  line-height:1.65;
-  white-space:pre-wrap;
+ margin-top:10px;
+ font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+ font-size:12px;
+ letter-spacing:.08em;
+ opacity:.78;
+ line-height:1.65;
+ white-space:pre-wrap;
+ min-height:1.7em;
 }
 
 .btnRow{margin-top:14px; display:flex; gap:10px; flex-wrap:wrap}
 .btn{
-  appearance:none;
-  border:0;
-  cursor:pointer;
-  padding:12px 14px;
-  border-radius:999px;
-  background:rgba(138,46,255,.16);
-  color:#fff;
-  letter-spacing:.22em;
-  font-size:11px;
-  text-transform:uppercase;
+ appearance:none;
+ border:0;
+ cursor:pointer;
+ padding:12px 14px;
+ border-radius:999px;
+ background:rgba(138,46,255,.16);
+ color:#fff;
+ letter-spacing:.22em;
+ font-size:11px;
+ text-transform:uppercase;
 }
 .btn:hover{filter:brightness(1.06)}
 .btn.alt{background:rgba(255,255,255,.06)}
 
 .note{
-  margin-top:22px;
-  font-size:10px;
-  letter-spacing:.30em;
-  text-transform:uppercase;
-  opacity:.55;
+ margin-top:22px;
+ font-size:10px;
+ letter-spacing:.30em;
+ text-transform:uppercase;
+ opacity:.55;
 }
 
-/* “corruption” animation */
 .corrupt{
-  display:inline-block;
-  animation:corrupt 2.6s steps(2,end) infinite;
+ display:inline-block;
+ animation:corrupt 2.6s steps(2,end) infinite;
 }
 @keyframes corrupt{
-  0%,100%{filter:contrast(1) hue-rotate(0deg)}
-  50%{filter:contrast(1.35) hue-rotate(18deg)}
+ 0%,100%{filter:contrast(1) hue-rotate(0deg)}
+ 50%{filter:contrast(1.35) hue-rotate(18deg)}
 }
 </style>
 </head>
 <body>
+
 <a class="brand" href="index.html">CLAWBOI</a>
 <div class="scan"></div>
 
 <div class="wrap">
-  <div class="h1">VAULT ACCESS</div>
-  <div class="sub">THIS IS THE HIDDEN INSIDE THE HIDDEN. IF YOU’RE HERE, THE SIGNAL CHOSE YOU.</div>
+<div class="h1">VAULT ACCESS</div>
+<div class="sub">THIS IS THE HIDDEN INSIDE THE HIDDEN. IF YOU’RE HERE, THE SIGNAL CHOSE YOU.</div>
 
-  <div class="grid">
-    <div class="card">
-      <div class="label">UNRELEASED FRAGMENTS</div>
-      <div class="mono" id="frags">
+<div class="grid">
+
+<div class="card">
+<div class="label">UNRELEASED FRAGMENTS</div>
+<div class="mono" id="frags">
 [LOCKED] 00:14 “TWO TIMES” (ALT TAKE)
 [LOCKED] 00:09 “BODY COUNT” (PHONE MIC CUT)
 [LOCKED] 00:12 “CLUB DECAY” (DEMO)
 STATUS: <span class="corrupt">CORRUPT</span>
-      </div>
-      <div class="btnRow">
-        <button class="btn" id="decrypt">DECRYPT</button>
-        <button class="btn alt" id="wipe">WIPE TRACE</button>
-      </div>
-    </div>
+</div>
+<div class="btnRow">
+<button class="btn" id="decrypt">DECRYPT</button>
+<button class="btn alt" id="wipe">WIPE TRACE</button>
+</div>
+</div>
 
-    <div class="card">
-      <div class="label">DREAM LOGS</div>
-      <div class="mono" id="logs">
-3:17 AM  “new place to drown / hearts lost ain’t found”
-1:02 AM  “I fake my smile they ain’t even know”
-4:44 AM  “all this pain never leave it’s gon show”
-2:28 AM  “hear voices like I’m schizo baby”
-5:11 AM  “I lost my hope while looking for hoes”
-12:09 AM “stars gonna shine when the pills in my eyes”
-6:33 AM  “I’m still in a sad world it keep haunting”
-3:59 AM  “I knew I was a star I heard that right from mommy”
-2:06 AM  “I’ve been praying for some peace but all this pain stuck beside me”
-11:48 PM “I stay out the way make me tired yuh”
-4:01 AM  “lost in my mind don’t remind me yuh”
-12:55 AM “I’m coping with all these drugs just to go keep it down”
-2:44 AM  “brain gon cold can’t catch that low”
-5:52 AM  “I laugh it up with my pain I don’t even understand”
-3:33 AM  “I got ghosts on my back and I really feel like I’m the vamp”
-1:29 AM  “I’m feeling so damn sick of all these people tryna love me”
-6:08 AM  “too many nights I was dying yuh”
-4:19 AM  “I just look in my bank that’s a lot in my checking”
-2:50 AM  “I’m in the dark no lamp”
-3:07 AM  “she just like the image not the message I just sent”
-5:00 AM  “I don’t trust a single word that you gon drop”
-12:41 AM “ain’t trusting my soul cause my shadow stay on me so tight”
-1:58 AM  “hide in the car from these demons I’m losing my sight”
-6:12 AM  “I lost three years of my life”
-2:11 AM  “staying myself can’t keep quiet”
-4:23 AM  “I feel so damn sick I had to get out my rage”
-3:38 AM  “taking these drugs I’m feeling strange”
-12:14 AM “I just lost my damn mind”
-5:26 AM  “I might not be worth all your time”
-1:13 AM  “she killing me with them notions”
-2:32 AM  “I’m drowning I’m like oh yeah”
-3:49 AM  “I can’t find my soul I look in the lost n found”
-4:57 AM  “thinking I’m ignoring you I wonder why”
-6:40 AM  “I gotta get sober”
-1:45 AM  “my sin gon come back quick when I’m in that mode”
-2:59 AM  “I’m flexing on these hoes / flexing on these bros”
-3:21 AM  “I’m tripping off that back door”
-5:33 AM  “cannot go back cycle now I’m going psycho”
-      </div>
-      <div class="btnRow">
-        <button class="btn" id="newLog">ADD LOG</button>
-        <a class="btn alt" href="dream.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">ENTER DREAM</a>
-      </div>
-    </div>
+<div class="card">
+<div class="label">DREAM LOGS</div>
+<div class="mono" id="logs"></div>
+<div class="btnRow">
+<button class="btn" id="newLog">ADD LOG</button>
+<a class="btn alt" href="dream.html">ENTER DREAM</a>
+</div>
+</div>
 
-    <div class="card">
-      <div class="label">TOUR MANIFEST</div>
-      <div class="mono">
+<div class="card">
+<div class="label">TOUR MANIFEST</div>
+<div class="mono">
 NO DATES.
 NO VENUES.
 NO PROBLEMS.
 
 WHEN THE FIRST SHOW HAPPENS,
 THIS PAGE WILL UPDATE ITSELF.
-      </div>
-      <div class="btnRow">
-        <a class="btn" href="follow.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">GET ALERTS</a>
-        <a class="btn alt" href="shop.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">MERCH</a>
-      </div>
-    </div>
+</div>
+<div class="btnRow">
+<a class="btn" href="follow.html">GET ALERTS</a>
+<a class="btn alt" href="shop.html">MERCH</a>
+</div>
+</div>
 
-    <div class="card">
-      <div class="label">BACKDOOR</div>
-      <div class="mono">
+<div class="card">
+<div class="label">BACKDOOR</div>
+<div class="mono">
 TYPE: “SIGNAL” TO RETURN TO TRANSMISSION
 TYPE: “HOME” TO EXIT
 TYPE: “BMA” TO OPEN BROKEN MINDS ANONYMOUS
-      </div>
-      <div class="note">YOU CAN HIDE A REAL PASSWORD HERE LATER (FOR A PRIVATE LINK, DROPBOX, UNLISTED VIDEO, ETC.)</div>
-    </div>
-  </div>
+</div>
+<div class="note">YOU CAN HIDE A REAL PASSWORD HERE LATER</div>
+</div>
+
+</div>
 </div>
 
 <script>
-/* Buttons */
-const decryptBtn = document.getElementById("decrypt");
-const wipeBtn = document.getElementById("wipe");
-const frags = document.getElementById("frags");
-const logs = document.getElementById("logs");
-const newLog = document.getElementById("newLog");
+const decryptBtn=document.getElementById("decrypt");
+const wipeBtn=document.getElementById("wipe");
+const frags=document.getElementById("frags");
+const logs=document.getElementById("logs");
+const newLog=document.getElementById("newLog");
 
-/* DECRYPT now routes to matrix page */
-decryptBtn.onclick = ()=>{
-  window.location.href = "decrypt.html";
+/* dream database */
+const dreamLogs=[
+`3:17 AM  “new place to drown / hearts lost ain’t found”`,
+`1:02 AM  “I fake my smile they ain’t even know”`,
+`4:44 AM  “all this pain never leave it’s gon show”`,
+`2:28 AM  “hear voices like I’m schizo baby”`,
+`5:11 AM  “I lost my hope while looking for hoes”`,
+`12:09 AM “stars gonna shine when the pills in my eyes”`,
+`6:33 AM  “I’m still in a sad world it keep haunting”`,
+`3:59 AM  “I knew I was a star I heard that right from mommy”`,
+`2:06 AM  “I’ve been praying for some peace but all this pain stuck beside me”`,
+`11:48 PM “I stay out the way make me tired yuh”`,
+`4:01 AM  “lost in my mind don’t remind me yuh”`,
+`12:55 AM “I’m coping with all these drugs just to go keep it down”`,
+`2:44 AM  “brain gon cold can’t catch that low”`,
+`5:52 AM  “I laugh it up with my pain I don’t even understand”`,
+`3:33 AM  “I got ghosts on my back and I really feel like I’m the vamp”`,
+`1:29 AM  “I’m feeling so damn sick of all these people tryna love me”`,
+`6:08 AM  “too many nights I was dying yuh”`,
+`4:19 AM  “I just look in my bank that’s a lot in my checking”`,
+`2:50 AM  “I’m in the dark no lamp”`,
+`3:07 AM  “she just like the image not the message I just sent”`,
+`5:00 AM  “I don’t trust a single word that you gon drop”`,
+`12:41 AM “ain’t trusting my soul cause my shadow stay on me so tight”`,
+`1:58 AM  “hide in the car from these demons I’m losing my sight”`,
+`6:12 AM  “I lost three years of my life”`,
+`2:11 AM  “staying myself can’t keep quiet”`,
+`4:23 AM  “I feel so damn sick I had to get out my rage”`,
+`3:38 AM  “taking these drugs I’m feeling strange”`,
+`12:14 AM “I just lost my damn mind”`,
+`5:26 AM  “I might not be worth all your time”`,
+`1:13 AM  “she killing me with them notions”`,
+`2:32 AM  “I’m drowning I’m like oh yeah”`,
+`3:49 AM  “I can’t find my soul I look in the lost n found”`,
+`4:57 AM  “thinking I’m ignoring you I wonder why”`,
+`6:40 AM  “I gotta get sober”`,
+`1:45 AM  “my sin gon come back quick when I’m in that mode”`,
+`2:59 AM  “I’m flexing on these hoes / flexing on these bros”`,
+`3:21 AM  “I’m tripping off that back door”`,
+`5:33 AM  “cannot go back cycle now I’m going psycho”`
+];
+
+let logIndex=0;
+logs.textContent=dreamLogs[0];
+
+newLog.onclick=()=>{
+logIndex++;
+if(logIndex>=dreamLogs.length){
+logs.textContent+="\n\n[END OF LOG]";
+return;
+}
+logs.textContent+="\n"+dreamLogs[logIndex];
 };
 
-wipeBtn.onclick = ()=>{
-  frags.textContent = "[TRACE WIPED]\n\n" +
-    "IF SOMEONE ASKED YOU WHAT YOU SAW,\n" +
-    "YOU SAW NOTHING.\n\n" +
-    "STATUS: CLEAN";
+decryptBtn.onclick=()=>{
+window.location.href="decrypt.html";
 };
 
-newLog.onclick = ()=>{
-  const options = [
-    "“THE LIGHT FELT LIKE A DRUG.”",
-    "“I RAN OUT OF MY BODY FOR A SECOND.”",
-    "“THE BASS SAID MY REAL NAME.”",
-    "“I SAW A CROWD WITH NO FACES.”",
-    "“THE SIGIL KEPT SPINNING AFTER I CLOSED MY EYES.”"
-  ];
-  const stamp = new Date();
-  const hh = String(stamp.getHours()).padStart(2,"0");
-  const mm = String(stamp.getMinutes()).padStart(2,"0");
-  const line = `${hh}:${mm}  ${options[Math.floor(Math.random()*options.length)]}`;
-  logs.textContent = logs.textContent.trim() + "\n" + line;
+wipeBtn.onclick=()=>{
+frags.textContent="[TRACE WIPED]\n\nIF SOMEONE ASKED YOU WHAT YOU SAW,\nYOU SAW NOTHING.\n\nSTATUS: CLEAN";
 };
 
-/* Keyboard backdoor */
-let buf = "";
+let buf="";
 document.addEventListener("keydown",(e)=>{
-  const k = (e.key||"").toUpperCase();
-  if(!/^[A-Z]$/.test(k)) return;
-  buf = (buf + k).slice(-6);
-
-  if(buf.endsWith("SIGNAL")) window.location.href = "secret.html";
-  if(buf.endsWith("HOME")) window.location.href = "index.html";
-  if(buf.endsWith("BMA")) window.location.href = "bma.html";
+const k=(e.key||"").toUpperCase();
+if(!/^[A-Z]$/.test(k)) return;
+buf=(buf+k).slice(-6);
+if(buf.endsWith("SIGNAL")) window.location.href="secret.html";
+if(buf.endsWith("HOME")) window.location.href="index.html";
+if(buf.endsWith("BMA")) window.location.href="bma.html";
 });
 </script>
 </body>
