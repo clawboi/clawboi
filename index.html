@@ -257,6 +257,45 @@ header a:hover{opacity:1}
   font-size:11px;
 }
 
+/* NEW: AS ABOVE / SO BELOW TREE PORTAL */
+.treePortal{
+  margin:16px auto 0;
+  width:max-content;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  cursor:pointer;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
+  color:rgba(255,255,255,.9);
+  opacity:.78;
+  transition:opacity .2s, transform .2s, filter .2s;
+}
+.treePortal:hover{
+  opacity:1;
+  transform:translateY(-1px);
+  filter:brightness(1.05);
+}
+.treeSvg{
+  width:56px;
+  height:56px;
+  display:block;
+  color:rgba(138,46,255,.95);
+  text-shadow:0 0 18px rgba(138,46,255,.35);
+  animation:treePulse 3.8s ease-in-out infinite;
+}
+@keyframes treePulse{
+  0%,100%{transform:scale(1); opacity:.92}
+  50%{transform:scale(1.05); opacity:1}
+}
+.treeHint{
+  font-size:10px;
+  letter-spacing:.34em;
+  text-transform:uppercase;
+  opacity:.6;
+}
+
 /* LYRIC — SMALLER */
 .lyric{
   text-align:center;
@@ -364,6 +403,52 @@ footer{
 <div class="videoPager">
 <button class="pageBtn" id="prevVideos">◀</button>
 <button class="pageBtn" id="nextVideos">▶</button>
+</div>
+
+<!-- AS ABOVE / SO BELOW TREE (below arrows, above lyrics) -->
+<div class="treePortal" id="treePortal" aria-label="Enter the Clawboi Universe" title="Enter the Universe">
+  <svg class="treeSvg" viewBox="0 0 220 220" role="img" aria-hidden="true">
+    <defs>
+      <filter id="violetGlow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="3.5" result="b"/>
+        <feMerge>
+          <feMergeNode in="b"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+
+    <path d="M110 22
+             C78 26,62 44,62 66
+             C42 72,34 92,44 108
+             C56 128,84 134,98 126
+             C102 142,118 142,122 126
+             C140 134,168 128,176 108
+             C186 92,178 72,158 66
+             C158 44,142 26,110 22 Z"
+          fill="none" stroke="currentColor" stroke-width="2.2" opacity=".92" filter="url(#violetGlow)"/>
+
+    <path d="M110 86
+             C104 102,98 112,92 124
+             C100 126,106 130,110 138
+             C114 130,120 126,128 124
+             C122 112,116 102,110 86 Z"
+          fill="none" stroke="currentColor" stroke-width="2.2" opacity=".9" filter="url(#violetGlow)"/>
+
+    <path d="M110 138
+             C100 150,90 160,74 166
+             M110 138
+             C120 150,130 160,146 166
+             M110 142
+             C106 156,102 168,92 176
+             M110 142
+             C114 156,118 168,128 176"
+          fill="none" stroke="currentColor" stroke-width="2.2" opacity=".88" filter="url(#violetGlow)"/>
+
+    <circle cx="110" cy="70" r="2.2" fill="currentColor" opacity=".9" filter="url(#violetGlow)"/>
+  </svg>
+
+  <div class="treeHint">UNIVERSE</div>
 </div>
 </section>
 
@@ -537,8 +622,13 @@ draw();
 
 nextVideos.onclick=()=>{page=(page+1)%pages.length;draw();}
 prevVideos.onclick=()=>{page=(page-1+pages.length)%pages.length;draw();}
+
+/* TREE PORTAL -> universe.html */
+const treePortal = document.getElementById("treePortal");
+if(treePortal){
+  treePortal.onclick = ()=>{ window.location.href = "universe.html"; };
+}
 </script>
 
 </body>
 </html>
-
