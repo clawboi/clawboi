@@ -1,4 +1,3 @@
-<!-- decrypt.html -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -147,23 +146,19 @@ canvas{position:fixed;inset:0}
     </div>
   </div>
 
-  <div class="small">YOU’LL PLUG REAL TRACKS IN LATER. CLICK A FILE TO “OPEN”.</div>
-
   <!-- NEW: audio + bouncing visual effect over the matrix -->
   <div class="player">
-    <button class="pbtn" id="playAmb">PLAY AMBIENT</button>
     <button class="pbtn alt" id="stopAmb">STOP</button>
     <a class="pbtn alt" href="secret.html">RETURN TO TRANSMISSION</a>
 
     <!-- hidden audio element (swap src later if you want) -->
     <audio id="amb" preload="auto" loop>
-      <!-- put your actual ambient file here later -->
       <source src="audio/ambient-space.mp3?v=1" type="audio/mpeg">
     </audio>
 
     <canvas class="viz" id="viz" aria-hidden="true"></canvas>
   </div>
-  <div class="pnote">TIP: IF AUDIO DOESN’T START, TAP PLAY AGAIN.</div>
+  <div class="pnote">TIP: IF AUDIO DOESN’T START, TAP ANYWHERE.</div>
 </div>
 
 <script>
@@ -184,7 +179,7 @@ window.addEventListener("resize", resize);
 resize();
 
 /* --- NEW: audio-reactive bounce (no change to your 0/1 vibe, just motion + pulse) --- */
-let aCtx, analyser, srcNode, data, playing=false;
+let aCtx, analyser, srcNode, data;
 let amp = 0; // smoothed amplitude 0..1
 
 function setupAudio(){
@@ -208,15 +203,31 @@ function setupAudio(){
 function getAmp(){
   if(!analyser) return 0;
   analyser.getByteFrequencyData(data);
-  // use low-mid bands for pulse
   let sum=0;
   const start=2, end=Math.min(48, data.length);
   for(let i=start;i<end;i++) sum += data[i];
-  const avg = sum / (end-start) / 255; // 0..1
-  // smooth it
+  const avg = sum / (end-start) / 255;
   amp = amp*0.85 + avg*0.15;
   return amp;
 }
+
+/* Auto-start audio on first user gesture (no play button) */
+const amb = document.getElementById("amb");
+let started = false;
+
+async function startIfNeeded(){
+  if(started) return;
+  try{
+    setupAudio();
+    if(aCtx.state === "suspended") await aCtx.resume();
+    await amb.play();
+    started = true;
+  }catch(e){
+    // silent fail
+  }
+}
+document.addEventListener("pointerdown", startIfNeeded, {passive:true});
+document.addEventListener("keydown", startIfNeeded);
 
 /* HUD flicker */
 const hud = document.getElementById("hud");
@@ -250,16 +261,15 @@ function drawViz(){
   for(let i=0;i<bars;i++){
     const idx = analyser ? Math.min(data.length-1, Math.floor(i*(data.length/bars))) : i;
     const raw = analyser ? (data[idx]/255) : 0;
-    const h = Math.max(2, (raw*0.65 + level*0.35) * (H-6));
+    const hh = Math.max(2, (raw*0.65 + level*0.35) * (H-6));
     const x = i*(bw+gap);
-    const y = H - h;
+    const y = H - hh;
 
-    // white core + violet glow
     vctx.fillStyle = `rgba(255,255,255,${0.18 + raw*0.35})`;
-    vctx.fillRect(x, y, bw, h);
+    vctx.fillRect(x, y, bw, hh);
 
     vctx.fillStyle = `rgba(138,46,255,${0.10 + raw*0.40})`;
-    vctx.fillRect(x, y, bw, h*0.92);
+    vctx.fillRect(x, y, bw, hh*0.92);
   }
 
   requestAnimationFrame(drawViz);
@@ -270,17 +280,14 @@ drawViz();
 function tick(){
   const level = getAmp();
 
-  // background fade gets a tiny bit stronger on hits
   const fade = 0.08 + level*0.08;
   ctx.fillStyle = `rgba(0,0,0,${fade})`;
   ctx.fillRect(0,0,window.innerWidth,window.innerHeight);
 
-  // violet intensity bumps with level
   const a = 0.78 + level*0.22;
   ctx.fillStyle = `rgba(138,46,255,${a})`;
   ctx.font = font+"px ui-monospace, Menlo, monospace";
 
-  // speed up slightly with amplitude
   const speed = 1 + level*2.4;
 
   for(let i=0;i<cols;i++){
@@ -288,7 +295,6 @@ function tick(){
     const y=ys[i];
     const ch = Math.random() > 0.5 ? "0" : "1";
 
-    // slight horizontal “wobble” from level
     const wobble = Math.sin((i*0.7) + performance.now()*0.002) * (level*3.5);
     ctx.fillText(ch, x + wobble, y);
 
@@ -299,28 +305,12 @@ function tick(){
 }
 tick();
 
-/* Audio controls */
-const playBtn = document.getElementById("playAmb");
+/* Stop button */
 const stopBtn = document.getElementById("stopAmb");
-const amb = document.getElementById("amb");
-
-playBtn.onclick = async ()=>{
-  try{
-    setupAudio();
-    if(aCtx.state === "suspended") await aCtx.resume();
-    await amb.play();
-    playing = true;
-    playBtn.textContent = "PLAYING";
-  }catch(e){
-    // silent fail like your style
-  }
-};
-
 stopBtn.onclick = ()=>{
   amb.pause();
   amb.currentTime = 0;
-  playing = false;
-  playBtn.textContent = "PLAY AMBIENT";
+  started = false; // allows re-start on next tap
 };
 
 /* File click behavior: goes to placeholders you can swap later */
