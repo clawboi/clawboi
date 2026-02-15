@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ESCAPE PROTOCOL</title>
+
+<style>
+:root{
+ --bg:#000;
+ --fg:#e8e8e8;
+ --accent:#8a2eff;
+}
+body{
+ margin:0;
+ background:var(--bg);
+ color:var(--fg);
+ font-family:monospace;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ height:100vh;
+ overflow:hidden;
+}
+
+/* pixel frame */
+.game{
+ width:92vw;
+ max-width:720px;
+ border:3px solid var(--accent);
+ padding:18px;
+ box-shadow:0 0 25px rgba(138,46,255,.35);
+ background:#050505;
+}
+
+/* title */
+.title{
+ text-align:center;
+ letter-spacing:.4em;
+ margin-bottom:16px;
+ color:#fff;
+ text-shadow:0 0 12px var(--accent);
+}
+
+/* story text */
+.text{
+ min-height:140px;
+ line-height:1.6;
+ white-space:pre-line;
+ margin-bottom:20px;
+}
+
+/* choices */
+.choices{
+ display:flex;
+ flex-direction:column;
+ gap:10px;
+}
+
+button{
+ background:#0a0a0a;
+ color:#fff;
+ border:1px solid var(--accent);
+ padding:12px;
+ cursor:pointer;
+ font-family:monospace;
+ letter-spacing:.15em;
+}
+button:hover{
+ background:var(--accent);
+}
+
+/* name input */
+input{
+ width:100%;
+ padding:12px;
+ margin-top:12px;
+ background:#000;
+ border:1px solid var(--accent);
+ color:#fff;
+ font-family:monospace;
+ text-align:center;
+ letter-spacing:.2em;
+}
+
+/* death text */
+.dead{
+ color:#ff5c5c;
+}
+
+/* win text */
+.win{
+ color:#8affc1;
+}
+</style>
+</head>
+<body>
+
+<div class="game">
+
+<div class="title">ESCAPE PROTOCOL</div>
+
+<div id="text" class="text"></div>
+
+<div id="choices" class="choices"></div>
+
+</div>
+
+<script>
+let playerName = "";
+let state = "name";
+
+/* random death chance */
+function fate(chance){
+ return Math.random() < chance;
+}
+
+/* UI helpers */
+function show(text, options=[]){
+ document.getElementById("text").innerHTML = text;
+ const c = document.getElementById("choices");
+ c.innerHTML="";
+ options.forEach(o=>{
+   const b=document.createElement("button");
+   b.textContent=o.label;
+   b.onclick=o.action;
+   c.appendChild(b);
+ });
+}
+
+/* start */
+start();
+
+function start(){
+ show(
+ "ENTER PATIENT NAME:",
+ [{
+   label:"CONFIRM",
+   action:()=>{
+     const val=document.getElementById("nameInput").value.trim();
+     if(!val) return;
+     playerName=val;
+     intro();
+   }
+ }]
+ );
+ const input=document.createElement("input");
+ input.id="nameInput";
+ input.placeholder="NAME";
+ document.getElementById("choices").prepend(input);
+}
+
+/* intro */
+function intro(){
+ show(
+ `${playerName}, you wake up in a hospital bed.
+
+The ceiling hums.
+Your wrists ache.
+You don't remember how you got here.
+
+A nurse enters with pills.
+
+Take them?`,
+ [
+ {label:"TAKE PILLS", action:pills},
+ {label:"REFUSE", action:refuse},
+ {label:"HIDE PILLS", action:hide}
+ ]);
+}
+
+/* branch 1 */
+function pills(){
+ if(fate(.55)) return die("The pills dissolve your thoughts. You forget your own name.");
+
+ show(
+ "The pills calm your nerves.\n\nThe nurse leaves.\n\nYou hear a door unlock down the hall.",
+ [
+ {label:"SNEAK OUT", action:hall},
+ {label:"WAIT", action:waitRoom}
+ ]);
+}
+
+function refuse(){
+ if(fate(.45)) return die("Orderlies pin you down. Sedative injected. Darkness.");
+
+ show(
+ "The nurse glares.\n\nShe writes something on her clipboard.\n\nShe leaves.",
+ [
+ {label:"RUN", action:hall},
+ {label:"SEARCH ROOM", action:search}
+ ]);
+}
+
+function hide(){
+ if(fate(.35)) return die("Camera sees everything. Alarm screams.");
+
+ show(
+ "You palm the pills.\n\nYou feel watched.",
+ [
+ {label:"THROW PILLS AWAY", action:hall},
+ {label:"EAT THEM NOW", action:pills}
+ ]);
+}
+
+/* hall */
+function hall(){
+ show(
+ "The hallway lights flicker.\nDoors line both sides.\n\nYou hear breathing behind one door.",
+ [
+ {label:"OPEN DOOR", action:door},
+ {label:"KEEP WALKING", action:walk},
+ {label:"RUN", action:runHall}
+ ]);
+}
+
+function waitRoom(){
+ if(fate(.6)) return die("Waiting was your last mistake. They return with restraints.");
+ hall();
+}
+
+function search(){
+ show(
+ "You find:\n• bent paperclip\n• cracked mirror shard",
+ [
+ {label:"TAKE PAPERCLIP", action:clip},
+ {label:"TAKE SHARD", action:shard}
+ ]);
+}
+
+/* items */
+function clip(){
+ show(
+ "You pick the lock.\n\nFreedom breathes.",
+ [
+ {label:"STEP INTO HALL", action:hall}
+ ]);
+}
+
+function shard(){
+ if(fate(.4)) return die("You cut too deep. Blood loss.");
+
+ hall();
+}
+
+/* hallway branches */
+function door(){
+ if(fate(.7)) return die("A patient lunges out. Screaming. Security arrives.");
+ winRoom();
+}
+
+function walk(){
+ if(fate(.5)) return die("Camera spots movement. Tranquilizer dart hits your neck.");
+ exitDoor();
+}
+
+function runHall(){
+ if(fate(.6)) return die("You slip. Skull meets tile.");
+ exitDoor();
+}
+
+/* near escape */
+function winRoom(){
+ show(
+ "Inside is a control room.\n\nSecurity feeds.\nExit doors.\nFreedom.",
+ [
+ {label:"OPEN EXIT", action:escape},
+ {label:"DISABLE CAMERAS", action:disable},
+ {label:"HIDE", action:hideFinal}
+ ]);
+}
+
+function exitDoor(){
+ show(
+ "A glowing EXIT sign pulses.",
+ [
+ {label:"OPEN DOOR", action:escape},
+ {label:"TURN BACK", action:hall}
+ ]);
+}
+
+function disable(){
+ if(fate(.5)) return die("Alarm triggered. Too slow.");
+ escape();
+}
+
+function hideFinal(){
+ if(fate(.65)) return die("They sweep the room. You are found.");
+ escape();
+}
+
+/* endings */
+function escape(){
+ if(fate(.5)) return die("Door opens to another ward. You never left.");
+
+ const endings=[
+ "You step outside. Cold air. Freedom is real.",
+ "The world glitches. The hospital never existed.",
+ "You wake up… in your bed at home. Was any of it real?"
+ ];
+ const msg=endings[Math.floor(Math.random()*endings.length)];
+
+ show(
+ `<span class="win">ESCAPE SUCCESSFUL</span>
+
+${msg}
+
+Survival Rate: ${Math.floor(Math.random()*5+11)}%`,
+ [{label:"PLAY AGAIN", action:restart}]
+ );
+}
+
+/* death */
+function die(reason){
+ show(
+ `<span class="dead">YOU DIED</span>
+
+${reason}
+
+Survival Probability: 15%`,
+ [{label:"TRY AGAIN", action:restart}]
+ );
+}
+
+/* restart */
+function restart(){
+ location.reload();
+}
+</script>
+
+</body>
+</html>
