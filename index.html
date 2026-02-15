@@ -129,6 +129,15 @@ header a:hover{opacity:1}
   100%{filter:brightness(1)}
 }
 
+/* NEW: intensify glow on 2nd click */
+.logo.heat{
+  text-shadow:
+    0 0 22px rgba(138,46,255,.55),
+    0 0 72px rgba(138,46,255,.30),
+    0 0 120px rgba(138,46,255,.18);
+  filter:saturate(1.15);
+}
+
 /* BLOCK */
 .block{padding:50px 0;}
 
@@ -380,11 +389,90 @@ document.documentElement.style.setProperty("--x",(e.clientX/window.innerWidth)*1
 document.documentElement.style.setProperty("--y",(e.clientY/window.innerHeight)*100+"%");
 });
 
-/* logo flash */
+/* logo: flash + 2nd-click glow boost + 3rd-click glitch sound + secret page */
 const logo=document.getElementById("logo");
+
+let logoClicks = 0;
+let logoTimer;
+
+/* glitch sound (no file needed) */
+let aCtx;
+function glitchBlip(){
+  try{
+    aCtx = aCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = aCtx.currentTime;
+
+    const master = aCtx.createGain();
+    master.gain.setValueAtTime(0.0001, t);
+    master.gain.exponentialRampToValueAtTime(0.22, t + 0.01);
+    master.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    master.connect(aCtx.destination);
+
+    // noisy burst
+    const bufferSize = Math.floor(aCtx.sampleRate * 0.12);
+    const buffer = aCtx.createBuffer(1, bufferSize, aCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++){
+      const n = (Math.random()*2-1);
+      data[i] = n * (1 - i/bufferSize);
+    }
+    const noise = aCtx.createBufferSource();
+    noise.buffer = buffer;
+
+    const hp = aCtx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.setValueAtTime(900, t);
+
+    const bp = aCtx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(1800, t);
+    bp.Q.setValueAtTime(8, t);
+
+    noise.connect(hp);
+    hp.connect(bp);
+    bp.connect(master);
+    noise.start(t);
+
+    // tiny digital chirp
+    const osc = aCtx.createOscillator();
+    osc.type = "square";
+    const og = aCtx.createGain();
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(0.12, t + 0.01);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+    osc.frequency.setValueAtTime(980, t);
+    osc.frequency.exponentialRampToValueAtTime(220, t + 0.08);
+    osc.connect(og);
+    og.connect(master);
+    osc.start(t);
+    osc.stop(t + 0.09);
+  }catch(e){}
+}
+
 logo.onclick=()=>{
-logo.classList.add("flash");
-setTimeout(()=>logo.classList.remove("flash"),350);
+  // keep your existing flash
+  logo.classList.add("flash");
+  setTimeout(()=>logo.classList.remove("flash"),350);
+
+  // count triple click
+  logoClicks++;
+
+  clearTimeout(logoTimer);
+  logoTimer = setTimeout(()=>{
+    logoClicks = 0;
+    logo.classList.remove("heat");
+  }, 700);
+
+  // 2nd click: glow intensifies
+  if(logoClicks === 2){
+    logo.classList.add("heat");
+  }
+
+  // 3rd click: glitch sound + go to secret page
+  if(logoClicks === 3){
+    glitchBlip();
+    window.location.href = "secret.html";
+  }
 };
 
 /* audio */
@@ -453,3 +541,4 @@ prevVideos.onclick=()=>{page=(page-1+pages.length)%pages.length;draw();}
 
 </body>
 </html>
+
