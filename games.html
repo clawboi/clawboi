@@ -1,1 +1,283 @@
+<!-- games.html -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GAMES</title>
+
+<style>
+:root{
+  --violet:#8a2eff;
+  --bg:#000;
+  --fg:#fff;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  overflow-x:hidden;
+  position:relative;
+}
+
+/* violet fog */
+body::before{
+  content:"";
+  position:fixed;
+  inset:-25%;
+  pointer-events:none;
+  z-index:0;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(138,46,255,.26), transparent 58%),
+    radial-gradient(circle at 78% 32%, rgba(138,46,255,.18), transparent 64%),
+    radial-gradient(circle at 48% 88%, rgba(138,46,255,.14), transparent 70%),
+    radial-gradient(circle at 60% 60%, rgba(255,255,255,.04), transparent 72%);
+  mix-blend-mode:screen;
+  filter:blur(38px) saturate(1.25);
+  animation:fog 18s ease-in-out infinite;
+}
+@keyframes fog{
+  0%,100%{transform:translate(0,0) scale(1)}
+  50%{transform:translate(-2.5%,3.5%) scale(1.02)}
+}
+
+/* scanlines */
+.scan{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:6;
+  opacity:.08;
+  mix-blend-mode:overlay;
+  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
+}
+
+/* top brand */
+.brand{
+  position:fixed;
+  top:14px;
+  left:14px;
+  z-index:9;
+  font-size:11px;
+  letter-spacing:.34em;
+  text-transform:uppercase;
+  color:#fff;
+  text-decoration:none;
+  opacity:.72;
+  text-shadow:0 0 18px rgba(138,46,255,.25);
+}
+.brand:hover{opacity:1}
+
+/* layout */
+.wrap{
+  position:relative;
+  z-index:2;
+  padding:90px 18px 60px;
+  max-width:980px;
+  margin:0 auto;
+}
+.h1{
+  font-size:clamp(18px,4vw,42px);
+  letter-spacing:.46em;
+  text-transform:uppercase;
+  text-shadow:0 0 18px rgba(138,46,255,.35);
+}
+.sub{
+  margin-top:10px;
+  font-size:11px;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+  opacity:.62;
+  line-height:1.7;
+}
+
+/* grid */
+.grid{
+  margin-top:26px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+@media(max-width:860px){.grid{grid-template-columns:1fr}}
+
+.card{
+  background:rgba(255,255,255,.03);
+  border-radius:18px;
+  padding:16px;
+  position:relative;
+  overflow:hidden;
+}
+.card:before{
+  content:"";
+  position:absolute;
+  left:-20%;
+  top:0;
+  width:140%;
+  height:1px;
+  background:linear-gradient(90deg, transparent, rgba(138,46,255,.55), transparent);
+  opacity:.35;
+}
+
+.label{
+  font-size:10px;
+  letter-spacing:.34em;
+  text-transform:uppercase;
+  opacity:.7;
+}
+
+.preview{
+  margin-top:12px;
+  border-radius:16px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.06);
+  background:rgba(0,0,0,.55);
+  position:relative;
+  aspect-ratio: 16 / 9;
+}
+.preview img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  filter:contrast(1.02) saturate(1.05);
+  opacity:.95;
+}
+.preview .noise{
+  position:absolute; inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(138,46,255,.14), transparent 55%),
+    radial-gradient(circle at 70% 60%, rgba(255,255,255,.06), transparent 60%);
+  mix-blend-mode:screen;
+}
+.preview .badge{
+  position:absolute;
+  left:12px; top:12px;
+  padding:8px 10px;
+  border-radius:999px;
+  font-size:10px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  background:rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.10);
+  opacity:.9;
+}
+.preview .badge.v{ border-color:rgba(138,46,255,.30); box-shadow:0 0 18px rgba(138,46,255,.10) }
+.preview .cta{
+  position:absolute;
+  right:12px; bottom:12px;
+  padding:10px 12px;
+  border-radius:999px;
+  font-size:10px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  background:rgba(138,46,255,.16);
+  border:1px solid rgba(255,255,255,.10);
+  color:#fff;
+  opacity:.92;
+}
+.card a{ text-decoration:none; color:#fff; }
+
+.desc{
+  margin-top:12px;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:12px;
+  letter-spacing:.08em;
+  opacity:.74;
+  line-height:1.6;
+}
+
+.btnRow{margin-top:14px; display:flex; gap:10px; flex-wrap:wrap}
+.btn{
+  appearance:none;
+  border:0;
+  cursor:pointer;
+  padding:12px 14px;
+  border-radius:999px;
+  background:rgba(138,46,255,.16);
+  color:#fff;
+  letter-spacing:.22em;
+  font-size:11px;
+  text-transform:uppercase;
+}
+.btn:hover{filter:brightness(1.06)}
+.btn.alt{background:rgba(255,255,255,.06)}
+</style>
+</head>
+
+<body>
+<a class="brand" href="secret.html">TRANSMISSION</a>
+<div class="scan"></div>
+
+<div class="wrap">
+  <div class="h1">GAMES</div>
+  <div class="sub">PLAYABLE SIGNALS · CLICK A NODE TO ENTER</div>
+
+  <div class="grid">
+
+    <!-- SPACE CHIMP -->
+    <div class="card">
+      <div class="label">SPACE CHIMP</div>
+
+      <a href="dream.html" aria-label="Open Space Chimp">
+        <div class="preview">
+          <!-- Put an image here: images/space-chimp.jpg (or .png).
+               If you don’t have one yet, leave it: it’ll show broken image until you add it. -->
+          <img src="images/space-chimp.jpg" alt="Space Chimp cover art">
+          <div class="noise"></div>
+          <div class="badge v">DREAM.HTML</div>
+          <div class="cta">ENTER</div>
+        </div>
+      </a>
+
+      <div class="desc">
+        LOW-GRAVITY RUN. PILL DODGE. STARSTATIC AUDIO.
+        <br>ONE WRONG MOVE = LAUGH / SCREAM / RELOAD.
+      </div>
+
+      <div class="btnRow">
+        <a class="btn" href="dream.html">PLAY</a>
+        <a class="btn alt" href="vault.html">VAULT</a>
+      </div>
+    </div>
+
+    <!-- PSYCHWARD ESCAPE -->
+    <div class="card">
+      <div class="label">ESCAPE PSYCHWARD</div>
+
+      <a href="escape.html" aria-label="Open Escape Psychward">
+        <div class="preview">
+          <!-- Put an image here: images/psychward.jpg (or .png). -->
+          <img src="images/psychward.jpg" alt="Escape Psychward cover art">
+          <div class="noise"></div>
+          <div class="badge">ESCAPE.HTML</div>
+          <div class="cta">ENTER</div>
+        </div>
+      </a>
+
+      <div class="desc">
+        CHOOSE DOOR A / B / C. PILLS OR NO PILLS.
+        <br>LOW SURVIVAL RATE. FULL DEATH LOG.
+      </div>
+
+      <div class="btnRow">
+        <a class="btn" href="escape.html">PLAY</a>
+        <a class="btn alt" href="secret.html">BACK</a>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="btnRow" style="margin-top:22px">
+    <a class="btn alt" href="secret.html">RETURN TO TRANSMISSION</a>
+    <a class="btn alt" href="listen.html">LISTEN</a>
+    <a class="btn alt" href="shop.html">SHOP</a>
+  </div>
+</div>
+
+</body>
+</html>
 
