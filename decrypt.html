@@ -69,6 +69,47 @@ a{color:#fff;text-decoration:none}
   text-transform:uppercase;
   opacity:.55;
 }
+
+/* NEW: mini player + visualizer */
+.player{
+  margin-top:12px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.pbtn{
+  appearance:none;
+  border:0;
+  cursor:pointer;
+  padding:10px 12px;
+  border-radius:999px;
+  background:rgba(138,46,255,.16);
+  color:#fff;
+  letter-spacing:.22em;
+  font-size:10px;
+  text-transform:uppercase;
+}
+.pbtn:hover{filter:brightness(1.06)}
+.pbtn.alt{background:rgba(255,255,255,.06)}
+.viz{
+  width:100%;
+  height:46px;
+  border-radius:12px;
+  overflow:hidden;
+  background:rgba(255,255,255,.02);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+}
+
+/* small player hint */
+.pnote{
+  margin-top:8px;
+  font-size:10px;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+  opacity:.5;
+}
+
 canvas{position:fixed;inset:0}
 .scan{
   position:fixed;inset:0;pointer-events:none;z-index:3;
@@ -78,6 +119,7 @@ canvas{position:fixed;inset:0}
 </style>
 </head>
 <body>
+
 <a class="brand" href="vault.html">CLAWBOI</a>
 <div class="hud" id="hud">DECRYPTING…</div>
 <canvas id="c"></canvas>
@@ -85,6 +127,7 @@ canvas{position:fixed;inset:0}
 
 <div class="panel">
   <div class="title">LOST SONG FILES</div>
+
   <div class="files" id="files">
     <div class="file" data-song="backdoor">
       <div class="name">UNTITLED_03_BACKDOOR.wav</div>
@@ -103,7 +146,24 @@ canvas{position:fixed;inset:0}
       <div class="tag">MISSING</div>
     </div>
   </div>
+
   <div class="small">YOU’LL PLUG REAL TRACKS IN LATER. CLICK A FILE TO “OPEN”.</div>
+
+  <!-- NEW: audio + bouncing visual effect over the matrix -->
+  <div class="player">
+    <button class="pbtn" id="playAmb">PLAY AMBIENT</button>
+    <button class="pbtn alt" id="stopAmb">STOP</button>
+    <a class="pbtn alt" href="secret.html">RETURN TO TRANSMISSION</a>
+
+    <!-- hidden audio element (swap src later if you want) -->
+    <audio id="amb" preload="auto" loop>
+      <!-- put your actual ambient file here later -->
+      <source src="audio/ambient-space.mp3?v=1" type="audio/mpeg">
+    </audio>
+
+    <canvas class="viz" id="viz" aria-hidden="true"></canvas>
+  </div>
+  <div class="pnote">TIP: IF AUDIO DOESN’T START, TAP PLAY AGAIN.</div>
 </div>
 
 <script>
@@ -111,6 +171,7 @@ canvas{position:fixed;inset:0}
 const c = document.getElementById("c");
 const ctx = c.getContext("2d");
 let w,h,cols,ys,font=16;
+
 function resize(){
   w=c.width=window.innerWidth*devicePixelRatio;
   h=c.height=window.innerHeight*devicePixelRatio;
@@ -122,24 +183,40 @@ function resize(){
 window.addEventListener("resize", resize);
 resize();
 
-function tick(){
-  ctx.fillStyle="rgba(0,0,0,0.08)";
-  ctx.fillRect(0,0,window.innerWidth,window.innerHeight);
+/* --- NEW: audio-reactive bounce (no change to your 0/1 vibe, just motion + pulse) --- */
+let aCtx, analyser, srcNode, data, playing=false;
+let amp = 0; // smoothed amplitude 0..1
 
-  ctx.fillStyle="rgba(138,46,255,0.95)";
-  ctx.font = font+"px ui-monospace, Menlo, monospace";
+function setupAudio(){
+  if(aCtx) return;
+  aCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = aCtx.createAnalyser();
+  analyser.fftSize = 1024;
+  data = new Uint8Array(analyser.frequencyBinCount);
 
-  for(let i=0;i<cols;i++){
-    const x=i*font;
-    const y=ys[i];
-    const ch = Math.random() > 0.5 ? "0" : "1";
-    ctx.fillText(ch, x, y);
-    ys[i] = y + font;
-    if(ys[i] > window.innerHeight + Math.random()*400) ys[i]= -Math.random()*200;
-  }
-  requestAnimationFrame(tick);
+  const audioEl = document.getElementById("amb");
+  srcNode = aCtx.createMediaElementSource(audioEl);
+
+  const gain = aCtx.createGain();
+  gain.gain.value = 0.9;
+
+  srcNode.connect(analyser);
+  analyser.connect(gain);
+  gain.connect(aCtx.destination);
 }
-tick();
+
+function getAmp(){
+  if(!analyser) return 0;
+  analyser.getByteFrequencyData(data);
+  // use low-mid bands for pulse
+  let sum=0;
+  const start=2, end=Math.min(48, data.length);
+  for(let i=start;i<end;i++) sum += data[i];
+  const avg = sum / (end-start) / 255; // 0..1
+  // smooth it
+  amp = amp*0.85 + avg*0.15;
+  return amp;
+}
 
 /* HUD flicker */
 const hud = document.getElementById("hud");
@@ -147,18 +224,116 @@ const hudLines = ["DECRYPTING…","PACKETS LOST…","REBUILDING INDEX…","SIGNA
 let hi=0;
 setInterval(()=>{hi=(hi+1)%hudLines.length; hud.textContent=hudLines[hi];}, 1100);
 
+/* Visualizer canvas (bounces to music) */
+const viz = document.getElementById("viz");
+const vctx = viz.getContext("2d");
+function fitViz(){
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  viz.width = Math.floor(viz.clientWidth * dpr);
+  viz.height = Math.floor(viz.clientHeight * dpr);
+  vctx.setTransform(1,0,0,1,0,0);
+  vctx.scale(dpr,dpr);
+}
+addEventListener("resize", fitViz);
+fitViz();
+
+function drawViz(){
+  const W = viz.clientWidth;
+  const H = viz.clientHeight;
+  vctx.clearRect(0,0,W,H);
+
+  const level = getAmp();
+  const bars = 32;
+  const gap = 3;
+  const bw = (W - gap*(bars-1)) / bars;
+
+  for(let i=0;i<bars;i++){
+    const idx = analyser ? Math.min(data.length-1, Math.floor(i*(data.length/bars))) : i;
+    const raw = analyser ? (data[idx]/255) : 0;
+    const h = Math.max(2, (raw*0.65 + level*0.35) * (H-6));
+    const x = i*(bw+gap);
+    const y = H - h;
+
+    // white core + violet glow
+    vctx.fillStyle = `rgba(255,255,255,${0.18 + raw*0.35})`;
+    vctx.fillRect(x, y, bw, h);
+
+    vctx.fillStyle = `rgba(138,46,255,${0.10 + raw*0.40})`;
+    vctx.fillRect(x, y, bw, h*0.92);
+  }
+
+  requestAnimationFrame(drawViz);
+}
+drawViz();
+
+/* Matrix tick now reacts to audio: speed + brightness + subtle “bounce” */
+function tick(){
+  const level = getAmp();
+
+  // background fade gets a tiny bit stronger on hits
+  const fade = 0.08 + level*0.08;
+  ctx.fillStyle = `rgba(0,0,0,${fade})`;
+  ctx.fillRect(0,0,window.innerWidth,window.innerHeight);
+
+  // violet intensity bumps with level
+  const a = 0.78 + level*0.22;
+  ctx.fillStyle = `rgba(138,46,255,${a})`;
+  ctx.font = font+"px ui-monospace, Menlo, monospace";
+
+  // speed up slightly with amplitude
+  const speed = 1 + level*2.4;
+
+  for(let i=0;i<cols;i++){
+    const x=i*font;
+    const y=ys[i];
+    const ch = Math.random() > 0.5 ? "0" : "1";
+
+    // slight horizontal “wobble” from level
+    const wobble = Math.sin((i*0.7) + performance.now()*0.002) * (level*3.5);
+    ctx.fillText(ch, x + wobble, y);
+
+    ys[i] = y + font*speed;
+    if(ys[i] > window.innerHeight + Math.random()*400) ys[i]= -Math.random()*200;
+  }
+  requestAnimationFrame(tick);
+}
+tick();
+
+/* Audio controls */
+const playBtn = document.getElementById("playAmb");
+const stopBtn = document.getElementById("stopAmb");
+const amb = document.getElementById("amb");
+
+playBtn.onclick = async ()=>{
+  try{
+    setupAudio();
+    if(aCtx.state === "suspended") await aCtx.resume();
+    await amb.play();
+    playing = true;
+    playBtn.textContent = "PLAYING";
+  }catch(e){
+    // silent fail like your style
+  }
+};
+
+stopBtn.onclick = ()=>{
+  amb.pause();
+  amb.currentTime = 0;
+  playing = false;
+  playBtn.textContent = "PLAY AMBIENT";
+};
+
 /* File click behavior: goes to placeholders you can swap later */
 document.getElementById("files").addEventListener("click",(e)=>{
   const row = e.target.closest(".file");
   if(!row) return;
   const key = row.getAttribute("data-song");
   if(key === "backdoor"){
-    window.location.href = "backdoor.html"; // create later if you want
+    window.location.href = "backdoor.html";
   }else{
-    window.location.href = "lostfile.html"; // create later if you want
+    window.location.href = "lostfile.html";
   }
 });
 </script>
 </body>
 </html>
-
