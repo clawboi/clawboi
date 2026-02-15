@@ -1,1 +1,164 @@
+<!-- decrypt.html -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DECRYPT</title>
+<style>
+:root{--bg:#000;--violet:#8a2eff;--fg:#fff;}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  overflow:hidden;
+}
+a{color:#fff;text-decoration:none}
+.brand{
+  position:fixed;top:14px;left:14px;z-index:9;
+  font-size:11px;letter-spacing:.34em;text-transform:uppercase;
+  opacity:.75;text-shadow:0 0 18px rgba(138,46,255,.25);
+}
+.brand:hover{opacity:1}
+.hud{
+  position:fixed;top:14px;right:14px;z-index:9;
+  font-size:10px;letter-spacing:.30em;text-transform:uppercase;
+  opacity:.62;
+}
+.panel{
+  position:fixed;
+  left:14px; bottom:14px;
+  z-index:9;
+  width:min(520px, calc(100vw - 28px));
+  background:rgba(255,255,255,.03);
+  border-radius:16px;
+  padding:14px;
+  backdrop-filter: blur(10px);
+  box-shadow:0 0 38px rgba(138,46,255,.10);
+}
+.panel .title{
+  font-size:10px;letter-spacing:.34em;text-transform:uppercase;opacity:.75;
+}
+.files{
+  margin-top:10px;
+  font-size:12px;
+  line-height:1.6;
+  letter-spacing:.08em;
+  opacity:.85;
+}
+.file{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 10px;
+  border-radius:12px;
+  background:rgba(138,46,255,.06);
+  margin-top:8px;
+  cursor:pointer;
+}
+.file:hover{filter:brightness(1.06)}
+.file .name{opacity:.92}
+.file .tag{opacity:.55; letter-spacing:.22em; text-transform:uppercase; font-size:10px}
+.small{
+  margin-top:10px;
+  font-size:10px;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+  opacity:.55;
+}
+canvas{position:fixed;inset:0}
+.scan{
+  position:fixed;inset:0;pointer-events:none;z-index:3;
+  opacity:.08;mix-blend-mode:overlay;
+  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
+}
+</style>
+</head>
+<body>
+<a class="brand" href="vault.html">CLAWBOI</a>
+<div class="hud" id="hud">DECRYPTING…</div>
+<canvas id="c"></canvas>
+<div class="scan"></div>
+
+<div class="panel">
+  <div class="title">LOST SONG FILES</div>
+  <div class="files" id="files">
+    <div class="file" data-song="backdoor">
+      <div class="name">UNTITLED_03_BACKDOOR.wav</div>
+      <div class="tag">RECOVER</div>
+    </div>
+    <div class="file" data-song="untitled01">
+      <div class="name">UNTITLED_01.wav</div>
+      <div class="tag">BROKEN</div>
+    </div>
+    <div class="file" data-song="untitled02">
+      <div class="name">UNTITLED_02.wav</div>
+      <div class="tag">GLITCH</div>
+    </div>
+    <div class="file" data-song="untitled04">
+      <div class="name">UNTITLED_04.wav</div>
+      <div class="tag">MISSING</div>
+    </div>
+  </div>
+  <div class="small">YOU’LL PLUG REAL TRACKS IN LATER. CLICK A FILE TO “OPEN”.</div>
+</div>
+
+<script>
+/* Matrix rain */
+const c = document.getElementById("c");
+const ctx = c.getContext("2d");
+let w,h,cols,ys,font=16;
+function resize(){
+  w=c.width=window.innerWidth*devicePixelRatio;
+  h=c.height=window.innerHeight*devicePixelRatio;
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  cols = Math.floor(window.innerWidth / font);
+  ys = Array(cols).fill(0).map(()=>Math.random()*window.innerHeight);
+}
+window.addEventListener("resize", resize);
+resize();
+
+function tick(){
+  ctx.fillStyle="rgba(0,0,0,0.08)";
+  ctx.fillRect(0,0,window.innerWidth,window.innerHeight);
+
+  ctx.fillStyle="rgba(138,46,255,0.95)";
+  ctx.font = font+"px ui-monospace, Menlo, monospace";
+
+  for(let i=0;i<cols;i++){
+    const x=i*font;
+    const y=ys[i];
+    const ch = Math.random() > 0.5 ? "0" : "1";
+    ctx.fillText(ch, x, y);
+    ys[i] = y + font;
+    if(ys[i] > window.innerHeight + Math.random()*400) ys[i]= -Math.random()*200;
+  }
+  requestAnimationFrame(tick);
+}
+tick();
+
+/* HUD flicker */
+const hud = document.getElementById("hud");
+const hudLines = ["DECRYPTING…","PACKETS LOST…","REBUILDING INDEX…","SIGNAL FOUND.","OPEN A FILE."];
+let hi=0;
+setInterval(()=>{hi=(hi+1)%hudLines.length; hud.textContent=hudLines[hi];}, 1100);
+
+/* File click behavior: goes to placeholders you can swap later */
+document.getElementById("files").addEventListener("click",(e)=>{
+  const row = e.target.closest(".file");
+  if(!row) return;
+  const key = row.getAttribute("data-song");
+  if(key === "backdoor"){
+    window.location.href = "backdoor.html"; // create later if you want
+  }else{
+    window.location.href = "lostfile.html"; // create later if you want
+  }
+});
+</script>
+</body>
+</html>
 
