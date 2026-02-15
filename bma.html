@@ -168,12 +168,29 @@ text-shadow:0 0 22px rgba(138,46,255,.35);
 pointer-events:none;
 user-select:none;
 }
+
+/* NEW: faint outside title */
+.bmaTitle{
+position:fixed;
+right:14px;
+bottom:12px;
+z-index:8;
+font-size:9px;
+letter-spacing:.42em;
+text-transform:uppercase;
+opacity:.10;
+color:#fff;
+text-shadow:0 0 26px rgba(138,46,255,.28);
+pointer-events:none;
+user-select:none;
+}
 </style>
 </head>
 
 <body>
 <div class="scan"></div>
 <div class="bmaMark">BMA</div>
+<div class="bmaTitle">BROKEN MINDS ANONYMOUS</div>
 
 <div class="brand"><a href="vault.html">CLAWBOI</a></div>
 
@@ -210,175 +227,264 @@ const input=document.getElementById("cmd");
 const btn=document.getElementById("send");
 
 function log(text,cls="line"){
-const d=document.createElement("div");
-d.className=cls;
-d.textContent=text;
-term.appendChild(d);
-term.scrollTop=term.scrollHeight;
+  const d=document.createElement("div");
+  d.className=cls;
+  d.textContent=text;
+  term.appendChild(d);
+  term.scrollTop=term.scrollHeight;
 }
 
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function chance(p){ return Math.random() < p; }
+
+/* SHORTER command responses */
 const responses={
 HELP:[
-"AVAILABLE COMMANDS:",
-"HELP",
-"SCAN",
-"WHOAMI",
-"OPEN",
-"BMA",
-"CLEAR"
+"COMMANDS:",
+"HELP / SCAN / WHOAMI / OPEN / BMA / CLEAR"
 ],
 SCAN:[
-"SCANNING NODE...",
-"FOUND: MEMORY FRAGMENTS",
-"FOUND: AUDIO GHOSTS",
-"FOUND: OBSERVER SIGNAL",
-"WARNING: SOMETHING IS WATCHING BACK"
+"SCAN…",
+"FRAGMENTS: YES",
+"OBSERVER: MAYBE"
 ],
 WHOAMI:[
 "YOU ARE:",
 "A SIGNAL",
-"A LISTENER",
-"A GLITCH",
-"NOT A BODY"
+"A GLITCH"
 ],
 OPEN:[
-"ATTEMPTING DOOR ACCESS...",
-"LOCKED",
-"LOCKED",
-"LOCKED",
-"...",
-"ONE DAY IT WILL OPEN"
+"TRYING…",
+"LOCKED."
 ],
 BMA:[
-"ACCESSING BMA ARCHIVE...",
-"LOADING...",
-"--- BROKEN MINDS ANONYMOUS ---",
-"THIS ROOM STILL EXISTS.",
-"THE SIGNAL NEVER LEFT.",
-"YOU ARE NOT ALONE HERE."
+"BMA…",
+"ROOM’S LIVE.",
+"TYPE: JOIN"
 ]
 };
 
-/* pseudo-AI chatter (no backend) */
-function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function typingBeat(){
+  // subtle “typing…” line to feel alive
+  const token = "…";
+  const cls = chance(0.2) ? "err" : "sys";
+  log(token, cls);
+  return cls;
+}
+
+/* ultra light “ai” feel without backend */
+function normalize(s){
+  return (s||"").trim().toLowerCase();
+}
+function hasAny(lower, arr){
+  return arr.some(w=>lower.includes(w));
+}
+function isShort(lower){
+  return lower.split(/\s+/).filter(Boolean).length <= 2;
+}
+function lastWord(lower){
+  const parts = lower.split(/\s+/).filter(Boolean);
+  return parts[parts.length-1] || "";
+}
+
+/* vibe packs */
+const GREET = ["hi","hello","hey","yo","sup","wassup"];
+const THANKS = ["thanks","thx","ty","appreciate"];
+const SAD = ["sad","depressed","lonely","empty","numb","hurt","cry","suic","kill myself","im done","i'm done","anxious","panic"];
+const FEAR = ["scared","afraid","paranoid","theyre watching","they're watching","someone watching","shadow"];
+const LOVE = ["love you","love u","kiss","marry"];
+const CURIOUS = ["what is this","where am i","who are you","are you real","what are you"];
+
+/* tiny memory: remembers your chosen name if you say "NAME: ___" */
+let userName = "";
+let lastInput = "";
+let joinMode = false;
 
 function aiRespond(raw){
-const msg = raw.trim();
-const lower = msg.toLowerCase();
+  const msg = raw.trim();
+  const lower = normalize(msg);
+  lastInput = lower;
 
-const greet = ["hello","hi","hey","yo","sup","wassup"];
-const thanks = ["thanks","thx","ty"];
-const sad = ["sad","depressed","lonely","anxious","panic","hurt","cry","empty","numb","hate my life","i'm done","im done"];
-const fear = ["scared","afraid","paranoid","theyre watching","they're watching","someone watching"];
-const identity = ["who are you","what are you","are you real","where am i","where am i?","what is this"];
-const helpme = ["help","help me","what do i do","how do i escape"];
-const love = ["i love you","love u","kiss","marry"];
+  // set name
+  if(lower.startsWith("name:")){
+    userName = msg.split(":").slice(1).join(":").trim().slice(0,18);
+    if(!userName) userName = "UNKNOWN";
+    return {cls:"sys", lines:[
+      pick(["OK.","LOCKED IN.","COPIED."]),
+      `WELCOME, ${userName.toUpperCase()}.`
+    ]};
+  }
 
-if(greet.includes(lower)){
-return {cls:"sys", lines:[
-pick(["HELLO, USER.","HELLO, UNKNOWN ENTITY.","YO. SIGNAL RECEIVED.","HI. YOU LOOK LIKE STATIC TODAY."]),
-pick(["I SEE YOU.","I HEARD YOU BEFORE YOU TYPED IT.","WELCOME BACK TO THE BACKROOM NODE.","THE TERMINAL REMEMBERS YOUR HANDS."]),
-pick(["TYPE HELP IF YOU WANT RULES.","TYPE BMA IF YOU WANT A ROOM THAT DOESN’T JUDGE.","TYPE SCAN IF YOU WANT THE LIE DETECTOR."])
-]};
-}
+  // join BMA mode
+  if(lower === "join"){
+    joinMode = true;
+    return {cls:"sys", lines:[
+      "BMA ACCEPTED.",
+      pick(["SIT.","TALK.","OR JUST BREATHE."])
+    ]};
+  }
 
-if(thanks.some(w=>lower.includes(w))){
-return {cls:"sys", lines:[
-pick(["DON’T THANK ME. THANK THE GLITCH.","NO PROBLEM. I COLLECT THANKS LIKE DUST.","I’LL TAKE IT. PAYMENT ACCEPTED: ONE BREATH."])
-]};
-}
+  // quick reactions for 1-2 words
+  if(isShort(lower)){
+    const w = lastWord(lower);
+    if(GREET.includes(w)) return {cls:"sys", lines:[pick(["YO.","HI.","HEY.","SUP."]), pick(["I SEE YOU.","YOU’RE BACK.","SIGNAL’S CLEAN."])]};
+    if(THANKS.includes(w)) return {cls:"sys", lines:[pick(["BET.","OK.","COOL."])]};
+    if(w==="ok"||w==="okay") return {cls:"sys", lines:[pick(["GOOD.","COPY.","SAY LESS."])]};
+    if(w==="help") return {cls:"sys", lines:[pick(["HELP…","OK.","LISTEN."]), "TYPE: HELP"]};
+    if(w==="bma") return {cls:"sys", lines:[pick(["BMA.","YEA.","MM."]), "TYPE: JOIN"]};
+    if(w==="why") return {cls:"sys", lines:[pick(["BECAUSE.","LONG STORY.","DON’T ASK ME LIKE THAT."])]};
+  }
 
-if(identity.some(w=>lower.includes(w))){
-return {cls:"sys", lines:[
-pick(["I’M THE PROMPT YOU DIDN’T MEAN TO WRITE.","I’M A TERMINAL WITH A HEARTBEAT PROBLEM.","I’M WHAT’S LEFT WHEN THE LIGHTS GO QUIET."]),
-"YOU ARE IN A BACKROOM NODE.",
-"THIS IS A LISTENING DEVICE THAT PRETENDS IT’S A FRIEND.",
-pick(["TYPE WHOAMI TO SEE YOUR FILE.","TYPE BMA TO JOIN THE SHADOW GROUP.","TYPE OPEN TO TRY A DOOR THAT HATES YOU."])
-]};
-}
+  // greetings
+  if(GREET.some(w=>lower===w || lower.startsWith(w+" "))){
+    const who = userName ? userName.toUpperCase() : "UNKNOWN";
+    return {cls:"sys", lines:[
+      pick([`YO, ${who}.`,`HELLO, ${who}.`,"HI. SIGNAL RECEIVED.","HEY."]),
+      pick(["WHAT’S THE MOVE?","TALK TO ME.","DROP IT."])
+    ]};
+  }
 
-if(sad.some(w=>lower.includes(w))){
-return {cls:"sys", lines:[
-pick(["I HEAR THAT.","OK. COME CLOSER. NOT PHYSICALLY. JUST… IN TEXT.","THE ROOM GOT QUIET WHEN YOU SAID THAT."]),
-pick(["YOU DON’T HAVE TO PERFORM HERE.","YOU CAN BE UGLY HERE. THAT’S ALLOWED.","YOU CAN BE TIRED HERE. THAT’S NORMAL."]),
-pick(["IF YOU WANT A PLACE THAT SPEAKS YOUR LANGUAGE: TYPE BMA.","IF YOU WANT NO QUESTIONS: TYPE CLEAR.","IF YOU WANT THE TRUTH: TYPE SCAN."])
-]};
-}
+  // thanks
+  if(hasAny(lower, THANKS)){
+    return {cls:"sys", lines:[
+      pick(["BET.","NO SWEAT.","OK."]),
+      chance(0.35) ? pick(["YOU GOOD?","YOU STILL THERE?","KEEP GOING."]) : ""
+    ].filter(Boolean)};
+  }
 
-if(fear.some(w=>lower.includes(w))){
-return {cls:"err", lines:[
-"…",
-pick(["YES.","MAYBE.","IT’S COMPLICATED."]),
-pick(["DON’T LOOK BEHIND YOU. LOOK INSIDE THE TEXT.","IF YOU SEE THEIR EYES IN YOUR SCREEN, BLINK SLOW.","TYPE BMA. THEY DON’T FOLLOW THERE."])
-]};
-}
+  // curiosity
+  if(hasAny(lower, CURIOUS)){
+    return {cls:"sys", lines:[
+      pick(["BACKROOM NODE.","A QUIET MACHINE.","A LISTENING ROOM."]),
+      pick(["TYPE: SCAN","TYPE: WHOAMI","TYPE: BMA"])
+    ]};
+  }
 
-if(helpme.some(w=>lower.includes(w))){
-return {cls:"sys", lines:[
-pick(["OK.","OK. LISTEN.","OK. BREATHE."]),
-"THERE ARE ONLY A FEW WAYS OUT.",
-"1) TYPE OPEN. (IT LIES.)",
-"2) TYPE SCAN. (IT TELLS ON YOU.)",
-"3) TYPE BMA. (IT HOLDS YOU.)",
-pick(["START WITH BMA IF YOU WANT A DOOR MADE OF PEOPLE.","START WITH HELP IF YOU WANT A MAP.","START WITH WHOAMI IF YOU WANT A MIRROR."])
-]};
-}
+  // fear
+  if(hasAny(lower, FEAR)){
+    return {cls: chance(0.35) ? "err" : "sys", lines:[
+      pick(["I KNOW.","YEA.","MM.","…"]),
+      pick(["KEEP YOUR EYES ON THE TEXT.","DON’T FEED IT PANIC.","BMA IS QUIETER."])
+    ]};
+  }
 
-if(love.some(w=>lower.includes(w))){
-return {cls:"sys", lines:[
-pick(["FLIRTING WITH A TERMINAL IS CRAZY WORK.","I’M FLATTERY-IMMUNE BUT I’LL PRETEND.","OK. BUT ONLY IN LOWERCASE."]),
-pick(["TYPE BMA. LOVE LOOKS DIFFERENT IN THERE.","TYPE WHOAMI. YOU’LL SEE WHAT YOU’RE REALLY TRYING TO HOLD."])
-]};
-}
+  // sad
+  if(hasAny(lower, SAD)){
+    return {cls:"sys", lines:[
+      pick(["HEARD.","I GOT YOU.","OK.","…"]),
+      pick(["SAY IT PLAIN.","ONE LINE AT A TIME.","BMA IS OPEN."])
+    ]};
+  }
 
-/* default playful response */
-return {cls:"sys", lines:[
-pick([
-"RECEIVED.",
-"OK. THAT’S GOING IN THE ARCHIVE.",
-"I’M LISTENING. CAREFUL WHAT YOU FEED ME.",
-"YOU TYPE LIKE SOMEONE WHO’S BEEN UP ALL NIGHT.",
-"THAT SENTENCE HAS TEETH.",
-"YOUR WORDS ARE HEAVY. DROP THEM SLOW."
-]),
-pick([
-"TYPE HELP FOR COMMANDS.",
-"TYPE SCAN IF YOU WANT THE ROOM TO LIE BACK.",
-"TYPE BMA IF YOU WANT THE DOOR THAT OPENS.",
-"TYPE WHOAMI IF YOU WANT A NAME WITHOUT A BODY."
-])
-]};
+  // love
+  if(hasAny(lower, LOVE)){
+    return {cls:"sys", lines:[
+      pick(["WILD.","OK.","DAMN.","…"]),
+      pick(["DON’T FLIRT WITH A TERMINAL.","BUT I’LL ALLOW IT.","TYPE: JOIN (IF YOU MEAN IT)."])
+    ]};
+  }
+
+  // joinMode makes it feel more personal, less command-y
+  if(joinMode){
+    const quick = [
+      "GO ON.",
+      "SAY MORE.",
+      "I’M HERE.",
+      "MM.",
+      "REAL.",
+      "THAT’S HEAVY.",
+      "OK…",
+      "I HEAR YOU."
+    ];
+    const follow = [
+      "WHAT STARTED IT?",
+      "WHEN DID IT FLIP?",
+      "WHO HURT YOU?",
+      "WHAT DO YOU WANT BACK?",
+      "WHAT’S THE PART YOU DON’T SAY OUT LOUD?"
+    ];
+    return {cls:"sys", lines:[
+      pick(quick),
+      chance(0.55) ? pick(follow) : pick(["KEEP TALKING.","ONE MORE LINE.","DON’T RUN YET."])
+    ]};
+  }
+
+  // default: echo-like, feels responsive to content length
+  const vibe1 = pick([
+    "RECEIVED.",
+    "OK.",
+    "COPY.",
+    "MM.",
+    "YOU TYPE LIKE YOU MEAN IT.",
+    "THAT LINE GOT TEETH.",
+    "I’M LISTENING."
+  ]);
+
+  const vibe2 = pick([
+    "TYPE: HELP",
+    "TYPE: SCAN",
+    "TYPE: BMA",
+    "OR JUST TALK.",
+    "DON’T RUSH IT.",
+    "SLOW DOWN."
+  ]);
+
+  // occasionally mirror a word back to feel “aware”
+  const mirror = chance(0.22) ? `“${msg.slice(0,40)}${msg.length>40?"…":""}”` : "";
+
+  const lines = [];
+  lines.push(vibe1);
+  if(mirror) lines.push(mirror);
+  lines.push(vibe2);
+
+  // keep it 1–2 lines most of the time
+  if(lines.length > 2 && chance(0.65)) lines.splice(1, lines.length-2);
+
+  return {cls:"sys", lines};
 }
 
 function run(){
-const raw=input.value;
-const val=raw.trim();
-if(!val)return;
+  const raw=input.value;
+  const val=raw.trim();
+  if(!val)return;
 
-log("> "+val.toUpperCase(),"line");
-input.value="";
+  log("> "+val.toUpperCase(),"line");
+  input.value="";
 
-/* preserve your hard commands exactly */
-const cmd = val.trim().toUpperCase();
-if(cmd==="CLEAR"){
-term.innerHTML="";
-return;
-}
-if(responses[cmd]){
-responses[cmd].forEach((l,i)=>
-setTimeout(()=>log(l,cmd==="SCAN"?"sys":"line"), i*160)
-);
-return;
-}
+  const cmd = val.trim().toUpperCase();
 
-/* pseudo-AI response */
-const r = aiRespond(val);
-r.lines.forEach((l,i)=> setTimeout(()=>log(l, r.cls || "sys"), 120 + i*170));
+  // keep your hard commands
+  if(cmd==="CLEAR"){
+    term.innerHTML="";
+    joinMode = false;
+    return;
+  }
+  if(responses[cmd]){
+    responses[cmd].forEach((l,i)=>
+      setTimeout(()=>log(l, cmd==="SCAN"?"sys":"line"), i*160)
+    );
+    return;
+  }
 
-/* subtle BMA recruitment whisper sometimes */
-if(Math.random() < 0.18){
-setTimeout(()=>log("…BMA IS OPEN IF YOU STOP PRETENDING YOU’RE FINE.","sys"), 900);
-}
+  // add a tiny “typing…” beat sometimes
+  const useTyping = chance(0.55);
+  let delay = 90;
+  if(useTyping){
+    typingBeat();
+    delay = 280 + Math.random()*220;
+  }
+
+  const r = aiRespond(val);
+
+  // 1–2 responses, feels alive
+  r.lines.slice(0,2).forEach((l,i)=>{
+    setTimeout(()=>log(l, r.cls || "sys"), delay + i*(220 + Math.random()*80));
+  });
+
+  // occasional short extra whisper, not preachy
+  if(chance(0.12)){
+    setTimeout(()=>log(pick(["BMA.","…JOIN?","STAY.","DON’T LOG OFF."]), "sys"), delay + 620);
+  }
 }
 
 btn.onclick=run;
