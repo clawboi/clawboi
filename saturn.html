@@ -1,1 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SATURN • MANSION</title>
+<style>
+:root{--bg:#070707;--violet:#8a2eff;--fg:#fff;--sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);min-height:100vh;overflow:hidden;position:relative}
+a{color:#fff;text-decoration:none}
+.top{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:16px 18px;z-index:5;background:rgba(0,0,0,.25);backdrop-filter:blur(10px)}
+.brand{letter-spacing:.34em;text-transform:uppercase;font-size:12px;opacity:.9}
+.btn{border:0;cursor:pointer;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.06);color:#fff;letter-spacing:.22em;font-size:10px;text-transform:uppercase}
+.wrap{max-width:920px;margin:0 auto;padding:90px 22px 80px;position:relative;z-index:2;text-align:center}
+
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+.bg::before{
+  content:"";position:absolute;inset:-25%;
+  background:
+    radial-gradient(circle at 24% 22%, rgba(235,210,150,.16), transparent 60%),
+    radial-gradient(circle at 76% 34%, rgba(138,46,255,.14), transparent 66%),
+    radial-gradient(circle at 45% 90%, rgba(255,255,255,.06), transparent 70%);
+  mix-blend-mode:screen;filter:blur(16px) saturate(1.1);
+}
+
+.planetWrap{position:relative;width:220px;height:220px;margin:12px auto 0;animation:float 9.4s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-12px)}}
+
+.planet{
+  position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:170px;height:170px;border-radius:50%;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,.14), transparent 35%),
+    radial-gradient(circle at 50% 55%, rgba(235,210,150,.44), rgba(120,90,40,.18) 55%, transparent 78%),
+    radial-gradient(circle at 65% 75%, rgba(0,0,0,.36), transparent 60%);
+  box-shadow:0 0 26px rgba(235,210,150,.14),0 0 110px rgba(138,46,255,.10);
+}
+
+/* ring */
+.ring{
+  position:absolute;
+  left:50%;top:52%;
+  transform:translate(-50%,-50%) rotate(-14deg);
+  width:240px;height:56px;border-radius:999px;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.18), rgba(138,46,255,.12), transparent);
+  opacity:.85;
+  filter:blur(.2px);
+}
+
+h1{margin:22px 0 0;letter-spacing:.34em;text-transform:uppercase;font-size:clamp(22px,5vw,52px);
+  text-shadow:0 0 16px rgba(235,210,150,.14),0 0 60px rgba(138,46,255,.18);}
+.sub{margin:14px auto 0;font-size:10px;letter-spacing:.28em;text-transform:uppercase;opacity:.55;max-width:46ch}
+
+.player{width:min(680px,100%);border-radius:22px;padding:18px;background:rgba(235,210,150,.06);
+  cursor:pointer;position:relative;overflow:hidden;margin:34px auto 0;}
+.player::before{content:"";position:absolute;top:0;left:-60%;width:50%;height:100%;
+  background:linear-gradient(120deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);}
+.player:hover::before{animation:shine 1.2s linear}
+@keyframes shine{to{left:130%}}
+.hint{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;
+  letter-spacing:.22em;font-size:10px;text-transform:uppercase;background:rgba(235,210,150,.10)}
+.hint.rainbow{animation:rainbow 4s linear infinite;}
+@keyframes rainbow{0%{color:#ff2a2a}25%{color:#ffe600}50%{color:#00ff9c}75%{color:#4aa3ff}100%{color:#ff2aff}}
+.note{margin-top:14px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;opacity:.55}
+@media (prefers-reduced-motion: reduce){.planetWrap,.player::before{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="top">
+  <div class="brand"><a href="index.html">CLAWBOI</a></div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <a class="btn" href="universe.html">HOME TO COSMOS</a>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="planetWrap" aria-hidden="true">
+    <div class="ring"></div>
+    <div class="planet"></div>
+  </div>
+
+  <h1>SATURN</h1>
+  <div class="sub">now playing: mansion</div>
+
+  <div class="player" id="player" role="button" aria-label="Play or pause Mansion">
+    <div class="hint" id="hint">TAP TO PLAY</div>
+    <div class="note">MANSION</div>
+    <audio id="audio" playsinline preload="metadata">
+      <source src="audio/mansion.mp3?v=1" type="audio/mpeg">
+    </audio>
+  </div>
+</div>
+
+<script>
+const player=document.getElementById("player");
+const audio=document.getElementById("audio");
+const hint=document.getElementById("hint");
+function setHint(on){hint.textContent=on?"PLAYING":"TAP TO PLAY";hint.classList.toggle("rainbow",on);}
+player.onclick=async()=>{
+  try{ if(audio.paused){setHint(true);await audio.play();}
+  else{audio.pause();audio.currentTime=0;setHint(false);} }
+  catch(e){setHint(false);alert("Check /audio/mansion.mp3");}
+};
+audio.addEventListener("pause",()=>setHint(false));
+audio.addEventListener("play",()=>setHint(true));
+</script>
+</body>
+</html>
 
