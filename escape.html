@@ -2,331 +2,1266 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ESCAPE PROTOCOL</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ESCAPE PSYCHWARD</title>
 
 <style>
 :root{
- --bg:#000;
- --fg:#e8e8e8;
- --accent:#8a2eff;
+  --bg:#000;
+  --fg:#eaeaea;
+  --accent:#8a2eff;
+  --red:#ff5c5c;
+  --green:#8affc1;
 }
+*{box-sizing:border-box}
+html,body{height:100%}
 body{
- margin:0;
- background:var(--bg);
- color:var(--fg);
- font-family:monospace;
- display:flex;
- align-items:center;
- justify-content:center;
- height:100vh;
- overflow:hidden;
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+  overflow:hidden;
+  position:relative;
 }
 
-/* pixel frame */
+/* violet fog */
+body:before{
+  content:"";
+  position:fixed;
+  inset:-25%;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(138,46,255,.22), transparent 60%),
+    radial-gradient(circle at 78% 34%, rgba(138,46,255,.14), transparent 70%),
+    radial-gradient(circle at 50% 86%, rgba(138,46,255,.10), transparent 72%);
+  mix-blend-mode:screen;
+  filter:blur(42px) saturate(1.15);
+  opacity:.95;
+}
+
+/* scanlines */
+.scan{
+  position:fixed; inset:0;
+  pointer-events:none;
+  opacity:.08;
+  mix-blend-mode:overlay;
+  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
+}
+
+/* top nav */
+.top{
+  position:fixed;
+  left:14px; right:14px; top:14px;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  z-index:9;
+}
+.brand{
+  font-size:11px;
+  letter-spacing:.34em;
+  text-transform:uppercase;
+  opacity:.78;
+  text-shadow:0 0 18px rgba(138,46,255,.25);
+}
+.brand a{color:#fff;text-decoration:none}
+.brand:hover{opacity:1}
+.navRight{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+.pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 12px;
+  border-radius:999px;
+  letter-spacing:.22em;
+  font-size:10px;
+  text-transform:uppercase;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.03);
+  color:#fff;
+  text-decoration:none;
+  cursor:pointer;
+}
+.pill:hover{filter:brightness(1.08)}
+.pill.v{border-color:rgba(138,46,255,.45); background:rgba(138,46,255,.12)}
+
+/* main frame */
 .game{
- width:92vw;
- max-width:720px;
- border:3px solid var(--accent);
- padding:18px;
- box-shadow:0 0 25px rgba(138,46,255,.35);
- background:#050505;
+  width:min(920px, 92vw);
+  border:2px solid rgba(138,46,255,.55);
+  border-radius:18px;
+  padding:18px;
+  box-shadow:0 0 40px rgba(138,46,255,.22);
+  background:rgba(0,0,0,.65);
+  backdrop-filter: blur(10px);
+  position:relative;
+  z-index:2;
 }
 
-/* title */
+/* header title */
 .title{
- text-align:center;
- letter-spacing:.4em;
- margin-bottom:16px;
- color:#fff;
- text-shadow:0 0 12px var(--accent);
+  text-align:center;
+  letter-spacing:.46em;
+  text-transform:uppercase;
+  color:#fff;
+  text-shadow:0 0 18px rgba(138,46,255,.40);
+  font-size:clamp(16px, 3.4vw, 30px);
 }
+.sub{
+  margin-top:8px;
+  text-align:center;
+  font-size:11px;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+  opacity:.62;
+}
+
+/* status HUD */
+.hud{
+  margin-top:14px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+.badge{
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  font-size:10px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  opacity:.85;
+}
+.badge b{opacity:.95}
+.badge.v{border-color:rgba(138,46,255,.35); background:rgba(138,46,255,.08)}
+.badge.r{border-color:rgba(255,92,92,.35); background:rgba(255,92,92,.06)}
+.badge.g{border-color:rgba(138,255,193,.25); background:rgba(138,255,193,.05)}
 
 /* story text */
 .text{
- min-height:140px;
- line-height:1.6;
- white-space:pre-line;
- margin-bottom:20px;
+  margin-top:16px;
+  min-height:170px;
+  line-height:1.7;
+  white-space:pre-line;
+  font-size:12px;
+  border-radius:14px;
+  padding:14px;
+  border:1px solid rgba(255,255,255,.06);
+  background:rgba(0,0,0,.70);
+  position:relative;
 }
+
+/* little “typing” cursor */
+.cursor{
+  display:inline-block;
+  width:10px;
+  opacity:.45;
+  animation:blink 1.05s steps(2,end) infinite;
+}
+@keyframes blink{50%{opacity:.15}}
 
 /* choices */
 .choices{
- display:flex;
- flex-direction:column;
- gap:10px;
+  margin-top:14px;
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
 }
-
+@media(min-width:720px){
+  .choices{grid-template-columns:1fr 1fr}
+}
 button{
- background:#0a0a0a;
- color:#fff;
- border:1px solid var(--accent);
- padding:12px;
- cursor:pointer;
- font-family:monospace;
- letter-spacing:.15em;
+  background:#070707;
+  color:#fff;
+  border:1px solid rgba(138,46,255,.55);
+  padding:12px 12px;
+  cursor:pointer;
+  font-family:inherit;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  font-size:11px;
+  border-radius:14px;
 }
-button:hover{
- background:var(--accent);
-}
+button:hover{background:rgba(138,46,255,.18); filter:brightness(1.05)}
+button:active{transform:translateY(1px)}
+button.danger{border-color:rgba(255,92,92,.55)}
+button.danger:hover{background:rgba(255,92,92,.10)}
+button.safe{border-color:rgba(138,255,193,.35)}
+button.safe:hover{background:rgba(138,255,193,.08)}
 
 /* name input */
+.inputRow{
+  margin-top:12px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
 input{
- width:100%;
- padding:12px;
- margin-top:12px;
- background:#000;
- border:1px solid var(--accent);
- color:#fff;
- font-family:monospace;
- text-align:center;
- letter-spacing:.2em;
+  width:min(360px, 100%);
+  padding:12px 12px;
+  background:#000;
+  border:1px solid rgba(138,46,255,.55);
+  color:#fff;
+  font-family:inherit;
+  text-align:center;
+  letter-spacing:.22em;
+  border-radius:14px;
+}
+small.hint{
+  display:block;
+  margin-top:10px;
+  text-align:center;
+  font-size:10px;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+  opacity:.50;
 }
 
-/* death text */
-.dead{
- color:#ff5c5c;
+/* endings */
+.dead{color:var(--red)}
+.win{color:var(--green)}
+
+/* optional audio */
+.audioRow{
+  margin-top:14px;
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+.note{
+  margin-top:10px;
+  font-size:10px;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+  opacity:.48;
+  text-align:center;
 }
 
-/* win text */
-.win{
- color:#8affc1;
+/* tiny glitch shimmer */
+@keyframes shimmer{
+  0%,100%{filter:contrast(1) hue-rotate(0deg)}
+  50%{filter:contrast(1.22) hue-rotate(10deg)}
+}
+.shimmer{animation:shimmer 2.6s steps(2,end) infinite}
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce){
+  body:before{animation:none!important}
+  .cursor{animation:none!important}
+  .shimmer{animation:none!important}
 }
 </style>
 </head>
 <body>
+<div class="scan"></div>
+
+<div class="top">
+  <div class="brand"><a href="index.html">CLAWBOI</a></div>
+  <div class="navRight">
+    <a class="pill" href="games.html">RETURN TO GAMES</a>
+  </div>
+</div>
 
 <div class="game">
+  <div class="title">ESCAPE PSYCHWARD</div>
+  <div class="sub">THREE DOORS. ONE MIND. NO REFUNDS. <span class="cursor">▮</span></div>
 
-<div class="title">ESCAPE PROTOCOL</div>
+  <div class="hud">
+    <div class="badge v">PATIENT: <b id="hudName">UNKNOWN</b></div>
+    <div class="badge">STABILITY: <b id="hudStab">05</b></div>
+    <div class="badge r">HEAT: <b id="hudHeat">00</b></div>
+    <div class="badge g">KEYS: <b id="hudKeys">0</b></div>
+    <div class="badge">LOOP: <b id="hudLoop">00</b></div>
+  </div>
 
-<div id="text" class="text"></div>
+  <div id="text" class="text"></div>
+  <div id="choices" class="choices"></div>
 
-<div id="choices" class="choices"></div>
-
+  <div class="audioRow">
+    <button class="pill v" id="playSong" type="button">PLAY SONG</button>
+    <button class="pill" id="stopSong" type="button">STOP</button>
+    <audio id="song" preload="auto">
+      <!-- put your track here -->
+      <source src="audio/psychward.mp3?v=1" type="audio/mpeg">
+    </audio>
+  </div>
+  <div class="note">PUT YOUR FILE AT <span class="shimmer">/audio/psychward.mp3</span> OR CHANGE THE SRC ABOVE.</div>
 </div>
 
 <script>
-let playerName = "";
-let state = "name";
+/* =========================
+   ESCAPE PSYCHWARD (no RNG death)
+   - deterministic consequences
+   - 3 real win paths hidden inside choices
+   - no survival % text
+========================= */
 
-/* random death chance */
-function fate(chance){
- return Math.random() < chance;
+const elText = document.getElementById("text");
+const elChoices = document.getElementById("choices");
+const hudName = document.getElementById("hudName");
+const hudStab = document.getElementById("hudStab");
+const hudHeat = document.getElementById("hudHeat");
+const hudKeys = document.getElementById("hudKeys");
+const hudLoop = document.getElementById("hudLoop");
+
+/* audio */
+const song = document.getElementById("song");
+document.getElementById("playSong").onclick = async ()=>{
+  try{ await song.play(); }catch(e){}
+};
+document.getElementById("stopSong").onclick = ()=>{
+  song.pause(); song.currentTime = 0;
+};
+
+const S = {
+  name:"",
+  stability:5, // 0..9
+  heat:0,      // 0..9 (security attention)
+  keys:0,      // 0..3
+  loop:0,
+  inv: new Set(), // paperclip, shard, badge, map, tape
+  flags: {
+    tookPills:false,
+    hidPills:false,
+    befriended:false,
+    lied:false,
+    confessed:false,
+    listened:false,
+    camerasOff:false,
+    nurseTrust:false,
+    doorCode:false,
+    vents:false
+  },
+  last:""
+};
+
+function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
+
+function updateHUD(){
+  hudName.textContent = (S.name || "UNKNOWN").toUpperCase();
+  hudStab.textContent = String(clamp(S.stability,0,9)).padStart(2,"0");
+  hudHeat.textContent = String(clamp(S.heat,0,9)).padStart(2,"0");
+  hudKeys.textContent = String(S.keys);
+  hudLoop.textContent = String(S.loop).padStart(2,"0");
 }
 
-/* UI helpers */
-function show(text, options=[]){
- document.getElementById("text").innerHTML = text;
- const c = document.getElementById("choices");
- c.innerHTML="";
- options.forEach(o=>{
-   const b=document.createElement("button");
-   b.textContent=o.label;
-   b.onclick=o.action;
-   c.appendChild(b);
- });
+function say(text, options=[]){
+  elText.innerHTML = text;
+  elChoices.innerHTML = "";
+  options.forEach(o=>{
+    const b = document.createElement("button");
+    b.textContent = o.label;
+    if(o.kind==="danger") b.classList.add("danger");
+    if(o.kind==="safe") b.classList.add("safe");
+    b.onclick = o.action;
+    elChoices.appendChild(b);
+  });
+  updateHUD();
 }
 
-/* start */
-start();
-
-function start(){
- show(
- "ENTER PATIENT NAME:",
- [{
-   label:"CONFIRM",
-   action:()=>{
-     const val=document.getElementById("nameInput").value.trim();
-     if(!val) return;
-     playerName=val;
-     intro();
-   }
- }]
- );
- const input=document.createElement("input");
- input.id="nameInput";
- input.placeholder="NAME";
- document.getElementById("choices").prepend(input);
+/* small “typewriter” flavor (fast, not annoying) */
+function typeScene(lines, after){
+  const chunks = Array.isArray(lines) ? lines : String(lines).split("\n");
+  let i=0;
+  elText.innerHTML = "";
+  function step(){
+    if(i >= chunks.length){ after?.(); return; }
+    elText.innerHTML += (i? "\n":"") + chunks[i];
+    i++;
+    setTimeout(step, 120);
+  }
+  step();
 }
 
-/* intro */
-function intro(){
- show(
- `${playerName}, you wake up in a hospital bed.
+/* =========================
+   START: name
+========================= */
+boot();
 
-The ceiling hums.
-Your wrists ache.
-You don't remember how you got here.
+function boot(){
+  S.loop = 0;
+  S.stability = 5; S.heat = 0; S.keys = 0;
+  S.inv = new Set();
+  S.flags = {
+    tookPills:false, hidPills:false, befriended:false, lied:false,
+    confessed:false, listened:false, camerasOff:false, nurseTrust:false,
+    doorCode:false, vents:false
+  };
 
-A nurse enters with pills.
+  say(
+`ENTER PATIENT NAME:
+(YES, IT MATTERS.)
+<span class="cursor">▮</span>`,
+  []);
+  // input row
+  const wrap = document.createElement("div");
+  wrap.className="inputRow";
+  wrap.innerHTML = `
+    <input id="nameInput" placeholder="NAME" autocomplete="off" />
+    <button class="safe" id="confirmBtn" type="button">CONFIRM</button>
+  `;
+  elChoices.appendChild(wrap);
 
-Take them?`,
- [
- {label:"TAKE PILLS", action:pills},
- {label:"REFUSE", action:refuse},
- {label:"HIDE PILLS", action:hide}
- ]);
+  const inp = document.getElementById("nameInput");
+  const btn = document.getElementById("confirmBtn");
+  const go = ()=>{
+    const v = (inp.value||"").trim();
+    if(!v) return;
+    S.name = v.slice(0,18);
+    updateHUD();
+    intro();
+  };
+  btn.onclick = go;
+  inp.addEventListener("keydown",(e)=>{ if(e.key==="Enter") go(); });
+  setTimeout(()=>inp.focus(), 90);
 }
 
-/* branch 1 */
-function pills(){
- if(fate(.55)) return die("The pills dissolve your thoughts. You forget your own name.");
-
- show(
- "The pills calm your nerves.\n\nThe nurse leaves.\n\nYou hear a door unlock down the hall.",
- [
- {label:"SNEAK OUT", action:hall},
- {label:"WAIT", action:waitRoom}
- ]);
+/* =========================
+   CORE LOOP HELPERS
+========================= */
+function addHeat(n=1){
+  S.heat = clamp(S.heat + n, 0, 9);
 }
-
-function refuse(){
- if(fate(.45)) return die("Orderlies pin you down. Sedative injected. Darkness.");
-
- show(
- "The nurse glares.\n\nShe writes something on her clipboard.\n\nShe leaves.",
- [
- {label:"RUN", action:hall},
- {label:"SEARCH ROOM", action:search}
- ]);
+function addStability(n=1){
+  S.stability = clamp(S.stability + n, 0, 9);
 }
-
-function hide(){
- if(fate(.35)) return die("Camera sees everything. Alarm screams.");
-
- show(
- "You palm the pills.\n\nYou feel watched.",
- [
- {label:"THROW PILLS AWAY", action:hall},
- {label:"EAT THEM NOW", action:pills}
- ]);
+function take(item){
+  S.inv.add(item);
 }
+function has(item){ return S.inv.has(item); }
 
-/* hall */
-function hall(){
- show(
- "The hallway lights flicker.\nDoors line both sides.\n\nYou hear breathing behind one door.",
- [
- {label:"OPEN DOOR", action:door},
- {label:"KEEP WALKING", action:walk},
- {label:"RUN", action:runHall}
- ]);
-}
-
-function waitRoom(){
- if(fate(.6)) return die("Waiting was your last mistake. They return with restraints.");
- hall();
-}
-
-function search(){
- show(
- "You find:\n• bent paperclip\n• cracked mirror shard",
- [
- {label:"TAKE PAPERCLIP", action:clip},
- {label:"TAKE SHARD", action:shard}
- ]);
-}
-
-/* items */
-function clip(){
- show(
- "You pick the lock.\n\nFreedom breathes.",
- [
- {label:"STEP INTO HALL", action:hall}
- ]);
-}
-
-function shard(){
- if(fate(.4)) return die("You cut too deep. Blood loss.");
-
- hall();
-}
-
-/* hallway branches */
-function door(){
- if(fate(.7)) return die("A patient lunges out. Screaming. Security arrives.");
- winRoom();
-}
-
-function walk(){
- if(fate(.5)) return die("Camera spots movement. Tranquilizer dart hits your neck.");
- exitDoor();
-}
-
-function runHall(){
- if(fate(.6)) return die("You slip. Skull meets tile.");
- exitDoor();
-}
-
-/* near escape */
-function winRoom(){
- show(
- "Inside is a control room.\n\nSecurity feeds.\nExit doors.\nFreedom.",
- [
- {label:"OPEN EXIT", action:escape},
- {label:"DISABLE CAMERAS", action:disable},
- {label:"HIDE", action:hideFinal}
- ]);
-}
-
-function exitDoor(){
- show(
- "A glowing EXIT sign pulses.",
- [
- {label:"OPEN DOOR", action:escape},
- {label:"TURN BACK", action:hall}
- ]);
-}
-
-function disable(){
- if(fate(.5)) return die("Alarm triggered. Too slow.");
- escape();
-}
-
-function hideFinal(){
- if(fate(.65)) return die("They sweep the room. You are found.");
- escape();
-}
-
-/* endings */
-function escape(){
- if(fate(.5)) return die("Door opens to another ward. You never left.");
-
- const endings=[
- "You step outside. Cold air. Freedom is real.",
- "The world glitches. The hospital never existed.",
- "You wake up… in your bed at home. Was any of it real?"
- ];
- const msg=endings[Math.floor(Math.random()*endings.length)];
-
- show(
- `<span class="win">ESCAPE SUCCESSFUL</span>
-
-${msg}
-
-Survival Rate: ${Math.floor(Math.random()*5+11)}%`,
- [{label:"PLAY AGAIN", action:restart}]
- );
-}
-
-/* death */
-function die(reason){
- show(
- `<span class="dead">YOU DIED</span>
+function death(reason, extra=""){
+  // no survival probability text, just a sharp ending
+  say(
+`<span class="dead">YOU DIED</span>
 
 ${reason}
+${extra ? "\n\n"+extra : ""}
 
-Survival Probability: 15%`,
- [{label:"TRY AGAIN", action:restart}]
- );
+<span class="cursor">▮</span>`,
+  [
+    {label:"TRY AGAIN", kind:"safe", action:()=>{ location.reload(); }},
+    {label:"RETURN TO GAMES", action:()=>{ window.location.href="games.html"; }}
+  ]);
 }
 
-/* restart */
-function restart(){
- location.reload();
+function win(text){
+  say(
+`<span class="win">ESCAPE SUCCESSFUL</span>
+
+${text}
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"PLAY AGAIN", kind:"safe", action:()=>{ location.reload(); }},
+    {label:"RETURN TO GAMES", action:()=>{ window.location.href="games.html"; }}
+  ]);
 }
+
+/* =========================
+   INTRO
+========================= */
+function intro(){
+  typeScene([
+`${S.name}, YOU WAKE UP IN A HOSPITAL BED.`,
+`THE CEILING HUMS LIKE A FRIDGE FULL OF BEES.`,
+`YOUR WRISTS ACHE. NOT BLEEDING. WORSE. REMEMBERING.`,
+`A NURSE ENTERS WITH A CUP: WHITE PILLS. WATER.`,
+`SHE SMILES LIKE IT’S PRACTICED.`,
+``,
+`TAKE THEM?`
+  ], ()=>{
+    say(elText.innerHTML, [
+      {label:"TAKE PILLS", kind:"safe", action:takePills},
+      {label:"REFUSE", kind:"danger", action:refusePills},
+      {label:"HIDE PILLS", action:hidePills}
+    ]);
+  });
+}
+
+function takePills(){
+  S.flags.tookPills = true;
+  addStability(2);
+  addHeat(1); // they note compliance
+  say(
+`THE PILLS GO DOWN.
+YOUR CHEST UNCLENCHES.
+THE ROOM GETS QUIETER. TOO QUIET.
+
+THE NURSE: “GOOD.”
+
+A SOFT CLICK FROM THE HALL. A DOOR UNLOCKING.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"MOVE NOW", kind:"safe", action:hallway},
+    {label:"ASK HER A QUESTION", action:questionNurse},
+    {label:"WAIT (PLAY NICE)", action:waitNice}
+  ]);
+}
+
+function refusePills(){
+  S.flags.lied = true;
+  addHeat(2);
+  addStability(-1);
+  say(
+`“NO.”
+
+THE NURSE’S SMILE DOESN’T MOVE.
+SHE WRITES ONE WORD ON HER CLIPBOARD:
+“NONCOMPLIANT.”
+
+THE AIR FEELS THINNER.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"APOLOGIZE (FAKE IT)", action:fakeIt},
+    {label:"DOUBLE DOWN", kind:"danger", action:doubleDown},
+    {label:"SEARCH THE ROOM", action:searchRoom}
+  ]);
+}
+
+function hidePills(){
+  S.flags.hidPills = true;
+  addHeat(1);
+  say(
+`YOU PALM THE PILLS.
+YOUR HAND IS A SECRET VAULT.
+
+THE NURSE LOOKS AT YOUR FINGERTIPS TOO LONG.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"SWALLOW THEM (NOW)", action:takePills},
+    {label:"POCKET THEM", action:keepPills},
+    {label:"DROP THEM UNDER THE BED", kind:"danger", action:dropPills}
+  ]);
+}
+
+function questionNurse(){
+  // calm path: can earn trust or trigger heat
+  const options = [
+    {label:"“WHAT DAY IS IT?”", action: ()=>{ S.flags.listened=true; addHeat(0); nurseDay(); } },
+    {label:"“WHAT IS THIS PLACE?”", action: ()=>{ addHeat(1); nursePlace(); } },
+    {label:"“WHAT’S IN THOSE PILLS?”", action: ()=>{ addHeat(1); nursePills(); } }
+  ];
+  say(`YOU SPEAK SOFT.\nSHE LISTENS WITH HER EYES.\n\nASK WHAT?`, options);
+}
+function nurseDay(){
+  addStability(1);
+  say(
+`“IT’S THURSDAY,” SHE SAYS.
+“BUT THAT DOESN’T HELP YOU.”
+
+SHE TAPS YOUR WRISTBAND.
+A TINY QR GLINTS.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"SCAN WRISTBAND (LOOK CLOSE)", action:wristband},
+    {label:"LEAVE THE BED", kind:"safe", action:hallway},
+    {label:"WAIT", action:waitNice}
+  ]);
+}
+function nursePlace(){
+  say(
+`“OBSERVATION,” SHE SAYS.
+“UNTIL YOUR THOUGHTS STOP TRYING TO RUN.”
+
+THE WORD “RUN” FEELS LIKE A KEY.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"RUN", kind:"danger", action:hallRun},
+    {label:"WALK OUT LIKE YOU BELONG", kind:"safe", action:hallway},
+    {label:"SEARCH ROOM", action:searchRoom}
+  ]);
+}
+function nursePills(){
+  addStability(-1);
+  say(
+`“HELP,” SHE SAYS.
+THE WAY SOME PEOPLE SAY “HANDCUFFS.”
+
+SHE SETS THE CUP DOWN.
+LEAVES IT.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"TAKE THEM", kind:"safe", action:takePills},
+    {label:"HIDE THEM", action:hidePills},
+    {label:"SEARCH ROOM", action:searchRoom}
+  ]);
+}
+
+function waitNice(){
+  // waiting can be safe, but if heat is high, it’s bad
+  if(S.heat >= 4){
+    return death("YOU WAIT.\nFOOTSTEPS MULTIPLY.\nA STRAP SNAPS.\nTHE LIGHTS GO WHITE.", "YOU SHOULD’VE MOVED WHEN THE DOOR CLICKED.");
+  }
+  addStability(1);
+  S.flags.nurseTrust = true;
+  say(
+`YOU WAIT.
+BREATH IN. BREATH OUT.
+
+THE NURSE RETURNS, DIFFERENT NOW.
+“YOU’RE TRYING,” SHE SAYS. LIKE IT’S A THREAT.
+
+SHE LEAVES A BADGE ON THE TABLE. “ACCIDENTALLY.”
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"TAKE BADGE", kind:"safe", action:takeBadge},
+    {label:"LEAVE IT (TOO HOT)", action:hallway},
+    {label:"SEARCH ROOM", action:searchRoom}
+  ]);
+}
+
+function fakeIt(){
+  addHeat(-1);
+  addStability(1);
+  say(
+`“SORRY,” YOU SAY.
+THE NURSE’S SMILE RETURNS, RELIEVED.
+LIKE YOU DID HER A FAVOR.
+
+SHE HANDS YOU THE CUP AGAIN.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"TAKE PILLS", kind:"safe", action:takePills},
+    {label:"HIDE PILLS", action:hidePills},
+    {label:"ASK A QUESTION", action:questionNurse}
+  ]);
+}
+
+function doubleDown(){
+  // deterministic: if you double down, they escalate
+  return death("YOU RAISE YOUR VOICE.\nTHE NURSE NODS ONCE.\nA BUTTON CLICKS UNDER HER THUMB.\nYOU HEAR TWO ORDERLIES BEFORE YOU SEE THEM.");
+}
+
+function keepPills(){
+  take("pills");
+  say(
+`YOU POCKET THE PILLS.
+A PRIVATE LITTLE CHEAT CODE.
+
+THE DOOR TO THE HALL IS AJAR.
+LIKE IT WANTS TO BE YOUR PROBLEM.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"STEP INTO HALL", kind:"safe", action:hallway},
+    {label:"SEARCH ROOM", action:searchRoom},
+    {label:"CRUSH A PILL (IN HAND)", action:crushPill}
+  ]);
+}
+
+function dropPills(){
+  addHeat(2);
+  return death("YOU DROP THEM.\nTHEY SKITTER LIKE BUGS.\nA CAMERA TILTS.\nAN ALARM DOESN’T SCREAM.\nWORSE.\nIT BEEPS ONCE.", "SOMEONE HEARD THAT BEEP A LONG TIME AGO.");
+}
+
+function crushPill(){
+  // pill dust can lower heat later, but reduces stability
+  take("dust");
+  addStability(-1);
+  say(
+`YOU CRUSH IT.
+WHITE DUST.
+SMELLS LIKE “CALM DOWN.”
+
+POCKET IT.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"HALLWAY", kind:"safe", action:hallway},
+    {label:"SEARCH ROOM", action:searchRoom}
+  ]);
+}
+
+function wristband(){
+  // deterministic: grants doorCode hint
+  S.flags.doorCode = true;
+  say(
+`YOU LEAN IN.
+THE QR IS SCRATCHED, BUT READABLE.
+
+A CODE PRINTED UNDER THE PLASTIC:
+“19-02-09”
+
+YOUR BRAIN DOES THAT THING:
+IT MAKES IT MEAN SOMETHING.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"MEMORIZE IT", kind:"safe", action:hallway},
+    {label:"SCRATCH IT INTO THE BEDFRAME", action:markCode}
+  ]);
+}
+function markCode(){
+  addHeat(1);
+  say(
+`YOU SCRATCH IT INTO METAL.
+A LITTLE PRAYER FOR LATER.
+
+<span class="cursor">▮</span>`,
+  [{label:"HALLWAY", kind:"safe", action:hallway}]
+  );
+}
+
+/* =========================
+   ROOM SEARCH / ITEMS
+========================= */
+function searchRoom(){
+  const found = [];
+  if(!has("paperclip")) found.push({label:"TAKE BENT PAPERCLIP", action:()=>{ take("paperclip"); addHeat(1); searchRoom2(); }});
+  if(!has("shard")) found.push({label:"TAKE MIRROR SHARD", kind:"danger", action:()=>{ take("shard"); addStability(-1); searchRoom2(); }});
+  if(!has("map")) found.push({label:"CHECK VENT (LOOSE SCREW)", action:()=>{ take("map"); S.flags.vents=true; addHeat(1); searchRoom2(); }});
+
+  if(found.length===0){
+    return say(
+`THE ROOM IS EMPTY NOW.
+OR YOU ARE.
+
+<span class="cursor">▮</span>`,
+    [
+      {label:"HALLWAY", kind:"safe", action:hallway},
+      {label:"SIT ON BED (COUNT BREATHS)", action:waitNice}
+    ]);
+  }
+
+  say(
+`YOU SEARCH FAST.
+
+FOUND OPTIONS:
+${found.map(_=>"•").join(" ")}
+
+<span class="cursor">▮</span>`,
+  [
+    ...found,
+    {label:"STOP SEARCHING", kind:"safe", action:hallway}
+  ]);
+}
+
+function searchRoom2(){
+  const inv = Array.from(S.inv).map(x=>x.toUpperCase()).join(", ") || "NOTHING";
+  say(
+`INVENTORY: ${inv}
+
+THE DOOR IS STILL AJAR.
+IT’S NOT AN INVITATION.
+IT’S A TEST.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"GO HALLWAY", kind:"safe", action:hallway},
+    {label:"KEEP SEARCHING", action:searchRoom}
+  ]);
+}
+
+function takeBadge(){
+  take("badge");
+  S.keys += 1;
+  addHeat(1);
+  say(
+`YOU TAKE THE BADGE.
+IT SAYS “TEMP” IN TINY LETTERS.
+THE PHOTO IS BLANK.
+LIKE YOU.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"HALLWAY", kind:"safe", action:hallway},
+    {label:"HIDE BADGE IN SHIRT", action:hideBadge}
+  ]);
+}
+function hideBadge(){
+  addHeat(-1);
+  say(
+`BADGE HIDDEN.
+YOU LOOK 7% LESS GUILTY.
+
+<span class="cursor">▮</span>`,
+  [{label:"HALLWAY", kind:"safe", action:hallway}]
+  );
+}
+
+/* =========================
+   HALLWAY
+========================= */
+function hallway(){
+  // hallway pressure based on heat
+  if(S.heat >= 7){
+    return death("YOU STEP OUT.\nA RED LIGHT BLINKS.\nA VOICE: “PATIENT OFF UNIT.”\nYOUR NAME SOUNDS WRONG IN THEIR MOUTH.");
+  }
+
+  const invHint = [];
+  if(has("paperclip")) invHint.push("PAPERCLIP");
+  if(has("badge")) invHint.push("BADGE");
+  if(has("map")) invHint.push("VENT MAP");
+  const h = invHint.length ? `YOU HAVE: ${invHint.join(" / ")}\n\n` : "";
+
+  say(
+`${h}THE HALLWAY LIGHTS FLICKER.
+DOORS LINE BOTH SIDES.
+
+A “STAFF ONLY” DOOR.
+A VENT GRATE NEAR THE FLOOR.
+A CAMERA THAT BLINKS LIKE IT’S BREATHING.
+
+YOU ALSO HEAR… HUMMING.
+SOMEONE IN A ROOM, SINGING UNDER THEIR BREATH.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"GO STAFF DOOR", kind:"safe", action:staffDoor},
+    {label:"CHECK VENT", action:vent},
+    {label:"FOLLOW HUMMING", action:humRoom},
+    {label:"WALK LIKE STAFF", action:walkStaff}
+  ]);
+}
+
+function hallRun(){
+  addHeat(3);
+  return hallway();
+}
+
+function walkStaff(){
+  // if you have badge, safer. If not, heat.
+  if(has("badge")){
+    addHeat(-1);
+    addStability(1);
+    return say(
+`YOU WALK LIKE YOU OWN THE TILE.
+BADGE IN POCKET, HEART IN THROAT.
+
+NOBODY STOPS YOU.
+THAT’S THE SCARIEST PART.
+
+<span class="cursor">▮</span>`,
+    [
+      {label:"STAFF DOOR", kind:"safe", action:staffDoor},
+      {label:"VENT", action:vent},
+      {label:"HUMMING ROOM", action:humRoom}
+    ]);
+  }
+  addHeat(2);
+  say(
+`YOU TRY THE CONFIDENCE TRICK.
+WITHOUT A BADGE, IT’S JUST A WALK.
+
+A NURSE AT THE END OF THE HALL STARES.
+NOT MAD. CURIOUS.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"TURN BACK", action:hallway},
+    {label:"KEEP GOING (BOLD)", kind:"danger", action:challenged}
+  ]);
+}
+
+function challenged(){
+  // deterministic capture
+  return death("YOU KEEP GOING.\nTHE NURSE SMILES.\n“CAN I SEE YOUR WRISTBAND?”\nYOU CAN’T.\nBECAUSE YOU’RE ALREADY GRABBED.");
+}
+
+/* =========================
+   HUMMING ROOM (social puzzle)
+========================= */
+function humRoom(){
+  // can reduce heat if you befriend, or increase if you spook them
+  say(
+`THE DOOR IS HALF-OPEN.
+INSIDE: A PATIENT WITH A PAPER CROWN
+MADE OF HOSPITAL FORMS.
+
+THEY LOOK UP.
+“YOU’RE NEW,” THEY SAY.
+LIKE THEY’VE BEEN WAITING.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"SAY HI", kind:"safe", action:friendHi},
+    {label:"ASK ABOUT EXIT", action:askExit},
+    {label:"STEAL THEIR CROWN (WHY)", kind:"danger", action:stealCrown}
+  ]);
+}
+
+function friendHi(){
+  S.flags.befriended = true;
+  addHeat(-1);
+  addStability(1);
+  say(
+`THEY NOD.
+“NAME?” THEY ASK.
+
+YOU FEEL THE ROOM LISTEN.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:`“${S.name}.”`, kind:"safe", action:friendName},
+    {label:"LIE", action:friendLie}
+  ]);
+}
+function friendName(){
+  S.flags.confessed = true;
+  addStability(1);
+  take("tape");
+  say(
+`THEY SMILE LIKE A DOOR UNLOCKING.
+“GOOD,” THEY WHISPER, AND SLIP YOU A CASSETTE TAPE.
+
+LABEL: “BMA / SIDE A”
+
+“THE STAFF DOOR HAS A CODE PAD,” THEY SAY.
+“THE CODE IS A DATE. A IMPORTANT ONE.”
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"ASK WHAT DATE", kind:"safe", action:friendDate},
+    {label:"LEAVE QUIETLY", action:hallway}
+  ]);
+}
+function friendLie(){
+  S.flags.lied = true;
+  addHeat(1);
+  say(
+`YOU LIE.
+THEY DON’T CALL YOU OUT.
+
+THEY JUST LOOK SADDER.
+LIKE THEY LOST SOMEONE THEY NEVER MET.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"APOLOGIZE", kind:"safe", action:friendName},
+    {label:"LEAVE", action:hallway}
+  ]);
+}
+function friendDate(){
+  S.flags.doorCode = true;
+  say(
+`“FEB 19,” THEY SAY.
+“9:30.”
+“DON’T ASK WHY.”
+
+THE CASSETTE FEELS WARM IN YOUR HAND.
+LIKE IT’S BEEN PLAYED.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"GO STAFF DOOR", kind:"safe", action:staffDoor},
+    {label:"VENT", action:vent},
+    {label:"HALLWAY", action:hallway}
+  ]);
+}
+function askExit(){
+  addHeat(1);
+  say(
+`“EXIT?” THEY LAUGH.
+“YOU’RE FUNNY.”
+
+THEY TAP THEIR TEMPLE.
+“EXIT IS A THOUGHT.
+DOOR IS A LIE.”
+
+UNHELPFUL. ICONIC.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"LEAVE", kind:"safe", action:hallway},
+    {label:"ASK ABOUT STAFF DOOR", action:friendDate}
+  ]);
+}
+function stealCrown(){
+  return death("YOU SNATCH THE PAPER CROWN.\nTHEY SCREAM LIKE A FIRE ALARM.\nTHE HALLWAY FILLS WITH SHOES.", "STEALING SYMBOLS DOESN’T MAKE YOU KING.");
+}
+
+/* =========================
+   VENT PATH (stealth puzzle)
+========================= */
+function vent(){
+  if(!has("map") && !has("paperclip")){
+    addHeat(1);
+    return say(
+`THE VENT GRATE IS SCREWED IN TIGHT.
+NO TOOLS. NO LUCK.
+
+YOU FEEL THE CAMERA BLINK.
+
+<span class="cursor">▮</span>`,
+    [
+      {label:"BACK", kind:"safe", action:hallway},
+      {label:"TRY STAFF DOOR", action:staffDoor},
+      {label:"FOLLOW HUMMING", action:humRoom}
+    ]);
+  }
+
+  if(has("paperclip")){
+    S.flags.vents = true;
+    addHeat(1);
+    take("dust"); // little bonus: you got grit/dust from vents
+    say(
+`YOU POP THE GRATE WITH THE PAPERCLIP.
+THE VENT BREATHES OUT COLD AIR.
+
+INSIDE: DARK, DUST, AND A LOW HUM
+LIKE A SERVER ROOM.
+
+<span class="cursor">▮</span>`,
+    [
+      {label:"CRAWL IN", kind:"safe", action:ventCrawl},
+      {label:"CLOSE IT (NOT YET)", action:hallway}
+    ]);
+    return;
+  }
+
+  // has map but no clip: still blocked
+  addHeat(1);
+  say(
+`YOU HAVE A MAP, NOT A WAY IN.
+THE VENT DOESN’T CARE ABOUT YOUR PLANS.
+
+<span class="cursor">▮</span>`,
+  [{label:"BACK", kind:"safe", action:hallway}]
+  );
+}
+
+function ventCrawl(){
+  // deterministic: if heat already high, you get spotted
+  if(S.heat >= 6){
+    return death("YOU CRAWL.\nTHE METAL POPS.\nTHE SOUND TRAVELS.\nFLASHLIGHTS FIND THE GRATE.", "THE VENT PATH HATES PANIC.");
+  }
+  addStability(-1);
+
+  say(
+`YOU CRAWL.
+THE WORLD IS A TUNNEL NOW.
+
+YOU SEE LIGHT THROUGH SLATS:
+A SECURITY OFFICE.
+MONITORS.
+KEYPAD LOGS.
+
+YOU COULD DROP IN.
+OR KEEP CRAWLING TO A LAUNDRY CHUTE.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"DROP INTO SECURITY", kind:"safe", action:securityFromVent},
+    {label:"CRAWL TO LAUNDRY CHUTE", action:laundryChute},
+    {label:"TURN BACK", action:hallway}
+  ]);
+}
+
+function securityFromVent(){
+  // Win path #1 (cameras)
+  if(!has("badge") && S.heat >= 4){
+    return death("YOU DROP IN.\nA GUARD LOOKS UP.\nYOU FREEZE LIKE A PAUSE BUTTON.\nHE DOESN’T.", "BADGE OR LOW HEAT. THAT’S THE TICKET.");
+  }
+  S.flags.camerasOff = true;
+  S.keys = clamp(S.keys + 1, 0, 3);
+  addHeat(1);
+  say(
+`YOU DROP INTO SECURITY.
+NOBODY LOOKS UP.
+THEY’RE ARGUING ABOUT A SHOW.
+
+YOU REACH THE PANEL:
+“CAMERAS” → OFFLINE.
+
+THE HALLWAY FEELS LESS ALIVE IMMEDIATELY.
+
+YOU ALSO FIND A KEYRING. ONE KEY.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"TAKE KEY + LEAVE", kind:"safe", action:()=>{ S.keys++; hallway(); }},
+    {label:"OPEN STAFF DOOR FROM HERE", action:remoteUnlock},
+    {label:"HIDE UNDER DESK (LET THEM PASS)", action:hideDesk}
+  ]);
+}
+
+function remoteUnlock(){
+  // requires doorCode known OR tape clue
+  if(S.flags.doorCode || has("tape")){
+    return win("YOU PUNCH IN THE CODE FROM MEMORY.\nTHE STAFF DOOR CLICKS OPEN DOWN THE HALL.\nYOU WALK OUT LIKE A GHOST.\n\nOUTSIDE, AIR FEELS ILLEGAL.\nYOUR BRAIN IS STILL LOUD.\nBUT IT’S YOURS.");
+  }
+  addHeat(2);
+  return death("YOU HIT RANDOM KEYS.\nTHE SCREEN FLASHES RED.\nTHE GUARDS STOP TALKING.\nALL EYES TURN AT ONCE.", "YOU NEEDED A REAL CODE. A REAL DATE.");
+}
+
+function hideDesk(){
+  // deterministic based on stability
+  if(S.stability <= 2){
+    return death("YOU HOLD YOUR BREATH TOO LONG.\nYOU COUGH.\nTHE SOUND BETRAYS YOU.");
+  }
+  addHeat(-1);
+  addStability(1);
+  say(
+`YOU HIDE.
+THEY PASS.
+THE ROOM SMELLS LIKE COFFEE AND CONTROL.
+
+YOU SLIP OUT THE WAY YOU CAME.
+
+<span class="cursor">▮</span>`,
+  [{label:"BACK TO HALLWAY", kind:"safe", action:hallway}]
+  );
+}
+
+function laundryChute(){
+  // Win path #2 (laundry exit) requires shard OR key
+  if(!has("shard") && S.keys < 1){
+    addHeat(1);
+    return say(
+`THE LAUNDRY CHUTE DOOR IS PADLOCKED.
+YOU CAN’T “WILL” A PADLOCK OPEN.
+
+YOU NEED:
+• A KEY  OR  • A SHARP THING
+
+<span class="cursor">▮</span>`,
+    [
+      {label:"GO GET A KEY (SECURITY)", kind:"safe", action:ventCrawl},
+      {label:"TURN BACK", action:hallway}
+    ]);
+  }
+
+  if(has("shard")){
+    // sharp thing = risky but deterministic
+    addStability(-2);
+    if(S.stability <= 0){
+      return death("YOU SAW THROUGH METAL WITH GLASS.\nIT FIGHTS BACK.\nYOU BLEED OUT QUIETLY.", "SHARP THINGS ARE HONEST.");
+    }
+  } else {
+    // key path is safer
+    addStability(1);
+  }
+
+  return win("YOU OPEN THE CHUTE.\nYOU DROP.\nTHE WORLD BECOMES A RUSH OF FABRIC AND STATIC.\n\nYOU LAND IN A LAUNDRY ROOM.\nA BACK EXIT.\nNO CAMERA.\n\nYOU STEP OUT.\nTHE SUN DOESN’T ASK QUESTIONS.");
+}
+
+/* =========================
+   STAFF DOOR (front door puzzle)
+========================= */
+function staffDoor(){
+  // if cameras are off, heat matters less
+  if(!S.flags.camerasOff && S.heat >= 6){
+    return death("YOU REACH THE STAFF DOOR.\nTHE CAMERA ABOVE IT TRACKS YOU.\nA VOICE ON SPEAKER: “STEP BACK.”\nYOU DON’T GET TO NEGOTIATE.");
+  }
+
+  const knowsCode = S.flags.doorCode || has("tape");
+  const codeLine = knowsCode
+    ? "YOU FEEL A CODE IN YOUR SKULL.\nA DATE. A TIME.\n"
+    : "THE KEYPAD WAITS.\nYOU DO NOT KNOW THE CODE.\n";
+
+  say(
+`${codeLine}
+THE DOOR SAYS: STAFF ONLY.
+
+YOU CAN:
+• TRY KEYPAD
+• TRY BADGE
+• TRY KEY
+• WALK AWAY LIKE THIS NEVER HAPPENED
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"ENTER CODE", kind:"safe", action:enterCode},
+    {label:"SWIPE BADGE", action:swipeBadge},
+    {label:"USE KEY", action:useKey},
+    {label:"BACK", action:hallway}
+  ]);
+}
+
+function enterCode(){
+  if(!(S.flags.doorCode || has("tape"))){
+    addHeat(2);
+    return death("YOU GUESS.\nTHE KEYPAD BEEPS WRONG.\nLOUD.\nA RED LIGHT THINKS ABOUT YOU.", "GUESSING IS JUST CONFESSING WITH EXTRA STEPS.");
+  }
+  // code known = win path #3
+  return win("YOU TYPE THE CODE.\nBEEP.\nGREEN.\nTHE DOOR OPENS LIKE IT WAS TIRED OF HOLDING YOU.\n\nOUTSIDE: WIND.\nNO CLIPBOARDS.\nNO STRAPS.\n\nYOUR MIND IS STILL BROKEN.\nBUT IT’S OUT HERE WITH YOU.");
+}
+
+function swipeBadge(){
+  if(!has("badge")){
+    addHeat(2);
+    return say(
+`YOU SWIPE NOTHING.
+THE DOOR DOESN’T CARE.
+
+<span class="cursor">▮</span>`,
+    [
+      {label:"BACK", kind:"safe", action:staffDoor},
+      {label:"GO FIND A BADGE", action:hallway}
+    ]);
+  }
+  // badge alone is not enough unless nurseTrust or camerasOff
+  if(S.flags.nurseTrust || S.flags.camerasOff){
+    return win("YOU SWIPE THE BADGE.\nIT ACCEPTS YOU.\n\nTHE DOOR OPENS.\nYOU WALK OUT LIKE YOU’VE ALWAYS BEEN STAFF.\n\nYOU’RE FREE.\nWHICH IS A DIFFERENT KIND OF SCARY.");
+  }
+  addHeat(2);
+  return death("THE BADGE BEEPS.\nYELLOW.\n“VERIFY.”\nA CAMERA BLINKS.\nSOMEONE SAYS YOUR NAME LIKE A WARNING.");
+}
+
+function useKey(){
+  if(S.keys <= 0){
+    return say(
+`NO KEY.
+
+<span class="cursor">▮</span>`,
+    [
+      {label:"BACK", kind:"safe", action:staffDoor},
+      {label:"TRY VENT (SECURITY)", action:vent}
+    ]);
+  }
+  // keys work if heat not too high
+  if(S.heat >= 6 && !S.flags.camerasOff){
+    return death("YOU INSERT THE KEY.\nIT TURNS.\nTHE LOCK CLICKS.\nAND SO DOES A RADIO.\nTHEY WERE WAITING.", "KEYS OPEN DOORS. THEY ALSO OPEN ATTENTION.");
+  }
+  return win("YOU TURN THE KEY.\nTHE DOOR OPENS.\n\nOUTSIDE: AIR THAT DOESN’T SMELL LIKE BLEACH.\nYOU DON’T RUN.\nYOU WALK.\n\nTHAT’S THE FLEX.");
+}
+
+/* =========================
+   If user sits in one place too long, loop pressure
+========================= */
+(function loopPressure(){
+  // a tiny ambient mechanic: if they keep backing out, loop count rises
+  const oldSay = say;
+  window.say = function(text, opts){
+    // detect “back” loops subtly
+    if(typeof text === "string" && (text.includes("BACK") || text.includes("HALLWAY"))){
+      // no-op
+    }
+    return oldSay(text, opts);
+  };
+})();
+
+/* tiny input convenience: keys 1-4 choose option */
+document.addEventListener("keydown",(e)=>{
+  const n = parseInt(e.key,10);
+  if(!n) return;
+  const btns = Array.from(elChoices.querySelectorAll("button"));
+  if(btns[n-1]) btns[n-1].click();
+});
+
+/* begin */
+updateHUD();
 </script>
-
 </body>
 </html>
