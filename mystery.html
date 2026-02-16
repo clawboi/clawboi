@@ -9,6 +9,8 @@
   --bg:#000;
   --fg:#fff;
   --violet:#8a2eff;
+  --glass: rgba(255,255,255,.06);
+  --glass2: rgba(138,46,255,.12);
 }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -52,7 +54,7 @@ body:before{
     rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
 }
 
-/* full canvas */
+/* canvas */
 #c{
   position:fixed;
   inset:0;
@@ -60,6 +62,22 @@ body:before{
   height:100%;
   z-index:1;
   image-rendering:pixelated;
+}
+
+/* reactive aura layer */
+#aura{
+  position:fixed;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+  opacity:.0;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(138,46,255,.26), transparent 55%),
+    radial-gradient(circle at 25% 70%, rgba(138,46,255,.16), transparent 60%),
+    radial-gradient(circle at 80% 30%, rgba(255,255,255,.06), transparent 70%);
+  mix-blend-mode:screen;
+  filter:blur(26px);
+  transition:opacity .12s linear;
 }
 
 /* brand + back */
@@ -127,7 +145,7 @@ body:before{
   cursor:pointer;
   padding:10px 12px;
   border-radius:999px;
-  background:rgba(255,255,255,.06);
+  background:var(--glass);
   color:#fff;
   letter-spacing:.26em;
   font-size:10px;
@@ -144,6 +162,54 @@ body:before{
   font-size:10px;
   text-transform:uppercase;
   opacity:.75;
+}
+
+/* audio dock bottom left */
+.audioDock{
+  position:fixed;
+  left:14px;
+  bottom:14px;
+  z-index:12;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:999px;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.08);
+  backdrop-filter: blur(12px);
+}
+.audioDock .label{
+  font-size:10px;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  opacity:.8;
+}
+.slider{
+  width:110px;
+  accent-color: var(--violet);
+}
+.miniBtn{
+  border:0;
+  cursor:pointer;
+  padding:8px 10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.06);
+  color:#fff;
+  font-size:10px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+}
+.miniBtn:hover{background:rgba(138,46,255,.14)}
+.track{
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.04);
+  color:#fff;
+  border-radius:999px;
+  padding:8px 10px;
+  font-size:10px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
 }
 
 /* whisper */
@@ -178,6 +244,81 @@ body:before{
   100%{opacity:0}
 }
 
+/* START OVERLAY for iOS audio unlock */
+.overlay{
+  position:fixed;
+  inset:0;
+  z-index:50;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background: radial-gradient(circle at 50% 50%, rgba(138,46,255,.16), rgba(0,0,0,.92) 60%);
+  backdrop-filter: blur(10px);
+}
+.card{
+  width:min(560px, 100%);
+  border-radius:22px;
+  padding:18px 18px 16px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.45);
+  box-shadow: 0 0 80px rgba(138,46,255,.20);
+}
+.card h1{
+  margin:0;
+  font-size:12px;
+  letter-spacing:.48em;
+  text-transform:uppercase;
+  opacity:.92;
+}
+.card p{
+  margin:12px 0 14px;
+  font-size:11px;
+  letter-spacing:.18em;
+  line-height:1.6;
+  opacity:.72;
+  text-transform:uppercase;
+}
+.bigBtn{
+  width:100%;
+  border:0;
+  cursor:pointer;
+  padding:14px 16px;
+  border-radius:999px;
+  background: rgba(138,46,255,.18);
+  color:#fff;
+  font-size:11px;
+  letter-spacing:.36em;
+  text-transform:uppercase;
+  backdrop-filter: blur(10px);
+}
+.bigBtn:hover{background: rgba(138,46,255,.26)}
+.smallRow{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+}
+.smallRow button{
+  flex:1;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color:#fff;
+  border-radius:999px;
+  padding:10px 12px;
+  font-size:10px;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.smallRow button:hover{background: rgba(255,255,255,.07)}
+.note{
+  margin-top:10px;
+  font-size:10px;
+  letter-spacing:.18em;
+  opacity:.55;
+  text-transform:uppercase;
+}
+
 @media (prefers-reduced-motion: reduce){
   body:before{animation:none!important}
 }
@@ -186,6 +327,7 @@ body:before{
 
 <body>
 <canvas id="c"></canvas>
+<div id="aura"></div>
 
 <div class="scan"></div>
 <div class="flash" id="flash"></div>
@@ -205,17 +347,45 @@ body:before{
   <button class="btn" id="nextBtn">NEXT ▶</button>
 </div>
 
+<div class="audioDock">
+  <span class="label" id="trackLabel">TRACK</span>
+  <select class="track" id="trackSelect" aria-label="Track select">
+    <option value="audio/mansion.mp3">MANSION</option>
+    <option value="audio/zahh.mp3">ZAHH</option>
+    <option value="audio/body-count.mp3">BODY COUNT</option>
+    <option value="audio/n0-water.mp3">N0 WATER</option>
+    <option value="audio/rant.mp3">RANT</option>
+  </select>
+  <button class="miniBtn" id="playBtn">PLAY</button>
+  <input class="slider" id="vol" type="range" min="0" max="1" step="0.01" value="0.72" />
+</div>
+
+<!-- iOS-friendly start gate -->
+<div class="overlay" id="startOverlay">
+  <div class="card">
+    <h1>MYSTERY REALM HOPPER</h1>
+    <p>ONE TAP TO OPEN THE GATE. AUDIO UNLOCKS. REALMS WAKE UP. YOU BECOME THE INPUT.</p>
+    <button class="bigBtn" id="startBtn">START / UNMUTE</button>
+    <div class="smallRow">
+      <button id="startSilent">START SILENT</button>
+      <button id="startAuto">AUTO PLAY</button>
+    </div>
+    <div class="note">IPHONE REQUIRES A TAP BEFORE MUSIC CAN PLAY.</div>
+  </div>
+</div>
+
 <script>
 /* =======================
-   MYSTERY: REALM HOPPER
-   - no typing
-   - blank world
-   - inputs trigger different toys
-   - next switches realms
+   MYSTERY: REALM HOPPER (LEGENDARY)
+   - iOS-safe audio unlock
+   - MP3 player + track select
+   - audio-reactive glow
+   - your original realms preserved
 ======================= */
 
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d", { alpha: true });
+const aura = document.getElementById("aura");
 
 const flash = document.getElementById("flash");
 const whisper = document.getElementById("whisper");
@@ -226,6 +396,15 @@ const realmIdxEl  = document.getElementById("realmIdx");
 
 const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
+
+const startOverlay = document.getElementById("startOverlay");
+const startBtn = document.getElementById("startBtn");
+const startSilent = document.getElementById("startSilent");
+const startAuto = document.getElementById("startAuto");
+
+const trackSelect = document.getElementById("trackSelect");
+const playBtn = document.getElementById("playBtn");
+const vol = document.getElementById("vol");
 
 const clamp = (n,a,b)=> Math.max(a, Math.min(b,n));
 const rand  = (a,b)=> a + Math.random()*(b-a);
@@ -243,50 +422,72 @@ function resize(){
 addEventListener("resize", resize);
 resize();
 
-/* ====== tiny audio (optional, no files) ====== */
-let audioOn=false, ac=null, master=null;
-function ensureAudio(){
+/* ====== AUDIO (MP3) + ANALYSER ====== */
+let audioOn = false;
+let audio = new Audio();
+audio.loop = true;
+audio.preload = "auto";
+audio.crossOrigin = "anonymous";
+audio.src = trackSelect.value;
+
+let ac=null, srcNode=null, analyser=null, data=null, master=null;
+
+function ensureAudioGraph(){
   if(ac) return;
   ac = new (window.AudioContext||window.webkitAudioContext)();
   master = ac.createGain();
-  master.gain.value = 0.10;
+  master.gain.value = parseFloat(vol.value);
   master.connect(ac.destination);
-}
-async function unlockAudio(){
-  try{
-    ensureAudio();
-    await ac.resume?.();
-    audioOn=true;
-  }catch(e){}
-}
-addEventListener("pointerdown", unlockAudio, {passive:true});
-addEventListener("keydown", unlockAudio);
 
-function blip(type="triangle", f=220, dur=0.06, g=0.16){
-  if(!audioOn || !ac) return;
-  const o=ac.createOscillator();
-  const gn=ac.createGain();
-  o.type=type; o.frequency.value=f;
-  gn.gain.value=0.0001;
-  o.connect(gn); gn.connect(master);
-  const t=ac.currentTime;
-  gn.gain.setValueAtTime(0.0001,t);
-  gn.gain.exponentialRampToValueAtTime(g,t+0.01);
-  gn.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-  o.start(t); o.stop(t+dur+0.02);
+  analyser = ac.createAnalyser();
+  analyser.fftSize = 1024;
+  data = new Uint8Array(analyser.frequencyBinCount);
+
+  srcNode = ac.createMediaElementSource(audio);
+  srcNode.connect(analyser);
+  analyser.connect(master);
 }
-function boom(){
-  if(!audioOn || !ac) return;
-  const o=ac.createOscillator();
-  const gn=ac.createGain();
-  o.type="sawtooth";
-  o.frequency.setValueAtTime(140, ac.currentTime);
-  o.frequency.exponentialRampToValueAtTime(40, ac.currentTime+0.14);
-  gn.gain.value=0.14;
-  o.connect(gn); gn.connect(master);
-  o.start();
-  setTimeout(()=>o.stop(), 160);
+
+async function unlockAndPlay(){
+  try{
+    ensureAudioGraph();
+    await ac.resume?.();
+    await audio.play();
+    audioOn = true;
+    playBtn.textContent = "PAUSE";
+  }catch(e){
+    // If blocked, user can tap again
+    console.log("Audio play blocked:", e);
+  }
 }
+
+function pauseAudio(){
+  audio.pause();
+  playBtn.textContent = "PLAY";
+}
+
+function toggleAudio(){
+  if(!audioOn || audio.paused) unlockAndPlay();
+  else { pauseAudio(); }
+}
+
+vol.addEventListener("input", ()=>{
+  const v = parseFloat(vol.value);
+  audio.volume = 1; // keep media element full, control via gain
+  if(master) master.gain.value = v;
+});
+
+trackSelect.addEventListener("change", async ()=>{
+  const wasPlaying = audioOn && !audio.paused;
+  audio.src = trackSelect.value;
+  audio.load();
+  say("TRACK SHIFT", 220);
+  if(wasPlaying){
+    await unlockAndPlay();
+  }
+});
+
+playBtn.addEventListener("click", toggleAudio);
 
 /* ====== UI effects ====== */
 function doFlash(){
@@ -300,7 +501,7 @@ function say(msg, ms=320){
   say._t = setTimeout(()=>whisper.classList.remove("on"), ms);
 }
 
-/* ====== shared particles ====== */
+/* ====== Stars ====== */
 const stars = [];
 function initStars(){
   stars.length=0;
@@ -320,8 +521,21 @@ function drawStars(speed=1){
   }
 }
 
+/* ====== Audio reactive energy ====== */
+let energy = 0;
+function updateEnergy(){
+  if(!audioOn || !analyser) { energy *= 0.92; return; }
+  analyser.getByteFrequencyData(data);
+  // sample low-mid bands for "pulse"
+  let sum=0, n=0;
+  for(let i=6;i<60;i++){ sum += data[i]; n++; }
+  const avg = (sum/(n||1))/255; // 0..1
+  energy = energy*0.82 + avg*0.18;
+  aura.style.opacity = String(clamp(energy*1.35, 0, 0.85));
+}
+
 /* =======================
-   REALMS
+   REALMS (your originals)
 ======================= */
 let realmIndex = 0;
 
@@ -336,17 +550,15 @@ const realms = [
     },
     action(x,y,charged){
       spawnBall(x,y, charged ? 22 : 12, charged ? 1.35 : 1.0);
-      blip("square", rint(90,260), charged?0.10:0.06, charged?0.22:0.16);
+      blip(charged?0.16:0.10);
     },
     update(dt){
-      // subtle violet gradient wash
-      ctx.fillStyle = "rgba(0,0,0,0.24)";
+      ctx.fillStyle = "rgba(0,0,0,0.22)";
       ctx.fillRect(0,0,W,H);
 
       drawStars(1.2);
 
-      // ground glow
-      ctx.fillStyle = "rgba(138,46,255,0.10)";
+      ctx.fillStyle = `rgba(138,46,255,${0.06 + energy*0.10})`;
       ctx.fillRect(0, H-60, W, 60);
 
       stepBalls(dt);
@@ -366,18 +578,17 @@ const realms = [
       if(charged){
         flood = clamp(flood + 0.35, 0, 1.0);
         say("FLOOD RISING", 260);
-        boom();
+        doFlash();
       }else{
         thunder(x,y);
       }
     },
     update(dt){
-      ctx.fillStyle = "rgba(0,0,0,0.26)";
+      ctx.fillStyle = "rgba(0,0,0,0.24)";
       ctx.fillRect(0,0,W,H);
 
       drawStars(0.9);
 
-      // rain spawn
       const count = Math.floor((rainRate * (1+flood*0.8)) * dt);
       for(let i=0;i<count;i++){
         drops.push({
@@ -390,12 +601,10 @@ const realms = [
         });
       }
 
-      // puddle
       const waterH = 70 + flood*120;
-      ctx.fillStyle = "rgba(138,46,255,0.08)";
+      ctx.fillStyle = `rgba(138,46,255,${0.06 + energy*0.14})`;
       ctx.fillRect(0, H-waterH, W, waterH);
 
-      // drops update
       for(let i=drops.length-1;i>=0;i--){
         const d = drops[i];
         d.x += d.vx*dt;
@@ -408,17 +617,15 @@ const realms = [
         ctx.stroke();
 
         if(d.y > H-waterH){
-          // ripple
-          ripples.push({x:d.x, y:H-waterH, r:1, a:0.45});
+          ripples.push({x:d.x, y:H-waterH, r:1, a:0.45 + energy*0.25});
           drops.splice(i,1);
           if(ripples.length>160) ripples.splice(0, ripples.length-160);
         }
       }
 
-      // ripples draw
       for(let i=ripples.length-1;i>=0;i--){
         const r = ripples[i];
-        r.r += (90 + flood*80) * dt;
+        r.r += (90 + flood*80 + energy*90) * dt;
         r.a *= 0.965;
         if(r.a < 0.02){ ripples.splice(i,1); continue; }
         ctx.strokeStyle = `rgba(138,46,255,${r.a})`;
@@ -439,21 +646,18 @@ const realms = [
     action(x,y,charged){
       if(charged){
         megaFirework(x,y);
-        boom();
         doFlash();
       }else{
         launchRocket(x,y);
-        blip("triangle", rint(180,520), 0.07, 0.16);
       }
     },
     update(dt){
-      ctx.fillStyle = "rgba(0,0,0,0.24)";
+      ctx.fillStyle = "rgba(0,0,0,0.22)";
       ctx.fillRect(0,0,W,H);
 
       drawStars(1.4);
 
-      // faint floor haze
-      ctx.fillStyle = "rgba(138,46,255,0.05)";
+      ctx.fillStyle = `rgba(138,46,255,${0.04 + energy*0.10})`;
       ctx.fillRect(0,H-110,W,110);
 
       stepFireworks(dt);
@@ -472,22 +676,20 @@ const realms = [
       if(charged){
         wells.push({x,y, r: 10, a: 0.9, p: 1.0});
         say("GRAVITY WELL", 220);
-        boom();
+        doFlash();
       }else{
         orbs.push(makeOrb(x,y));
-        blip("sine", rint(120,420), 0.07, 0.12);
       }
     },
     update(dt){
-      ctx.fillStyle = "rgba(0,0,0,0.22)";
+      ctx.fillStyle = "rgba(0,0,0,0.20)";
       ctx.fillRect(0,0,W,H);
 
       drawStars(0.8);
 
-      // wells
       for(let i=wells.length-1;i>=0;i--){
         const w = wells[i];
-        w.r += 220*dt;
+        w.r += 220*dt*(1+energy*0.7);
         w.a *= 0.975;
         w.p *= 0.985;
         if(w.a < 0.03){ wells.splice(i,1); continue; }
@@ -498,16 +700,14 @@ const realms = [
         ctx.stroke();
       }
 
-      // orbs physics with gentle orbit + well pull
       for(const o of orbs){
-        // base drift
         o.vx *= 0.998; o.vy *= 0.998;
 
         for(const w of wells){
           const dx = w.x - o.x;
           const dy = w.y - o.y;
           const d2 = dx*dx + dy*dy + 40;
-          const f = (5200 * w.p) / d2;
+          const f = (5200 * w.p * (1+energy*0.8)) / d2;
           o.vx += dx * f * dt;
           o.vy += dy * f * dt;
         }
@@ -515,7 +715,6 @@ const realms = [
         o.x += o.vx*dt;
         o.y += o.vy*dt;
 
-        // wrap
         if(o.x < -40) o.x=W+40;
         if(o.x > W+40) o.x=-40;
         if(o.y < -40) o.y=H+40;
@@ -524,16 +723,15 @@ const realms = [
         o.phase += dt*(0.8+o.s*0.8);
       }
 
-      // draw orbs
       for(const o of orbs){
         const pulse = 0.6 + 0.4*Math.sin(o.phase*3.2);
         ctx.beginPath();
-        ctx.fillStyle = `rgba(138,46,255,${0.22 + pulse*0.22})`;
+        ctx.fillStyle = `rgba(138,46,255,${0.18 + pulse*0.20 + energy*0.20})`;
         ctx.arc(o.x, o.y, o.r*2.6, 0, Math.PI*2);
         ctx.fill();
 
         ctx.beginPath();
-        ctx.fillStyle = `rgba(255,255,255,${0.45 + pulse*0.30})`;
+        ctx.fillStyle = `rgba(255,255,255,${0.40 + pulse*0.30 + energy*0.20})`;
         ctx.arc(o.x, o.y, o.r, 0, Math.PI*2);
         ctx.fill();
       }
@@ -548,24 +746,22 @@ const realms = [
     },
     action(x,y,charged){
       if(charged){
-        waves.push({x,y, r: 1, a: 0.55});
-        boom();
+        waves.push({x,y, r: 1, a: 0.55 + energy*0.25});
+        doFlash();
         say("SHOCKWAVE", 220);
       }else{
         growShard(x,y);
-        blip("triangle", rint(220,760), 0.06, 0.14);
       }
     },
     update(dt){
-      ctx.fillStyle = "rgba(0,0,0,0.26)";
+      ctx.fillStyle = "rgba(0,0,0,0.24)";
       ctx.fillRect(0,0,W,H);
 
       drawStars(1.0);
 
-      // waves
       for(let i=waves.length-1;i>=0;i--){
         const w = waves[i];
-        w.r += 520*dt;
+        w.r += 520*dt*(1+energy*0.8);
         w.a *= 0.965;
         if(w.a < 0.02){ waves.splice(i,1); continue; }
         ctx.strokeStyle = `rgba(138,46,255,${w.a})`;
@@ -575,12 +771,10 @@ const realms = [
         ctx.stroke();
       }
 
-      // shards
       for(const s of shards){
         s.t += dt;
         s.wob = Math.sin(s.t*2.4 + s.seed)*0.6;
       }
-
       drawShards();
     }
   }
@@ -593,60 +787,53 @@ function setRealm(idx){
   realmIdxEl.textContent  = String(realmIndex+1).padStart(2,"0") + "/0" + realms.length;
   initStars();
   realms[realmIndex].init();
+  say(pick(["REALM SHIFT","GATE OPEN","SIGNAL BENDS","NEW PHYSICS"]), 240);
 }
 
-/* =======================
-   REALM 1: Physics balls
-======================= */
+/* ====== tiny synth SFX (kept, but soft) ====== */
+function blip(g=0.10){
+  // If WebAudio exists, we can add a tiny osc for clicks without fighting the MP3.
+  if(!ac) return;
+  const o=ac.createOscillator();
+  const gn=ac.createGain();
+  o.type="triangle"; o.frequency.value=rint(180,520);
+  gn.gain.value=0.0001;
+  o.connect(gn); gn.connect(master);
+  const t=ac.currentTime;
+  gn.gain.setValueAtTime(0.0001,t);
+  gn.gain.exponentialRampToValueAtTime(g,t+0.01);
+  gn.gain.exponentialRampToValueAtTime(0.0001,t+0.06);
+  o.start(t); o.stop(t+0.09);
+}
+
+/* ====== REALM 1 physics balls ====== */
 const balls = [];
 let wind = 0;
-
 function spawnBall(x,y, r=12, mass=1){
-  balls.push({
-    x, y,
-    vx: rand(-180,180),
-    vy: rand(-120,60),
-    r,
-    m: mass,
-    spin: rand(-2,2),
-    hue: rint(260,310),
-    life: 0
-  });
+  balls.push({ x,y, vx: rand(-180,180), vy: rand(-120,60), r, m: mass, hue: rint(260,310), life: 0 });
   if(balls.length > 90) balls.splice(0, balls.length-90);
 }
-
 function stepBalls(dt){
-  // gentle wind drift
   wind = wind*0.97 + rand(-12,12)*0.02;
-
   for(const b of balls){
     b.life += dt;
-
     b.vx += wind*dt;
-    b.vy += 980*dt; // gravity
-
-    // integrate
+    b.vy += 980*dt;
     b.x += b.vx*dt;
     b.y += b.vy*dt;
 
-    // walls
-    if(b.x < b.r){ b.x=b.r; b.vx*=-0.82; blip("sine", 180, 0.04, 0.06); }
-    if(b.x > W-b.r){ b.x=W-b.r; b.vx*=-0.82; blip("sine", 180, 0.04, 0.06); }
+    if(b.x < b.r){ b.x=b.r; b.vx*=-0.82; }
+    if(b.x > W-b.r){ b.x=W-b.r; b.vx*=-0.82; }
 
-    // floor
     const floor = H - 20;
     if(b.y > floor-b.r){
       b.y = floor-b.r;
       b.vy *= -0.78;
       b.vx *= 0.96;
-      if(Math.abs(b.vy) > 220) blip("square", rint(90,220), 0.05, 0.08);
     }
-
-    // ceiling
     if(b.y < b.r){ b.y=b.r; b.vy*=-0.7; }
   }
 
-  // simple ball-ball repel
   for(let i=0;i<balls.length;i++){
     for(let j=i+1;j<balls.length;j++){
       const a=balls[i], b=balls[j];
@@ -658,39 +845,33 @@ function stepBalls(dt){
         const push=(min-d)*0.55;
         a.x -= nx*push; a.y -= ny*push;
         b.x += nx*push; b.y += ny*push;
-        const k = 240; // impulse
+        const k = 240;
         a.vx -= nx*k*0.5; a.vy -= ny*k*0.5;
         b.vx += nx*k*0.5; b.vy += ny*k*0.5;
       }
     }
   }
 }
-
 function drawBalls(){
   for(const b of balls){
-    // glow
     ctx.beginPath();
-    ctx.fillStyle = `hsla(${b.hue}, 100%, 60%, 0.14)`;
+    ctx.fillStyle = `hsla(${b.hue}, 100%, 60%, ${0.10 + energy*0.10})`;
     ctx.arc(b.x, b.y, b.r*2.8, 0, Math.PI*2);
     ctx.fill();
 
-    // core
     ctx.beginPath();
-    ctx.fillStyle = `hsla(${b.hue}, 100%, 72%, 0.75)`;
+    ctx.fillStyle = `hsla(${b.hue}, 100%, 72%, 0.72)`;
     ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
     ctx.fill();
 
-    // highlight
     ctx.beginPath();
-    ctx.fillStyle = `rgba(255,255,255,0.40)`;
+    ctx.fillStyle = `rgba(255,255,255,${0.30 + energy*0.25})`;
     ctx.arc(b.x - b.r*0.25, b.y - b.r*0.25, b.r*0.28, 0, Math.PI*2);
     ctx.fill();
   }
 }
 
-/* =======================
-   REALM 2: Rain
-======================= */
+/* ====== REALM 2 rain ====== */
 const drops = [];
 const ripples = [];
 let rainRate = 520;
@@ -699,10 +880,8 @@ let flood = 0;
 function thunder(x,y){
   doFlash();
   say("THUNDER", 180);
-  blip("square", rint(40,120), 0.09, 0.20);
-  // jag lightning
   ctx.save();
-  ctx.globalAlpha = 0.45;
+  ctx.globalAlpha = 0.45 + energy*0.25;
   ctx.strokeStyle = "rgba(255,255,255,0.9)";
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -717,16 +896,13 @@ function thunder(x,y){
   ctx.stroke();
   ctx.restore();
 
-  // ripple burst
   for(let i=0;i<8;i++){
-    ripples.push({x:x+rand(-40,40), y:H-(70+flood*120), r:1, a:0.55});
+    ripples.push({x:x+rand(-40,40), y:H-(70+flood*120), r:1, a:0.45 + energy*0.35});
   }
   if(ripples.length>160) ripples.splice(0, ripples.length-160);
 }
 
-/* =======================
-   REALM 3: Fireworks
-======================= */
+/* ====== REALM 3 fireworks ====== */
 const rockets = [];
 const sparks = [];
 
@@ -735,10 +911,8 @@ function launchRocket(x,y){
     x, y: H + 30,
     vx: rand(-40,40),
     vy: -rand(820,1060),
-    targetX: x,
     targetY: clamp(y, 90, H*0.72),
-    hue: rint(260,315),
-    life: 0
+    hue: rint(260,315)
   });
   if(rockets.length>14) rockets.splice(0, rockets.length-14);
 }
@@ -747,7 +921,7 @@ function explode(x,y,hue, power=1){
   const count = Math.floor(70*power);
   for(let i=0;i<count;i++){
     const a = Math.random()*Math.PI*2;
-    const sp = rand(120, 520)*power;
+    const sp = rand(120, 520)*power*(1+energy*0.6);
     sparks.push({
       x,y,
       vx: Math.cos(a)*sp,
@@ -755,7 +929,7 @@ function explode(x,y,hue, power=1){
       r: rand(1.2,2.6)*power,
       hue,
       a: rand(0.40,0.95),
-      life: 0
+      trail:false
     });
   }
   if(sparks.length>1400) sparks.splice(0, sparks.length-1400);
@@ -769,14 +943,12 @@ function megaFirework(x,y){
 }
 
 function stepFireworks(dt){
-  // rockets
   for(let i=rockets.length-1;i>=0;i--){
     const r = rockets[i];
-    r.life += dt;
     r.x += r.vx*dt;
     r.y += r.vy*dt;
-    r.vy += 280*dt; // gravity
-    // trail
+    r.vy += 280*dt;
+
     if(Math.random()<0.65){
       sparks.push({
         x:r.x, y:r.y,
@@ -785,21 +957,18 @@ function stepFireworks(dt){
         r: rand(0.8,1.6),
         hue:r.hue,
         a: rand(0.08,0.22),
-        life: 0,
         trail:true
       });
     }
+
     if(r.y <= r.targetY || r.vy > -40){
       explode(r.x, r.y, r.hue, 1.0);
-      blip("triangle", rint(180,520), 0.08, 0.18);
       rockets.splice(i,1);
     }
   }
 
-  // sparks
   for(let i=sparks.length-1;i>=0;i--){
     const s = sparks[i];
-    s.life += dt;
     s.x += s.vx*dt;
     s.y += s.vy*dt;
     s.vx *= 0.992;
@@ -807,28 +976,23 @@ function stepFireworks(dt){
     s.vy += (s.trail?220:520)*dt;
     s.a *= s.trail ? 0.965 : 0.985;
 
-    if(s.y > H+60 || s.a < 0.03){
-      sparks.splice(i,1);
-    }
+    if(s.y > H+60 || s.a < 0.03) sparks.splice(i,1);
   }
 }
 
 function drawFireworks(){
-  // rockets
   for(const r of rockets){
     ctx.beginPath();
     ctx.fillStyle = `hsla(${r.hue},100%,70%,0.85)`;
     ctx.arc(r.x,r.y,3,0,Math.PI*2);
     ctx.fill();
   }
-  // sparks
   for(const s of sparks){
     ctx.beginPath();
     ctx.fillStyle = `hsla(${s.hue},100%,70%,${s.a})`;
     ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
     ctx.fill();
 
-    // glow
     if(!s.trail){
       ctx.beginPath();
       ctx.fillStyle = `hsla(${s.hue},100%,60%,${s.a*0.10})`;
@@ -838,45 +1002,24 @@ function drawFireworks(){
   }
 }
 
-/* =======================
-   REALM 4: Orbit
-======================= */
+/* ====== REALM 4 orbit ====== */
 const orbs = [];
 const wells = [];
 function makeOrb(x,y){
   const s = rand(0.4,1.2);
-  return {
-    x,y,
-    vx: rand(-90,90),
-    vy: rand(-90,90),
-    r: rand(2.2,4.2),
-    s,
-    phase: rand(0,10)
-  };
+  return { x,y, vx: rand(-90,90), vy: rand(-90,90), r: rand(2.2,4.2), s, phase: rand(0,10) };
 }
 
-/* =======================
-   REALM 5: Shards
-======================= */
+/* ====== REALM 5 shards ====== */
 const shards = [];
 const waves = [];
-
 function growShard(x,y){
   const h = rint(260,320);
   const height = rand(18, 90);
   const w = rand(4, 14);
-  shards.push({
-    x,y,
-    h,
-    height,
-    w,
-    t: 0,
-    seed: rand(0,999),
-    tilt: rand(-0.5,0.5)
-  });
+  shards.push({ x,y, h, height, w, t:0, seed: rand(0,999), tilt: rand(-0.5,0.5) });
   if(shards.length>120) shards.splice(0, shards.length-120);
 }
-
 function drawShards(){
   for(const s of shards){
     const sway = s.wob || 0;
@@ -884,33 +1027,28 @@ function drawShards(){
     const topX = s.x + tilt*s.height;
     const topY = s.y - s.height;
 
-    // glow
-    ctx.strokeStyle = `hsla(${s.h}, 100%, 60%, 0.20)`;
+    ctx.strokeStyle = `hsla(${s.h}, 100%, 60%, ${0.16 + energy*0.14})`;
     ctx.lineWidth = s.w*2.4;
     ctx.beginPath();
     ctx.moveTo(s.x, s.y);
     ctx.lineTo(topX, topY);
     ctx.stroke();
 
-    // core
-    ctx.strokeStyle = `hsla(${s.h}, 100%, 74%, 0.85)`;
+    ctx.strokeStyle = `hsla(${s.h}, 100%, 74%, 0.82)`;
     ctx.lineWidth = s.w;
     ctx.beginPath();
     ctx.moveTo(s.x, s.y);
     ctx.lineTo(topX, topY);
     ctx.stroke();
 
-    // tip highlight
     ctx.beginPath();
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.fillStyle = `rgba(255,255,255,${0.45 + energy*0.25})`;
     ctx.arc(topX, topY, 2.2, 0, Math.PI*2);
     ctx.fill();
   }
 }
 
-/* =======================
-   INPUT: click / tap / hold / drag / keys
-======================= */
+/* ====== INPUT ====== */
 let pointerDown=false, downT=0, downX=0, downY=0;
 let lastX=W/2, lastY=H/2;
 
@@ -920,7 +1058,6 @@ function realmAction(x,y,charged){
 
 addEventListener("pointermove", (e)=>{
   lastX=e.clientX; lastY=e.clientY;
-  // Drag pushes in physics realm
   if(pointerDown && realms[realmIndex].name==="GRAVITY DROP"){
     const dx = e.clientX - downX;
     const dy = e.clientY - downY;
@@ -951,52 +1088,60 @@ addEventListener("pointerup", (e)=>{
 
   const ms = performance.now()-downT;
   const charged = ms > 520;
-
   realmAction(e.clientX, e.clientY, charged);
 }, {passive:true});
 
-// keys
 addEventListener("keydown", (e)=>{
   const k = e.key;
-  if(k === "ArrowRight"){ setRealm(realmIndex+1); blip("sine", 420, 0.06, 0.10); return; }
-  if(k === "ArrowLeft"){ setRealm(realmIndex-1); blip("sine", 340, 0.06, 0.10); return; }
+  if(k === "ArrowRight"){ setRealm(realmIndex+1); return; }
+  if(k === "ArrowLeft"){ setRealm(realmIndex-1); return; }
 
   if(k === " " || k === "Enter"){
     e.preventDefault();
     realmAction(lastX, lastY, false);
     return;
   }
-
-  // extra: “B” triggers big version
   if(k.toLowerCase() === "b"){
     realmAction(lastX, lastY, true);
   }
 }, {passive:false});
 
-// buttons
-prevBtn.onclick = ()=>{ setRealm(realmIndex-1); blip("sine", 320, 0.06, 0.10); };
-nextBtn.onclick = ()=>{ setRealm(realmIndex+1); blip("sine", 420, 0.06, 0.10); };
+prevBtn.onclick = ()=> setRealm(realmIndex-1);
+nextBtn.onclick = ()=> setRealm(realmIndex+1);
 
-/* =======================
-   LOOP
-======================= */
+/* ====== LOOP ====== */
 let lastT = performance.now();
 function loop(t){
   const dt = clamp((t-lastT)/1000, 0, 0.033);
   lastT = t;
 
-  // realm updates draw their own “fade”
+  updateEnergy();
   realms[realmIndex].update(dt);
 
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
-/* =======================
-   START
-======================= */
-setRealm(0);
-say("TAP OR PRESS SPACE", 520);
+/* ====== START ====== */
+function startWorld({withAudio}){
+  startOverlay.style.display = "none";
+  setRealm(0);
+  say("TAP OR PRESS SPACE", 520);
+  if(withAudio){
+    unlockAndPlay();
+  }else{
+    ensureAudioGraph(); // create analyser for future, but don't play
+  }
+}
+
+startBtn.onclick = ()=> startWorld({withAudio:true});
+startAuto.onclick = ()=> startWorld({withAudio:true});
+startSilent.onclick = ()=> startWorld({withAudio:false});
+
+/* friendly: tap anywhere on overlay starts too */
+startOverlay.addEventListener("click", (e)=>{
+  if(e.target === startOverlay) startWorld({withAudio:true});
+});
 </script>
 </body>
 </html>
