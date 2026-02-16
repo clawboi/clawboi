@@ -23,7 +23,7 @@ function setPixelText(ctx){
 /* =========================================================
    UI MANAGER
    ========================================================= */
-export class UIManager{
+export class UIManager {
   constructor(){
     this.toasts = [];
     this.floaters = [];
