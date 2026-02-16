@@ -1,4 +1,4 @@
-<!doctype html>
+ <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -90,9 +90,170 @@
       max-width:70ch;
     }
 
-    /* Coming soon block */
+    /* ===== NEW: shop grid (keeps your vibe) ===== */
+    .rbBar{
+      margin-top:18px;
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .rbLink{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:12px 14px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(138,46,255,.06);
+      color:#fff;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      font-size:11px;
+    }
+    .rbDot{
+      width:8px;height:8px;border-radius:999px;
+      background:rgba(138,46,255,.9);
+      box-shadow:0 0 16px rgba(138,46,255,.35);
+    }
+
+    .grid{
+      margin-top:26px;
+      display:grid;
+      grid-template-columns:repeat(3, 1fr);
+      gap:14px;
+    }
+    @media (max-width:980px){ .grid{grid-template-columns:repeat(2, 1fr);} }
+    @media (max-width:640px){ .grid{grid-template-columns:1fr;} }
+
+    .card{
+      position:relative;
+      border-radius:22px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.03);
+      overflow:hidden;
+      box-shadow:0 26px 80px rgba(0,0,0,.55);
+    }
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:-1px;
+      pointer-events:none;
+      background:
+        radial-gradient(800px 260px at 20% 0%, rgba(138,46,255,.18), transparent 60%),
+        radial-gradient(700px 240px at 80% 30%, rgba(255,255,255,.06), transparent 62%);
+      opacity:.9;
+    }
+
+    .thumb{
+      position:relative;
+      aspect-ratio: 4 / 3;
+      background:rgba(0,0,0,.55);
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .thumb iframe{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      border:0;
+    }
+    .thumbFallback{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:18px;
+      color:rgba(255,255,255,.72);
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      font-size:11px;
+      line-height:1.7;
+      background:
+        radial-gradient(800px 260px at 30% 20%, rgba(138,46,255,.18), transparent 55%),
+        radial-gradient(700px 240px at 80% 70%, rgba(255,255,255,.06), transparent 60%),
+        rgba(0,0,0,.55);
+    }
+
+    .body{
+      position:relative;
+      padding:14px 14px 16px;
+    }
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.35);
+      letter-spacing:.22em;
+      text-transform:uppercase;
+      font-size:10px;
+      color:rgba(255,255,255,.78);
+    }
+    .tag .pill{
+      width:7px;height:7px;border-radius:999px;
+      background:rgba(0,255,213,.85);
+      box-shadow:0 0 14px rgba(0,255,213,.25);
+    }
+    .title{
+      margin:10px 0 0;
+      font-weight:900;
+      letter-spacing:.10em;
+      text-transform:uppercase;
+      font-size:14px;
+      line-height:1.35;
+    }
+    .meta{
+      margin:8px 0 0;
+      color:rgba(255,255,255,.62);
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      font-size:11px;
+      line-height:1.6;
+    }
+    .actions{
+      margin-top:12px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      padding:12px 14px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      letter-spacing:.22em;
+      text-transform:uppercase;
+      font-size:11px;
+      background:rgba(138,46,255,.14);
+      color:#fff;
+      cursor:pointer;
+      user-select:none;
+    }
+    .btn:hover{
+      border-color:rgba(138,46,255,.55);
+      box-shadow:0 0 26px rgba(138,46,255,.14);
+      background:rgba(138,46,255,.22);
+    }
+    .btn.alt{
+      background:rgba(255,255,255,.06);
+    }
+    .btn.alt:hover{
+      border-color:rgba(255,255,255,.22);
+      background:rgba(255,255,255,.10);
+      box-shadow:none;
+    }
+
+    /* Coming soon block (kept, but now “below” the merch) */
     .soon{
-      margin: 54px 0 0;
+      margin: 22px 0 0;
       border: 1px solid rgba(138,46,255,.22);
       background: rgba(138,46,255,.06);
       border-radius: 22px;
@@ -146,9 +307,295 @@
   <main class="wrap">
     <section class="hero">
       <h1 class="h1">Shop</h1>
-      <p class="sub">Coming soon.</p>
+      <p class="sub">Official Redbubble drops. Tap a tile to view it, then hit BUY to open Redbubble.</p>
+
+      <div class="rbBar">
+        <a class="rbLink" href="https://www.redbubble.com/people/clawboi/shop?asc=u" target="_blank" rel="noopener">
+          <span class="rbDot"></span> View full Redbubble shop
+        </a>
+      </div>
     </section>
 
+    <!-- ===== NEW: product grid ===== -->
+    <section class="grid" aria-label="Merch grid">
+      <!-- 1 -->
+      <article class="card">
+        <div class="thumb">
+          <iframe
+            src="https://www.redbubble.com/i/t-shirt/BMA-by-clawboi/178525489.WFLAH"
+            title="BMA by clawboi (T-Shirt)"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox">
+          </iframe>
+          <div class="thumbFallback">If preview is blocked, hit BUY below.</div>
+        </div>
+        <div class="body">
+          <div class="tag"><span class="pill"></span> T-Shirt</div>
+          <div class="title">BMA</div>
+          <div class="meta">Classic tee drop</div>
+          <div class="actions">
+            <a class="btn" href="https://www.redbubble.com/i/t-shirt/BMA-by-clawboi/178525489.WFLAH" target="_blank" rel="noopener">Buy</a>
+            <a class="btn alt" href="https://www.redbubble.com/i/t-shirt/BMA-by-clawboi/178525489.WFLAH" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 2 -->
+      <article class="card">
+        <div class="thumb">
+          <iframe
+            src="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.WFLAH"
+            title="Broken Minds Anonymous (T-Shirt)"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox">
+          </iframe>
+          <div class="thumbFallback">If preview is blocked, hit BUY below.</div>
+        </div>
+        <div class="body">
+          <div class="tag"><span class="pill"></span> T-Shirt</div>
+          <div class="title">Broken Minds Anonymous</div>
+          <div class="meta">Tee version</div>
+          <div class="actions">
+            <a class="btn" href="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.WFLAH" target="_blank" rel="noopener">Buy</a>
+            <a class="btn alt" href="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.WFLAH" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 3 -->
+      <article class="card">
+        <div class="thumb">
+          <iframe
+            src="https://www.redbubble.com/i/sweatshirt/Broken-Minds-Anonymous-by-clawboi/178525222.E3041"
+            title="Broken Minds Anonymous (Sweatshirt)"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox">
+          </iframe>
+          <div class="thumbFallback">If preview is blocked, hit BUY below.</div>
+        </div>
+        <div class="body">
+          <div class="tag"><span class="pill"></span> Sweatshirt</div>
+          <div class="title">Broken Minds Anonymous</div>
+          <div class="meta">Warm layer version</div>
+          <div class="actions">
+            <a class="btn" href="https://www.redbubble.com/i/sweatshirt/Broken-Minds-Anonymous-by-clawboi/178525222.E3041" target="_blank" rel="noopener">Buy</a>
+            <a class="btn alt" href="https://www.redbubble.com/i/sweatshirt/Broken-Minds-Anonymous-by-clawboi/178525222.E3041" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 4 -->
+      <article class="card">
+        <div class="thumb">
+          <iframe
+            src="https://www.redbubble.com/i/t-shirt/JUMP-by-clawboi/178524500.IJ6L0"
+            title="JUMP (T-Shirt)"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox">
+          </iframe>
+          <div class="thumbFallback">If preview is blocked, hit BUY below.</div>
+        </div>
+        <div class="body">
+          <div class="tag"><span class="pill"></span> T-Shirt</div>
+          <div class="title">JUMP</div>
+          <div class="meta">Tee version</div>
+          <div class="actions">
+            <a class="btn" href="https://www.redbubble.com/i/t-shirt/JUMP-by-clawboi/178524500.IJ6L0" target="_blank" rel="noopener">Buy</a>
+            <a class="btn alt" href="https://www.redbubble.com/i/t-shirt/JUMP-by-clawboi/178524500.IJ6L0" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 5 -->
+      <article class="card">
+        <div class="thumb">
+          <iframe
+            src="https://www.redbubble.com/i/photographic-print/ANGELS-IN-BACKD00RS-by-clawboi/178524760.6Q0TX"
+            title="ANGELS IN BACKD00RS (Photographic Print)"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox">
+          </iframe>
+          <div class="thumbFallback">If preview is blocked, hit BUY below.</div>
+        </div>
+        <div class="body">
+          <div class="tag"><span class="pill"></span> Print</div>
+          <div class="title">ANGELS IN BACKD00RS</div>
+          <div class="meta">Photographic print</div>
+          <div class="actions">
+            <a class="btn" href="https://www.redbubble.com/i/photographic-print/ANGELS-IN-BACKD00RS-by-clawboi/178524760.6Q0TX" target="_blank" rel="noopener">Buy</a>
+            <a class="btn alt" href="https://www.redbubble.com/i/photographic-print/ANGELS-IN-BACKD00RS-by-clawboi/178524760.6Q0TX" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 6 -->
+      <article class="card">
+        <div class="thumb">
+          <iframe
+            src="https://www.redbubble.com/i/backpack/Two-Times-by-clawboi/178524644.K1KHE"
+            title="Two Times (Backpack)"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox">
+          </iframe>
+          <div class="thumbFallback">If preview is blocked, hit BUY below.</div>
+        </div>
+        <div class="body">
+          <div class="tag"><span class="pill"></span> Backpack</div>
+          <div class="title">Two Times</div>
+          <div class="meta">Backpack version</div>
+          <div class="actions">
+            <a class="btn" href="https://www.redbubble.com/i/backpack/Two-Times-by-clawboi/178524644.K1KHE" target="_blank" rel="noopener">Buy</a>
+            <a class="btn alt" href="https://www.redbubble.com/i/backpack/Two-Times-by-clawboi/178524644.K1KHE" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 7 -->
+      <article class="card">
+        <div class="thumb">
+          <iframe
+            src="https://www.redbubble.com/i/sticker/Broken-Minds-Anonymous-by-clawboi/178525222.EJUG5"
+            title="Broken Minds Anonymous (Sticker)"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox">
+          </iframe>
+          <div class="thumbFallback">If preview is blocked, hit BUY below.</div>
+        </div>
+        <div class="body">
+          <div class="tag"><span class="pill"></span> Sticker</div>
+          <div class="title">Broken Minds Anonymous</div>
+          <div class="meta">Sticker version</div>
+          <div class="actions">
+            <a class="btn" href="https://www.redbubble.com/i/sticker/Broken-Minds-Anonymous-by-clawboi/178525222.EJUG5" target="_blank" rel="noopener">Buy</a>
+            <a class="btn alt" href="https://www.redbubble.com/i/sticker/Broken-Minds-Anonymous-by-clawboi/178525222.EJUG5" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 8 -->
+      <article class="card">
+        <div class="thumb">
+          <iframe
+            src="https://www.redbubble.com/i/throw-pillow/JUMP-by-clawboi/178524500.5X2YF"
+            title="JUMP (Throw Pillow)"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox">
+          </iframe>
+          <div class="thumbFallback">If preview is blocked, hit BUY below.</div>
+        </div>
+        <div class="body">
+          <div class="tag"><span class="pill"></span> Pillow</div>
+          <div class="title">JUMP</div>
+          <div class="meta">Throw pillow</div>
+          <div class="actions">
+            <a class="btn" href="https://www.redbubble.com/i/throw-pillow/JUMP-by-clawboi/178524500.5X2YF" target="_blank" rel="noopener">Buy</a>
+            <a class="btn alt" href="https://www.redbubble.com/i/throw-pillow/JUMP-by-clawboi/178524500.5X2YF" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 9 -->
+      <article class="card">
+        <div class="thumb">
+          <iframe
+            src="https://www.redbubble.com/i/iphone-case/Two-Times-by-clawboi/178524644.4UP47"
+            title="Two Times (iPhone Case)"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox">
+          </iframe>
+          <div class="thumbFallback">If preview is blocked, hit BUY below.</div>
+        </div>
+        <div class="body">
+          <div class="tag"><span class="pill"></span> iPhone Case</div>
+          <div class="title">Two Times</div>
+          <div class="meta">Phone armor</div>
+          <div class="actions">
+            <a class="btn" href="https://www.redbubble.com/i/iphone-case/Two-Times-by-clawboi/178524644.4UP47" target="_blank" rel="noopener">Buy</a>
+            <a class="btn alt" href="https://www.redbubble.com/i/iphone-case/Two-Times-by-clawboi/178524644.4UP47" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 10 -->
+      <article class="card">
+        <div class="thumb">
+          <iframe
+            src="https://www.redbubble.com/i/dress/Two-Times-by-clawboi/178524644.V4WQ8"
+            title="Two Times (Dress)"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox">
+          </iframe>
+          <div class="thumbFallback">If preview is blocked, hit BUY below.</div>
+        </div>
+        <div class="body">
+          <div class="tag"><span class="pill"></span> Dress</div>
+          <div class="title">Two Times</div>
+          <div class="meta">Dress version</div>
+          <div class="actions">
+            <a class="btn" href="https://www.redbubble.com/i/dress/Two-Times-by-clawboi/178524644.V4WQ8" target="_blank" rel="noopener">Buy</a>
+            <a class="btn alt" href="https://www.redbubble.com/i/dress/Two-Times-by-clawboi/178524644.V4WQ8" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 11 -->
+      <article class="card">
+        <div class="thumb">
+          <iframe
+            src="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.5U9OZ"
+            title="Broken Minds Anonymous (T-Shirt Alt)"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox">
+          </iframe>
+          <div class="thumbFallback">If preview is blocked, hit BUY below.</div>
+        </div>
+        <div class="body">
+          <div class="tag"><span class="pill"></span> T-Shirt</div>
+          <div class="title">Broken Minds Anonymous</div>
+          <div class="meta">Alt tee listing</div>
+          <div class="actions">
+            <a class="btn" href="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.5U9OZ" target="_blank" rel="noopener">Buy</a>
+            <a class="btn alt" href="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.5U9OZ" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 12 -->
+      <article class="card">
+        <div class="thumb">
+          <iframe
+            src="https://www.redbubble.com/i/hat/Broken-Minds-Anonymous-by-clawboi/178525222/fce2"
+            title="Broken Minds Anonymous (Hat)"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox">
+          </iframe>
+          <div class="thumbFallback">If preview is blocked, hit BUY below.</div>
+        </div>
+        <div class="body">
+          <div class="tag"><span class="pill"></span> Hat</div>
+          <div class="title">Broken Minds Anonymous</div>
+          <div class="meta">Hat version</div>
+          <div class="actions">
+            <a class="btn" href="https://www.redbubble.com/i/hat/Broken-Minds-Anonymous-by-clawboi/178525222/fce2" target="_blank" rel="noopener">Buy</a>
+            <a class="btn alt" href="https://www.redbubble.com/i/hat/Broken-Minds-Anonymous-by-clawboi/178525222/fce2" target="_blank" rel="noopener">View</a>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Kept your block (still true, now it’s “future drops”) -->
     <section class="soon" aria-label="Coming soon">
       <h2 class="soonTitle">COMING SOON</h2>
       <p class="soonText">posters · merch · digital drops</p>
@@ -162,6 +609,14 @@
 
   <script>
     document.getElementById('y').textContent = new Date().getFullYear();
+
+    // Hide fallback text if the iframe loads (some browsers block embeds; fallback stays visible then)
+    document.querySelectorAll('.thumb').forEach((wrap)=>{
+      const iframe = wrap.querySelector('iframe');
+      const fb = wrap.querySelector('.thumbFallback');
+      if(!iframe || !fb) return;
+      iframe.addEventListener('load', ()=>{ fb.style.display = 'none'; });
+    });
   </script>
 </body>
 </html>
