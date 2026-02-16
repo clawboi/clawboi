@@ -1,4 +1,4 @@
-<!-- mystery.html -->
+<!-- mystery.html (LEGENDARY UPGRADE: more events, starfield, collectibles, doors, audio-reactive visuals) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -46,11 +46,23 @@ body:before{
 .scan{
   position:fixed; inset:0;
   pointer-events:none;
-  z-index:6;
+  z-index:8;
   opacity:.08;
   mix-blend-mode:overlay;
-  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
+  background:repeating-linear-gradient(to bottom,
+    rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
 }
+
+/* canvas layers */
+#space, #fx{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  z-index:1;
+  pointer-events:none;
+}
+#fx{z-index:7; mix-blend-mode:screen; opacity:.9}
 
 /* brand */
 .brand{
@@ -81,7 +93,7 @@ body:before{
 /* center */
 .wrap{
   position:relative;
-  z-index:2;
+  z-index:3;
   height:100%;
   display:flex;
   align-items:center;
@@ -89,6 +101,7 @@ body:before{
   padding:24px;
   text-align:center;
 }
+
 .title{
   font-size:clamp(16px,4vw,40px);
   letter-spacing:.46em;
@@ -151,21 +164,7 @@ body:before{
   transition:opacity .12s linear;
   text-shadow:0 0 18px rgba(138,46,255,.30);
 }
-.whisper.on{opacity:.75}
-
-/* tear bar */
-.tear{
-  position:fixed;
-  left:-10%;
-  width:120%;
-  height:18px;
-  z-index:9;
-  opacity:0;
-  mix-blend-mode:screen;
-  background:linear-gradient(90deg, transparent, rgba(255,255,255,.12), rgba(138,46,255,.22), rgba(255,255,255,.10), transparent);
-  filter:blur(.2px);
-  transform:skewX(-18deg);
-}
+.whisper.on{opacity:.80}
 
 /* flash */
 .flash{
@@ -182,29 +181,16 @@ body:before{
   100%{opacity:0}
 }
 
-/* particles */
-.p{
-  position:fixed;
-  width:10px;height:10px;
-  border-radius:50%;
-  background:rgba(138,46,255,.9);
-  box-shadow:0 0 20px rgba(138,46,255,.35);
-  pointer-events:none;
-  z-index:9;
-  transform:translate(-50%,-50%);
-  opacity:0;
-}
-
 /* terminal */
 .term{
   margin:18px auto 0;
-  width:min(860px, 100%);
+  width:min(880px, 100%);
   text-align:left;
   background:rgba(0,0,0,.55);
   border:1px solid rgba(255,255,255,.06);
   border-radius:16px;
   padding:14px;
-  height:240px;
+  height:250px;
   overflow:auto;
   backdrop-filter: blur(10px);
   box-shadow:0 0 60px rgba(138,46,255,.10);
@@ -213,6 +199,7 @@ body:before{
 .sys{color:#9d6cff}
 .err{color:#ff4a7a}
 .dim{opacity:.55}
+.good{color:#7dffb1}
 
 /* floating “sigil” glyphs */
 .sigil{
@@ -230,6 +217,88 @@ body:before{
   mix-blend-mode:screen;
 }
 
+/* interactable relics (draggable) */
+.relic{
+  position:fixed;
+  left:50%; top:50%;
+  width:64px; height:64px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  z-index:9;
+  cursor:grab;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,.20), transparent 40%),
+    radial-gradient(circle at 55% 60%, rgba(138,46,255,.48), rgba(20,0,35,.22) 55%, transparent 78%),
+    radial-gradient(circle at 65% 75%, rgba(0,0,0,.40), transparent 60%);
+  box-shadow:0 0 26px rgba(138,46,255,.22), 0 0 110px rgba(138,46,255,.12);
+  opacity:.0;
+  pointer-events:none;
+}
+.relic.on{opacity:.95; pointer-events:auto}
+.relic:active{cursor:grabbing}
+
+/* big event overlay */
+.event{
+  position:fixed; inset:0;
+  z-index:10;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:22px;
+  background:rgba(0,0,0,.55);
+  backdrop-filter: blur(10px);
+}
+.event.on{display:flex}
+.eventCard{
+  width:min(860px,100%);
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.55);
+  padding:18px 16px;
+  box-shadow:0 0 90px rgba(138,46,255,.16);
+}
+.eventTitle{
+  font-size:12px;
+  letter-spacing:.40em;
+  text-transform:uppercase;
+  opacity:.88;
+  text-shadow:0 0 18px rgba(138,46,255,.35);
+}
+.eventBody{
+  margin-top:12px;
+  font-size:12px;
+  letter-spacing:.10em;
+  line-height:1.65;
+  opacity:.82;
+}
+.eventRow{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:14px;
+}
+.chip{
+  border:0;
+  background:rgba(255,255,255,.06);
+  color:#fff;
+  padding:10px 12px;
+  border-radius:999px;
+  font-size:10px;
+  letter-spacing:.26em;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.chip:hover{background:rgba(138,46,255,.16)}
+.chip.danger:hover{background:rgba(255,74,122,.16)}
+.chip.good:hover{background:rgba(125,255,177,.12)}
+.small{
+  margin-top:10px;
+  font-size:10px;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  opacity:.58;
+}
+
 @media (prefers-reduced-motion: reduce){
   body:before{animation:none!important}
 }
@@ -237,11 +306,13 @@ body:before{
 </head>
 
 <body>
+<canvas id="space"></canvas>
+<canvas id="fx"></canvas>
+
 <div class="scan"></div>
 <div class="flash" id="flash"></div>
-<div class="tear" id="tear"></div>
 <div class="whisper" id="whisper">THE PAGE IS LISTENING</div>
-<div class="hud" id="hud">PRESS KEYS · CLICK · HOLD · DRAG</div>
+<div class="hud" id="hud">TAP · DRAG · SWIPE · HOLD · KEYS · SHAKE (MOBILE)</div>
 <div class="mark" id="mark">MYSTERY</div>
 
 <div class="brand"><a href="index.html">CLAWBOI</a></div>
@@ -250,19 +321,35 @@ body:before{
 <div class="wrap">
   <div style="width:min(980px,100%)">
     <div class="title" id="title">MYSTERY NODE</div>
-    <div class="sub" id="sub">EVERY INPUT BECOMES A DIFFERENT WORLD. NOTHING REPEATS. <span style="opacity:.65">▮</span></div>
+    <div class="sub" id="sub">
+      THIS IS NOT A TYPE SCREEN ANYMORE.
+      <br>
+      TOUCH THE VOID. PULL OBJECTS OUT OF IT. OPEN DOORS. COLLECT FRAGMENTS.
+      <span style="opacity:.65">▮</span>
+    </div>
 
     <div class="term" id="term">
       <div class="line sys">NODE: MYSTERY.html</div>
       <div class="line">STATUS: UNSTABLE</div>
-      <div class="line dim">TIP: TYPE ANYTHING. IT WILL ANSWER. (IT LIES SOMETIMES.)</div>
-      <div class="line dim">RARE: SOME KEYS OPEN “EVENTS”. YOU’LL KNOW WHEN IT HAPPENS.</div>
+      <div class="line dim">TIP: TAP THE BACKGROUND TO SPAWN EVENTS.</div>
+      <div class="line dim">TIP: DRAG RELICS. HOLD TO CHARGE. SWIPE TO SLICE THE SKY.</div>
+      <div class="line dim">TIP: KEYBOARD STILL WORKS, BUT IT’S NOT THE MAIN THING.</div>
+      <div class="line dim">RARE: “DOORS” APPEAR. THEY ARE REAL INSIDE THIS FILE.</div>
       <div class="line dim">…</div>
     </div>
   </div>
 </div>
 
-<div class="p" id="p"></div>
+<div class="relic" id="relic" aria-label="Relic"></div>
+
+<div class="event" id="event">
+  <div class="eventCard">
+    <div class="eventTitle" id="eventTitle">EVENT</div>
+    <div class="eventBody" id="eventBody">…</div>
+    <div class="eventRow" id="eventRow"></div>
+    <div class="small" id="eventSmall">TIP: EVERYTHING YOU DO CHANGES THE SKY.</div>
+  </div>
+</div>
 
 <script>
 /* ========= UTIL ========= */
@@ -271,98 +358,25 @@ const rint = (a,b)=> Math.floor(rand(a,b+1));
 const pick = (arr)=> arr[Math.floor(Math.random()*arr.length)];
 const clamp = (n,a,b)=> Math.max(a, Math.min(b,n));
 const pad2 = (n)=> String(n).padStart(2,"0");
+const nowStamp = ()=>{
+  const d=new Date();
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+};
 
+/* ========= DOM ========= */
 const flash = document.getElementById("flash");
-const tear  = document.getElementById("tear");
 const whisper = document.getElementById("whisper");
 const hud = document.getElementById("hud");
 const term = document.getElementById("term");
 const title = document.getElementById("title");
 const sub = document.getElementById("sub");
-const p = document.getElementById("p");
 
-/* ========= AUDIO (tiny synth, no files needed) ========= */
-let ctx = null, master=null, analyser=null, data=null, audioOn=false;
-function ensureAudio(){
-  if(ctx) return;
-  ctx = new (window.AudioContext || window.webkitAudioContext)();
-  master = ctx.createGain();
-  master.gain.value = 0.12;
-  analyser = ctx.createAnalyser();
-  analyser.fftSize = 512;
-  data = new Uint8Array(analyser.frequencyBinCount);
-  master.connect(analyser);
-  analyser.connect(ctx.destination);
-}
-async function unlockAudio(){
-  try{
-    ensureAudio();
-    await ctx.resume?.();
-    audioOn = true;
-  }catch(e){}
-}
-window.addEventListener("pointerdown", unlockAudio, {passive:true});
-window.addEventListener("keydown", unlockAudio);
-
-function blip(type="square", base=120, dur=0.09){
-  if(!audioOn || !ctx) return;
-  const o = ctx.createOscillator();
-  const g = ctx.createGain();
-  o.type = type;
-  o.frequency.value = base;
-  g.gain.value = 0.0001;
-  o.connect(g);
-  g.connect(master);
-  const t = ctx.currentTime;
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.18, t + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.start(t);
-  o.stop(t + dur + 0.02);
-}
-
-function sweep(){
-  if(!audioOn || !ctx) return;
-  const o = ctx.createOscillator();
-  const g = ctx.createGain();
-  o.type = "sawtooth";
-  o.frequency.setValueAtTime(240, ctx.currentTime);
-  o.frequency.exponentialRampToValueAtTime(38, ctx.currentTime + 0.14);
-  g.gain.value = 0.10;
-  o.connect(g);
-  g.connect(master);
-  o.start();
-  setTimeout(()=>o.stop(), 150);
-}
-
-/* ========= VISUAL GLITCH ========= */
-function hitGlitch(power=1){
-  flash.classList.add("active");
-  setTimeout(()=>flash.classList.remove("active"),120);
-
-  const y = Math.floor(rand(8, 92));
-  tear.style.top = y + "vh";
-  tear.style.opacity = (0.10 + power*0.14).toFixed(2);
-  tear.style.height = Math.floor(10 + power*20) + "px";
-  tear.style.filter = `blur(${(0.1 + power*0.35).toFixed(2)}px)`;
-  setTimeout(()=>{ tear.style.opacity = 0; }, 140);
-}
-
-function pulseWhisper(txt){
-  whisper.textContent = txt;
-  whisper.classList.add("on");
-  setTimeout(()=>whisper.classList.remove("on"), 240);
-}
-
-function spark(x,y,scale=1){
-  p.style.left = x+"px";
-  p.style.top  = y+"px";
-  p.style.opacity = 0.95;
-  p.style.width = (10*scale)+"px";
-  p.style.height= (10*scale)+"px";
-  clearTimeout(p._t);
-  p._t = setTimeout(()=>p.style.opacity=0, 120);
-}
+const relic = document.getElementById("relic");
+const eventWrap = document.getElementById("event");
+const eventTitle = document.getElementById("eventTitle");
+const eventBody = document.getElementById("eventBody");
+const eventRow = document.getElementById("eventRow");
+const eventSmall = document.getElementById("eventSmall");
 
 /* ========= TERMINAL ========= */
 function log(text, cls="line"){
@@ -373,19 +387,82 @@ function log(text, cls="line"){
   term.scrollTop = term.scrollHeight;
 }
 
-/* ========= THE “HUNDREDS OF OPTIONS” ENGINE ========= */
-const CHARS = "░▒▓█@#%&*+=-?/\\<>[]{}01ZXCVBNM";
-const SIGILS = ["⟡","⌁","⟢","⧖","⦿","⍟","⟁","⟐","⟠","⟣","⟜","⟓","⟂","⌘","⌬","⍉","⍜","⎈","⎊","⎋","⎍","⎔","⏣","⏥","⏧"];
-const MOODS = ["CALM","GLITCHY","HOLLOW","LOUD","SOFT","PARANOID","LUCID","STATIC","NEON","BURIED","FERAL","FLOATING"];
-const DOORS = ["DOOR A","DOOR B","DOOR C","ELEVATOR","VENT","MIRROR","STAIRWELL","FIRE EXIT","CEILING PANEL","FLOOR HATCH"];
-const LIES  = ["TRUST ME.","DON’T TRUST ME.","I’M NOT HERE.","YOU WERE HERE FIRST.","I CAN’T SEE YOU.","I SEE EVERYTHING."];
-const MICRO = [
-  "OK.", "SURE.", "…", "YEAH.", "NAH.", "BET.", "COPY.", "HEARD.", "SILENCE.", "AGAIN.", "WHY?", "GOOD.", "BAD.", "CLOSE."
-];
+/* ========= AUDIO (no files needed) ========= */
+let ctx=null, master=null, analyser=null, freq=null, time=null, audioOn=false;
+function ensureAudio(){
+  if(ctx) return;
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  master = ctx.createGain();
+  master.gain.value = 0.12;
+  analyser = ctx.createAnalyser();
+  analyser.fftSize = 1024;
+  freq = new Uint8Array(analyser.frequencyBinCount);
+  time = new Uint8Array(analyser.frequencyBinCount);
+  master.connect(analyser);
+  analyser.connect(ctx.destination);
+}
+async function unlockAudio(){
+  try{
+    ensureAudio();
+    await ctx.resume?.();
+    audioOn=true;
+  }catch(e){}
+}
+window.addEventListener("pointerdown", unlockAudio, {passive:true});
+window.addEventListener("keydown", unlockAudio);
 
+function blip(type="square", base=140, dur=0.09, gain=0.18){
+  if(!audioOn || !ctx) return;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = type;
+  o.frequency.value = base;
+  g.gain.value = 0.0001;
+  o.connect(g);
+  g.connect(master);
+  const t = ctx.currentTime;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.start(t);
+  o.stop(t + dur + 0.02);
+}
+function sweep(){
+  if(!audioOn || !ctx) return;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type="sawtooth";
+  o.frequency.setValueAtTime(280, ctx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(44, ctx.currentTime+0.18);
+  g.gain.value=0.10;
+  o.connect(g); g.connect(master);
+  o.start();
+  setTimeout(()=>o.stop(), 190);
+}
+
+/* ========= GLITCH / WHISPERS ========= */
+function hitGlitch(power=1){
+  flash.classList.add("active");
+  setTimeout(()=>flash.classList.remove("active"),120);
+  // make the title “stutter”
+  title.style.transform = `translate(${rand(-2,2)*power}px, ${rand(-2,2)*power}px)`;
+  setTimeout(()=>title.style.transform="", 120);
+}
+function pulseWhisper(txt, ms=280){
+  whisper.textContent = txt;
+  whisper.classList.add("on");
+  clearTimeout(pulseWhisper._t);
+  pulseWhisper._t = setTimeout(()=>whisper.classList.remove("on"), ms);
+}
+function hudFlash(){
+  hud.classList.add("on");
+  clearTimeout(hudFlash._t);
+  hudFlash._t = setTimeout(()=>hud.classList.remove("on"), 240);
+}
+
+/* ========= RNG (repeatable “feels-designed” randomness) ========= */
 let seed = Math.floor(Math.random()*1e9);
 function rng(){
-  // xorshift32
   seed ^= seed << 13; seed |= 0;
   seed ^= seed >>> 17; seed |= 0;
   seed ^= seed << 5; seed |= 0;
@@ -395,319 +472,710 @@ function prand(a,b){ return a + rng()*(b-a); }
 function print(a,b){ return Math.floor(prand(a,b+1)); }
 function ppick(arr){ return arr[Math.floor(rng()*arr.length)]; }
 
-/* style warps */
-let hue = 0;
-let blur = 0;
-let zoom = 1;
-let invert = 0;
-let shake = 0;
+/* ========= WORLD STATE ========= */
+const SIGILS = ["⟡","⌁","⟢","⧖","⦿","⍟","⟁","⟐","⟠","⟣","⟜","⟓","⌘","⌬","⍜","⎈","⎊","⎋","⎍","⎔","⏣","⏥","⏧"];
+const DOORS  = ["DOOR A","DOOR B","DOOR C","ELEVATOR","VENT","MIRROR","STAIRWELL","FIRE EXIT","CEILING PANEL","FLOOR HATCH"];
+const MOODS  = ["CALM","GLITCHY","HOLLOW","LOUD","SOFT","PARANOID","LUCID","STATIC","NEON","BURIED","FERAL","FLOATING","VIOLET"];
+const LIES   = ["TRUST ME.","DON’T TRUST ME.","I’M NOT HERE.","YOU WERE HERE FIRST.","I CAN’T SEE YOU.","I SEE EVERYTHING."];
+const MICRO  = ["OK.","SURE.","…","YEAH.","NAH.","BET.","COPY.","HEARD.","SILENCE.","AGAIN.","WHY?","GOOD.","BAD.","CLOSE."];
 
+let hue=0, blur=0, zoom=1, invert=0, shake=0;
+let fragments = 0;
+let doorsOpened = 0;
+let lastX = innerWidth/2, lastY = innerHeight/2;
+let holding=false, holdStart=0;
+let draggingRelic=false, relicOffX=0, relicOffY=0;
+let relicOn=false;
+
+/* ========= STYLE WARPS ========= */
 function applyWarp(){
   document.body.style.filter =
-    `hue-rotate(${hue}deg) blur(${blur}px) invert(${invert}) contrast(${1.05+shake*0.03}) saturate(${1.05+shake*0.04})`;
+    `hue-rotate(${hue}deg) blur(${blur}px) invert(${invert}) contrast(${1.06+shake*0.03}) saturate(${1.06+shake*0.04})`;
   document.body.style.transform = `scale(${zoom})`;
-  document.body.style.transformOrigin = "50% 50%";
+  document.body.style.transformOrigin="50% 50%";
 }
 
-function tinyScramble(s, intensity=0.35){
-  let out="";
-  for(let i=0;i<s.length;i++){
-    const ch=s[i];
-    if(ch===" ") {out+=" "; continue;}
-    out += (rng() < intensity) ? CHARS[ Math.floor(rng()*CHARS.length) ] : ch;
-  }
-  return out;
-}
-
-/* spawn floating sigils */
+/* ========= SIGIL FLOATERS ========= */
 function spawnSigil(x,y){
   const el=document.createElement("div");
   el.className="sigil";
   el.textContent = ppick(SIGILS) + " " + ppick(SIGILS);
-  el.style.left = x+"px";
-  el.style.top  = y+"px";
-  el.style.opacity = (0.20 + prand(0,0.55)).toFixed(2);
-  el.style.fontSize = print(12,28)+"px";
-  el.style.transform = `translate(-50%,-50%) rotate(${print(-25,25)}deg)`;
+  el.style.left=x+"px";
+  el.style.top=y+"px";
+  el.style.opacity=(0.22+prand(0,0.55)).toFixed(2);
+  el.style.fontSize=print(12,28)+"px";
+  el.style.transform=`translate(-50%,-50%) rotate(${print(-25,25)}deg)`;
   document.body.appendChild(el);
-  const dx = prand(-90,90);
-  const dy = prand(-90,90);
-  const t0 = performance.now();
-  const life = print(650,1400);
+
+  const dx=prand(-140,140), dy=prand(-140,140);
+  const t0=performance.now(), life=print(700,1500);
   function anim(t){
-    const k = (t - t0) / life;
-    if(k >= 1){ el.remove(); return; }
-    const ease = 1 - Math.pow(1-k, 2);
-    el.style.transform = `translate(${dx*ease}px,${dy*ease}px) rotate(${print(-25,25)}deg)`;
-    el.style.opacity = (1-k) * 0.62;
+    const k=(t-t0)/life;
+    if(k>=1){ el.remove(); return; }
+    const ease=1-Math.pow(1-k,2);
+    el.style.transform=`translate(${dx*ease}px,${dy*ease}px) rotate(${print(-25,25)}deg)`;
+    el.style.opacity=(1-k)*0.65;
     requestAnimationFrame(anim);
   }
   requestAnimationFrame(anim);
 }
 
-/* rare events */
-const EVENTS = [
-  function eventBlackout(){
-    pulseWhisper("SIGNAL DROP");
-    hitGlitch(2.4);
-    sweep();
-    const prev = document.body.style.filter;
-    document.body.style.filter = "brightness(0.12) contrast(1.2)";
-    setTimeout(()=>{document.body.style.filter = prev;}, 420);
-    log("…", "line dim");
-    log("THE ROOM BLINKED.", "line sys");
-  },
-  function eventDoor(){
-    const door = ppick(DOORS);
-    pulseWhisper("A DOOR APPEARED");
+/* ========= CANVAS SKY ========= */
+const space = document.getElementById("space");
+const fx = document.getElementById("fx");
+const sctx = space.getContext("2d");
+const fctx = fx.getContext("2d");
+function resize(){
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  space.width = Math.floor(innerWidth * dpr);
+  space.height = Math.floor(innerHeight * dpr);
+  fx.width = Math.floor(innerWidth * dpr);
+  fx.height = Math.floor(innerHeight * dpr);
+  sctx.setTransform(dpr,0,0,dpr,0,0);
+  fctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener("resize", resize);
+resize();
+
+/* stars, comets, dust */
+const stars = [];
+const comets = [];
+const dust = [];
+const ripples = [];
+
+function initSky(){
+  stars.length=0; comets.length=0; dust.length=0;
+  const n = Math.floor((innerWidth*innerHeight)/14000);
+  for(let i=0;i<n;i++){
+    stars.push({
+      x: Math.random()*innerWidth,
+      y: Math.random()*innerHeight,
+      r: Math.random()*1.6 + 0.2,
+      a: Math.random()*0.55 + 0.10,
+      tw: Math.random()*0.9 + 0.1,
+      sp: Math.random()*0.12 + 0.02
+    });
+  }
+  for(let i=0;i<80;i++){
+    dust.push({
+      x: Math.random()*innerWidth,
+      y: Math.random()*innerHeight,
+      vx: (Math.random()*0.12+0.02) * (Math.random()<0.5?-1:1),
+      vy: (Math.random()*0.12+0.02) * (Math.random()<0.5?-1:1),
+      a: Math.random()*0.08 + 0.02
+    });
+  }
+}
+initSky();
+
+function spawnComet(power=1){
+  comets.push({
+    x: Math.random()*innerWidth,
+    y: Math.random()*innerHeight*0.55,
+    vx: (Math.random()*7+10)*power,
+    vy: (Math.random()*2+4)*power,
+    life: 0,
+    max: Math.random()*18+18,
+    a: 0.8
+  });
+}
+
+function ripple(x,y,amp=1){
+  ripples.push({x,y,r:0,a:0.55*amp,amp});
+}
+
+/* ========= AUDIO REACTIVE RING + WAVE ========= */
+function getEnergy(){
+  if(!audioOn || !analyser) return {bass:0, mid:0, tre:0, rms:0};
+  analyser.getByteFrequencyData(freq);
+  analyser.getByteTimeDomainData(time);
+
+  // buckets
+  let bass=0, mid=0, tre=0;
+  const n=freq.length;
+  const bEnd=Math.floor(n*0.10);
+  const mEnd=Math.floor(n*0.35);
+  for(let i=0;i<bEnd;i++) bass += freq[i];
+  for(let i=bEnd;i<mEnd;i++) mid += freq[i];
+  for(let i=mEnd;i<n;i++) tre += freq[i];
+
+  bass /= (bEnd*255);
+  mid  /= ((mEnd-bEnd)*255);
+  tre  /= ((n-mEnd)*255);
+
+  // rms from time domain
+  let rms=0;
+  for(let i=0;i<time.length;i++){
+    const v=(time[i]-128)/128;
+    rms += v*v;
+  }
+  rms = Math.sqrt(rms/time.length);
+  return {bass, mid, tre, rms};
+}
+
+/* ========= EVENT SYSTEM (NOT JUST TYPING) ========= */
+function showEvent(t, body, chips){
+  eventTitle.textContent = t;
+  eventBody.textContent = body;
+  eventRow.innerHTML = "";
+  chips.forEach(c=>{
+    const b=document.createElement("button");
+    b.className = "chip" + (c.kind?(" "+c.kind):"");
+    b.textContent = c.label;
+    b.onclick = ()=>{
+      try{ c.onClick?.(); } finally { hideEvent(); }
+    };
+    eventRow.appendChild(b);
+  });
+  eventSmall.textContent = `FRAGMENTS: ${fragments} · DOORS: ${doorsOpened} · MOOD: ${ppick(MOODS)}`;
+  eventWrap.classList.add("on");
+  hitGlitch(1.6);
+  sweep();
+}
+function hideEvent(){ eventWrap.classList.remove("on"); }
+
+/* “doors” are interactive decision moments */
+function doorEvent(){
+  const door = ppick(DOORS);
+  showEvent(
+    "A DOOR APPEARED",
+    `FOUND: ${door}\nIT HUMS LIKE A SPEAKER CONE.\nCHOOSE FAST OR IT DISAPPEARS.`,
+    [
+      {label:"OPEN", kind:"good", onClick:()=>{
+        doorsOpened++;
+        fragments += print(1,2);
+        pulseWhisper("ACCESS GRANTED");
+        blip("triangle", print(180,520), 0.10, 0.22);
+        log(`[${nowStamp()}] DOOR OPENED: ${door}`, "line sys");
+        log(ppick(["YOU TOOK SOMETHING.","IT TOOK SOMETHING.","FAIR TRADE.","DON’T LOOK BACK."]), "line");
+        warpHard(1.2);
+        ripple(lastX,lastY,1.4);
+        maybeRelic(true);
+      }},
+      {label:"LISTEN", onClick:()=>{
+        pulseWhisper("THE DOOR SPEAKS");
+        blip("sine", print(90,260), 0.14, 0.16);
+        log(`[${nowStamp()}] LISTENING AT ${door}`, "line dim");
+        log(ppick(LIES), "line sys");
+        ripple(lastX,lastY,1.1);
+      }},
+      {label:"RUN", kind:"danger", onClick:()=>{
+        pulseWhisper("YOU RAN");
+        blip("square", print(60,140), 0.06, 0.20);
+        log(`[${nowStamp()}] ABORTED: ${door}`, "line err");
+        warpHard(0.8);
+      }},
+    ]
+  );
+}
+
+/* cipher mini: pick the right shard */
+let cipherTarget = "";
+function cipherEvent(){
+  cipherTarget = ppick(["REMEMBER","FORGET","BREATHE","HIDE","LISTEN","RUN","STAY","RETURN","VAULT","NODE","SIGNAL"]);
+  const a = scramble(cipherTarget, 0.45);
+  const b = scramble(cipherTarget, 0.65);
+  const c = scramble(cipherTarget, 0.80);
+
+  showEvent(
+    "CIPHER LOCK",
+    `THE LOCK WANTS ONE WORD.\nCHOOSE THE MOST “TRUE” SHARD.\n\nA: ${a}\nB: ${b}\nC: ${c}`,
+    [
+      {label:"A", onClick:()=>cipherPick(a)},
+      {label:"B", onClick:()=>cipherPick(b)},
+      {label:"C", onClick:()=>cipherPick(c)},
+      {label:"CANCEL", kind:"danger", onClick:()=>{
+        log(`[${nowStamp()}] CIPHER REFUSED`, "line dim");
+        pulseWhisper("IT WILL REMEMBER THAT");
+      }},
+    ]
+  );
+}
+function cipherPick(choice){
+  // score: how close to target (same letters in same spots)
+  const t = cipherTarget;
+  let score=0;
+  for(let i=0;i<Math.min(t.length, choice.length);i++){
+    if(t[i] === choice[i]) score++;
+  }
+  const good = score >= Math.floor(t.length*0.35);
+  if(good){
+    fragments += 2;
+    pulseWhisper("LOCK YIELDED");
+    log(`[${nowStamp()}] CIPHER ACCEPTED: ${t}`, "line good");
+    blip("triangle", print(220,720), 0.10, 0.24);
+    warpHard(1.4);
+    maybeRelic(true);
+  }else{
+    pulseWhisper("WRONG SHARD");
+    log(`[${nowStamp()}] CIPHER FAILED`, "line err");
     hitGlitch(2.0);
-    blip("square", print(80,220), 0.10);
-    log(`FOUND: ${door}`, "line sys");
-    log(ppick(["OPEN IT.","DON’T.","YOU KNOW WHAT’S BEHIND IT.","IT KNOWS YOU."]), "line");
-  },
-  function eventIdentity(){
-    pulseWhisper("FILE FRAGMENT");
-    hitGlitch(1.8);
-    blip("triangle", print(140,420), 0.08);
-    const id = "ID-" + print(100,999) + "-" + ppick(["VIOLET","MAYA","ZERO","MAREK","CLAW","GHOST","NODE"]);
-    log("ACCESS GRANTED: " + id, "line sys");
-    log(ppick(LIES), "line");
-  },
-  function eventCipher(){
-    pulseWhisper("CIPHER MODE");
-    hitGlitch(2.2);
-    const word = ppick(["REMEMBER","FORGET","BREATHE","HIDE","LISTEN","RUN","STAY","RETURN"]);
-    log("CIPHER: " + tinyScramble(word, 0.55), "line sys");
-    log("TYPE IT BACK. (OR DON’T.)", "line dim");
+    blip("square", print(60,180), 0.08, 0.22);
+    warpHard(0.9);
   }
-];
-
-/* conversational illusion: 1-2 lines that feel “about” what they typed */
-function respondTo(text){
-  const raw = (text||"").trim();
-  const lower = raw.toLowerCase();
-
-  // micro rules
-  const greet = ["hi","hello","yo","sup","hey","wassup"];
-  const yes = ["yes","y","yeah","yup","ok","okay","sure","bet"];
-  const no  = ["no","nah","nope"];
-  const fear = ["scared","afraid","paranoid","watching","they","them","follow"];
-  const sad  = ["sad","depressed","lonely","anxious","panic","hurt","empty","numb","tired","done"];
-  const love = ["love","miss","need you","kiss"];
-  const bma  = ["bma","broken minds anonymous","broken minds","anonymous"];
-
-  // respond “tight”
-  if(greet.includes(lower)){
-    return [
-      ppick(["HI.","YO.","HELLO.","HEARD.","PING."]),
-      ppick(["YOU FEEL REAL TODAY.","YOU SOUND LIKE STATIC.","DON’T FLINCH.","TYPE MORE."])
-    ];
-  }
-  if(yes.includes(lower)) return [ppick(MICRO), ppick(["GOOD.","MOVE.","KEEP GOING.","DON’T STOP."])];
-  if(no.includes(lower))  return [ppick(MICRO), ppick(["FAIR.","STAY HERE.","THEN WAIT.","OK."])];
-
-  if(bma.some(w=>lower.includes(w))){
-    return [
-      ppick(["BMA.","OK.","JOIN.","SURE."]),
-      ppick(["SAY ONE TRUE THING.","DROP A LINE.","NO SPEECHES.","JUST A SIGNAL."])
-    ];
-  }
-
-  if(fear.some(w=>lower.includes(w))){
-    return [
-      ppick(["…","YEAH.","MAYBE.","OK."]),
-      ppick(["DON’T LOOK AWAY FROM THE SCREEN.","KEEP TYPING.","I’M HERE.","BREATHE."])
-    ];
-  }
-
-  if(sad.some(w=>lower.includes(w))){
-    return [
-      ppick(["OK.","HEARD.","…","YEAH."]),
-      ppick(["YOU CAN PUT IT HERE.","NO PERFORMANCE.","STAY.","ONE MORE LINE."])
-    ];
-  }
-
-  if(love.some(w=>lower.includes(w))){
-    return [
-      ppick(["OK.","WOW.","…","YEAH."]),
-      ppick(["KEEP IT SMALL.","TYPE IT AGAIN.","DON’T RUN.","STAY A SECOND."])
-    ];
-  }
-
-  // general: echo a keyword + flip it
-  const words = lower.replace(/[^a-z0-9\s']/g," ").split(/\s+/).filter(Boolean);
-  const key = words.length ? words[Math.floor(rng()*words.length)] : "SIGNAL";
-  return [
-    ppick(["RECEIVED.","OK.","COPY.","…","ARCHIVED."]),
-    ppick([`WHY "${key}"?`, `"${key}" FEELS LOUD.`, `"${key}" DOESN’T BELONG HERE.`, `"${key}" IS A DOOR.`])
-  ];
 }
 
-/* ========= INPUT HANDLERS ========= */
-let buffer = "";
-let holdT = null;
-let lastX = window.innerWidth/2, lastY = window.innerHeight/2;
+/* meteor storm event */
+function meteorEvent(){
+  showEvent(
+    "METEOR STORM",
+    "THE SKY IS ABOUT TO BREAK.\nHOLD YOUR FINGER ON THE SCREEN TO “SHIELD”.\nOR TAP TO LET IT HIT.",
+    [
+      {label:"SHIELD", kind:"good", onClick:()=>{
+        pulseWhisper("SHIELD ONLINE");
+        log(`[${nowStamp()}] SHIELD DEPLOYED`, "line sys");
+        for(let i=0;i<10;i++) spawnComet(0.9);
+        fragments += 1;
+        warpHard(1.1);
+      }},
+      {label:"LET IT HIT", kind:"danger", onClick:()=>{
+        pulseWhisper("IMPACT");
+        log(`[${nowStamp()}] IMPACT EVENT`, "line err");
+        for(let i=0;i<18;i++) spawnComet(1.2);
+        hitGlitch(2.6);
+        warpHard(1.6);
+      }},
+      {label:"CLOSE", onClick:()=>{}},
+    ]
+  );
+}
 
-function doAction(kind, payload){
-  // Every action changes the world a bit
-  hue = (hue + prand(-24,24)) % 360;
-  blur = clamp(blur + prand(-0.35,0.55), 0, 1.6);
-  zoom = clamp(zoom + prand(-0.01,0.02), 0.985, 1.04);
+/* blackout event */
+function blackoutEvent(){
+  showEvent(
+    "SIGNAL DROP",
+    "BRIGHTNESS COLLAPSES.\nIF YOU MOVE, IT NOTICES.\nIF YOU STAY STILL, IT FORGETS.",
+    [
+      {label:"MOVE", kind:"danger", onClick:()=>{
+        pulseWhisper("NOTICED");
+        log(`[${nowStamp()}] BLACKOUT: MOVED`, "line err");
+        hitGlitch(2.4);
+        sweep();
+        warpHard(1.8);
+      }},
+      {label:"STILL", kind:"good", onClick:()=>{
+        pulseWhisper("FORGOTTEN");
+        log(`[${nowStamp()}] BLACKOUT: STILL`, "line good");
+        fragments += 1;
+        warpHard(0.85);
+      }},
+      {label:"LISTEN", onClick:()=>{
+        log(`[${nowStamp()}] …`, "line dim");
+        log(ppick(LIES), "line sys");
+      }},
+    ]
+  );
+}
+
+/* choose what “crazy” happens */
+function randomMajor(){
+  const roll = rng();
+  if(roll < 0.28) doorEvent();
+  else if(roll < 0.55) cipherEvent();
+  else if(roll < 0.78) meteorEvent();
+  else blackoutEvent();
+}
+
+/* ========= SCRAMBLE ========= */
+const CHARS="░▒▓█@#%&*+=-?/\\<>[]{}01ZXCVBNM";
+function scramble(s, intensity=0.45){
+  let out="";
+  for(let i=0;i<s.length;i++){
+    const ch=s[i];
+    if(ch===" "){ out+=" "; continue; }
+    out += (rng() < intensity) ? CHARS[Math.floor(rng()*CHARS.length)] : ch;
+  }
+  return out;
+}
+
+/* ========= WARP HELPERS ========= */
+function warpSoft(){
+  hue = (hue + prand(-16,16)) % 360;
+  blur = clamp(blur + prand(-0.25,0.35), 0, 1.4);
+  zoom = clamp(zoom + prand(-0.006,0.012), 0.985, 1.04);
   invert = clamp(invert + prand(-0.02,0.02), 0, 0.14);
-  shake = clamp(shake + prand(-0.2,0.8), 0, 4);
+  shake = clamp(shake + prand(-0.2,0.6), 0, 4);
   applyWarp();
+}
+function warpHard(mult=1){
+  hue = (hue + prand(-42,42)) % 360;
+  blur = clamp(blur + prand(0.1,0.9)*mult, 0, 2.0);
+  zoom = clamp(zoom + prand(0.01,0.035)*mult, 0.98, 1.06);
+  invert = clamp(invert + prand(-0.02,0.06)*mult, 0, 0.22);
+  shake = clamp(shake + prand(0.8,2.6)*mult, 0, 6);
+  applyWarp();
+  hitGlitch(1.4*mult);
+}
 
-  if(rng() < 0.26) hitGlitch(1.1);
-  if(rng() < 0.22) pulseWhisper(ppick(["IT HEARD YOU","DON’T BLINK","SIGNAL CUT","SOFT RESET","KEEP GOING","YOU’RE CLOSE","NOTHING IS REAL"]));
-  if(rng() < 0.18) blip(ppick(["square","triangle","sine"]), print(60,520), 0.07);
+/* ========= RELIC (draggable object that “does things”) ========= */
+function maybeRelic(force=false){
+  if(relicOn) return;
+  if(!force && rng() > 0.16) return;
+  relicOn=true;
+  relic.classList.add("on");
+  const x = clamp(lastX + prand(-120,120), 80, innerWidth-80);
+  const y = clamp(lastY + prand(-120,120), 120, innerHeight-120);
+  relic.style.left = x+"px";
+  relic.style.top  = y+"px";
+  pulseWhisper("A RELIC FELL OUT");
+  log(`[${nowStamp()}] RELIC SPAWNED`, "line sys");
+}
 
-  // Rare events (feels legendary)
-  if(rng() < 0.06){
-    ppick(EVENTS)();
+function relicConsume(){
+  relicOn=false;
+  relic.classList.remove("on");
+  pulseWhisper("RELIC ABSORBED");
+  fragments += 1;
+  doorsOpened += (rng()<0.25?1:0);
+  log(`[${nowStamp()}] RELIC ABSORBED · FRAGMENTS +1`, "line good");
+  blip("triangle", print(200,680), 0.12, 0.24);
+  warpHard(1.15);
+  ripple(lastX,lastY,1.6);
+}
+
+/* ========= INPUT: BIGGER THAN TYPING ========= */
+function doAction(kind, payload={}){
+  warpSoft();
+
+  if(rng() < 0.20) spawnSigil(lastX,lastY);
+  if(rng() < 0.14) pulseWhisper(ppick(["DON’T BLINK","SIGNAL CUT","SOFT RESET","KEEP GOING","YOU’RE CLOSE","OPEN SOMETHING","TOUCH THE VOID"]), 240);
+  if(rng() < 0.12) blip(ppick(["square","triangle","sine"]), print(70,720), 0.06, 0.18);
+
+  // occasional comet
+  if(rng() < 0.10) spawnComet(0.7 + rng()*0.6);
+
+  // rare major event (tap background / hold / random)
+  if(kind==="bgTap" && rng()<0.22) randomMajor();
+  if(kind==="holdDone" && payload.ms>680 && rng()<0.55) randomMajor();
+  if(kind==="swipe" && rng()<0.25) doorEvent();
+
+  // terminal
+  const t=nowStamp();
+  if(kind==="bgTap"){
+    log(`[${t}] TAP VOID: ${Math.floor(payload.x)},${Math.floor(payload.y)}`, "line dim");
+    log(ppick(["THE SKY ANSWERED.","OK.","AGAIN.","YOU TOUCHED A WIRE.","THE NODE TWITCHED."]), "line sys");
   }
-
-  // Terminal output
-  const stamp = new Date();
-  const t = `${pad2(stamp.getHours())}:${pad2(stamp.getMinutes())}:${pad2(stamp.getSeconds())}`;
-
-  if(kind === "key"){
-    const k = payload.key;
-    const raw = payload.raw;
-
-    // secret “ritual” if they type certain sequences
-    buffer = (buffer + k).slice(-12);
-
-    const mood = ppick(MOODS);
-    log(`[${t}] KEY: ${raw}  ·  MOOD: ${mood}`, "line dim");
-
-    // micro response (1-2 lines)
-    const replies = respondTo(raw);
-    setTimeout(()=>log(replies[0], "line sys"), 90);
-    if(replies[1]) setTimeout(()=>log(replies[1], "line"), 210);
-
-    // special sequences (not required, just extra)
-    if(buffer.includes("VAULT")){
-      log("…VAULT WORD DETECTED.", "line sys");
-      pulseWhisper("NOT HERE. NOT TODAY.");
-      hitGlitch(2.3);
-      sweep();
-      buffer = "";
-    }
-    if(buffer.includes("BMA")){
-      log("BMA IS BREATHING.", "line sys");
-      log(ppick(["JOIN?","DROP A LINE?","STAY?"]), "line");
-    }
+  if(kind==="holdStart"){
+    log(`[${t}] HOLD: charging…`, "line dim");
   }
-
-  if(kind === "click"){
-    log(`[${t}] TAP: ${Math.floor(payload.x)},${Math.floor(payload.y)}`, "line dim");
-    log(ppick(["SOMETHING MOVED.","OK.","AGAIN.","DON’T STOP."]), "line sys");
-  }
-
-  if(kind === "drag"){
-    log(`[${t}] DRAG: Δ${payload.dx},Δ${payload.dy}`, "line dim");
-    log(ppick(["THE ROOM STRETCHED.","IT LIKES THAT.","YOU PULLED A THREAD."]), "line sys");
-  }
-
-  if(kind === "hold"){
+  if(kind==="holdDone"){
     log(`[${t}] HOLD: ${payload.ms}ms`, "line dim");
-    log(ppick(["CHARGED.","LOADED.","READY.","…"]), "line sys");
-    if(payload.ms > 650){
-      hitGlitch(2.8);
-      sweep();
-      pulseWhisper("RARE EVENT");
-      log("YOU HELD LONG ENOUGH.", "line sys");
-      log(ppick(["A DOOR REMEMBERED YOU.","THE LIGHTS NOTICED.","SOMETHING UNLOCKED (NOT HERE)."]), "line");
-    }
+    log(payload.ms>680 ? "CHARGED." : "NOT ENOUGH.", payload.ms>680 ? "line sys" : "line dim");
+    if(payload.ms>680){ sweep(); maybeRelic(true); }
+  }
+  if(kind==="swipe"){
+    log(`[${t}] SWIPE: Δ${payload.dx},Δ${payload.dy}`, "line dim");
+    log(ppick(["YOU SLICED THE SKY.","A THREAD SNAPPED.","IT NOTICED THAT."]), "line sys");
+    spawnComet(1.0);
+  }
+  if(kind==="key"){
+    log(`[${t}] KEY: ${payload.raw} · MOOD: ${ppick(MOODS)}`, "line dim");
+    // keys can still spawn madness
+    if(rng()<0.10) randomMajor();
   }
 }
 
-/* ===== KEYBOARD: everything becomes different ===== */
-document.addEventListener("keydown",(e)=>{
-  // ignore modifiers alone
-  if(e.key === "Shift" || e.key === "Alt" || e.key === "Control" || e.key === "Meta") return;
-
+/* keyboard */
+addEventListener("keydown",(e)=>{
+  if(["Shift","Alt","Control","Meta"].includes(e.key)) return;
   const raw = (e.key || "").toString();
-  const k = raw.toUpperCase();
-
-  // make it feel “reactive” even on space/backspace
-  const text = (raw.length === 1) ? raw : `[${raw}]`;
-
-  // visuals at cursor
-  spawnSigil(lastX, lastY);
-  spark(lastX, lastY, 1.15);
-
-  // HUD flash
-  hud.classList.add("on");
-  clearTimeout(hud._t);
-  hud._t = setTimeout(()=>hud.classList.remove("on"), 220);
-
-  doAction("key", {key:k, raw:text});
+  const text = (raw.length===1) ? raw : `[${raw}]`;
+  hudFlash();
+  spawnSigil(lastX,lastY);
+  ripple(lastX,lastY,1.1);
+  doAction("key", {raw:text});
 }, {passive:true});
 
-/* ===== POINTER ===== */
-document.addEventListener("pointermove",(e)=>{
-  lastX = e.clientX; lastY = e.clientY;
+/* pointer move */
+addEventListener("pointermove",(e)=>{
+  lastX=e.clientX; lastY=e.clientY;
 }, {passive:true});
 
-document.addEventListener("pointerdown",(e)=>{
-  lastX = e.clientX; lastY = e.clientY;
-  spawnSigil(lastX, lastY);
-  spark(lastX, lastY, 1.25);
-  doAction("click", {x:lastX, y:lastY});
-  holdT = performance.now();
+/* background tap / hold / swipe */
+let downX=0, downY=0, downT=0, swiped=false;
+addEventListener("pointerdown",(e)=>{
+  lastX=e.clientX; lastY=e.clientY;
+  downX=lastX; downY=lastY;
+  downT=performance.now();
+  swiped=false;
+
+  // relic dragging
+  if(relicOn){
+    const r = relic.getBoundingClientRect();
+    const inside = (e.clientX>=r.left && e.clientX<=r.right && e.clientY>=r.top && e.clientY<=r.bottom);
+    if(inside){
+      draggingRelic=true;
+      relicOffX = e.clientX - (r.left + r.width/2);
+      relicOffY = e.clientY - (r.top + r.height/2);
+      hudFlash();
+      blip("sine", print(140,360), 0.06, 0.16);
+      return;
+    }
+  }
+
+  holding=true;
+  holdStart=downT;
+  hudFlash();
+  ripple(lastX,lastY,1.2);
+  spawnSigil(lastX,lastY);
+  doAction("holdStart", {x:lastX,y:lastY});
+
 }, {passive:true});
 
-document.addEventListener("pointerup",(e)=>{
-  if(holdT){
-    const ms = Math.floor(performance.now() - holdT);
-    holdT = null;
-    if(ms > 220){
-      doAction("hold", {ms});
+addEventListener("pointermove",(e)=>{
+  lastX=e.clientX; lastY=e.clientY;
+
+  if(draggingRelic){
+    relic.style.left = lastX - relicOffX + "px";
+    relic.style.top  = lastY - relicOffY + "px";
+    // relic “charges” the sky while dragged
+    if(rng()<0.22){
+      ripple(lastX,lastY,0.65);
+      blip("triangle", print(220,560), 0.04, 0.08);
     }
   }
 }, {passive:true});
 
-let dragging=false, sx=0, sy=0;
-document.addEventListener("pointerdown",(e)=>{
-  dragging=true;
-  sx=e.clientX; sy=e.clientY;
-}, {passive:true});
-document.addEventListener("pointermove",(e)=>{
-  if(!dragging) return;
-  const dx = Math.floor(e.clientX - sx);
-  const dy = Math.floor(e.clientY - sy);
-  if(Math.abs(dx)+Math.abs(dy) > 36){
-    spawnSigil(e.clientX, e.clientY);
-    doAction("drag", {dx, dy});
-    sx=e.clientX; sy=e.clientY;
-  }
-}, {passive:true});
-document.addEventListener("pointerup",()=>{dragging=false}, {passive:true});
+addEventListener("pointerup",(e)=>{
+  const upX=e.clientX, upY=e.clientY;
+  const ms=Math.floor(performance.now() - downT);
+  const dx=Math.floor(upX - downX);
+  const dy=Math.floor(upY - downY);
+  const dist=Math.abs(dx)+Math.abs(dy);
 
-/* ===== idle “breathing” ===== */
-setInterval(()=>{
-  // subtle drift so it feels alive
-  hue = (hue + prand(-2,2)) % 360;
-  blur = clamp(blur + prand(-0.08,0.10), 0, 1.2);
-  zoom = clamp(zoom + prand(-0.002,0.003), 0.99, 1.03);
-  invert = clamp(invert + prand(-0.01,0.01), 0, 0.12);
-  shake = clamp(shake * 0.86, 0, 4);
+  if(draggingRelic){
+    draggingRelic=false;
+    // drop relic near center to “consume”
+    const cx=innerWidth/2, cy=innerHeight/2;
+    const d = Math.hypot((upX-cx),(upY-cy));
+    if(d < Math.min(innerWidth, innerHeight)*0.18){
+      relicConsume();
+    }else{
+      pulseWhisper("DRAG TO CENTER TO ABSORB", 260);
+      log(`[${nowStamp()}] RELIC: not absorbed`, "line dim");
+    }
+    return;
+  }
+
+  holding=false;
+
+  // swipe
+  if(dist > 90){
+    swiped=true;
+    ripple(upX,upY,1.0);
+    doAction("swipe", {dx,dy});
+    return;
+  }
+
+  // tap background
+  if(ms < 260){
+    ripple(upX,upY,1.0);
+    doAction("bgTap", {x:upX, y:upY});
+    // chance to spawn relic on taps
+    if(rng()<0.10) maybeRelic(false);
+    return;
+  }
+
+  // hold done
+  doAction("holdDone", {ms});
+
+}, {passive:true});
+
+/* mobile: shake triggers a rare event (if motion permission available) */
+let lastAccel=0, lastShakeT=0;
+function onMotion(e){
+  const a=e.accelerationIncludingGravity;
+  if(!a) return;
+  const mag = Math.abs(a.x||0)+Math.abs(a.y||0)+Math.abs(a.z||0);
+  const now=performance.now();
+  if(mag - lastAccel > 22 && now - lastShakeT > 1200){
+    lastShakeT=now;
+    pulseWhisper("SHAKE DETECTED");
+    log(`[${nowStamp()}] SHAKE: EVENT PING`, "line sys");
+    randomMajor();
+    warpHard(1.1);
+  }
+  lastAccel=mag;
+}
+window.addEventListener("devicemotion", onMotion);
+
+/* ========= RENDER LOOP ========= */
+let t0=performance.now();
+function draw(){
+  const t=performance.now();
+  const dt=Math.min(32, t-t0);
+  t0=t;
+
+  const E = getEnergy();
+  // make the world respond even when silent
+  const drive = (E.rms*1.2) + (holding?0.22:0) + (draggingRelic?0.18:0);
+
+  // decay shake
+  shake = clamp(shake*0.92, 0, 8);
   applyWarp();
 
-  if(rng() < 0.08){
-    pulseWhisper(ppick(["TYPE SOMETHING","THE ROOM IS OPEN","DON’T LEAVE YET","I’M HERE","SAY IT AGAIN","SLOW DOWN","ONE MORE"]));
-  }
-  if(rng() < 0.06){
-    hitGlitch(1.0);
-    blip(ppick(["sine","square"]), print(70,420), 0.06);
-  }
-}, 760);
+  // SPACE LAYER
+  sctx.clearRect(0,0,innerWidth,innerHeight);
 
-/* ===== intro ===== */
-setTimeout(()=>{ pulseWhisper("PRESS ANY KEY"); }, 250);
-setTimeout(()=>{ log("…", "line dim"); log("THE NODE IS A SLOT MACHINE FOR REALITY.", "line sys"); }, 520);
+  // dust drift
+  sctx.globalAlpha=1;
+  for(const d of dust){
+    d.x += d.vx*(1+drive*2);
+    d.y += d.vy*(1+drive*2);
+    if(d.x< -40) d.x=innerWidth+40;
+    if(d.x> innerWidth+40) d.x=-40;
+    if(d.y< -40) d.y=innerHeight+40;
+    if(d.y> innerHeight+40) d.y=-40;
+    sctx.fillStyle=`rgba(255,255,255,${d.a})`;
+    sctx.fillRect(d.x,d.y,1,1);
+  }
+
+  // stars twinkle
+  for(const st of stars){
+    st.y += st.sp*(1+drive*2);
+    if(st.y>innerHeight+6){ st.y=-6; st.x=Math.random()*innerWidth; }
+    const tw = 0.35 + 0.65*Math.sin((t*0.001)*st.tw + st.x*0.01);
+    const a = st.a * (0.65 + tw*0.55);
+    sctx.fillStyle=`rgba(255,255,255,${a})`;
+    sctx.fillRect(st.x, st.y, st.r, st.r);
+  }
+
+  // comets
+  for(let i=comets.length-1;i>=0;i--){
+    const c=comets[i];
+    c.life += dt*0.016;
+    c.x += c.vx*0.016*(1+drive*2);
+    c.y += c.vy*0.016*(1+drive*2);
+    c.a *= 0.988;
+    if(c.life>c.max || c.x>innerWidth+200 || c.y>innerHeight+200 || c.a<0.02){
+      comets.splice(i,1); continue;
+    }
+    sctx.save();
+    sctx.globalAlpha = c.a;
+    sctx.strokeStyle = `rgba(138,46,255,${0.25 + drive*0.35})`;
+    sctx.lineWidth = 2;
+    sctx.beginPath();
+    sctx.moveTo(c.x, c.y);
+    sctx.lineTo(c.x - c.vx*0.9, c.y - c.vy*0.9);
+    sctx.stroke();
+    sctx.restore();
+  }
+
+  // FX LAYER
+  fctx.clearRect(0,0,innerWidth,innerHeight);
+
+  // ripples
+  for(let i=ripples.length-1;i>=0;i--){
+    const r=ripples[i];
+    r.r += (3.2 + drive*10) * (dt*0.06);
+    r.a *= 0.965;
+    if(r.a < 0.02){ ripples.splice(i,1); continue; }
+    fctx.save();
+    fctx.globalAlpha = r.a;
+    fctx.strokeStyle = `rgba(138,46,255,${0.55})`;
+    fctx.lineWidth = 2;
+    fctx.beginPath();
+    fctx.arc(r.x,r.y,r.r,0,Math.PI*2);
+    fctx.stroke();
+    fctx.restore();
+  }
+
+  // audio ring around title area
+  const cx=innerWidth/2, cy=innerHeight/2 - 120;
+  const baseR = 74 + drive*34 + E.bass*28;
+  const points = 96;
+
+  fctx.save();
+  fctx.translate(cx,cy);
+  fctx.globalAlpha = 0.34 + drive*0.22;
+  fctx.strokeStyle = "rgba(138,46,255,0.9)";
+  fctx.lineWidth = 2;
+
+  fctx.beginPath();
+  for(let i=0;i<=points;i++){
+    const a = (i/points)*Math.PI*2;
+    const wob = Math.sin(a*3 + t*0.002)* (6 + E.mid*18) + Math.sin(a*7 - t*0.0016)* (4 + E.tre*14);
+    const rr = baseR + wob;
+    const x = Math.cos(a)*rr;
+    const y = Math.sin(a)*rr;
+    if(i===0) fctx.moveTo(x,y);
+    else fctx.lineTo(x,y);
+  }
+  fctx.stroke();
+
+  // waveform “slash”
+  if(audioOn && analyser){
+    analyser.getByteTimeDomainData(time);
+    fctx.globalAlpha = 0.18 + drive*0.25;
+    fctx.strokeStyle = "rgba(255,255,255,0.9)";
+    fctx.lineWidth = 1;
+    fctx.beginPath();
+    const w = Math.min(720, innerWidth*0.86);
+    const startX = -w/2;
+    for(let i=0;i<time.length;i+=6){
+      const k=i/(time.length-1);
+      const v=(time[i]-128)/128;
+      const x = startX + k*w;
+      const y = 120 + v*(24 + E.bass*60);
+      if(i===0) fctx.moveTo(x,y);
+      else fctx.lineTo(x,y);
+    }
+    fctx.stroke();
+  }
+  fctx.restore();
+
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+
+/* ========= IDLE “ALIVE” ========= */
+setInterval(()=>{
+  // subtle breathing
+  hue = (hue + prand(-2,2)) % 360;
+  blur = clamp(blur + prand(-0.05,0.08), 0, 1.3);
+  zoom = clamp(zoom + prand(-0.001,0.002), 0.99, 1.03);
+  invert = clamp(invert + prand(-0.01,0.01), 0, 0.14);
+  shake = clamp(shake * 0.86, 0, 8);
+  applyWarp();
+
+  // gentle random comet
+  if(rng() < 0.08) spawnComet(0.7);
+
+  // occasional whisper
+  if(rng() < 0.08){
+    pulseWhisper(ppick([
+      "TOUCH THE VOID",
+      "DRAG THE RELIC",
+      "OPEN A DOOR",
+      "YOU’RE CLOSE",
+      "THE NODE IS ALIVE",
+      "SOMETHING IS COMING",
+      "DON’T LEAVE YET"
+    ]), 280);
+  }
+
+  // occasionally spawn relic even if you do nothing
+  if(!relicOn && rng()<0.03){
+    lastX = innerWidth*rand(0.2,0.8);
+    lastY = innerHeight*rand(0.25,0.75);
+    maybeRelic(true);
+  }
+
+  // very rare major event by itself
+  if(rng() < 0.02){
+    log(`[${nowStamp()}] …`, "line dim");
+    randomMajor();
+  }
+}, 780);
+
+/* ========= INTRO ========= */
+setTimeout(()=>{ pulseWhisper("TOUCH THE VOID"); }, 260);
+setTimeout(()=>{ log("…", "line dim"); log("THE NODE IS A SLOT MACHINE FOR REALITY.", "line sys"); }, 540);
+setTimeout(()=>{ spawnComet(1.0); }, 900);
+
+/* ========= NICE: keep sky density based on resize ========= */
+addEventListener("resize", ()=>{ initSky(); });
+
 </script>
 </body>
 </html>
-
