@@ -396,7 +396,7 @@ function update(dt) {
 
   if (hb) {
     if (typeof enemies.resolvePlayerAttack === "function") {
-      const h = enemies.resolvePlayerAttack(player);
+      const h = enemies.resolvePlayerAttack(player, hb);
       hitCount = h?.count || 0;
       hitKills = h?.kills || 0;
     } else if (typeof enemies.resolvePlayerHit === "function") {
