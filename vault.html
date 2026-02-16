@@ -26,6 +26,14 @@ body{
 /* NEW: kill underlines everywhere */
 a{ text-decoration:none; }
 
+/* NEW: underlines ONLY for the backdoor keywords */
+.mono a.backdoorLink{
+ text-decoration:underline;
+ text-decoration-thickness:2px;
+ text-underline-offset:3px;
+ color:inherit;
+}
+
 .brand{
  position:fixed;
  top:14px;
@@ -219,9 +227,9 @@ THIS PAGE WILL UPDATE ITSELF.
 <div class="card">
 <div class="label">BACKDOOR</div>
 <div class="mono">
-TYPE: “SIGNAL” TO RETURN TO TRANSMISSION
-TYPE: “HOME” TO EXIT
-TYPE: “BMA” TO OPEN BROKEN MINDS ANONYMOUS
+TYPE: “<a class="backdoorLink" href="secret.html">SIGNAL</a>” TO RETURN TO TRANSMISSION
+TYPE: “<a class="backdoorLink" href="index.html">HOME</a>” TO EXIT
+TYPE: “<a class="backdoorLink" href="bma.html">BMA</a>” TO OPEN BROKEN MINDS ANONYMOUS
 </div>
 <div class="note">YOU CAN HIDE A REAL PASSWORD HERE LATER</div>
 </div>
