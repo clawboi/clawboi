@@ -341,6 +341,14 @@ function update(dt){
     waveTimer = Math.max(2.0, 3.1 - player.level*0.12);
   }
 
+  // --- boss trigger ---
+if(player.level >= 5 && enemies.bossAlive !== true){
+  enemies.spawnBoss(player.x, player.y, player.level);
+  ui.toast("THE NODE GUARDIAN WAKES", 1.2, "good");
+  effects.hitFlash(0.12);
+  camShake(10, 0.20);
+}
+
   // camera
   cam.update(dt, player.x, player.y);
 
