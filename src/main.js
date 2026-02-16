@@ -85,6 +85,11 @@ let fx = null;
 let quest = null;
 let interact = null;
 
+let hitStop = 0;
+function doHitStop(t=0.05){
+  hitStop = Math.max(hitStop, t);
+}
+
 // room
 let room = "forest"; // "forest" | "node"
 
@@ -277,6 +282,14 @@ requestAnimationFrame(loop);
 function update(dt){
   if(state === STATE.START || state === STATE.WIN || state === STATE.DEAD) return;
 
+  if(hitStop > 0){
+  hitStop = Math.max(0, hitStop - dt);
+  ui.update(dt);
+  effects.update(dt * 0.35);
+  return;
+}
+
+
   tWorld += dt;
   fx.update(dt);
 
@@ -305,13 +318,17 @@ function update(dt){
   enemies.update(dt, player, world);
 
   // resolve player attack
-  const hb = player.getHitbox();
-  const res = enemies.resolvePlayerHit(hb);
-  if(res.hits){
-    cam.kick(2.2 + res.hits*0.4, 0.08);
-    fx.hitFlash(0.12);
-    fx.sparksHit(hb.x, hb.y, 16 + res.hits*3, "violet");
-    fx.text(hb.x, hb.y-8, `HIT x${res.hits}`, "violet");
+  const hit = enemies.resolvePlayerAttack(player);
+if(hit.count){
+  camShake(3 + hit.count*1.2, 0.10);
+  effects.hitFlash(0.10);
+  doHitStop(0.035 + Math.min(0.03, hit.count*0.01));
+
+  if(hit.kills){
+    player.addXP(hit.kills * 6);
+    ui.floatText(player.x, player.y - 10, `+${hit.kills*6} XP`, "good");
+  }
+}
   }
   if(res.kills){
     drops.spawnEssence(hb.x, hb.y, 8 + res.kills*4);
