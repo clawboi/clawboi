@@ -1,23 +1,23 @@
 import { clamp } from "./utils.js";
 
 export class PlayerTest {
-  constructor(){
-    this.x = 160;
-    this.y = 90;
+  constructor(x=160,y=90){
+    this.x = x;
+    this.y = y;
 
     this.vx = 0;
     this.vy = 0;
 
-    this.speed = 90;      // base
-    this.accel = 18.0;    // responsiveness
-    this.friction = 14.0; // stop quick
+    this.r = 6;
+
+    this.speed = 92;
+    this.accel = 18.0;
+    this.friction = 14.0;
 
     this.dashT = 0;
     this.dashCD = 0;
 
     this.face = {x:1, y:0};
-
-    this.hp = 100;
   }
 
   tryDash(){
@@ -26,8 +26,7 @@ export class PlayerTest {
     this.dashT = 0.10;
   }
 
-  update(dt, input){
-    // cooldowns
+  update(dt, input, world){
     this.dashCD = Math.max(0, this.dashCD - dt);
     this.dashT  = Math.max(0, this.dashT - dt);
 
@@ -41,28 +40,31 @@ export class PlayerTest {
     const targetVx = mx * this.speed * dashMul;
     const targetVy = my * this.speed * dashMul;
 
-    // accelerate toward target velocity (smooth, not floaty)
     this.vx += (targetVx - this.vx) * (1 - Math.pow(0.001, dt*this.accel));
     this.vy += (targetVy - this.vy) * (1 - Math.pow(0.001, dt*this.accel));
 
-    // friction when no input
     if(Math.abs(mx)+Math.abs(my) < 0.001){
       this.vx *= Math.pow(0.001, dt*this.friction);
       this.vy *= Math.pow(0.001, dt*this.friction);
     }
 
-    // integrate
-    this.x += this.vx * dt;
-    this.y += this.vy * dt;
+    // try move X then Y (slide along walls)
+    const nx = this.x + this.vx * dt;
+    if(!world.isBlockedCircle(nx, this.y, this.r)) this.x = nx;
+    else this.vx *= 0.2;
 
-    // keep inside test room (base 320x180)
-    this.x = clamp(this.x, 10, 310);
-    this.y = clamp(this.y, 12, 170);
+    const ny = this.y + this.vy * dt;
+    if(!world.isBlockedCircle(this.x, ny, this.r)) this.y = ny;
+    else this.vy *= 0.2;
+
+    // keep inside world bounds
+    this.x = clamp(this.x, this.r, world.worldW - this.r);
+    this.y = clamp(this.y, this.r, world.worldH - this.r);
   }
 
-  draw(ctx){
-    const x = this.x|0;
-    const y = this.y|0;
+  draw(ctx, camX, camY){
+    const x = (this.x - camX) | 0;
+    const y = (this.y - camY) | 0;
 
     // shadow
     ctx.fillStyle = "rgba(0,0,0,0.35)";
@@ -93,4 +95,3 @@ export class PlayerTest {
     ctx.fillRect(x + (this.face.x*6)|0, y + (this.face.y*6)|0, 2, 2);
   }
 }
-
