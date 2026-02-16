@@ -5,6 +5,15 @@
 // - reset()
 // - spawnWaveAround(x,y,level)
 // - update(dt, player, world)
+// --- enemy hits player (Part 7) ---
+const hurt = enemies.resolveEnemyHits(player);
+if(hurt.took){
+  cam.kick(8, 0.12);
+  fx.pulseDamage(0.22);
+  fx.hitFlash(0.10);
+  fx.text(player.x, player.y-18, `-${hurt.dmg} HP`, "danger");
+}
+
 // - draw(ctx, camX, camY)
 // - resolvePlayerHit(hitbox)
 // - aliveCount()
@@ -63,7 +72,7 @@ export class EnemyManager{
   }
 
   // --- update AI ---
-  update(dt, player, world){
+  (dt, player, world){
     this._t += dt;
     this.world = world;
 
