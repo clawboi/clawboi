@@ -38,18 +38,41 @@ function resize(){
 window.addEventListener("resize", resize);
 resize();
 
-/* ------------------ Input ------------------ */
+/* ------------------ Input (solid + non-sticky) ------------------ */
 const keys = new Set();
+const pressed = new Set(); // edge-trigger: first frame only
+
+function keyName(e){
+  // normalize space + shift + arrows reliably
+  if(e.key === " ") return " ";
+  return e.key.toLowerCase();
+}
+
 window.addEventListener("keydown", (e)=>{
-  const k = e.key.toLowerCase();
+  const k = keyName(e);
   if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k)) e.preventDefault();
+
+  if(!keys.has(k)) pressed.add(k);
   keys.add(k);
 
-  if(state === STATE.START && (k === "enter" || k === " ")) startGame();
-  if(state === STATE.DEAD && (k === "enter" || k === " ")) startGame();
+  // Start / restart
+  if((state === STATE.START || state === STATE.DEAD) && (k === "enter" || k === " ")) startGame();
 });
-window.addEventListener("keyup", (e)=> keys.delete(e.key.toLowerCase()));
+
+window.addEventListener("keyup", (e)=>{
+  const k = keyName(e);
+  keys.delete(k);
+  pressed.delete(k);
+});
+
+// HUGE: prevents “stuck movement” when you alt-tab or iOS focus changes
+window.addEventListener("blur", ()=>{
+  keys.clear();
+  pressed.clear();
+});
+
 const isDown = (k)=> keys.has(k);
+const wasPressed = (k)=> pressed.has(k);
 
 /* ------------------ Game objects ------------------ */
 let world, player, enemies, effects, ui;
@@ -101,18 +124,17 @@ function update(dt){
   const {mx,my} = getMove();
   player.setMove(mx,my);
 
-  const attack = isDown("j") || isDown(" ");
-  const dash   = isDown("k") || isDown("shift");
+  // IMPORTANT: edge-trigger attack/dash (feels way less “finicky”)
+  const attackPressed = wasPressed("j") || wasPressed(" ");
+  const dashPressed   = wasPressed("k") || wasPressed("shift");
 
-  if(attack) player.tryAttack();
-  if(dash) player.tryDash();
+  if(attackPressed) player.tryAttack();
+  if(dashPressed) player.tryDash();
 
   player.update(dt, world, effects);
 
-  // enemies
   enemies.update(dt, player, world, effects);
 
-  // resolve sword hits
   const hit = enemies.resolvePlayerAttack(player);
   if(hit.count){
     camShake(2 + hit.count, 0.08);
@@ -123,7 +145,6 @@ function update(dt){
     }
   }
 
-  // enemy hits player
   const took = enemies.resolveEnemyHits(player);
   if(took){
     camShake(6, 0.10);
@@ -131,7 +152,6 @@ function update(dt){
     ui.toast("HIT", 0.35, "danger");
   }
 
-  // spawning
   spawnT -= dt;
   if(spawnT <= 0){
     enemies.spawnWave(player.x, player.y, player.level);
@@ -159,15 +179,16 @@ function update(dt){
     ui.toast("THE FOREST ATE YOU", 1.4, "danger");
     camShake(10, 0.25);
   }
+
+  // consume pressed keys (so “pressed” is 1-frame only)
+  pressed.clear();
 }
 
 /* ------------------ Draw ------------------ */
 function draw(){
-  // clear
   ctx.fillStyle = "#050508";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  // start screen overlay
   if(state === STATE.START){
     drawStart();
     requestAnimationFrame(draw);
@@ -218,9 +239,6 @@ function drawStart(){
   ctx.fillText("MOVE: WASD/ARROWS   ATTACK: J/SPACE   DASH: K/SHIFT", canvas.width/2, canvas.height/2 + 42);
 
   ctx.restore();
-
-  // click/tap to start
-  canvas.onclick = ()=> startGame();
 }
 
 /* ------------------ Loop ------------------ */
@@ -235,7 +253,7 @@ function loop(now){
 requestAnimationFrame(loop);
 requestAnimationFrame(draw);
 
-// allow tap to start even on iOS
+// tap to start / restart (keep this; it’s good)
 canvas.addEventListener("pointerdown", ()=>{
   if(state === STATE.START) startGame();
   if(state === STATE.DEAD) startGame();
