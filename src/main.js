@@ -2,6 +2,9 @@ import { CONFIG } from "./config.js";
 import { clamp, lerp, now, fmt, isTouchDevice } from "./utils.js";
 import { Input } from "./input.js";
 import { PlayerTest } from "./player_test.js";
+import { WorldForest } from "./world_forest.js";
+import { Camera } from "./camera.js";
+import { PickupManager } from "./pickups.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d", { alpha:false });
@@ -32,6 +35,8 @@ function resize(){
   canvas.style.width = view.pxW + "px";
   canvas.style.height = view.pxH + "px";
   ctx.imageSmoothingEnabled = false;
+
+  if(cam) cam.resizeView(CONFIG.baseW, CONFIG.baseH);
 }
 window.addEventListener("resize", resize, {passive:true});
 resize();
@@ -44,19 +49,82 @@ window.addEventListener("keydown", (e)=>{
   }
 }, {passive:true});
 
-/* ---------- input + objects ---------- */
+/* ---------- input ---------- */
 const input = new Input({ canvas, mobileAtkBtn, mobileDashBtn });
-const player = new PlayerTest();
 
-const STATE = { START:"start", PLAY:"play" };
+/* ---------- state ---------- */
+const STATE = { START:"start", PLAY:"play", WIN:"win" };
 let state = STATE.START;
 
+let world = null;
+let player = null;
+let cam = null;
+let pickups = null;
+
+let tWorld = 0;
+
+// objective
+const objective = {
+  shardsNeeded: 3,
+  portalOpen: false,
+  win: false
+};
+
 function startGame(){
+  world = new WorldForest({
+    tilesW: 160,
+    tilesH: 120,
+    tileSize: 8,
+    seed: (Math.random()*1e9)|0
+  });
+
+  player = new PlayerTest(world.spawn.x, world.spawn.y);
+
+  cam = new Camera({
+    viewW: CONFIG.baseW,
+    viewH: CONFIG.baseH,
+    worldW: world.worldW,
+    worldH: world.worldH
+  });
+
+  pickups = new PickupManager();
+  pickups.reset(objective.shardsNeeded);
+
+  // spawn shards near open tiles around spawn (guaranteed reachable-ish)
+  // simple: place them by sampling until floor found
+  for(let i=0;i<objective.shardsNeeded;i++){
+    const p = findOpenSpot(world, world.spawn.x, world.spawn.y, 220 + i*80);
+    pickups.addShard(p.x, p.y);
+  }
+
+  objective.portalOpen = false;
+  objective.win = false;
+  world.setPortalActive(false);
+
   state = STATE.PLAY;
+}
+
+function findOpenSpot(world, cx, cy, radius){
+  for(let tries=0; tries<900; tries++){
+    const a = Math.random()*Math.PI*2;
+    const d = radius * (0.35 + Math.random()*0.65);
+    const x = cx + Math.cos(a)*d;
+    const y = cy + Math.sin(a)*d;
+    if(!world.isBlockedCircle(x,y,10)) return {x:x|0,y:y|0};
+  }
+  // fallback: spawn
+  return {x:cx|0,y:cy|0};
 }
 
 canvas.addEventListener("pointerdown", ()=>{
   if(state === STATE.START) startGame();
+  if(state === STATE.WIN) startGame();
+}, { passive:true });
+
+window.addEventListener("keydown", (e)=>{
+  const k = (e.key||"").toLowerCase();
+  if(state === STATE.START && (k==="enter" || k===" ")) startGame();
+  if(state === STATE.WIN && (k==="enter" || k===" ")) startGame();
 }, { passive:true });
 
 /* ---------- loop ---------- */
@@ -80,111 +148,166 @@ function loop(t){
 requestAnimationFrame(loop);
 
 function update(dt){
-  if(state === STATE.START){
-    if(input.startPressed()) startGame();
-    return;
-  }
+  if(state === STATE.START || state === STATE.WIN) return;
+
+  tWorld += dt;
 
   // dash
   if(input.dash()) player.tryDash();
 
-  player.update(dt, input);
+  // movement + collision
+  player.update(dt, input, world);
 
-  // we’ll wire attack in Part 4 (combat overhaul)
+  // pickups
+  pickups.update(dt);
+  const got = pickups.tryCollect(player);
+  if(got){
+    if(cam) cam.kick(2.5, 0.10);
+  }
+
+  // objective logic
+  if(!objective.portalOpen && pickups.done()){
+    objective.portalOpen = true;
+    world.setPortalActive(true);
+    if(cam) cam.kick(6, 0.18);
+  }
+
+  // camera follow
+  cam.update(dt, player.x, player.y);
+
+  // win check
+  if(world.inPortal(player.x, player.y, player.r)){
+    objective.win = true;
+    state = STATE.WIN;
+  }
 }
 
 function draw(fps){
-  // clear
+  // clear screen
   ctx.fillStyle = CONFIG.bg;
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  // draw in base space
+  // start overlay
+  if(state === STATE.START){
+    drawStart();
+    if(debugOn){
+      debugEl.textContent =
+        `STATE ${state}\nSCALE ${view.scale}x\nFPS ${fmt(fps,0)}\n`;
+    }
+    return;
+  }
+
+  // base-space render
   ctx.save();
   ctx.scale(view.scale, view.scale);
 
-  // test room floor
-  ctx.fillStyle = "#071012";
-  ctx.fillRect(0,0,CONFIG.baseW, CONFIG.baseH);
+  const { sx, sy } = cam.getShakeOffset();
+  const camX = (cam.x + sx) | 0;
+  const camY = (cam.y + sy) | 0;
 
-  // pixel grass pattern
-  for(let y=0;y<CONFIG.baseH;y++){
-    for(let x=0;x<CONFIG.baseW;x++){
-      if(((x*19 + y*11) & 31) === 0){
-        ctx.fillStyle = ((x+y)&1) ? "#0b1b14" : "#0c2017";
-        ctx.fillRect(x,y,1,1);
-      }
-      if(((x*17 + y*13) & 127) === 0){
-        ctx.fillStyle = "rgba(138,46,255,0.45)";
-        ctx.fillRect(x,y,1,1);
-      }
-    }
-  }
+  world.draw(ctx, camX, camY, tWorld);
+  pickups.draw(ctx, camX, camY);
+  player.draw(ctx, camX, camY);
 
-  // boundary
-  ctx.fillStyle = "rgba(0,0,0,0.18)";
-  ctx.fillRect(0,0,CONFIG.baseW,6);
-  ctx.fillRect(0,CONFIG.baseH-6,CONFIG.baseW,6);
-  ctx.fillRect(0,0,6,CONFIG.baseH);
-  ctx.fillRect(CONFIG.baseW-6,0,6,CONFIG.baseH);
+  // HUD in base-space
+  drawHUD(ctx);
 
-  // title overlay if start
-  if(state === STATE.START){
+  // win overlay
+  if(state === STATE.WIN){
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.fillRect(0,0,CONFIG.baseW,CONFIG.baseH);
 
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(138,46,255,0.95)";
     ctx.font = "18px ui-monospace, Menlo, Consolas, monospace";
-    ctx.fillText("THE ADVENTURES OF CLAWBOI", CONFIG.baseW/2, 74);
+    ctx.fillText("PORTAL BREACHED", CONFIG.baseW/2, 78);
 
-    ctx.fillStyle = "rgba(255,255,255,0.78)";
-    ctx.font = "11px ui-monospace, Menlo, Consolas, monospace";
-    ctx.fillText("PART 2: INPUT ONLINE", CONFIG.baseW/2, 94);
-
-    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.fillStyle = "rgba(255,255,255,0.80)";
     ctx.font = "12px ui-monospace, Menlo, Consolas, monospace";
-    ctx.fillText(isTouchDevice() ? "TAP TO START" : "PRESS ENTER TO START", CONFIG.baseW/2, 124);
+    ctx.fillText("PRESS ENTER / TAP TO RUN IT BACK", CONFIG.baseW/2, 104);
 
-    ctx.restore();
-    if(debugOn){
-      debugEl.textContent =
-        `STATE ${state}\n`+
-        `SCALE ${view.scale}x\n`+
-        `FPS ${fmt(fps,0)}\n`;
-    }
-    return;
-  }
-
-  // draw player
-  player.draw(ctx);
-
-  // joystick visual on touch (so you know it’s reading)
-  if(isTouchDevice() && input.stick.active){
-    ctx.strokeStyle = "rgba(255,255,255,0.25)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(40, CONFIG.baseH-40, 18, 0, Math.PI*2);
-    ctx.stroke();
-
-    ctx.fillStyle = "rgba(138,46,255,0.55)";
-    ctx.fillRect(
-      (40 + input.stick.dx*14 - 2)|0,
-      (CONFIG.baseH-40 + input.stick.dy*14 - 2)|0,
-      4,4
-    );
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.font = "10px ui-monospace, Menlo, Consolas, monospace";
+    ctx.fillText("NEXT PART: COMBAT + ENEMIES + XP + LOOT", CONFIG.baseW/2, 124);
   }
 
   ctx.restore();
 
-  // debug overlay
   if(debugOn){
     debugEl.textContent =
       `STATE ${state}\n`+
       `SCALE ${view.scale}x\n`+
       `FPS ${fmt(fps,0)}\n`+
-      `MOVE ${fmt(input.moveVector().mx,2)}, ${fmt(input.moveVector().my,2)}\n`+
-      `DASH ${input.dash() ? "ON" : "OFF"}\n`+
-      `ATK ${input.attack() ? "ON" : "OFF"}\n`;
+      `P ${player.x|0},${player.y|0}\n`+
+      `CAM ${cam.x|0},${cam.y|0}\n`+
+      `SHARDS ${pickups.collected}/${pickups.target}\n`+
+      `PORTAL ${objective.portalOpen ? "OPEN" : "LOCKED"}\n`;
   }
 }
 
+function drawHUD(ctx){
+  // top-left objective
+  const pad = 10;
+
+  ctx.textAlign = "left";
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(pad, pad, 148, 26);
+
+  ctx.fillStyle = "rgba(255,255,255,0.82)";
+  ctx.font = "10px ui-monospace, Menlo, Consolas, monospace";
+  ctx.fillText("OBJECTIVE", pad+8, pad+11);
+
+  const shardText = `VIOLET SHARDS ${pickups.collected}/${pickups.target}`;
+  ctx.fillStyle = "rgba(138,46,255,0.95)";
+  ctx.fillText(shardText, pad+8, pad+22);
+
+  // portal status
+  ctx.textAlign = "right";
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(CONFIG.baseW-152-pad, pad, 152, 26);
+
+  ctx.fillStyle = objective.portalOpen ? "rgba(125,255,177,0.90)" : "rgba(255,255,255,0.65)";
+  ctx.font = "10px ui-monospace, Menlo, Consolas, monospace";
+  ctx.fillText(objective.portalOpen ? "PORTAL: OPEN" : "PORTAL: LOCKED", CONFIG.baseW-pad-8, pad+16);
+
+  // mini compass pip (points to portal)
+  const dx = world.portal.x - player.x;
+  const dy = world.portal.y - player.y;
+  const ang = Math.atan2(dy, dx);
+  const cx = CONFIG.baseW/2;
+  const cy = 14;
+  const px = (cx + Math.cos(ang)*8)|0;
+  const py = (cy + Math.sin(ang)*5)|0;
+
+  ctx.fillStyle = "rgba(255,255,255,0.25)";
+  ctx.fillRect(cx-10, cy-4, 20, 8);
+  ctx.fillStyle = objective.portalOpen ? "rgba(138,46,255,0.95)" : "rgba(255,255,255,0.55)";
+  ctx.fillRect(px, py, 2, 2);
+}
+
+function drawStart(){
+  ctx.save();
+  ctx.scale(view.scale, view.scale);
+
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(0,0,CONFIG.baseW,CONFIG.baseH);
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "rgba(138,46,255,0.95)";
+  ctx.font = "18px ui-monospace, Menlo, Consolas, monospace";
+  ctx.fillText("THE ADVENTURES OF CLAWBOI", CONFIG.baseW/2, 70);
+
+  ctx.fillStyle = "rgba(255,255,255,0.80)";
+  ctx.font = "12px ui-monospace, Menlo, Consolas, monospace";
+  ctx.fillText("PART 3: WORLD ONLINE", CONFIG.baseW/2, 92);
+
+  ctx.fillStyle = "rgba(255,255,255,0.70)";
+  ctx.font = "11px ui-monospace, Menlo, Consolas, monospace";
+  ctx.fillText(isTouchDevice() ? "TAP TO START" : "PRESS ENTER TO START", CONFIG.baseW/2, 118);
+
+  ctx.fillStyle = "rgba(255,255,255,0.50)";
+  ctx.font = "10px ui-monospace, Menlo, Consolas, monospace";
+  ctx.fillText("COLLECT 3 VIOLET SHARDS TO OPEN THE PORTAL", CONFIG.baseW/2, 136);
+
+  ctx.restore();
+}
