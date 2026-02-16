@@ -13,6 +13,9 @@ export class WorldForest {
     // 0 floor, 1 wall
     this.tile = new Uint8Array(this.tilesW * this.tilesH);
 
+    // ✅ IMPORTANT: expose BOTH names for minimap + other systems
+    this.tiles = this.tile;
+
     // spawn and portal
     this.spawn = { x: (this.worldW*0.5)|0, y: (this.worldH*0.5)|0 };
     this.portal = { x: (this.worldW*0.5 + 220)|0, y: (this.worldH*0.5 - 120)|0, r:14, active:false };
@@ -169,12 +172,10 @@ export class WorldForest {
         const y = ty*ts - camY;
 
         if(v===0){
-          // grass base
           const n = (tx*17 + ty*13) & 7;
           ctx.fillStyle = n<3 ? "#0b1b14" : "#0c2017";
           ctx.fillRect(x,y,ts,ts);
 
-          // tiny violet mushrooms
           if(((tx*19 + ty*11) & 63) === 0){
             ctx.fillStyle = "rgba(138,46,255,0.35)";
             ctx.fillRect(x+3,y+3,2,2);
@@ -182,22 +183,17 @@ export class WorldForest {
             ctx.fillRect(x+4,y+2,1,1);
           }
         }else{
-          // wall/trees
           ctx.fillStyle = "#07070d";
           ctx.fillRect(x,y,ts,ts);
-
-          // tree highlight
           ctx.fillStyle = "rgba(138,46,255,0.08)";
           ctx.fillRect(x+1,y+1,ts-2,ts-2);
         }
       }
     }
 
-    // fog wash
     ctx.fillStyle = "rgba(10,4,18,0.12)";
     ctx.fillRect(0,0,vw,vh);
 
-    // portal indicator (draw last so it pops)
     this._drawPortal(ctx, camX, camY, t);
   }
 
@@ -205,7 +201,6 @@ export class WorldForest {
     const x = (this.portal.x - camX)|0;
     const y = (this.portal.y - camY)|0;
 
-    // base rune even when inactive
     ctx.fillStyle = "rgba(255,255,255,0.10)";
     ctx.fillRect(x-10,y-10,20,20);
 
@@ -217,16 +212,13 @@ export class WorldForest {
 
     const pulse = 0.5 + 0.5*Math.sin(t*5.0);
 
-    // big glow
     ctx.fillStyle = `rgba(138,46,255,${0.20 + pulse*0.25})`;
     ctx.fillRect(x-16,y-16,32,32);
 
-    // core
     ctx.fillStyle = "rgba(255,255,255,0.75)";
     ctx.fillRect(x-2,y-12,4,24);
     ctx.fillRect(x-12,y-2,24,4);
 
-    // orbit pixels
     for(let i=0;i<10;i++){
       const a = t*1.2 + i*(Math.PI*2/10);
       const px = (x + Math.cos(a)*(12 + pulse*3))|0;
@@ -236,4 +228,3 @@ export class WorldForest {
     }
   }
 }
-
