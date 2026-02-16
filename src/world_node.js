@@ -59,7 +59,7 @@ export class WorldNode {
   }
 
   draw(ctx, camX, camY, t=0){
-    const vw = 320, vh = 180;
+    const vw = ctx.canvas.width, vh = ctx.canvas.height;
 
     ctx.fillStyle = "#050508";
     ctx.fillRect(0,0,vw,vh);
