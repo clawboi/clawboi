@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Shop — CLAWBOI</title>
   <meta name="theme-color" content="#000000" />
+
+  <!-- tiny performance hints (doesn't change layout) -->
+  <link rel="preload" as="image" href="images/shop/001-01.jpg">
+  <link rel="preload" as="image" href="images/shop/002-01.jpg">
+  <link rel="preload" as="image" href="images/shop/003-01.jpg">
+  <link rel="preload" as="image" href="images/shop/004-01.jpg">
+
   <style>
     :root{
       --bg:#000;
@@ -90,7 +97,6 @@
       max-width:70ch;
     }
 
-    /* ===== existing rb bar ===== */
     .rbBar{
       margin-top:18px;
       display:flex;
@@ -117,7 +123,6 @@
       box-shadow:0 0 16px rgba(138,46,255,.35);
     }
 
-    /* ===== filters ===== */
     .filters{
       margin-top:14px;
       display:flex;
@@ -183,7 +188,6 @@
       opacity:.9;
     }
 
-    /* ===== image switcher inside thumb ===== */
     .thumb{
       position:relative;
       aspect-ratio: 4 / 3;
@@ -191,6 +195,7 @@
       border-bottom:1px solid rgba(255,255,255,.08);
       overflow:hidden;
       user-select:none;
+      touch-action:pan-y;
     }
     .stage{
       position:absolute;
@@ -206,7 +211,6 @@
       pointer-events:none;
       transition:opacity .22s ease;
 
-      /* fuller frame (no crop) */
       object-fit:contain;
       object-position:center;
       background:rgba(0,0,0,.55);
@@ -237,7 +241,7 @@
       opacity:1;
       transition:opacity .2s ease;
       z-index:2;
-      pointer-events:none;
+      pointer-events:none; /* important */
     }
 
     /* image nav buttons */
@@ -248,7 +252,9 @@
       align-items:center;
       justify-content:space-between;
       padding:10px;
-      z-index:3;
+
+      /* raised above ALL overlays for Chrome reliability */
+      z-index:8;
       pointer-events:none;
     }
     .arrowBtn{
@@ -265,6 +271,7 @@
       transition:.2s;
       box-shadow:0 18px 40px rgba(0,0,0,.35);
       backdrop-filter: blur(6px);
+      -webkit-tap-highlight-color: transparent;
     }
     .arrowBtn:hover{
       border-color:rgba(138,46,255,.55);
@@ -283,7 +290,7 @@
       position:absolute;
       left:12px;
       bottom:12px;
-      z-index:3;
+      z-index:8; /* raised */
       display:flex;
       gap:8px;
       pointer-events:none;
@@ -338,7 +345,6 @@
       line-height:1.6;
     }
 
-    /* pricing + single buy button */
     .priceRow{
       margin-top:10px;
       display:flex;
@@ -418,7 +424,6 @@
       line-height:1;
     }
 
-    /* Coming soon block */
     .soon{
       margin: 22px 0 0;
       border: 1px solid rgba(138,46,255,.22);
@@ -456,7 +461,6 @@
       flex-wrap:wrap;
     }
 
-    /* hide cards when filtered */
     .hidden{display:none !important;}
   </style>
 </head>
@@ -496,17 +500,18 @@
     <section class="grid" aria-label="Merch grid" id="grid">
 
       <!-- 1 -->
-      <article class="card" data-cat="apparel" data-title="BMA" data-buy="https://www.redbubble.com/i/t-shirt/BMA-by-clawboi/178525489.WFLAH"
+      <article class="card" data-cat="apparel" data-title="BMA"
+        data-buy="https://www.redbubble.com/i/t-shirt/BMA-by-clawboi/178525489.WFLAH"
         data-img1="images/shop/001-01.jpg"
         data-img2="images/shop/001-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <img class="on" loading="lazy" alt="BMA Preview 1" />
-            <img loading="lazy" alt="BMA Preview 2" />
+            <img class="on" alt="BMA Preview 1" />
+            <img alt="BMA Preview 2" />
           </div>
           <div class="imgNav">
-            <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
-            <button class="arrowBtn next" aria-label="Next image"><span class="arrowIcon">›</span></button>
+            <button class="arrowBtn prev" type="button" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
+            <button class="arrowBtn next" type="button" aria-label="Next image"><span class="arrowIcon">›</span></button>
           </div>
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
@@ -532,17 +537,18 @@
       </article>
 
       <!-- 2 -->
-      <article class="card" data-cat="apparel" data-title="Broken Minds Anonymous Tee" data-buy="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.WFLAH"
+      <article class="card" data-cat="apparel" data-title="Broken Minds Anonymous Tee"
+        data-buy="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.WFLAH"
         data-img1="images/shop/002-01.jpg"
         data-img2="images/shop/002-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <img class="on" loading="lazy" alt="BMA Tee Preview 1" />
-            <img loading="lazy" alt="BMA Tee Preview 2" />
+            <img class="on" alt="BMA Tee Preview 1" />
+            <img alt="BMA Tee Preview 2" />
           </div>
           <div class="imgNav">
-            <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
-            <button class="arrowBtn next" aria-label="Next image"><span class="arrowIcon">›</span></button>
+            <button class="arrowBtn prev" type="button" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
+            <button class="arrowBtn next" type="button" aria-label="Next image"><span class="arrowIcon">›</span></button>
           </div>
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
@@ -568,17 +574,18 @@
       </article>
 
       <!-- 3 -->
-      <article class="card" data-cat="apparel" data-title="BMA Sweatshirt" data-buy="https://www.redbubble.com/i/sweatshirt/Broken-Minds-Anonymous-by-clawboi/178525222.E3041"
+      <article class="card" data-cat="apparel" data-title="BMA Sweatshirt"
+        data-buy="https://www.redbubble.com/i/sweatshirt/Broken-Minds-Anonymous-by-clawboi/178525222.E3041"
         data-img1="images/shop/003-01.jpg"
         data-img2="images/shop/003-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <img class="on" loading="lazy" alt="BMA Sweatshirt Preview 1" />
-            <img loading="lazy" alt="BMA Sweatshirt Preview 2" />
+            <img class="on" alt="BMA Sweatshirt Preview 1" />
+            <img alt="BMA Sweatshirt Preview 2" />
           </div>
           <div class="imgNav">
-            <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
-            <button class="arrowBtn next" aria-label="Next image"><span class="arrowIcon">›</span></button>
+            <button class="arrowBtn prev" type="button" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
+            <button class="arrowBtn next" type="button" aria-label="Next image"><span class="arrowIcon">›</span></button>
           </div>
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
@@ -604,17 +611,18 @@
       </article>
 
       <!-- 4 -->
-      <article class="card" data-cat="apparel" data-title="JUMP Tee" data-buy="https://www.redbubble.com/i/t-shirt/JUMP-by-clawboi/178524500.IJ6L0"
+      <article class="card" data-cat="apparel" data-title="JUMP Tee"
+        data-buy="https://www.redbubble.com/i/t-shirt/JUMP-by-clawboi/178524500.IJ6L0"
         data-img1="images/shop/004-01.jpg"
         data-img2="images/shop/004-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <img class="on" loading="lazy" alt="JUMP Tee Preview 1" />
-            <img loading="lazy" alt="JUMP Tee Preview 2" />
+            <img class="on" alt="JUMP Tee Preview 1" />
+            <img alt="JUMP Tee Preview 2" />
           </div>
           <div class="imgNav">
-            <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
-            <button class="arrowBtn next" aria-label="Next image"><span class="arrowIcon">›</span></button>
+            <button class="arrowBtn prev" type="button" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
+            <button class="arrowBtn next" type="button" aria-label="Next image"><span class="arrowIcon">›</span></button>
           </div>
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
@@ -642,17 +650,18 @@
       </article>
 
       <!-- 5 -->
-      <article class="card" data-cat="accessories" data-title="ANGELS IN BACKD00RS Print" data-buy="https://www.redbubble.com/i/photographic-print/ANGELS-IN-BACKD00RS-by-clawboi/178524760.6Q0TX"
+      <article class="card" data-cat="accessories" data-title="ANGELS IN BACKD00RS Print"
+        data-buy="https://www.redbubble.com/i/photographic-print/ANGELS-IN-BACKD00RS-by-clawboi/178524760.6Q0TX"
         data-img1="images/shop/005-01.jpg"
         data-img2="images/shop/005-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <img class="on" loading="lazy" alt="ANGELS Print Preview 1" />
-            <img loading="lazy" alt="ANGELS Print Preview 2" />
+            <img class="on" alt="ANGELS Print Preview 1" />
+            <img alt="ANGELS Print Preview 2" />
           </div>
           <div class="imgNav">
-            <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
-            <button class="arrowBtn next" aria-label="Next image"><span class="arrowIcon">›</span></button>
+            <button class="arrowBtn prev" type="button" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
+            <button class="arrowBtn next" type="button" aria-label="Next image"><span class="arrowIcon">›</span></button>
           </div>
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
@@ -680,17 +689,18 @@
       </article>
 
       <!-- 6 -->
-      <article class="card" data-cat="accessories" data-title="Two Times Backpack" data-buy="https://www.redbubble.com/i/backpack/Two-Times-by-clawboi/178524644.K1KHE"
+      <article class="card" data-cat="accessories" data-title="Two Times Backpack"
+        data-buy="https://www.redbubble.com/i/backpack/Two-Times-by-clawboi/178524644.K1KHE"
         data-img1="images/shop/006-01.jpg"
         data-img2="images/shop/006-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <img class="on" loading="lazy" alt="Two Times Backpack Preview 1" />
-            <img loading="lazy" alt="Two Times Backpack Preview 2" />
+            <img class="on" alt="Two Times Backpack Preview 1" />
+            <img alt="Two Times Backpack Preview 2" />
           </div>
           <div class="imgNav">
-            <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
-            <button class="arrowBtn next" aria-label="Next image"><span class="arrowIcon">›</span></button>
+            <button class="arrowBtn prev" type="button" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
+            <button class="arrowBtn next" type="button" aria-label="Next image"><span class="arrowIcon">›</span></button>
           </div>
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
@@ -718,17 +728,18 @@
       </article>
 
       <!-- 7 -->
-      <article class="card" data-cat="accessories" data-title="BMA Sticker" data-buy="https://www.redbubble.com/i/sticker/Broken-Minds-Anonymous-by-clawboi/178525222.EJUG5"
+      <article class="card" data-cat="accessories" data-title="BMA Sticker"
+        data-buy="https://www.redbubble.com/i/sticker/Broken-Minds-Anonymous-by-clawboi/178525222.EJUG5"
         data-img1="images/shop/007-01.jpg"
         data-img2="images/shop/007-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <img class="on" loading="lazy" alt="BMA Sticker Preview 1" />
-            <img loading="lazy" alt="BMA Sticker Preview 2" />
+            <img class="on" alt="BMA Sticker Preview 1" />
+            <img alt="BMA Sticker Preview 2" />
           </div>
           <div class="imgNav">
-            <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
-            <button class="arrowBtn next" aria-label="Next image"><span class="arrowIcon">›</span></button>
+            <button class="arrowBtn prev" type="button" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
+            <button class="arrowBtn next" type="button" aria-label="Next image"><span class="arrowIcon">›</span></button>
           </div>
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
@@ -756,17 +767,18 @@
       </article>
 
       <!-- 8 -->
-      <article class="card" data-cat="accessories" data-title="JUMP Pillow" data-buy="https://www.redbubble.com/i/throw-pillow/JUMP-by-clawboi/178524500.5X2YF"
+      <article class="card" data-cat="accessories" data-title="JUMP Pillow"
+        data-buy="https://www.redbubble.com/i/throw-pillow/JUMP-by-clawboi/178524500.5X2YF"
         data-img1="images/shop/008-01.jpg"
         data-img2="images/shop/008-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <img class="on" loading="lazy" alt="JUMP Pillow Preview 1" />
-            <img loading="lazy" alt="JUMP Pillow Preview 2" />
+            <img class="on" alt="JUMP Pillow Preview 1" />
+            <img alt="JUMP Pillow Preview 2" />
           </div>
           <div class="imgNav">
-            <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
-            <button class="arrowBtn next" aria-label="Next image"><span class="arrowIcon">›</span></button>
+            <button class="arrowBtn prev" type="button" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
+            <button class="arrowBtn next" type="button" aria-label="Next image"><span class="arrowIcon">›</span></button>
           </div>
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
@@ -794,17 +806,18 @@
       </article>
 
       <!-- 9 -->
-      <article class="card" data-cat="accessories" data-title="Two Times iPhone Case" data-buy="https://www.redbubble.com/i/iphone-case/Two-Times-by-clawboi/178524644.4UP47"
+      <article class="card" data-cat="accessories" data-title="Two Times iPhone Case"
+        data-buy="https://www.redbubble.com/i/iphone-case/Two-Times-by-clawboi/178524644.4UP47"
         data-img1="images/shop/009-01.jpg"
         data-img2="images/shop/009-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <img class="on" loading="lazy" alt="Two Times Case Preview 1" />
-            <img loading="lazy" alt="Two Times Case Preview 2" />
+            <img class="on" alt="Two Times Case Preview 1" />
+            <img alt="Two Times Case Preview 2" />
           </div>
           <div class="imgNav">
-            <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
-            <button class="arrowBtn next" aria-label="Next image"><span class="arrowIcon">›</span></button>
+            <button class="arrowBtn prev" type="button" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
+            <button class="arrowBtn next" type="button" aria-label="Next image"><span class="arrowIcon">›</span></button>
           </div>
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
@@ -832,17 +845,18 @@
       </article>
 
       <!-- 10 -->
-      <article class="card" data-cat="apparel" data-title="Two Times Dress" data-buy="https://www.redbubble.com/i/dress/Two-Times-by-clawboi/178524644.V4WQ8"
+      <article class="card" data-cat="apparel" data-title="Two Times Dress"
+        data-buy="https://www.redbubble.com/i/dress/Two-Times-by-clawboi/178524644.V4WQ8"
         data-img1="images/shop/010-01.jpg"
         data-img2="images/shop/010-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <img class="on" loading="lazy" alt="Two Times Dress Preview 1" />
-            <img loading="lazy" alt="Two Times Dress Preview 2" />
+            <img class="on" alt="Two Times Dress Preview 1" />
+            <img alt="Two Times Dress Preview 2" />
           </div>
           <div class="imgNav">
-            <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
-            <button class="arrowBtn next" aria-label="Next image"><span class="arrowIcon">›</span></button>
+            <button class="arrowBtn prev" type="button" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
+            <button class="arrowBtn next" type="button" aria-label="Next image"><span class="arrowIcon">›</span></button>
           </div>
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
@@ -870,17 +884,18 @@
       </article>
 
       <!-- 11 -->
-      <article class="card" data-cat="apparel" data-title="BMA Tee (Alt)" data-buy="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.5U9OZ"
+      <article class="card" data-cat="apparel" data-title="BMA Tee (Alt)"
+        data-buy="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.5U9OZ"
         data-img1="images/shop/011-01.jpg"
         data-img2="images/shop/011-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <img class="on" loading="lazy" alt="BMA Tee Alt Preview 1" />
-            <img loading="lazy" alt="BMA Tee Alt Preview 2" />
+            <img class="on" alt="BMA Tee Alt Preview 1" />
+            <img alt="BMA Tee Alt Preview 2" />
           </div>
           <div class="imgNav">
-            <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
-            <button class="arrowBtn next" aria-label="Next image"><span class="arrowIcon">›</span></button>
+            <button class="arrowBtn prev" type="button" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
+            <button class="arrowBtn next" type="button" aria-label="Next image"><span class="arrowIcon">›</span></button>
           </div>
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
@@ -908,17 +923,18 @@
       </article>
 
       <!-- 12 -->
-      <article class="card" data-cat="accessories" data-title="BMA Hat" data-buy="https://www.redbubble.com/i/hat/Broken-Minds-Anonymous-by-clawboi/178525222/fce2"
+      <article class="card" data-cat="accessories" data-title="BMA Hat"
+        data-buy="https://www.redbubble.com/i/hat/Broken-Minds-Anonymous-by-clawboi/178525222/fce2"
         data-img1="images/shop/012-01.jpg"
         data-img2="images/shop/012-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <img class="on" loading="lazy" alt="BMA Hat Preview 1" />
-            <img loading="lazy" alt="BMA Hat Preview 2" />
+            <img class="on" alt="BMA Hat Preview 1" />
+            <img alt="BMA Hat Preview 2" />
           </div>
           <div class="imgNav">
-            <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
-            <button class="arrowBtn next" aria-label="Next image"><span class="arrowIcon">›</span></button>
+            <button class="arrowBtn prev" type="button" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
+            <button class="arrowBtn next" type="button" aria-label="Next image"><span class="arrowIcon">›</span></button>
           </div>
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
@@ -976,7 +992,7 @@
     }
     chips.forEach(c=>c.addEventListener('click', ()=>setFilter(c.dataset.filter)));
 
-    // ===== 2-image swipe/arrow system (local images) =====
+    // ===== Fast image swap system (desktop + mobile smooth) =====
     function initCard(card){
       const stage = card.querySelector('.stage');
       const imgs = Array.from(stage.querySelectorAll('img'));
@@ -989,30 +1005,51 @@
       const u2 = card.getAttribute('data-img2') || "";
       const urls = [u1, u2].filter(Boolean);
 
-      // assign image sources
-      if(imgs[0] && urls[0]) imgs[0].src = urls[0];
-      if(imgs[1] && urls[1]) imgs[1].src = urls[1];
+      // Always decode async when possible (smoother on Safari)
+      imgs.forEach(im=>{
+        im.loading = "lazy";
+        im.decoding = "async";
+        im.fetchPriority = "low";
+      });
 
-      // hide fallback once at least one image loads
-      let loaded = 0;
+      // Load FIRST image immediately (priority)
+      if(imgs[0] && urls[0]){
+        imgs[0].fetchPriority = "high";
+        imgs[0].loading = "eager";
+        imgs[0].src = urls[0];
+      }
+
+      // Do NOT load the second image yet. We'll load it on first "next" click.
+      let secondLoaded = false;
+      function ensureSecond(){
+        if(secondLoaded) return;
+        if(imgs[1] && urls[1]){
+          imgs[1].src = urls[1];
+          secondLoaded = true;
+        }
+      }
+
+      // Make fallback truly disappear (fixes Chrome click issue)
+      let anyLoaded = false;
       imgs.forEach((im)=>{
         im.addEventListener('load', ()=>{
-          loaded++;
-          if(loaded>=1) fallback.style.opacity = "0";
-        });
-        im.addEventListener('error', ()=>{
-          // keep fallback visible if both fail
+          if(anyLoaded) return;
+          anyLoaded = true;
+          // fade then remove from layout for perfect click-through
+          fallback.style.opacity = "0";
+          setTimeout(()=>{ fallback.style.display = "none"; }, 220);
         });
       });
 
       let i = 0;
       function show(n){
         i = (n+2)%2;
+        // if switching to 2, make sure it's requested
+        if(i === 1) ensureSecond();
         imgs.forEach((im, k)=> im.classList.toggle('on', k===i));
         dots.forEach((d, k)=> d.classList.toggle('on', k===i));
       }
 
-      // if only 1 url, hide arrows/dots second
       if(urls.length < 2){
         prevBtn.style.display="none";
         nextBtn.style.display="none";
@@ -1021,9 +1058,10 @@
         prevBtn.addEventListener('click', (e)=>{ e.preventDefault(); show(i-1); });
         nextBtn.addEventListener('click', (e)=>{ e.preventDefault(); show(i+1); });
 
-        // swipe on mobile
+        // swipe
         let sx=0, sy=0, down=false;
         const thumb = card.querySelector('.thumb');
+
         thumb.addEventListener('pointerdown', (e)=>{
           down=true;
           sx=e.clientX; sy=e.clientY;
@@ -1038,19 +1076,15 @@
             if(dx<0) show(i+1);
             else show(i-1);
           }
-        });
+        }, {passive:true});
       }
 
       show(0);
     }
 
-    // init all cards
     cards.forEach(initCard);
-
-    // default filter
     setFilter('all');
 
-    // keyboard convenience: left/right to swap images when focused on page
     document.addEventListener('keydown', (e)=>{
       if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
       const midY = window.scrollY + window.innerHeight*0.35;
