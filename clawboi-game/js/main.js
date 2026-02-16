@@ -98,6 +98,9 @@ function loop() {
     scenes.draw(worldR.ctx);
 
     // simple HUD
+    uiR.ctx.setTransform(1,0,0,1,0,0);
+uiR.ctx.textBaseline = "top";
+uiR.ctx.font = "12px ui-monospace, Menlo, Consolas, monospace";
     const u = uiR.ctx;
     u.save();
     u.fillStyle = "#b388ff";
