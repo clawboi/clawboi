@@ -1,57 +1,103 @@
-html,body{
-margin:0;
-padding:0;
-background:#05050a;
-overflow:hidden;
-font-family:monospace;
+/* style.css — canvas stack + pixel-perfect scaling */
+
+:root{
+  --bg:#05060a;
 }
 
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  height: 100%;
+  overflow: hidden;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* Center the engine and keep it locked */
 #engineRoot{
-position:fixed;
-left:50%;
-top:50%;
-transform:translate(-50%,-50%);
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg);
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+/* ALL canvases: same size, same anchor, stacked */
 canvas{
-position:absolute;
-left:0;
-top:0;
-image-rendering:pixelated;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+
+  /* crisp pixel look */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+
+  /* no selection/scroll weirdness */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
 }
 
-#world{z-index:1;}
-#fx{z-index:2;pointer-events:none;}
-#ui{z-index:3;pointer-events:none;}
+/* Only the UI layer should receive pointer events (optional) */
+#world{ pointer-events: none; }
+#fx   { pointer-events: none; }
+#ui   { pointer-events: auto; }
 
-#debug{
-position:fixed;
-left:10px;
-bottom:10px;
-color:#9d7bff;
-font-size:12px;
-white-space:pre;
-opacity:.85;
-}
-
+/* Mobile buttons pinned to screen */
 #mobile{
-position:fixed;
-right:10px;
-bottom:10px;
-display:flex;
-flex-direction:column;
-gap:12px;
-z-index:999;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* buttons override */
+  z-index: 50;
 }
 
 #mobile button{
-width:70px;
-height:70px;
-border-radius:50%;
-border:none;
-background:#7b2cff;
-color:white;
-font-size:24px;
-box-shadow:0 0 25px #7b2cff;
+  pointer-events: auto;
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  border: 1px solid rgba(179,136,255,0.45);
+  background: rgba(120,40,255,0.35);
+  box-shadow: 0 0 18px rgba(138,46,255,0.35);
+  color: rgba(255,255,255,0.9);
+  font-size: 20px;
 }
 
+/* Example placement: bottom-left stack */
+#atk{
+  position: absolute;
+  left: 18px;
+  bottom: 110px;
+}
+#dash{
+  position: absolute;
+  left: 18px;
+  bottom: 30px;
+}
+
+/* Debug overlay */
+#debug{
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 99;
+  color: rgba(255,255,255,0.7);
+  font-size: 12px;
+  white-space: pre;
+  display: none;
+}
+
+
+
+
+
+<script type="module" src="./js/main.js"></script>
