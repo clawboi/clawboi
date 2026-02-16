@@ -133,8 +133,9 @@ export class EnemyManager {
 
   /* ✅ the method your main.js calls */
   resolvePlayerAttack(player){
-    const hb = player?.getAttackHitbox?.();
-    if(!hb) return { count:0, kills:0 };
+    resolvePlayerAttack(player, hbOverride){
+  const hb = hbOverride || player?.getAttackHitbox?.();
+  if(!hb) return { count:0, kills:0 };
 
     // harden hitbox values so they never create NaN enemies
     const hx = Number.isFinite(hb.x) ? hb.x : player.x;
