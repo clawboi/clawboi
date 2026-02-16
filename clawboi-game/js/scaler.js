@@ -1,38 +1,40 @@
+// scaler.js - reliable canvas sizing for stacked canvases (world/fx/ui)
 import { CONFIG } from "./config.js";
-import { clamp } from "./utils.js";
 
-export function scale(worldCanvas, fxCanvas, uiCanvas){
-  function calcScale(){
-    const vv = window.visualViewport;
-    const ww = vv ? vv.width : window.innerWidth;
-    const wh = vv ? vv.height : window.innerHeight;
+export function scale(worldCanvas, fxCanvas, uiCanvas) {
+  const canvases = [worldCanvas, fxCanvas, uiCanvas].filter(Boolean);
 
-    const sx = Math.floor(ww / CONFIG.WIDTH);
-    const sy = Math.floor((wh - 120) / CONFIG.HEIGHT); // leave space for UI
-    const s = Math.min(sx, sy) || 1;
-    return clamp(s, 1, 6);
-  }
+  function resize() {
+    // Size container (#stack) dictates display size
+    const stack = document.getElementById("stack");
+    const rect = stack ? stack.getBoundingClientRect() : null;
 
-  function apply(){
-    const s = calcScale();
+    // fallback: viewport
+    const cssW = rect ? rect.width : window.innerWidth;
+    const cssH = rect ? rect.height : window.innerHeight;
 
-    // internal size fixed
-    for (const c of [worldCanvas, fxCanvas, uiCanvas]){
-      c.width = CONFIG.WIDTH;
-      c.height = CONFIG.HEIGHT;
-      c.style.width = (CONFIG.WIDTH * s) + "px";
-      c.style.height = (CONFIG.HEIGHT * s) + "px";
-      const ctx = c.getContext("2d");
-      ctx.imageSmoothingEnabled = false;
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+
+    // Internal resolution: either CONFIG base, or match CSS with DPR
+    // If you want pixel-art fixed res, use CONFIG.WIDTH/HEIGHT
+    const internalW = CONFIG.WIDTH;
+    const internalH = CONFIG.HEIGHT;
+
+    // Make canvases draw in fixed internal resolution (pixel art stable),
+    // while CSS scales them to stack size.
+    for (const c of canvases) {
+      c.width = internalW;
+      c.height = internalH;
+      c.style.width = cssW + "px";
+      c.style.height = cssH + "px";
     }
-
-    // update CSS var so the container matches canvas size
-    document.documentElement.style.setProperty("--scale", String(s));
-    document.documentElement.style.setProperty("--baseW", CONFIG.WIDTH + "px");
-    document.documentElement.style.setProperty("--baseH", CONFIG.HEIGHT + "px");
   }
 
-  window.addEventListener("resize", apply, { passive:true });
-  apply();
-}
+  window.addEventListener("resize", resize, { passive: true });
+  // Some mobile browsers change visualViewport while scrolling UI bars
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", resize, { passive: true });
+  }
 
+  resize();
+}
