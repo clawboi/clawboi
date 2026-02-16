@@ -131,7 +131,7 @@
 
   // Scene layout: long run to the right
   const road={x0:10,y0:26,x1:W-10,y1:H-18};
-  const gate={x:W-18, y:H/2-22, w:8, h:44, hp:1, broken:false};
+  const gate={x:W-18, y:H/2-22, w:8, h:44, hp:220, broken:false};
 
   // Car
   const car={
@@ -315,8 +315,9 @@
     }
 
     // driving physics
-    const accel = keys.has("w") ? 80 : 0;
-    const brake = keys.has("s") ? 95 : 0;
+    const accelPower = 80;
+    const brakePower = 140;     // stronger forward braking
+    const reversePower = 70;    // reverse acceleration
 
     // boost
     const boosting = keys.has("shift") && car.hp>5;
@@ -332,9 +333,17 @@
     const steerPower = clamp(Math.abs(car.speed)/70, 0.2, 1.0);
     car.ang += steer * (2.3*dt) * steerPower * (car.speed>=0 ? 1 : -1);
 
-    // speed integrate
-    car.speed += (accel*dt) * boostMul;
-    car.speed -= (brake*dt) * Math.sign(car.speed||1);
+    // speed integrate (fixed brake/reverse)
+    if(keys.has("w")){
+      car.speed += (accelPower*dt) * boostMul;
+    }
+    if(keys.has("s")){
+      if(car.speed > 0){
+        car.speed -= brakePower*dt;      // brake hard while moving forward
+      }else{
+        car.speed -= reversePower*dt;    // accelerate backward from stop / while reversing
+      }
+    }
     car.speed *= (1 - 0.8*dt); // friction
 
     car.speed = clamp(car.speed, -55, 120);
@@ -345,7 +354,7 @@
     car.x += car.vx*dt;
     car.y += car.vy*dt;
 
-    // keep on road
+    // keep on road (same behavior)
     if(car.x<road.x0+10){ car.x=road.x0+10; car.speed*=0.6; }
     if(car.x>road.x1-10){ car.x=road.x1-10; car.speed*=0.6; }
     if(car.y<road.y0+10){ car.y=road.y0+10; car.speed*=0.7; }
@@ -392,44 +401,42 @@
     }
 
     // gate collision
-    // gate collision
-if(!gate.broken){
-  const inGateX = (car.x > gate.x-8 && car.x < gate.x+gate.w+8);
-  const inGateY = (car.y > gate.y-10 && car.y < gate.y+gate.h+10);
-  if(inGateX && inGateY){
-    // ONE-HIT BREAK if you're moving fast enough
-    const SPEED_TO_BREAK = 78; // tweak: 70-90 feels good
-    const sp = Math.abs(car.speed);
+    if(!gate.broken){
+      const inGateX = (car.x > gate.x-8 && car.x < gate.x+gate.w+8);
+      const inGateY = (car.y > gate.y-10 && car.y < gate.y+gate.h+10);
+      if(inGateX && inGateY){
+        // ONE-HIT BREAK if you're moving fast enough
+        const SPEED_TO_BREAK = 78;
+        const sp = Math.abs(car.speed);
 
-    if(sp >= SPEED_TO_BREAK){
-      gate.broken = true;
-      gate.hp = 0;
+        if(sp >= SPEED_TO_BREAK){
+          gate.broken = true;
+          gate.hp = 0;
 
-      // you still take a little damage, but you *burst through* (no bounce-back)
-      car.hp -= 10; 
-      particles(gate.x+4, gate.y+gate.h/2, 140, 3.0, 190, 1.05, "#00ffd5","#ff3b6b");
-      shake = Math.max(shake, 16);
-      hitstop = 0.020;
+          // burst through (no bounce-back)
+          car.hp -= 10;
+          particles(gate.x+4, gate.y+gate.h/2, 140, 3.0, 190, 1.05, "#00ffd5","#ff3b6b");
+          shake = Math.max(shake, 16);
+          hitstop = 0.020;
 
-      // keep momentum forward so it feels like you shattered it
-      car.speed = Math.max(car.speed, SPEED_TO_BREAK * 0.9);
+          // keep momentum forward so it feels like you shattered it
+          car.speed = Math.max(car.speed, SPEED_TO_BREAK * 0.9);
 
-      msgEl.textContent="ONE HIT. GATE SHATTERED. GO.";
+          msgEl.textContent="ONE HIT. GATE SHATTERED. GO.";
+        }else{
+          // too slow: bump
+          car.speed *= 0.35;
+          car.hp -= 2;
+          shake = Math.max(shake, 4);
+          msgEl.textContent="FASTER. FULL SEND INTO THE GATE.";
+        }
+      }else{
+        msgEl.textContent="RUN THEM OVER. BUILD SPEED. BREAK THE GATE.";
+      }
     }else{
-      // too slow: bump, lose speed, small damage
-      car.speed *= 0.35;
-      car.hp -= 2;
-      shake = Math.max(shake, 4);
-      msgEl.textContent="FASTER. FULL SEND INTO THE GATE.";
-    }
-  }else{
-    msgEl.textContent="RUN THEM OVER. BUILD SPEED. BREAK THE GATE.";
-  }
-}else{
-
       msgEl.textContent="ESCAPE LINE OPEN. DRIVE THROUGH.";
-      // escape condition: cross beyond right boundary
-      if(car.x > W-6){
+      // escape condition (fixed: road clamp stops you at road.x1-10)
+      if(car.x >= road.x1-10){
         localStorage.setItem(PROG_KEY,"AOC05_COMPLETE");
         fadeTo("06AOC.html");
       }
@@ -496,4 +503,3 @@ if(!gate.broken){
 </script>
 </body>
 </html>
-
