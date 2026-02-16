@@ -612,6 +612,7 @@ function exitNode() {
 }
 
 function draw(fps) {
+  ctx.setTransform(1,0,0,1,0,0);
   ctx.fillStyle = CONFIG.bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
