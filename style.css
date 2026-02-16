@@ -1,254 +1,733 @@
+/* style.css — THE ADVENTURES OF CLAWBOI (LEGENDARY UI + pixel-perfect scaling)
+   Goals:
+   - Crisp pixel art (no blur)
+   - “Real RPG” vibe: colored, readable, dark fantasy
+   - Huge sharp canvas with safe letterboxing
+   - HUD that feels like a game UI, not a webpage
+   - Mobile friendly + touch controls ready
+*/
+
 :root{
-  --bg:#050507;
-  --fg:#fff;
+  --bg:#06040a;
+  --bg2:#0b0614;
+  --ink:#ffffff;
+  --muted:rgba(255,255,255,.70);
+
   --violet:#8a2eff;
-  --deep:#0b0820;
-  --muted:rgba(255,255,255,.65);
+  --violet2:#b06bff;
+  --neon:#d8b7ff;
+
+  --green:#7dffb1;
+  --red:#ff3b6e;
+  --gold:#ffdb66;
+
+  --panel:rgba(10,6,20,.62);
+  --panel2:rgba(8,4,16,.72);
+  --line:rgba(255,255,255,.10);
+  --line2:rgba(138,46,255,.22);
+
+  --shadow:0 10px 40px rgba(0,0,0,.55);
+  --glow:0 0 22px rgba(138,46,255,.35), 0 0 90px rgba(138,46,255,.14);
+
+  --radius:18px;
+
+  /* Base “game resolution” for canvases (matches HTML width/height attributes) */
+  --baseW:320;
+  --baseH:180;
+
+  /* Pixel scale multiplier (JS can override via inline style later if desired) */
+  --scale:5;
 }
 
-*{box-sizing:border-box}
-html,body{height:100%}
+/* ===== RESET ===== */
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
 body{
   margin:0;
-  background: radial-gradient(circle at 40% 20%, rgba(138,46,255,.10), transparent 55%),
-              radial-gradient(circle at 70% 70%, rgba(40,30,120,.10), transparent 55%),
-              var(--bg);
-  color:var(--fg);
+  background:
+    radial-gradient(1200px 700px at 50% 30%, rgba(138,46,255,.14), transparent 62%),
+    radial-gradient(900px 600px at 70% 70%, rgba(255,255,255,.06), transparent 62%),
+    linear-gradient(180deg, var(--bg), var(--bg2));
+  color:var(--ink);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   overflow:hidden;
 }
 
-#gameWrap{
-  position:relative;
-  width:100vw;
-  height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+/* Subtle “violet fog” that reads like RPG atmosphere */
+body::before{
+  content:"";
+  position:fixed;
+  inset:-20%;
+  pointer-events:none;
+  z-index:0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(138,46,255,.18), transparent 60%),
+    radial-gradient(circle at 80% 30%, rgba(138,46,255,.11), transparent 70%),
+    radial-gradient(circle at 45% 88%, rgba(138,46,255,.08), transparent 72%),
+    radial-gradient(circle at 60% 60%, rgba(255,255,255,.04), transparent 72%);
+  mix-blend-mode:screen;
+  filter:blur(44px) saturate(1.12);
+  animation:fog 18s ease-in-out infinite;
+}
+@keyframes fog{
+  0%,100%{ transform:translate(0,0) scale(1); opacity:.9; }
+  50%{ transform:translate(-2.3%,3.2%) scale(1.02); opacity:1; }
 }
 
-canvas#game{
-  width:min(1100px, 96vw);
-  height:auto;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  border-radius:16px;
-  border:1px solid rgba(255,255,255,.08);
-  background: #000;
-  box-shadow: 0 0 120px rgba(138,46,255,.12);
-}
-
-#hud{
-  position:absolute;
+/* Optional scanline whisper (kept light, not “terminal-y”) */
+body::after{
+  content:"";
+  position:fixed;
   inset:0;
   pointer-events:none;
-  width:min(1100px, 96vw);
-  height:auto;
-  aspect-ratio: 16/9;
+  z-index:1;
+  opacity:.06;
+  mix-blend-mode:overlay;
+  background:repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,.08) 0px,
+    rgba(255,255,255,.08) 1px,
+    transparent 3px,
+    transparent 7px
+  );
 }
 
-#hud .row{
+/* ===== TOP BAR ===== */
+.topbar{
+  position:fixed;
+  top:10px;
+  left:10px;
+  right:10px;
+  z-index:20;
   display:flex;
+  align-items:center;
   justify-content:space-between;
-  align-items:center;
-  padding:12px 14px;
-  gap:10px;
-}
-.brand{
-  letter-spacing:.42em;
-  text-transform:uppercase;
-  font-size:11px;
-  opacity:.85;
-  text-shadow:0 0 18px rgba(138,46,255,.35);
-}
-.tiny{
-  font-size:10px;
-  letter-spacing:.26em;
-  opacity:.7;
-  text-transform:uppercase;
-}
+  gap:14px;
 
-.bars{
-  padding:0 14px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.bar{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-.label{
-  font-size:10px;
-  letter-spacing:.22em;
-  opacity:.75;
-  width:34px;
-}
-.track{
-  flex:1;
-  height:10px;
+  padding:10px 12px;
   border-radius:999px;
-  background:rgba(255,255,255,.08);
-  overflow:hidden;
+  background:rgba(0,0,0,.26);
   border:1px solid rgba(255,255,255,.06);
-}
-.fill{
-  height:100%;
-  width:0%;
-  border-radius:999px;
-  background: linear-gradient(90deg, rgba(138,46,255,.95), rgba(255,255,255,.22));
-  box-shadow: 0 0 18px rgba(138,46,255,.25);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
 }
 
-.row.bottom{
-  position:absolute;
-  left:0; right:0;
-  bottom:10px;
-  padding:10px 14px;
-  justify-content:flex-start;
-}
-.chip{
-  font-size:10px;
-  letter-spacing:.20em;
+.brand{
+  color:#fff;
+  text-decoration:none;
+  font-size:11px;
+  letter-spacing:.38em;
   text-transform:uppercase;
-  padding:8px 10px;
-  border-radius:999px;
-  background:rgba(0,0,0,.40);
-  border:1px solid rgba(255,255,255,.08);
-  opacity:.85;
+  opacity:.90;
+  text-shadow: 0 0 18px rgba(138,46,255,.32);
 }
-
-.inv{
-  position:absolute;
-  right:14px;
-  bottom:56px;
-  width:220px;
-  padding:10px;
-  border-radius:14px;
-  background:rgba(0,0,0,.35);
-  border:1px solid rgba(255,255,255,.08);
+.topnav{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
 }
-.invTitle{
+.topnav a{
+  color:#fff;
+  text-decoration:none;
   font-size:10px;
   letter-spacing:.30em;
   text-transform:uppercase;
-  opacity:.75;
-  margin-bottom:8px;
-}
-.slots{
-  display:grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap:6px;
-}
-.slot{
-  height:28px;
-  border-radius:8px;
-  background:rgba(255,255,255,.06);
+  opacity:.72;
+  padding:8px 10px;
+  border-radius:999px;
   border:1px solid rgba(255,255,255,.06);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:10px;
-  opacity:.85;
+  background:rgba(0,0,0,.18);
 }
-.slot.on{
-  border-color: rgba(138,46,255,.45);
-  box-shadow: 0 0 18px rgba(138,46,255,.18);
-}
-.slot span{opacity:.9}
+.topnav a:hover{ opacity:1; border-color:rgba(138,46,255,.26); box-shadow:0 0 22px rgba(138,46,255,.10); }
+.topnav a.ghost{ opacity:.55; }
 
-.centerMsg{
-  position:absolute;
-  left:50%;
-  top:46%;
-  transform:translate(-50%,-50%);
-  font-size:14px;
-  letter-spacing:.38em;
-  text-transform:uppercase;
-  text-align:center;
-  opacity:0;
-  transition:opacity .18s;
-  text-shadow:0 0 26px rgba(138,46,255,.30);
-  max-width: 80%;
+/* ===== GAME SHELL ===== */
+.gameShell{
+  position:relative;
+  z-index:2;
+  height:100%;
+  display:grid;
+  grid-template-rows: 1fr auto;
+  padding:64px 12px 18px;
 }
-.subMsg{
-  position:absolute;
-  left:50%;
-  top:54%;
-  transform:translate(-50%,-50%);
-  font-size:10px;
-  letter-spacing:.28em;
-  text-transform:uppercase;
-  text-align:center;
-  opacity:0;
-  transition:opacity .18s;
-  color:var(--muted);
-  max-width: 80%;
-}
-.centerMsg.on, .subMsg.on{opacity:1}
 
-/* Mobile controls */
-.touch{
+.backdrop{
   position:absolute;
   inset:0;
-  width:min(1100px, 96vw);
-  aspect-ratio:16/9;
+  z-index:0;
   pointer-events:none;
-}
-.joy{
-  position:absolute;
-  left:14px;
-  bottom:14px;
-  width:120px;
-  height:120px;
-  pointer-events:auto;
-  touch-action:none;
-  opacity:.88;
-}
-.joyBase{
-  position:absolute; inset:0;
-  border-radius:50%;
-  background:rgba(0,0,0,.35);
-  border:1px solid rgba(255,255,255,.10);
-}
-.joyKnob{
-  position:absolute;
-  left:50%; top:50%;
-  width:48px; height:48px;
-  transform:translate(-50%,-50%);
-  border-radius:50%;
-  background:rgba(138,46,255,.26);
-  border:1px solid rgba(138,46,255,.35);
-  box-shadow:0 0 24px rgba(138,46,255,.18);
+  background:
+    radial-gradient(900px 420px at 50% 55%, rgba(138,46,255,.14), transparent 68%),
+    radial-gradient(700px 500px at 40% 70%, rgba(20,160,255,.06), transparent 65%),
+    radial-gradient(520px 520px at 60% 78%, rgba(125,255,177,.05), transparent 62%);
+  filter:saturate(1.08);
 }
 
-.btns{
-  position:absolute;
-  right:14px;
-  bottom:14px;
-  display:flex;
-  gap:10px;
-  pointer-events:auto;
+/* ===== STAGE (LETTERBOX + CRISP PIXELS) ===== */
+.stage{
+  position:relative;
+  z-index:2;
+  width:min(1180px, 100%);
+  margin:0 auto;
+
+  /* keep a “game screen” vibe */
+  border-radius: var(--radius);
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg, rgba(0,0,0,.40), rgba(0,0,0,.62));
+  box-shadow: var(--shadow), var(--glow);
+  overflow:hidden;
+
+  /* Center the scaled canvases */
+  display:grid;
+  place-items:center;
+
+  /* Strong “RPG frame” */
+  outline:1px solid rgba(138,46,255,.18);
+  outline-offset:-8px;
 }
-.tbtn{
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(0,0,0,.35);
-  color:#fff;
-  padding:12px 14px;
+
+/* Make canvases absolutely stacked and scaled crisply */
+.stage canvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+
+  /* Crisp pixel art */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+
+  /* Prevent iOS smoothing when scaled */
+  -ms-interpolation-mode: nearest-neighbor;
+
+  /* Let DOM HUD sit above */
+  z-index:2;
+}
+
+/* We’ll letterbox the “base resolution” into the stage via a wrapper pseudo */
+.stage::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:
+    radial-gradient(600px 280px at 50% 40%, rgba(138,46,255,.10), transparent 65%),
+    linear-gradient(180deg, rgba(255,255,255,.03), transparent 40%);
+}
+
+/* ===== HUD ===== */
+.hud{
+  position:absolute;
+  inset:0;
+  z-index:5;
+  pointer-events:none;
+
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+
+  padding:12px;
+  gap:12px;
+}
+
+.hudLeft, .hudRight{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  min-width: 260px;
+}
+
+.bar{
+  position:relative;
+  height:22px;
   border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.40);
+  overflow:hidden;
+  box-shadow: 0 0 24px rgba(0,0,0,.35);
+}
+.bar .label{
+  position:absolute;
+  left:10px;
+  top:50%;
+  transform:translateY(-50%);
   font-size:10px;
   letter-spacing:.26em;
   text-transform:uppercase;
+  opacity:.78;
+  z-index:3;
+}
+.bar .fill{
+  position:absolute;
+  inset:0;
+  width:55%;
+  background:linear-gradient(90deg, rgba(138,46,255,.9), rgba(255,255,255,.18));
+  filter:saturate(1.15);
+  box-shadow:0 0 18px rgba(138,46,255,.22);
+}
+.bar.health .fill{
+  background:linear-gradient(90deg, rgba(255,59,110,.95), rgba(138,46,255,.22));
+  box-shadow:0 0 18px rgba(255,59,110,.18);
+}
+.bar.xp .fill{
+  background:linear-gradient(90deg, rgba(125,255,177,.90), rgba(138,46,255,.22));
+  box-shadow:0 0 18px rgba(125,255,177,.18);
+}
+.bar.hall{
+  height:16px;
+  border-radius:999px;
+  border-color:rgba(138,46,255,.24);
+  background:rgba(0,0,0,.46);
+}
+.bar.hall .fill{
+  width:0%;
+  background:linear-gradient(90deg, rgba(138,46,255,.95), rgba(176,107,255,.35));
+  box-shadow:0 0 22px rgba(138,46,255,.24);
+}
+
+.bar .num{
+  position:absolute;
+  right:10px;
+  top:50%;
+  transform:translateY(-50%);
+  font-size:10px;
+  letter-spacing:.18em;
+  opacity:.78;
+  z-index:3;
+}
+
+.meta{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.pill{
+  pointer-events:none;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:7px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.28);
+  font-size:10px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  opacity:.86;
+}
+.pill.violet{
+  border-color:rgba(138,46,255,.22);
+  box-shadow:0 0 22px rgba(138,46,255,.10);
+}
+.pill b{
+  letter-spacing:.08em;
+  opacity:1;
+}
+
+.hallucination{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:10px 10px 12px;
+  border-radius:14px;
+  border:1px solid rgba(138,46,255,.18);
+  background:rgba(0,0,0,.28);
+  box-shadow:0 0 34px rgba(138,46,255,.10);
+}
+.hallTop{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center;
+}
+
+/* Inventory slots */
+.inventory{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+}
+.slot{
+  width:46px;
+  height:46px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.10);
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,.08), transparent 55%),
+    rgba(0,0,0,.35);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.50), 0 0 18px rgba(0,0,0,.25);
+  position:relative;
+}
+.slot::after{
+  content:"";
+  position:absolute;
+  inset:8px;
+  border-radius:8px;
+  border:1px dashed rgba(138,46,255,.18);
+  opacity:.45;
+}
+
+/* ===== Center text (boss intro etc.) ===== */
+.centerText{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  z-index:10;
+  pointer-events:none;
+  opacity:0;
+
+  text-align:center;
+  font-size: clamp(14px, 2.4vw, 28px);
+  letter-spacing:.42em;
+  text-transform:uppercase;
+  text-shadow: 0 0 18px rgba(138,46,255,.45), 0 0 80px rgba(138,46,255,.18);
+  padding:18px 16px;
+  border-radius:18px;
+  background:rgba(0,0,0,.26);
+  border:1px solid rgba(255,255,255,.06);
+  backdrop-filter: blur(10px);
+  transition: opacity .18s ease;
+}
+
+/* ===== Overlays (Start / How / Pause / Death) ===== */
+.overlay{
+  position:absolute;
+  inset:0;
+  z-index:30;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(0,0,0,.62);
+  backdrop-filter: blur(12px);
+}
+.overlay.on{ display:flex; }
+
+.card{
+  width:min(760px, 100%);
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,.10);
+  background:
+    radial-gradient(800px 420px at 50% 30%, rgba(138,46,255,.14), transparent 60%),
+    rgba(0,0,0,.55);
+  box-shadow: var(--shadow), 0 0 120px rgba(138,46,255,.16);
+  padding:18px 16px 16px;
+}
+
+.card.wide{ width:min(900px, 100%); }
+
+.logo{
+  text-align:center;
+  padding:10px 8px 4px;
+}
+.logoTop{
+  font-size:10px;
+  letter-spacing:.46em;
+  text-transform:uppercase;
+  opacity:.72;
+}
+.logoMain{
+  margin-top:8px;
+  font-size: clamp(28px, 5vw, 58px);
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  text-shadow: 0 0 20px rgba(138,46,255,.50), 0 0 90px rgba(138,46,255,.20);
+}
+.logoSub{
+  margin-top:8px;
+  font-size:11px;
+  letter-spacing:.44em;
+  text-transform:uppercase;
+  opacity:.72;
+}
+
+.tagline{
+  margin:12px auto 0;
+  text-align:center;
+  font-size:12px;
+  letter-spacing:.12em;
+  line-height:1.6;
+  opacity:.86;
+  max-width:58ch;
+}
+
+.buttons{
+  margin-top:16px;
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+.big{
+  pointer-events:auto;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.06);
+  color:#fff;
+  padding:12px 14px;
+  border-radius:999px;
+  font-size:11px;
+  letter-spacing:.32em;
+  text-transform:uppercase;
+  cursor:pointer;
+  box-shadow:0 0 20px rgba(0,0,0,.20);
+}
+.big:hover{
+  border-color:rgba(138,46,255,.28);
+  background:rgba(138,46,255,.14);
+  box-shadow:0 0 40px rgba(138,46,255,.14);
+}
+.big.ghost{
+  opacity:.78;
+  background:rgba(0,0,0,.18);
+}
+.big.link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+}
+
+.hint{
+  margin-top:14px;
+  text-align:center;
+  font-size:10px;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  opacity:.70;
+  line-height:1.8;
+}
+.key{
+  display:inline-block;
+  padding:4px 7px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.30);
+  box-shadow: 0 0 18px rgba(138,46,255,.10);
+  margin:0 6px;
+}
+.dot{ opacity:.45; margin:0 6px; }
+
+.smallprint{
+  margin-top:10px;
+  text-align:center;
+  font-size:10px;
+  letter-spacing:.10em;
+  opacity:.62;
+}
+
+/* How screen */
+.card h2{
+  margin:4px 0 10px;
+  text-align:center;
+  font-size:12px;
+  letter-spacing:.44em;
+  text-transform:uppercase;
+  opacity:.92;
+}
+.card ul{
+  margin:10px auto 0;
+  padding:0 0 0 18px;
+  max-width:70ch;
+  line-height:1.75;
+  font-size:12px;
+  letter-spacing:.06em;
+  opacity:.86;
+}
+.card li{ margin:8px 0; }
+.card b{ color:var(--neon); }
+
+/* ===== Loader ===== */
+.loader{
+  position:absolute;
+  left:50%;
+  bottom:12px;
+  transform:translateX(-50%);
+  z-index:25;
+  display:none;
+  align-items:center;
+  gap:12px;
+  padding:10px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.40);
+  box-shadow: var(--shadow);
+}
+.loader.on{ display:flex; }
+.loaderBar{
+  width:min(280px, 48vw);
+  height:10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(138,46,255,.18);
+  overflow:hidden;
+}
+.loaderFill{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg, rgba(138,46,255,.95), rgba(255,255,255,.18));
+  box-shadow:0 0 22px rgba(138,46,255,.18);
+}
+.loaderText{
+  font-size:10px;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  opacity:.78;
+}
+
+/* ===== Touch Controls ===== */
+.touch{
+  position:absolute;
+  inset:auto 0 0 0;
+  z-index:12;
+  pointer-events:none;
+  display:none;
+  padding:14px 12px 12px;
+  gap:12px;
+  align-items:flex-end;
+  justify-content:space-between;
+}
+.touch.on{ display:flex; }
+
+.stick{
+  pointer-events:auto;
+  width:150px;
+  height:150px;
+  position:relative;
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.28);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow);
+}
+.pad{
+  position:absolute;
+  width:52px;
+  height:52px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.06);
   cursor:pointer;
 }
-.tbtn:active{
-  transform:translateY(1px);
-  border-color: rgba(138,46,255,.35);
+.pad:hover{ background:rgba(138,46,255,.14); border-color:rgba(138,46,255,.28); }
+.pad.up{ left:50%; top:10px; transform:translateX(-50%); }
+.pad.down{ left:50%; bottom:10px; transform:translateX(-50%); }
+.pad.left{ top:50%; left:10px; transform:translateY(-50%); }
+.pad.right{ top:50%; right:10px; transform:translateY(-50%); }
+
+.actions{
+  pointer-events:auto;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.act{
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.06);
+  color:#fff;
+  padding:14px 14px;
+  border-radius:16px;
+  font-size:10px;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+  cursor:pointer;
+  min-width:96px;
+  box-shadow: var(--shadow);
+}
+.act:hover{ background:rgba(255,255,255,.10); }
+.act.violet{
+  border-color:rgba(138,46,255,.28);
+  background:rgba(138,46,255,.14);
+  box-shadow: 0 0 30px rgba(138,46,255,.14), var(--shadow);
 }
 
-/* Hide touch controls on large pointer devices */
-@media (hover:hover) and (pointer:fine){
-  .touch{display:none}
+/* ===== Footer ===== */
+.foot{
+  position:fixed;
+  left:50%;
+  bottom:10px;
+  transform:translateX(-50%);
+  z-index:19;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:center;
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.06);
+  background:rgba(0,0,0,.22);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+}
+.tiny{
+  color:#fff;
+  text-decoration:none;
+  font-size:10px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  opacity:.62;
+}
+.tiny:hover{ opacity:1; }
+
+/* ===== Debug (optional) ===== */
+.debug{
+  position:absolute;
+  left:12px;
+  bottom:12px;
+  z-index:18;
+  pointer-events:none;
+  font-size:10px;
+  letter-spacing:.14em;
+  opacity:.66;
+  padding:8px 10px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.26);
 }
 
+/* ===== Responsive sizing / “big & sharp” stage =====
+   The stage uses aspect-ratio: baseW/baseH to maintain correct scaling.
+   Canvas is stretched to fill; pixelation is enforced.
+*/
+.stage{
+  aspect-ratio: calc(var(--baseW) / var(--baseH));
+  /* Make it as big as possible without blowing out mobile */
+  height: min(78vh, 720px);
+}
+@media (max-width: 860px){
+  .stage{ height:min(74vh, 560px); }
+  .hudLeft, .hudRight{ min-width: 220px; }
+  .slot{ width:42px; height:42px; }
+}
+@media (max-width: 560px){
+  .topbar{ padding:9px 10px; }
+  .topnav a{ padding:7px 9px; }
+  .stage{ height:min(70vh, 480px); }
+  .hudLeft, .hudRight{ min-width: 170px; }
+  .bar{ height:20px; }
+  .bar .label, .bar .num{ font-size:9px; }
+  .slot{ width:40px; height:40px; }
+}
+@media (max-width: 420px){
+  .stage{ height:min(66vh, 420px); }
+  .hud{ padding:10px; }
+}
+
+/* ===== Motion preferences ===== */
+@media (prefers-reduced-motion: reduce){
+  body::before{ animation:none !important; }
+}
+
+/* ===== Utility: hide touch UI until main.js enables it ===== */
+#touch[aria-hidden="true"]{ display:none; }
+#touch.on{ display:flex; }
+
+/* ===== Small quality: make text crisp ===== */
+h1,h2,h3, .logoMain{
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
