@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia's Audition — Title</title>
+<style>
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%; display:grid; place-items:center; padding:18px;}
+  .card{
+    width:min(920px, 100%);
+    border:1px solid var(--ui2);
+    background:rgba(255,255,255,.03);
+    border-radius:22px;
+    padding:18px;
+    position:relative;
+    overflow:hidden;
+  }
+  .card:before{
+    content:"";
+    position:absolute; inset:-40%;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(138,46,255,.26), transparent 60%),
+      radial-gradient(circle at 80% 30%, rgba(0,255,213,.14), transparent 65%),
+      radial-gradient(circle at 52% 90%, rgba(255,255,255,.08), transparent 70%);
+    filter: blur(34px) saturate(1.2);
+    pointer-events:none;
+  }
+  .inner{position:relative; z-index:2;}
+  .h1{
+    font-size:clamp(22px,5vw,44px);
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    text-shadow:0 0 18px rgba(138,46,255,.35);
+  }
+  .sub{
+    margin-top:10px;
+    font-size:12px;
+    letter-spacing:.14em;
+    opacity:.75;
+    line-height:1.6;
+    max-width:70ch;
+  }
+  .row{display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;}
+  .btn{
+    appearance:none;
+    border:1px solid var(--ui2);
+    background:rgba(0,0,0,.35);
+    backdrop-filter: blur(8px);
+    color:#fff;
+    border-radius:999px;
+    padding:12px 14px;
+    font-size:11px;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .btn.primary{ border-color: rgba(138,46,255,.55); background:rgba(138,46,255,.16); }
+  .btn:hover{filter:brightness(1.06)}
+  .mono{
+    margin-top:14px;
+    border:1px solid var(--ui2);
+    background:rgba(0,0,0,.28);
+    border-radius:16px;
+    padding:12px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size:12px;
+    letter-spacing:.08em;
+    line-height:1.6;
+    opacity:.85;
+    white-space:pre-wrap;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="inner">
+      <div class="h1">SOPHIA’S AUDITION</div>
+      <div class="sub">
+        10 minutes. Find your keys. Don’t fall asleep.
+        Milo follows. The house remembers.
+      </div>
+
+      <div class="row">
+        <button class="btn primary" id="start">START (10:00)</button>
+        <button class="btn" id="continue">CONTINUE</button>
+        <button class="btn" id="reset">RESET SAVE</button>
+      </div>
+
+      <div class="mono" id="status"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+const RUN_KEY="SOPHIA_AUDITION_RUN_V1";
+const DURATION_MS = 10*60*1000;
+
+function loadState(){
+  const r=localStorage.getItem(STORE_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return {hasKeys:false, slept:false, trip:false, puke:false, poemLines:0, guitarPlayed:0, lastRoom:"BEDROOM", sophia:{x:160,y:120}, milo:{x:148,y:132}};
+}
+function saveState(s){ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+
+function loadRun(){
+  const r=localStorage.getItem(RUN_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return { startTime:0, durationMs:DURATION_MS, active:false, ended:false };
+}
+function saveRun(run){ localStorage.setItem(RUN_KEY, JSON.stringify(run)); }
+
+function fmt(ms){
+  ms=Math.max(0, ms|0);
+  const s=Math.ceil(ms/1000);
+  const m=(s/60)|0;
+  const ss=String(s%60).padStart(2,"0");
+  return `${m}:${ss}`;
+}
+
+const statusEl=document.getElementById("status");
+function renderStatus(){
+  const s=loadState();
+  const run=loadRun();
+  const now=Date.now();
+  const left = run.active ? (run.startTime + run.durationMs - now) : run.durationMs;
+  statusEl.textContent =
+`SAVE:
+  KEYS: ${s.hasKeys ? "YES" : "NO"}
+  POEM: ${s.poemLines}
+  TRIP: ${s.trip ? "ON" : "OFF"}
+  PUKE: ${s.puke ? "YES" : "NO"}
+  LAST ROOM: ${s.lastRoom}
+
+RUN:
+  ACTIVE: ${run.active ? "YES" : "NO"}
+  TIME LEFT: ${fmt(left)}
+`;
+}
+renderStatus();
+setInterval(renderStatus, 400);
+
+document.getElementById("start").onclick=()=>{
+  const s=loadState();
+  s.slept=false;
+  saveState(s);
+
+  const run={ startTime:Date.now(), durationMs:DURATION_MS, active:true, ended:false };
+  saveRun(run);
+  location.href="Sophie01.html";
+};
+
+document.getElementById("continue").onclick=()=>{
+  const run=loadRun();
+  if(!run.active || run.ended){
+    // if no active run, just start fresh timer but keep save
+    const newRun={ startTime:Date.now(), durationMs:DURATION_MS, active:true, ended:false };
+    saveRun(newRun);
+  }
+  const s=loadState();
+  // Continue from lastRoom if present
+  const map={
+    "BEDROOM":"Sophie01.html",
+    "BACKYARD":"Sophie02.html",
+    "LIVING":"Sophie03.html",
+    "KITCHEN":"Sophie04.html"
+  };
+  location.href = map[s.lastRoom] || "Sophie01.html";
+};
+
+document.getElementById("reset").onclick=()=>{
+  localStorage.removeItem(STORE_KEY);
+  localStorage.removeItem(RUN_KEY);
+  renderStatus();
+};
+</script>
+</body>
+</html>
