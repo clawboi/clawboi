@@ -9,7 +9,7 @@ import { EnemyManager } from "./enemies.js";
 import { DropManager } from "./drops.js";
 import { FX } from "./fx.js";
 
-const canvas = document.getElementById("game");
+ canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d", { alpha:false });
 
 const debugEl = document.getElementById("debug");
@@ -92,6 +92,11 @@ let drops = null;
 let fx = null;
 
 let tWorld = 0;
+
+let hitStop = 0;
+function doHitStop(t=0.05){
+  hitStop = Math.max(hitStop, t);
+}
 
 // objective
 const objective = {
@@ -269,6 +274,13 @@ let waveTimer = 0;
 function update(dt){
   if(state === STATE.START || state === STATE.WIN || state === STATE.DEAD) return;
 
+  if(hitStop > 0){
+  hitStop = Math.max(0, hitStop - dt);
+  ui.update(dt);
+  effects.update(dt * 0.35);
+  return;
+}
+
   tWorld += dt;
   fx.update(dt);
 
@@ -283,7 +295,7 @@ function update(dt){
   }
 
   if(input.attack()){
-    const ok = player.tryAttack();
+     ok = player.tryAttack();
     if(ok){
       cam.kick(1.8, 0.06);
       fx.sparksHit(player.x + player.face.x*10, player.y + player.face.y*10, 10, "violet");
@@ -297,17 +309,21 @@ function update(dt){
   enemies.update(dt, player, world);
 
   // --- enemy hits player (Part 7) ---
-const hurt = enemies.resolveEnemyHits(player);
-if(hurt.took){
-  cam.kick(8, 0.12);
-  fx.pulseDamage(0.22);
-  fx.hitFlash(0.10);
-  fx.text(player.x, player.y-18, `-${hurt.dmg} HP`, "danger");
+const hit = enemies.resolvePlayerAttack(player);
+if(hit.count){
+  camShake(3 + hit.count*1.2, 0.10);
+  effects.hitFlash(0.10);
+  doHitStop(0.035 + Math.min(0.03, hit.count*0.01));
+
+  if(hit.kills){
+    player.addXP(hit.kills * 6);
+    ui.floatText(player.x, player.y - 10, `+${hit.kills*6} XP`, "good");
+  }
 }
 
   // resolve player attack
-  const hb = player.getHitbox();
-  const res = enemies.resolvePlayerHit(hb);
+   hb = player.getHitbox();
+   res = enemies.resolvePlayerHit(hb);
   if(res.hits){
     cam.kick(2.2 + res.hits*0.4, 0.08);
     fx.hitFlash(0.12);
@@ -318,7 +334,7 @@ if(hurt.took){
   if(res.kills){
     // drop essence + XP
     drops.spawnEssence(hb.x, hb.y, 8 + res.kills*4);
-    const xpGain = res.kills * 10;
+     xpGain = res.kills * 10;
     player.addXP(xpGain);
     fx.text(player.x, player.y-16, `+${xpGain} XP`, "good");
     fx.pulseGood(0.18);
@@ -326,7 +342,7 @@ if(hurt.took){
 
   // drops
   drops.update(dt, world);
-  const got = drops.tryCollect(player);
+   got = drops.tryCollect(player);
   if(got){
     player.heal(got * 2);
     player.addXP(got * 1);
@@ -336,7 +352,7 @@ if(hurt.took){
 
   // shards
   pickups.update(dt);
-  const gotShard = pickups.tryCollect(player);
+   gotShard = pickups.tryCollect(player);
   if(gotShard){
     cam.kick(6.0, 0.14);
     fx.hitFlash(0.14);
@@ -353,8 +369,8 @@ if(hurt.took){
   }
 
   // portal open condition
-  const bossAlive = enemies.list.some(e=>e.boss && e.hp>0);
-  const canOpen = pickups.done() && !bossAlive;
+   bossAlive = enemies.list.some(e=>e.boss && e.hp>0);
+   canOpen = pickups.done() && !bossAlive;
 
   if(!objective.portalOpen && canOpen){
     objective.portalOpen = true;
@@ -418,9 +434,9 @@ function draw(fps){
   ctx.save();
   ctx.scale(view.scale, view.scale);
 
-  const { sx, sy } = cam.getShakeOffset();
-  const camX = (cam.x + sx) | 0;
-  const camY = (cam.y + sy) | 0;
+   { sx, sy } = cam.getShakeOffset();
+   camX = (cam.x + sx) | 0;
+   camY = (cam.y + sy) | 0;
 
   // world
   world.draw(ctx, camX, camY, tWorld);
@@ -448,7 +464,7 @@ function draw(fps){
   ctx.restore();
 
   if(debugOn){
-    const bossAlive = enemies?.list?.some(e=>e.boss && e.hp>0);
+     bossAlive = enemies?.list?.some(e=>e.boss && e.hp>0);
     debugEl.textContent =
       `STATE ${state}\n`+
       `SCALE ${view.scale}x\n`+
@@ -464,22 +480,22 @@ function draw(fps){
 }
 
 function drawHUD(ctx){
-  const pad = 10;
+   pad = 10;
 
   // Left panel
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(pad-2, pad-2, 176, 58);
 
   // HP
-  const barW = 156;
-  const hp = player.hp / player.hpMax;
+   barW = 156;
+   hp = player.hp / player.hpMax;
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(pad+6, pad+6, barW, 10);
   ctx.fillStyle = "rgba(255,74,122,0.95)";
   ctx.fillRect(pad+6, pad+6, (barW*hp)|0, 10);
 
   // XP
-  const xp = player.xp / player.xpNext;
+   xp = player.xp / player.xpNext;
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(pad+6, pad+20, barW, 6);
   ctx.fillStyle = "rgba(138,46,255,0.95)";
@@ -496,14 +512,14 @@ function drawHUD(ctx){
   ctx.fillText(`SHARDS ${pickups.collected}/${pickups.target}`, pad+60, pad+40);
 
   // Right panel (status + minimap)
-  const rightW = 112;
-  const rightX = CONFIG.baseW - rightW - pad;
+   rightW = 112;
+   rightX = CONFIG.baseW - rightW - pad;
 
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(rightX, pad-2, rightW, 90);
 
-  const bossAlive = enemies.list.some(e=>e.boss && e.hp>0);
-  const status = objective.portalOpen ? "PORTAL OPEN"
+   bossAlive = enemies.list.some(e=>e.boss && e.hp>0);
+   status = objective.portalOpen ? "PORTAL OPEN"
               : bossAlive ? "KILL BOSS"
               : pickups.done() ? "UNLOCKING"
               : "FIND SHARDS";
@@ -516,20 +532,20 @@ function drawHUD(ctx){
   if(mapDirty) rebuildMinimap();
 
   // map frame area
-  const mx = rightX + 8;
-  const my = pad + 18;
-  const MW = 96, MH = 72;
+   mx = rightX + 8;
+   my = pad + 18;
+   MW = 96, MH = 72;
 
   // map image
   ctx.drawImage(mapCanvas, mx, my);
 
   // markers (convert world coords -> map coords)
-  const tilesW = world.tilesW ?? world.w ?? 1;
-  const tilesH = world.tilesH ?? world.h ?? 1;
-  const tileSize = world.tileSize ?? 8;
+   tilesW = world.tilesW ?? world.w ?? 1;
+   tilesH = world.tilesH ?? world.h ?? 1;
+   tileSize = world.tileSize ?? 8;
 
-  const wx = player.x / (tilesW*tileSize);
-  const wy = player.y / (tilesH*tileSize);
+   wx = player.x / (tilesW*tileSize);
+   wy = player.y / (tilesH*tileSize);
 
   // player
   ctx.fillStyle = "rgba(255,255,255,0.95)";
@@ -537,8 +553,8 @@ function drawHUD(ctx){
 
   // portal
   if(world.portal){
-    const px = world.portal.x / (tilesW*tileSize);
-    const py = world.portal.y / (tilesH*tileSize);
+     px = world.portal.x / (tilesW*tileSize);
+     py = world.portal.y / (tilesH*tileSize);
     ctx.fillStyle = objective.portalOpen ? "rgba(138,46,255,0.95)" : "rgba(255,255,255,0.45)";
     ctx.fillRect(mx + (px*MW)|0, my + (py*MH)|0, 2, 2);
   }
@@ -546,11 +562,11 @@ function drawHUD(ctx){
   // enemies (tiny dots)
   let shown = 0;
   ctx.fillStyle = "rgba(255,74,122,0.55)";
-  for(const e of enemies.list){
+  for( e of enemies.list){
     if(e.hp<=0) continue;
     if(shown++ > 18) break;
-    const ex = e.x / (tilesW*tileSize);
-    const ey = e.y / (tilesH*tileSize);
+     ex = e.x / (tilesW*tileSize);
+     ey = e.y / (tilesH*tileSize);
     ctx.fillRect(mx + (ex*MW)|0, my + (ey*MH)|0, 1, 1);
   }
 }
