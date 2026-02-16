@@ -59,9 +59,9 @@
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d', { alpha: false });
 
-  // Internal "pixel world" resolution (scaled up to look chunky)
-  const W = 320, H = 180;          // logical resolution
-  const SCALE = 3;                // canvas is 960x540 => 320x180 * 3
+  // Viewport resolution (kept chunky), now with a much larger MAP rendered via camera.
+  const W = 320, H = 180;          // viewport logical resolution
+  const SCALE = 3;                 // canvas is 960x540 => 320x180 * 3
   const world = document.createElement('canvas');
   world.width = W; world.height = H;
   const g = world.getContext('2d', { alpha: false });
@@ -82,7 +82,6 @@
   const keys = new Set();
   const pressed = new Set();
   let mouse = { x: W/2, y: H/2, down:false };
-  let pointerLocked = false;
 
   window.addEventListener('keydown', (e)=>{
     const k = e.key.toLowerCase();
@@ -134,59 +133,63 @@
     }
   };
 
+  // ======== Big Map + Camera ========
+  const MAP_W = 960;     // HUGE map (world units in viewport-pixels)
+  const MAP_H = 540;
+  const camera = { x: 0, y: 0 };
+  function updateCamera(){
+    // follow player, keep inside map bounds
+    camera.x = clamp(player.x - W/2, 0, MAP_W - W);
+    camera.y = clamp(player.y - H/2, 0, MAP_H - H);
+  }
+
   // ======== Pixel "Sprites" (procedural drawing) ========
   function drawChimp(px,py,dir,frame,aimAng){
-    // px/py are center-ish
     const x = Math.floor(px), y = Math.floor(py);
-    // Body colors
     const fur = "#6b4a2f";
     const dark = "#3b2416";
     const face = "#b88960";
     const eye = "#f4f4ff";
     const pupil = "#151018";
     const violet = "#b300ff";
+    const teal = "#00ffd5";
 
-    // bob for movement
     const bob = Math.floor(Math.sin(frame*0.3)*1);
 
-    // Feet shadow
     g.fillStyle = "rgba(0,0,0,0.35)";
     g.fillRect(x-6, y+8, 12, 3);
 
-    // Torso
     g.fillStyle = fur;
     g.fillRect(x-5, y-6+bob, 10, 10);
-    // Chest patch
     g.fillStyle = dark;
     g.fillRect(x-3, y-4+bob, 6, 6);
 
-    // Head
     g.fillStyle = fur;
     g.fillRect(x-6, y-14+bob, 12, 10);
-    // Face
     g.fillStyle = face;
     g.fillRect(x-4, y-12+bob, 8, 6);
 
-    // Eyes
     const ex = dir>0 ? 2 : -4;
     g.fillStyle = eye;
     g.fillRect(x+ex, y-12+bob, 3, 2);
     g.fillStyle = pupil;
     g.fillRect(x+ex+1, y-12+bob, 1, 1);
 
-    // Violet accent (belt-ish)
+    // Violet accent
     g.fillStyle = violet;
     g.fillRect(x-5, y+1+bob, 10, 2);
 
-    // Arms (simple)
+    // little teal pin
+    g.fillStyle = teal;
+    g.fillRect(x-1, y-2+bob, 2, 2);
+
     g.fillStyle = fur;
     g.fillRect(x-7, y-5+bob, 2, 8);
     g.fillRect(x+5, y-5+bob, 2, 8);
 
-    // Aim line hint (tiny)
     const ax = x + Math.cos(aimAng)*10;
     const ay = y + Math.sin(aimAng)*10;
-    g.strokeStyle = "rgba(0,255,213,0.35)";
+    g.strokeStyle = "rgba(0,255,213,0.38)";
     g.beginPath();
     g.moveTo(x, y-2+bob);
     g.lineTo(ax, ay);
@@ -196,26 +199,22 @@
   function drawZombie(z){
     const x = Math.floor(z.x), y = Math.floor(z.y);
     const bob = Math.floor(Math.sin(z.t*0.2)*1);
-    // Shadow
+
     g.fillStyle = "rgba(0,0,0,0.35)";
     g.fillRect(x-5, y+7, 10, 3);
 
-    // body
-    g.fillStyle = z.elite ? "#21ff7a" : "#58b0ff";
+    g.fillStyle = z.elite ? "#23ff86" : "#5aa7ff";
     g.fillRect(x-4, y-6+bob, 8, 10);
-    // head
-    g.fillStyle = z.elite ? "#00c05a" : "#2b6bd6";
+    g.fillStyle = z.elite ? "#00c866" : "#2d6fe0";
     g.fillRect(x-5, y-14+bob, 10, 9);
 
-    // face bits
     g.fillStyle = "#0a0a12";
     g.fillRect(x-3, y-12+bob, 2, 2);
     g.fillRect(x+1, y-12+bob, 2, 2);
     g.fillStyle = "#ff3b6b";
     g.fillRect(x-1, y-9+bob, 2, 1);
 
-    // arms
-    g.fillStyle = z.elite ? "#00c05a" : "#2b6bd6";
+    g.fillStyle = z.elite ? "#00c866" : "#2d6fe0";
     g.fillRect(x-7, y-4+bob, 2, 7);
     g.fillRect(x+5, y-4+bob, 2, 7);
   }
@@ -223,18 +222,15 @@
   function drawBoss(b){
     const x = Math.floor(b.x), y = Math.floor(b.y);
     const wob = Math.floor(Math.sin(b.t*0.12)*2);
-    // Shadow
+
     g.fillStyle = "rgba(0,0,0,0.45)";
     g.fillRect(x-16, y+18, 32, 6);
 
-    // body
     g.fillStyle = "#ff3b6b";
     g.fillRect(x-14, y-8+wob, 28, 28);
-    // head
     g.fillStyle = "#ff7aa0";
     g.fillRect(x-16, y-26+wob, 32, 20);
 
-    // eyes
     g.fillStyle = "#0a0a12";
     g.fillRect(x-9, y-18+wob, 6, 4);
     g.fillRect(x+3, y-18+wob, 6, 4);
@@ -242,73 +238,116 @@
     g.fillRect(x-7, y-17+wob, 2, 2);
     g.fillRect(x+5, y-17+wob, 2, 2);
 
-    // teeth
     g.fillStyle = "#e8e8ff";
     g.fillRect(x-6, y-10+wob, 12, 3);
 
-    // cracks
     g.fillStyle = "rgba(0,0,0,0.25)";
     g.fillRect(x-2, y-2+wob, 4, 6);
 
-    // little horns
     g.fillStyle = "#00ffd5";
     g.fillRect(x-13, y-28+wob, 4, 4);
     g.fillRect(x+9, y-28+wob, 4, 4);
   }
 
-  // ======== World / Arena ========
+  // ======== World / Arena (NOW BIG MAP) ========
   const arena = {
-    x0: 20, y0: 18, x1: W-20, y1: H-20
+    x0: 28, y0: 26, x1: MAP_W-28, y1: MAP_H-28
   };
 
-  function drawArenaBackdrop(t){
-    // floor gradient
-    g.fillStyle = "#070517";
-    g.fillRect(0,0,W,H);
-
-    // subtle neon fog
-    for(let i=0;i<5;i++){
-      const fx = Math.floor((Math.sin(t*0.2+i)*0.5+0.5)*W);
-      const fy = Math.floor((Math.cos(t*0.17+i)*0.5+0.5)*H);
-      g.fillStyle = `rgba(${randi(90,120)},0,${randi(120,200)},0.05)`;
-      g.fillRect(fx-40, fy-25, 80, 50);
-    }
-
-    // grid
-    g.strokeStyle = "rgba(0,255,213,0.10)";
-    g.lineWidth = 1;
-    for(let x=arena.x0; x<arena.x1; x+=10){
-      g.beginPath(); g.moveTo(x,arena.y0); g.lineTo(x,arena.y1); g.stroke();
-    }
-    for(let y=arena.y0; y<arena.y1; y+=10){
-      g.beginPath(); g.moveTo(arena.x0,y); g.lineTo(arena.x1,y); g.stroke();
-    }
-
-    // walls
-    g.strokeStyle = "rgba(179,0,255,0.55)";
-    g.strokeRect(arena.x0, arena.y0, arena.x1-arena.x0, arena.y1-arena.y0);
-
-    // corners
-    g.fillStyle = "rgba(179,0,255,0.22)";
-    g.fillRect(arena.x0-2, arena.y0-2, 6, 6);
-    g.fillRect(arena.x1-4, arena.y0-2, 6, 6);
-    g.fillRect(arena.x0-2, arena.y1-4, 6, 6);
-    g.fillRect(arena.x1-4, arena.y1-4, 6, 6);
+  // Disco floor tile palette (still pixel, now legendary)
+  const disco = [
+    "#0b0720","#120a2a","#1a0c35",
+    "#00ffd5","#b300ff","#ff3b6b",
+    "#7CFF6B","#ffd24a","#5aa7ff"
+  ];
+  function discoCol(ix,iy,t){
+    // deterministic-ish cycling
+    const k = (ix*17 + iy*23 + Math.floor(t*8)) % disco.length;
+    return disco[k];
   }
 
-  // ======== Weapons ========
+  function drawArenaBackdrop(t){
+    // deep base
+    g.fillStyle = "#050214";
+    g.fillRect(0,0,W,H);
+
+    // disco floor tiles (world-based), rendered through camera
+    const tile = 8;
+    const wx0 = Math.floor(camera.x / tile) * tile;
+    const wy0 = Math.floor(camera.y / tile) * tile;
+    const wx1 = camera.x + W + tile;
+    const wy1 = camera.y + H + tile;
+
+    for(let wy = wy0; wy < wy1; wy += tile){
+      for(let wx = wx0; wx < wx1; wx += tile){
+        const ix = Math.floor(wx/tile);
+        const iy = Math.floor(wy/tile);
+
+        // only within arena floor (outside = void fog)
+        const inArena = (wx+tile > arena.x0 && wx < arena.x1 && wy+tile > arena.y0 && wy < arena.y1);
+        if(inArena){
+          const c = discoCol(ix,iy,t);
+          g.fillStyle = c;
+          const sx = Math.floor(wx - camera.x);
+          const sy = Math.floor(wy - camera.y);
+          g.fillRect(sx, sy, tile, tile);
+
+          // glossy highlight
+          g.fillStyle = "rgba(255,255,255,0.06)";
+          g.fillRect(sx+1, sy+1, tile-2, 1);
+        } else {
+          // void haze
+          const sx = Math.floor(wx - camera.x);
+          const sy = Math.floor(wy - camera.y);
+          g.fillStyle = "rgba(10,6,22,0.85)";
+          g.fillRect(sx, sy, tile, tile);
+        }
+      }
+    }
+
+    // neon fog pulses (viewport)
+    for(let i=0;i<7;i++){
+      const fx = Math.floor((Math.sin(t*0.35+i*1.7)*0.5+0.5)*W);
+      const fy = Math.floor((Math.cos(t*0.29+i*1.3)*0.5+0.5)*H);
+      g.fillStyle = `rgba(${randi(90,150)},0,${randi(140,240)},0.06)`;
+      g.fillRect(fx-44, fy-28, 88, 56);
+    }
+
+    // arena walls (viewport)
+    const ax0 = arena.x0 - camera.x;
+    const ay0 = arena.y0 - camera.y;
+    const aw = (arena.x1 - arena.x0);
+    const ah = (arena.y1 - arena.y0);
+
+    // inner glow
+    g.strokeStyle = "rgba(0,255,213,0.20)";
+    g.strokeRect(Math.floor(ax0)+1, Math.floor(ay0)+1, Math.floor(aw)-2, Math.floor(ah)-2);
+
+    // main wall
+    g.strokeStyle = "rgba(179,0,255,0.60)";
+    g.strokeRect(Math.floor(ax0), Math.floor(ay0), Math.floor(aw), Math.floor(ah));
+
+    // corner caps
+    g.fillStyle = "rgba(179,0,255,0.22)";
+    g.fillRect(Math.floor(ax0)-1, Math.floor(ay0)-1, 6, 6);
+    g.fillRect(Math.floor(ax0+aw)-4, Math.floor(ay0)-1, 6, 6);
+    g.fillRect(Math.floor(ax0)-1, Math.floor(ay0+ah)-4, 6, 6);
+    g.fillRect(Math.floor(ax0+aw)-4, Math.floor(ay0+ah)-4, 6, 6);
+  }
+
+  // ======== Weapons (WAY MORE DAMAGE) ========
   const WEAPONS = [
-    { id:"pistol", name:"Pistol", color:"#00ffd5",  fireRate: 7.5, spread: 0.03, speed: 220, dmg: 20, pellets:1, recoil:0.6 },
-    { id:"shotgun",name:"Shotgun",color:"#ff3b6b",  fireRate: 1.6, spread: 0.22, speed: 210, dmg: 12, pellets:6, recoil:2.0 },
-    { id:"laser",  name:"Laser", color:"#b300ff",  fireRate: 10.5, spread: 0.01, speed: 320, dmg: 14, pellets:1, recoil:0.3, pierce:true },
-    { id:"smg",    name:"SMG",   color:"#7CFF6B",  fireRate: 14.0, spread: 0.08, speed: 240, dmg: 10, pellets:1, recoil:0.35 },
-    { id:"hammer", name:"Hammer",color:"#ffd24a",  melee:true, dmg: 45, cooldown: 0.55, reach: 14 }
+    { id:"pistol", name:"Pistol", color:"#00ffd5",  fireRate: 7.5, spread: 0.03, speed: 240, dmg: 44, pellets:1, recoil:0.75 },
+    { id:"shotgun",name:"Shotgun",color:"#ff3b6b",  fireRate: 1.7, spread: 0.22, speed: 220, dmg: 26, pellets:7, recoil:2.4 },
+    { id:"laser",  name:"Laser", color:"#b300ff",  fireRate: 11.0, spread: 0.01, speed: 360, dmg: 30, pellets:1, recoil:0.35, pierce:true },
+    { id:"smg",    name:"SMG",   color:"#7CFF6B",  fireRate: 15.0, spread: 0.07, speed: 260, dmg: 18, pellets:1, recoil:0.40 },
+    { id:"hammer", name:"Hammer",color:"#ffd24a",  melee:true, dmg: 80, cooldown: 0.52, reach: 15 }
   ];
   const byId = Object.fromEntries(WEAPONS.map(w=>[w.id,w]));
 
   // ======== Game Objects ========
   const player = {
-    x: W/2, y: H/2,
+    x: MAP_W/2, y: MAP_H/2,
     vx: 0, vy: 0,
     hp: 100,
     dir: 1,
@@ -325,7 +364,6 @@
   const bullets = []; // {x,y,vx,vy,dmg,life,col,pierce}
   const zombies = []; // {x,y,vx,vy,hp,spd,t,elite}
   let boss = null;    // {x,y,hp,maxHp,spd,t,phase,atkCD}
-  let spawnT = 0;
   let bossTriggered = false;
 
   function resetRun(){
@@ -335,10 +373,9 @@
     floats.length = 0;
     boss = null;
     bossTriggered = false;
-    spawnT = 0;
     shake = 0;
 
-    player.x = W/2; player.y = H/2;
+    player.x = MAP_W/2; player.y = MAP_H/2;
     player.vx = 0; player.vy = 0;
     player.hp = 100;
     player.invuln = 0;
@@ -348,9 +385,12 @@
     player.slot = 0;
     player.shootCD = 0;
     player.meleeCD = 0;
+
+    waveInit();
+    updateCamera();
   }
 
-  // ======== Bunker Select Screen ========
+  // ======== Bunker Select Screen (higher-quality look) ========
   let bunkerCursor = 0;
   let bunkerPicked = []; // weapon ids (max 3)
 
@@ -360,18 +400,58 @@
   }
   bunkerInit();
 
+  // ======== Waves (less zombies, they come in waves) ========
+  const wave = {
+    n: 1,
+    state: "REST",         // REST | SPAWN | CLEAR
+    timer: 2.0,
+    toSpawn: 0,
+    spawnCD: 0,
+    spawned: 0
+  };
+
+  function waveInit(){
+    wave.n = 1;
+    wave.state = "REST";
+    wave.timer = 2.0;
+    wave.toSpawn = 0;
+    wave.spawnCD = 0;
+    wave.spawned = 0;
+  }
+
+  function startWave(){
+    wave.state = "SPAWN";
+    wave.spawned = 0;
+
+    // fewer enemies overall, but punchier wave identity
+    // base count scales slowly; elites appear later
+    const base = 6 + Math.floor(wave.n * 1.8);
+    wave.toSpawn = clamp(base, 6, 28);
+    wave.spawnCD = 0.18; // controlled trickle inside a wave
+
+    // tiny entry boom
+    particles(player.x, player.y, 28, 1.8, 85, 0.35, "#00ffd5", "#b300ff");
+    shake = Math.max(shake, 2);
+  }
+
+  function nextWave(){
+    wave.n++;
+    wave.state = "REST";
+    wave.timer = 2.2;
+  }
+
   // ======== Spawning ========
   function spawnZombie(elite=false){
-    // spawn on edges outside arena
     const side = randi(0,3);
     let x,y;
-    if(side===0){ x = arena.x0-6; y = rand(arena.y0, arena.y1); }
-    if(side===1){ x = arena.x1+6; y = rand(arena.y0, arena.y1); }
-    if(side===2){ x = rand(arena.x0, arena.x1); y = arena.y0-6; }
-    if(side===3){ x = rand(arena.x0, arena.x1); y = arena.y1+6; }
+    if(side===0){ x = arena.x0-10; y = rand(arena.y0, arena.y1); }
+    if(side===1){ x = arena.x1+10; y = rand(arena.y0, arena.y1); }
+    if(side===2){ x = rand(arena.x0, arena.x1); y = arena.y0-10; }
+    if(side===3){ x = rand(arena.x0, arena.x1); y = arena.y1+10; }
 
-    const hp = elite ? 70 : 40;
-    const spd = elite ? rand(18,28) : rand(14,22);
+    // beefier zombies but fewer of them (guns are much stronger)
+    const hp = elite ? (90 + wave.n*6) : (55 + wave.n*4);
+    const spd = elite ? rand(20,30) : rand(15,24);
 
     zombies.push({ x,y,vx:0,vy:0,hp,spd,t:rand(0,999), elite });
   }
@@ -380,71 +460,66 @@
     bossTriggered = true;
     const side = randi(0,3);
     let x,y;
-    if(side===0){ x = arena.x0-18; y = rand(arena.y0, arena.y1); }
-    if(side===1){ x = arena.x1+18; y = rand(arena.y0, arena.y1); }
-    if(side===2){ x = rand(arena.x0, arena.x1); y = arena.y0-18; }
-    if(side===3){ x = rand(arena.x0, arena.x1); y = arena.y1+18; }
+    if(side===0){ x = arena.x0-26; y = rand(arena.y0, arena.y1); }
+    if(side===1){ x = arena.x1+26; y = rand(arena.y0, arena.y1); }
+    if(side===2){ x = rand(arena.x0, arena.x1); y = arena.y0-26; }
+    if(side===3){ x = rand(arena.x0, arena.x1); y = arena.y1+26; }
 
-    const maxHp = 900;
-    boss = { x,y, hp:maxHp, maxHp, spd: 16, t:0, phase:0, atkCD: 1.2 };
-    particles(x,y,70,1.5,60,0.8,"#ff3b6b","#b300ff");
-    shake = 6;
+    const maxHp = 1300 + wave.n*120;
+    boss = { x,y, hp:maxHp, maxHp, spd: 18, t:0, phase:0, atkCD: 1.15 };
+    particles(x,y,90,1.8,80,0.9,"#ff3b6b","#b300ff");
+    shake = 7;
   }
 
   // ======== Combat ========
   function shootWeapon(w, ang){
-    const base = w;
     const ox = player.x;
     const oy = player.y-2;
 
-    for(let p=0;p<(base.pellets||1);p++){
-      const a = ang + rand(-base.spread, base.spread);
-      const sp = base.speed;
+    for(let p=0;p<(w.pellets||1);p++){
+      const a = ang + rand(-w.spread, w.spread);
+      const sp = w.speed;
       bullets.push({
         x: ox + Math.cos(a)*6,
         y: oy + Math.sin(a)*6,
         vx: Math.cos(a)*sp,
         vy: Math.sin(a)*sp,
-        dmg: base.dmg,
+        dmg: w.dmg,
         life: 1.0,
-        col: base.color,
-        pierce: !!base.pierce
+        col: w.color,
+        pierce: !!w.pierce
       });
     }
 
-    // Muzzle flash
-    particles(ox+Math.cos(ang)*7, oy+Math.sin(ang)*7, 6, 0.6, 40, 0.25, base.color, "#e8e8ff");
-    shake = Math.max(shake, base.recoil || 0.5);
+    particles(ox+Math.cos(ang)*7, oy+Math.sin(ang)*7, 7, 0.7, 55, 0.28, w.color, "#e8e8ff");
+    shake = Math.max(shake, w.recoil || 0.6);
   }
 
   function meleeHit(w, ang){
-    // arc hit: damage anything within reach
     const reach = w.reach || 14;
     const hx = player.x + Math.cos(ang)*reach;
     const hy = player.y + Math.sin(ang)*reach;
     let hitAny = false;
 
-    // Zombies
     for(const z of zombies){
-      if(dist2(hx,hy,z.x,z.y) < (10*10)){
+      if(dist2(hx,hy,z.x,z.y) < (11*11)){
         z.hp -= w.dmg;
         hitAny = true;
-        particles(z.x,z.y,18,1.2,55,0.35,"#ffd24a","#ff3b6b");
+        particles(z.x,z.y,20,1.3,65,0.38,"#ffd24a","#ff3b6b");
         floats.push({x:z.x,y:z.y-6,vx:rand(-8,8),vy:rand(-18,-10),t:0,life:0.7,text:`-${w.dmg}`,col:"#ffd24a"});
-        shake = Math.max(shake, 3);
+        shake = Math.max(shake, 3.5);
       }
     }
-    // Boss
-    if(boss && dist2(hx,hy,boss.x,boss.y) < (22*22)){
+
+    if(boss && dist2(hx,hy,boss.x,boss.y) < (24*24)){
       boss.hp -= w.dmg;
       hitAny = true;
-      particles(boss.x,boss.y,22,1.6,65,0.45,"#ffd24a","#b300ff");
+      particles(boss.x,boss.y,26,1.7,75,0.48,"#ffd24a","#b300ff");
       floats.push({x:boss.x,y:boss.y-18,vx:rand(-10,10),vy:rand(-20,-12),t:0,life:0.8,text:`-${w.dmg}`,col:"#ffd24a"});
-      shake = Math.max(shake, 5);
+      shake = Math.max(shake, 5.5);
     }
 
-    // Swing whoosh
-    particles(player.x+Math.cos(ang)*10, player.y+Math.sin(ang)*10, hitAny?10:6, 1.0, 35, 0.22, "#ffd24a", "rgba(255,255,255,0.7)");
+    particles(player.x+Math.cos(ang)*10, player.y+Math.sin(ang)*10, hitAny?12:7, 1.1, 45, 0.24, "#ffd24a", "rgba(255,255,255,0.75)");
   }
 
   // ======== Damage ========
@@ -453,7 +528,7 @@
     player.hp -= amount;
     player.invuln = 0.55;
     shake = Math.max(shake, 6);
-    particles(player.x, player.y, 40, 1.8, 70, 0.6, "#ff3b6b", "#b300ff");
+    particles(player.x, player.y, 42, 1.9, 80, 0.65, "#ff3b6b", "#b300ff");
   }
 
   // ======== UI Helpers ========
@@ -461,12 +536,6 @@
     g.fillStyle = color;
     g.font = `${8*scale}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace`;
     g.fillText(txt, x, y);
-  }
-  function bar(x,y,w,h,fill,back){
-    g.fillStyle = back;
-    g.fillRect(x,y,w,h);
-    g.fillStyle = fill;
-    g.fillRect(x,y,w*h? (w*fill.p): (w*fill), h);
   }
 
   function niceTime(s){
@@ -479,7 +548,7 @@
   function update(dt){
     if(paused) return;
 
-    // global fx update
+    // fx update
     for(let i=sparks.length-1;i>=0;i--){
       const p = sparks[i];
       p.t += dt;
@@ -502,11 +571,9 @@
     }
 
     if(state === STATE.BUNKER){
-      // navigate list
       if(pressed.has("arrowdown") || pressed.has("s")) bunkerCursor = (bunkerCursor+1) % WEAPONS.length;
       if(pressed.has("arrowup") || pressed.has("w")) bunkerCursor = (bunkerCursor-1+WEAPONS.length) % WEAPONS.length;
 
-      // toggle pick
       if(pressed.has("enter") || pressed.has("e")){
         const id = WEAPONS[bunkerCursor].id;
         const idx = bunkerPicked.indexOf(id);
@@ -514,14 +581,10 @@
           bunkerPicked.splice(idx,1);
         }else{
           if(bunkerPicked.length < 3) bunkerPicked.push(id);
-          else {
-            // replace last if full
-            bunkerPicked[bunkerPicked.length-1] = id;
-          }
+          else bunkerPicked[bunkerPicked.length-1] = id;
         }
       }
 
-      // start
       if(pressed.has(" ")){
         if(bunkerPicked.length === 0) bunkerPicked = ["pistol"];
         player.selected = bunkerPicked.slice(0,3);
@@ -536,10 +599,8 @@
       player.timeAlive += dt;
       player.frame += 1;
 
-      // pause
       if(pressed.has("p")) paused = !paused;
 
-      // swap weapons
       if(pressed.has("1")) player.slot = 0;
       if(pressed.has("2")) player.slot = 1;
       if(pressed.has("3")) player.slot = 2;
@@ -554,7 +615,7 @@
       if(keys.has("w")) my -= 1;
       if(keys.has("s")) my += 1;
 
-      const spd = 55;
+      const spd = 62; // slightly snappier
       const len = Math.hypot(mx,my) || 1;
       mx /= len; my /= len;
 
@@ -564,17 +625,21 @@
       player.x += player.vx*dt;
       player.y += player.vy*dt;
 
+      // big map bounds
       player.x = clamp(player.x, arena.x0+6, arena.x1-6);
       player.y = clamp(player.y, arena.y0+8, arena.y1-8);
 
-      // aim
-      const ang = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+      // camera follow
+      updateCamera();
+
+      // aim (convert mouse in viewport to world point)
+      const aimWorldX = camera.x + mouse.x;
+      const aimWorldY = camera.y + mouse.y;
+      const ang = Math.atan2(aimWorldY - player.y, aimWorldX - player.x);
       player.dir = Math.cos(ang) >= 0 ? 1 : -1;
 
-      // invuln timer
       player.invuln = Math.max(0, player.invuln - dt);
 
-      // shooting / melee
       player.shootCD = Math.max(0, player.shootCD - dt);
       player.meleeCD = Math.max(0, player.meleeCD - dt);
 
@@ -589,10 +654,9 @@
           player.shootCD = 1 / rate;
           shootWeapon(weapon, ang);
         }
-        // Punch always available on Space (small damage)
         if(pressed.has(" ") && player.meleeCD <= 0){
-          player.meleeCD = 0.45;
-          meleeHit({dmg:22, reach:12}, ang);
+          player.meleeCD = 0.42;
+          meleeHit({dmg:30, reach:12}, ang); // punch buff (legendary chimp)
         }
       }
 
@@ -602,54 +666,63 @@
         b.life -= dt;
         b.x += b.vx*dt;
         b.y += b.vy*dt;
-        if(b.life<=0 || b.x<0 || b.x>W || b.y<0 || b.y>H){
+
+        if(b.life<=0 || b.x<0 || b.x>MAP_W || b.y<0 || b.y>MAP_H){
           bullets.splice(i,1);
           continue;
         }
 
-        // collide zombies
-        let hit = false;
         for(let j=zombies.length-1;j>=0;j--){
           const z = zombies[j];
           if(dist2(b.x,b.y,z.x,z.y) < (7*7)){
             z.hp -= b.dmg;
-            hit = true;
-            particles(b.x,b.y,10,0.9,55,0.28,b.col,"#e8e8ff");
+            particles(b.x,b.y,12,1.0,60,0.30,b.col,"#e8e8ff");
             if(!b.pierce){ bullets.splice(i,1); }
             if(z.hp<=0){
               zombies.splice(j,1);
-              player.score += z.elite ? 35 : 20;
-              particles(z.x,z.y,18,1.2,65,0.45,"#00ffd5","#b300ff");
+              player.score += z.elite ? 55 : 32;
+              particles(z.x,z.y,22,1.3,75,0.50,"#00ffd5","#b300ff");
             }
             break;
           }
         }
 
-        // collide boss
-        if(boss && dist2(b.x,b.y,boss.x,boss.y) < (20*20)){
+        if(boss && dist2(b.x,b.y,boss.x,boss.y) < (22*22)){
           boss.hp -= b.dmg;
-          particles(b.x,b.y,14,1.2,70,0.35,b.col,"#ff3b6b");
-          if(!b.pierce){
-            bullets.splice(i,1);
-          }
-          player.score += 2;
+          particles(b.x,b.y,16,1.3,80,0.38,b.col,"#ff3b6b");
+          if(!b.pierce) bullets.splice(i,1);
+          player.score += 3;
         }
       }
 
-      // spawning logic: ramp difficulty over time
-      spawnT -= dt;
-      const difficulty = 1 + player.timeAlive / 35; // ramps slowly
-      const baseDelay = clamp(0.65 / difficulty, 0.12, 0.65);
+      // WAVES controller
+      if(wave.state === "REST"){
+        wave.timer -= dt;
+        if(wave.timer <= 0) startWave();
+      } else if(wave.state === "SPAWN"){
+        // spawn enemies slowly so it's readable (and fewer overall)
+        wave.spawnCD -= dt;
+        if(wave.spawnCD <= 0 && wave.spawned < wave.toSpawn){
+          wave.spawnCD = 0.20;
 
-      if(spawnT <= 0){
-        spawnT = baseDelay;
-        const eliteChance = clamp((player.timeAlive - 25) / 120, 0, 0.35);
-        spawnZombie(Math.random() < eliteChance);
-        if(Math.random()<0.12) spawnZombie(false);
+          const eliteChance = clamp((wave.n - 3) / 12, 0, 0.35);
+          spawnZombie(Math.random() < eliteChance);
+
+          wave.spawned++;
+        }
+        // done spawning -> wait for clear
+        if(wave.spawned >= wave.toSpawn){
+          wave.state = "CLEAR";
+        }
+      } else if(wave.state === "CLEAR"){
+        // when all zombies gone (and boss not active), next wave
+        if(zombies.length === 0 && !boss){
+          nextWave();
+        }
       }
 
-      // trigger boss around ~75 seconds (and if not already)
-      if(!bossTriggered && player.timeAlive > 75){
+      // Boss appears on big milestone wave (and not constant time-based)
+      if(!bossTriggered && wave.n >= 8){
         spawnBoss();
       }
 
@@ -664,11 +737,9 @@
         z.x += z.vx*dt;
         z.y += z.vy*dt;
 
-        // keep near arena
-        z.x = clamp(z.x, arena.x0-8, arena.x1+8);
-        z.y = clamp(z.y, arena.y0-8, arena.y1+8);
+        z.x = clamp(z.x, arena.x0-12, arena.x1+12);
+        z.y = clamp(z.y, arena.y0-12, arena.y1+12);
 
-        // bite
         if(dist2(z.x,z.y,player.x,player.y) < (10*10)){
           hurtPlayer(z.elite ? 12 : 8);
         }
@@ -679,10 +750,9 @@
         boss.t += 1;
         const a = Math.atan2(player.y - boss.y, player.x - boss.x);
 
-        // phases as hp drops
         const hpP = boss.hp / boss.maxHp;
         const spdBoost = hpP < 0.6 ? 1.25 : 1.0;
-        const drift = (Math.sin(boss.t*0.04) * 7);
+        const drift = (Math.sin(boss.t*0.04) * 9);
 
         boss.x += (Math.cos(a)*boss.spd*spdBoost + drift)*dt;
         boss.y += (Math.sin(a)*boss.spd*spdBoost - drift)*dt;
@@ -692,44 +762,42 @@
 
         boss.atkCD -= dt;
         if(boss.atkCD <= 0){
-          boss.atkCD = hpP < 0.5 ? 0.85 : 1.15;
+          boss.atkCD = hpP < 0.5 ? 0.85 : 1.10;
 
-          // slam pulse: spawns extra zombies + shock particles
-          particles(boss.x,boss.y,60,2.0,85,0.6,"#ff3b6b","#00ffd5");
-          shake = Math.max(shake, 8);
+          particles(boss.x,boss.y,70,2.2,95,0.65,"#ff3b6b","#00ffd5");
+          shake = Math.max(shake, 9);
 
-          // shock damage if close
           const d = Math.sqrt(dist2(boss.x,boss.y,player.x,player.y));
-          if(d < 34){
+          if(d < 36){
             hurtPlayer(hpP < 0.5 ? 18 : 14);
           }
 
-          // summon
-          for(let k=0;k<(hpP<0.5?4:2);k++){
-            spawnZombie(Math.random()<0.25);
+          // summon fewer than before (keeps it readable)
+          for(let k=0;k<(hpP<0.5?3:2);k++){
+            spawnZombie(Math.random()<0.30);
           }
         }
 
-        // boss contact
         if(dist2(boss.x,boss.y,player.x,player.y) < (22*22)){
           hurtPlayer(16);
         }
 
-        // boss dead
         if(boss.hp <= 0){
-          player.score += 500;
-          particles(boss.x,boss.y,140,2.5,120,1.2,"#b300ff","#00ffd5");
+          player.score += 700;
+          particles(boss.x,boss.y,170,2.8,140,1.25,"#b300ff","#00ffd5");
           shake = 10;
           boss = null;
-          // After boss, it just keeps going forever (extra spicy spawns)
-          spawnT = 0.05;
+
+          // after boss: continue waves, but give a victory rest
+          wave.state = "REST";
+          wave.timer = 3.0;
+          wave.n = Math.max(wave.n, 9);
         }
       }
 
-      // score also increases by survival
-      player.score += dt * 4;
+      // score from survival + wave pressure bonus
+      player.score += dt * (4 + wave.n*0.18);
 
-      // dead
       if(player.hp <= 0){
         state = STATE.DEAD;
         if(player.score > highScore){
@@ -744,7 +812,6 @@
 
     if(state === STATE.DEAD){
       if(pressed.has("enter")){
-        // quick restart with same loadout
         resetRun();
         state = STATE.PLAY;
       }
@@ -759,35 +826,42 @@
 
   // ======== Render ========
   function render(){
-    // screen shake
     const sx = shake>0 ? randi(-shake, shake) : 0;
     const sy = shake>0 ? randi(-shake, shake) : 0;
     shake = Math.max(0, shake - 0.35);
 
-    // backdrop
     const t = performance.now()/1000;
+
+    if(state !== STATE.BUNKER){
+      updateCamera();
+    }
+
     drawArenaBackdrop(t);
 
     g.save();
     g.translate(sx, sy);
 
     if(state === STATE.BUNKER){
-      // Bunker scene
+      // higher-quality bunker presentation (still pixel)
       g.fillStyle = "#050214";
       g.fillRect(0,0,W,H);
 
-      // bunker neon stripe
-      g.fillStyle = "rgba(179,0,255,0.25)";
-      g.fillRect(0, 0, W, 18);
-      g.fillStyle = "rgba(0,255,213,0.12)";
-      g.fillRect(0, 18, W, 6);
+      // neon header with extra crispness
+      g.fillStyle = "rgba(179,0,255,0.28)";
+      g.fillRect(0, 0, W, 20);
+      g.fillStyle = "rgba(0,255,213,0.14)";
+      g.fillRect(0, 20, W, 6);
 
-      // title
-      drawText("CLUB DECAY: BUNKER LOADOUT", 16, 16, 1.4, "#e8e8ff");
-      drawText("Pick up to 3 weapons. ENTER/E to toggle. SPACE to deploy.", 16, 34, 1.0, "rgba(232,232,255,0.75)");
+      // soft scanline shimmer
+      for(let y=0; y<H; y+=3){
+        g.fillStyle = (y%6===0) ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0)";
+        g.fillRect(0,y,W,1);
+      }
 
-      // list
-      const startY = 56;
+      drawText("CLUB DECAY: BUNKER LOADOUT", 14, 17, 1.6, "#e8e8ff");
+      drawText("Pick up to 3 weapons. ENTER/E to toggle. SPACE to deploy.", 14, 38, 1.0, "rgba(232,232,255,0.80)");
+
+      const startY = 58;
       for(let i=0;i<WEAPONS.length;i++){
         const w = WEAPONS[i];
         const y = startY + i*16;
@@ -795,13 +869,14 @@
         const cur = (i===bunkerCursor);
 
         if(cur){
-          g.fillStyle = "rgba(179,0,255,0.25)";
-          g.fillRect(12, y-10, W-24, 14);
+          g.fillStyle = "rgba(0,255,213,0.14)";
+          g.fillRect(10, y-11, W-20, 15);
+          g.fillStyle = "rgba(179,0,255,0.20)";
+          g.fillRect(10, y-11, 6, 15);
         }
-        g.fillStyle = picked ? "rgba(0,255,213,0.18)" : "rgba(255,255,255,0.06)";
+        g.fillStyle = picked ? "rgba(0,255,213,0.20)" : "rgba(255,255,255,0.06)";
         g.fillRect(16, y-9, 10, 10);
 
-        // check mark
         if(picked){
           g.fillStyle = "#00ffd5";
           g.fillRect(18, y-7, 6, 2);
@@ -810,10 +885,9 @@
 
         drawText(w.name.toUpperCase(), 34, y, 1.0, w.color);
         const meta = w.melee ? `MELEE dmg:${w.dmg}` : `dmg:${w.dmg}  rate:${w.fireRate.toFixed(1)}  spread:${w.spread.toFixed(2)}`;
-        drawText(meta, 160, y, 0.9, "rgba(232,232,255,0.55)");
+        drawText(meta, 160, y, 0.9, "rgba(232,232,255,0.60)");
       }
 
-      // picked slots preview
       drawText("SLOTS:", 16, H-42, 1.0, "#e8e8ff");
       for(let i=0;i<3;i++){
         const id = bunkerPicked[i];
@@ -821,86 +895,152 @@
         g.fillRect(68+i*84, H-54, 78, 20);
         if(id){
           const w = byId[id];
+          g.fillStyle = "rgba(0,0,0,0.25)";
+          g.fillRect(68+i*84, H-54, 78, 20);
           g.fillStyle = w.color;
           g.fillRect(70+i*84, H-52, 10, 16);
           drawText(`${i+1}:${w.name}`, 84+i*84, H-39, 0.95, "#e8e8ff");
         } else {
-          drawText(`${i+1}: EMPTY`, 84+i*84, H-39, 0.95, "rgba(232,232,255,0.4)");
+          drawText(`${i+1}: EMPTY`, 84+i*84, H-39, 0.95, "rgba(232,232,255,0.45)");
         }
       }
 
-      // little chimp in bunker corner
+      // little chimp
       drawChimp(W-44, H-34, 1, Math.floor(t*20), 0);
 
       g.restore();
-      // upscale to screen
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(world, 0, 0, W, H, 0, 0, canvas.width, canvas.height);
       return;
     }
 
-    // PLAY/DEAD render
+    // ===== PLAY/DEAD render with CAMERA =====
+    const ox = camera.x;
+    const oy = camera.y;
+
     // bullets
     for(const b of bullets){
+      const sxp = Math.floor(b.x - ox);
+      const syp = Math.floor(b.y - oy);
+      if(sxp<-3 || sxp>W+3 || syp<-3 || syp>H+3) continue;
       g.fillStyle = b.col;
-      g.fillRect(Math.floor(b.x)-1, Math.floor(b.y)-1, 3, 3);
+      g.fillRect(sxp-1, syp-1, 3, 3);
+      // tiny glow pixel
+      g.fillStyle = "rgba(255,255,255,0.35)";
+      g.fillRect(sxp, syp, 1, 1);
     }
 
     // zombies
-    for(const z of zombies) drawZombie(z);
+    for(const z of zombies){
+      const sxz = z.x - ox, syz = z.y - oy;
+      if(sxz<-24 || sxz>W+24 || syz<-24 || syz>H+24) continue;
+      const zz = Object.assign({}, z, { x: sxz, y: syz });
+      drawZombie(zz);
+    }
 
     // boss
-    if(boss) drawBoss(boss);
+    if(boss){
+      const sxb = boss.x - ox, syb = boss.y - oy;
+      const bb = Object.assign({}, boss, { x: sxb, y: syb });
+      drawBoss(bb);
+    }
 
     // player
-    const aimAng = Math.atan2(mouse.y-player.y, mouse.x-player.x);
-    // flash invuln
+    const aimWorldX = camera.x + mouse.x;
+    const aimWorldY = camera.y + mouse.y;
+    const aimAng = Math.atan2(aimWorldY-player.y, aimWorldX-player.x);
+
     const blink = player.invuln>0 && (Math.floor(performance.now()/70)%2===0);
-    if(!blink) drawChimp(player.x, player.y, player.dir, player.frame, aimAng);
+    if(!blink) drawChimp(player.x-ox, player.y-oy, player.dir, player.frame, aimAng);
 
     // sparks
     for(const p of sparks){
+      const spx = Math.floor(p.x - ox);
+      const spy = Math.floor(p.y - oy);
+      if(spx<0||spx>=W||spy<0||spy>=H) continue;
       g.fillStyle = p.col;
-      g.fillRect(Math.floor(p.x), Math.floor(p.y), 1, 1);
+      g.fillRect(spx, spy, 1, 1);
     }
+
     // floats
     for(const f of floats){
-      drawText(f.text, Math.floor(f.x), Math.floor(f.y), 1.0, f.col);
+      const fx = Math.floor(f.x - ox);
+      const fy = Math.floor(f.y - oy);
+      if(fx<-40||fx>W+40||fy<-20||fy>H+20) continue;
+      drawText(f.text, fx, fy, 1.0, f.col);
     }
 
-    // UI
-    // Top bar
-    g.fillStyle = "rgba(0,0,0,0.38)";
-    g.fillRect(0,0,W,18);
+    // ===== UI (better + cleaner, still same vibe) =====
+    // top HUD panel
+    g.fillStyle = "rgba(0,0,0,0.42)";
+    g.fillRect(0,0,W,24);
+    g.fillStyle = "rgba(179,0,255,0.18)";
+    g.fillRect(0,22,W,2);
 
     const score = Math.floor(player.score);
-    drawText(`SCORE ${score}`, 8, 13, 1.0, "#e8e8ff");
-    drawText(`TIME ${niceTime(player.timeAlive)}`, 110, 13, 1.0, "rgba(232,232,255,0.75)");
-    drawText(`HI ${highScore}`, 220, 13, 1.0, "rgba(0,255,213,0.85)");
+    drawText(`SCORE ${score}`, 8, 14, 1.0, "#e8e8ff");
+    drawText(`TIME ${niceTime(player.timeAlive)}`, 108, 14, 1.0, "rgba(232,232,255,0.82)");
+    drawText(`HI ${highScore}`, 226, 14, 1.0, "rgba(0,255,213,0.90)");
+    drawText(`WAVE ${wave.n} ${wave.state==="REST"?"(BREATH)":wave.state==="SPAWN"?"(INCOMING)":"(CLEAR)"}`, 8, 23, 0.9, "rgba(232,232,255,0.70)");
 
-    // HP bar
+    // HP bar (chunkier + legible)
     const hpP = clamp(player.hp/100, 0, 1);
-    g.fillStyle = "rgba(255,255,255,0.08)";
-    g.fillRect(8, 22, 140, 8);
+    g.fillStyle = "rgba(255,255,255,0.10)";
+    g.fillRect(8, 28, 170, 10);
     g.fillStyle = hpP>0.4 ? "#7CFF6B" : "#ff3b6b";
-    g.fillRect(8, 22, 140*hpP, 8);
-    g.strokeStyle = "rgba(255,255,255,0.15)";
-    g.strokeRect(8, 22, 140, 8);
-    drawText(`HP`, 154, 29, 0.85, "rgba(232,232,255,0.7)");
+    g.fillRect(8, 28, 170*hpP, 10);
+    g.strokeStyle = "rgba(255,255,255,0.18)";
+    g.strokeRect(8, 28, 170, 10);
+    drawText(`HP`, 184, 37, 0.9, "rgba(232,232,255,0.78)");
 
-    // Boss bar
+    // boss bar
     if(boss){
       const bp = clamp(boss.hp/boss.maxHp, 0, 1);
-      g.fillStyle = "rgba(0,0,0,0.42)";
-      g.fillRect(8, 34, 304, 10);
+      g.fillStyle = "rgba(0,0,0,0.46)";
+      g.fillRect(8, 42, 304, 10);
       g.fillStyle = "#ff3b6b";
-      g.fillRect(8, 34, 304*bp, 10);
-      g.strokeStyle = "rgba(255,255,255,0.15)";
-      g.strokeRect(8, 34, 304, 10);
-      drawText(`BOSS`, 270, 42, 0.9, "#e8e8ff");
+      g.fillRect(8, 42, 304*bp, 10);
+      g.strokeStyle = "rgba(255,255,255,0.18)";
+      g.strokeRect(8, 42, 304, 10);
+      drawText(`BOSS`, 270, 50, 0.9, "#e8e8ff");
     }
 
-    // Weapon slots bottom
+    // minimap (BIG MAP visibility)
+    // tiny panel top-right under header
+    const mmW = 84, mmH = 48;
+    const mmX = W - mmW - 8;
+    const mmY = 28;
+    g.fillStyle = "rgba(0,0,0,0.40)";
+    g.fillRect(mmX, mmY, mmW, mmH);
+    g.strokeStyle = "rgba(179,0,255,0.35)";
+    g.strokeRect(mmX, mmY, mmW, mmH);
+
+    // map to minimap
+    const sxm = mmW / MAP_W;
+    const sym = mmH / MAP_H;
+
+    // arena outline
+    g.strokeStyle = "rgba(0,255,213,0.35)";
+    g.strokeRect(mmX + arena.x0*sxm, mmY + arena.y0*sym, (arena.x1-arena.x0)*sxm, (arena.y1-arena.y0)*sym);
+
+    // player dot
+    g.fillStyle = "#e8e8ff";
+    g.fillRect(Math.floor(mmX + player.x*sxm)-1, Math.floor(mmY + player.y*sym)-1, 3, 3);
+
+    // zombies dots (cap for perf)
+    let shown = 0;
+    for(const z of zombies){
+      if(shown++ > 40) break;
+      g.fillStyle = z.elite ? "#23ff86" : "rgba(90,167,255,0.85)";
+      g.fillRect(Math.floor(mmX + z.x*sxm), Math.floor(mmY + z.y*sym), 1, 1);
+    }
+    // boss dot
+    if(boss){
+      g.fillStyle = "#ff3b6b";
+      g.fillRect(Math.floor(mmX + boss.x*sxm)-1, Math.floor(mmY + boss.y*sym)-1, 3, 3);
+    }
+
+    // weapon slots bottom
     const y = H-16;
     for(let i=0;i<3;i++){
       const id = player.selected[i];
@@ -908,7 +1048,7 @@
       g.fillRect(8+i*104, y, 96, 12);
       if(id){
         const w = byId[id];
-        g.fillStyle = (i===player.slot) ? "rgba(179,0,255,0.35)" : "rgba(0,0,0,0.25)";
+        g.fillStyle = (i===player.slot) ? "rgba(179,0,255,0.40)" : "rgba(0,0,0,0.25)";
         g.fillRect(8+i*104, y, 96, 12);
         g.fillStyle = w.color;
         g.fillRect(10+i*104, y+2, 8, 8);
@@ -920,13 +1060,14 @@
 
     // DEAD overlay
     if(state === STATE.DEAD){
-      g.fillStyle = "rgba(0,0,0,0.58)";
+      g.fillStyle = "rgba(0,0,0,0.60)";
       g.fillRect(0,0,W,H);
 
-      drawText("YOU GOT ERASED.", 92, 70, 1.8, "#ff3b6b");
-      drawText(`SCORE ${Math.floor(player.score)}  |  TIME ${niceTime(player.timeAlive)}`, 72, 92, 1.1, "#e8e8ff");
-      drawText(`HIGH SCORE ${highScore}`, 104, 108, 1.1, "#00ffd5");
-      drawText("ENTER to retry  |  ESC to bunker", 70, 132, 1.0, "rgba(232,232,255,0.75)");
+      drawText("YOU GOT ERASED.", 86, 68, 1.9, "#ff3b6b");
+      drawText(`SCORE ${Math.floor(player.score)}  |  TIME ${niceTime(player.timeAlive)}`, 62, 92, 1.1, "#e8e8ff");
+      drawText(`HIGH SCORE ${highScore}`, 102, 110, 1.1, "#00ffd5");
+      drawText(`WAVE REACHED ${wave.n}`, 104, 124, 1.0, "rgba(232,232,255,0.82)");
+      drawText("ENTER to retry  |  ESC to bunker", 64, 146, 1.0, "rgba(232,232,255,0.80)");
     }
 
     // paused overlay
@@ -939,7 +1080,6 @@
 
     g.restore();
 
-    // upscale
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(world, 0, 0, W, H, 0, 0, canvas.width, canvas.height);
   }
