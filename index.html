@@ -40,6 +40,28 @@ body::before{
   filter:blur(10px) saturate(1.2);
 }
 
+/* NEW: subtle texture + vignette so it feels less empty (no layout changes) */
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  background:
+    radial-gradient(1200px 900px at 50% 45%, rgba(0,0,0,0) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.60) 100%),
+    repeating-radial-gradient(circle at 18% 24%,
+      rgba(255,255,255,.035) 0 1px,
+      transparent 1px 6px),
+    repeating-radial-gradient(circle at 78% 62%,
+      rgba(138,46,255,.030) 0 1px,
+      transparent 1px 7px),
+    repeating-linear-gradient(0deg,
+      rgba(255,255,255,.020) 0 1px,
+      transparent 1px 4px);
+  mix-blend-mode:overlay;
+  opacity:.55;
+}
+
 a{color:#fff;text-decoration:none}
 
 /* NAV */
@@ -129,13 +151,13 @@ header a:hover{opacity:1}
   100%{filter:brightness(1)}
 }
 
-/* NEW: intensify glow on 2nd click */
+/* intensify glow (used on FIRST click now) */
 .logo.heat{
   text-shadow:
-    0 0 22px rgba(138,46,255,.55),
-    0 0 72px rgba(138,46,255,.30),
-    0 0 120px rgba(138,46,255,.18);
-  filter:saturate(1.15);
+    0 0 28px rgba(138,46,255,.70),
+    0 0 90px rgba(138,46,255,.38),
+    0 0 150px rgba(138,46,255,.22);
+  filter:saturate(1.22) contrast(1.02);
 }
 
 /* BLOCK */
@@ -474,7 +496,10 @@ document.documentElement.style.setProperty("--x",(e.clientX/window.innerWidth)*1
 document.documentElement.style.setProperty("--y",(e.clientY/window.innerHeight)*100+"%");
 });
 
-/* logo: flash + 2nd-click glow boost + 3rd-click glitch sound + secret page */
+/* logo: flash + TWO-click behavior:
+   click 1 -> extra violet glow (heat)
+   click 2 -> glitch sound + secret page
+*/
 const logo=document.getElementById("logo");
 
 let logoClicks = 0;
@@ -493,7 +518,6 @@ function glitchBlip(){
     master.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
     master.connect(aCtx.destination);
 
-    // noisy burst
     const bufferSize = Math.floor(aCtx.sampleRate * 0.12);
     const buffer = aCtx.createBuffer(1, bufferSize, aCtx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -518,7 +542,6 @@ function glitchBlip(){
     bp.connect(master);
     noise.start(t);
 
-    // tiny digital chirp
     const osc = aCtx.createOscillator();
     osc.type = "square";
     const og = aCtx.createGain();
@@ -535,11 +558,9 @@ function glitchBlip(){
 }
 
 logo.onclick=()=>{
-  // keep your existing flash
   logo.classList.add("flash");
   setTimeout(()=>logo.classList.remove("flash"),350);
 
-  // count triple click
   logoClicks++;
 
   clearTimeout(logoTimer);
@@ -548,13 +569,13 @@ logo.onclick=()=>{
     logo.classList.remove("heat");
   }, 700);
 
-  // 2nd click: glow intensifies
-  if(logoClicks === 2){
+  // 1st click: glow intensifies (stays briefly)
+  if(logoClicks === 1){
     logo.classList.add("heat");
   }
 
-  // 3rd click: glitch sound + go to secret page
-  if(logoClicks === 3){
+  // 2nd click: glitch + secret page
+  if(logoClicks === 2){
     glitchBlip();
     window.location.href = "secret.html";
   }
