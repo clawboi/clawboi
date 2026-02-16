@@ -204,7 +204,7 @@ function startGame() {
   world = forest;
   room = "forest";
 
-  player = new PlayerTest(world.x, world.spawn.y);
+  player = new PlayerTest(world.spawn.x, world.spawn.y);
 
   cam = new Camera({
     viewW: CONFIG.baseW,
