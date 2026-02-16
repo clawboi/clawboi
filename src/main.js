@@ -284,11 +284,11 @@ function update(dt){
 
   if(hitStop > 0){
   hitStop = Math.max(0, hitStop - dt);
-  ui.update(dt);
-  effects.update(dt * 0.35);
+  // freeze gameplay, still animate FX a bit
+  fx.update(dt * 0.35);
+  cam.kick(0, 0); // no-op but keeps cam “touched”
   return;
 }
-
 
   tWorld += dt;
   fx.update(dt);
@@ -319,24 +319,19 @@ function update(dt){
 
   // resolve player attack
   const hit = enemies.resolvePlayerAttack(player);
-if(hit.count){
-  camShake(3 + hit.count*1.2, 0.10);
-  effects.hitFlash(0.10);
-  doHitStop(0.035 + Math.min(0.03, hit.count*0.01));
+
+if(hit && hit.count){
+  cam.kick(2 + hit.count*0.8, 0.10);
+  fx.hitFlash(0.10);
+  doHitStop(0.030 + Math.min(0.030, hit.count*0.010));
 
   if(hit.kills){
-    player.addXP(hit.kills * 6);
-    ui.floatText(player.x, player.y - 10, `+${hit.kills*6} XP`, "good");
+    const xpGain = hit.kills * 6;
+    player.addXP(xpGain);
+    fx.text(player.x, player.y - 16, `+${xpGain} XP`, "good");
+    fx.pulseGood(0.12);
   }
 }
-  }
-  if(res.kills){
-    drops.spawnEssence(hb.x, hb.y, 8 + res.kills*4);
-    const xpGain = res.kills * 10;
-    player.addXP(xpGain);
-    fx.text(player.x, player.y-16, `+${xpGain} XP`, "good");
-    fx.pulseGood(0.18);
-  }
 
   // drops
   drops.update(dt, world);
