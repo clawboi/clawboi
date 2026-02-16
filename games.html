@@ -65,7 +65,7 @@ body::before{
   letter-spacing:.34em;
   text-transform:uppercase;
   color:#fff;
-  text-decoration:none;
+  text-decoration:none; /* no underline */
   opacity:.72;
   text-shadow:0 0 18px rgba(138,46,255,.25);
 }
@@ -102,6 +102,12 @@ body::before{
   gap:14px;
 }
 @media(max-width:860px){.grid{grid-template-columns:1fr}}
+
+/* NO underlines anywhere */
+a, a:visited, a:hover, a:active{
+  color:#fff;
+  text-decoration:none;
+}
 
 .card{
   background:rgba(255,255,255,.03);
@@ -179,7 +185,6 @@ body::before{
   color:#fff;
   opacity:.92;
 }
-.card a{ text-decoration:none; color:#fff; }
 
 .desc{
   margin-top:12px;
@@ -226,7 +231,6 @@ body::before{
         <div class="preview">
           <img src="images/space-chimp.png" alt="Space Chimp cover art">
           <div class="noise"></div>
-          <!-- removed DREAM.HTML badge -->
           <div class="cta">ENTER</div>
         </div>
       </a>
@@ -264,27 +268,96 @@ body::before{
       </div>
     </div>
 
-    <!-- ADVENTURES OF CLAWBOI (placeholder slot) -->
+    <!-- ADVENTURES OF CLAWBOI -->
     <div class="card">
       <div class="label">ADVENTURES OF CLAWBOI</div>
 
       <a href="clawboi-game/" aria-label="Open Adventures of Clawboi">
         <div class="preview">
-          <!-- add later: images/adventuresofclawboi.png -->
           <img src="images/adventuresofclawboi.png" alt="Adventures of Clawboi cover art">
           <div class="noise"></div>
-          <div class="badge v">COMING SOON</div>
+          <div class="badge v">BETA</div>
           <div class="cta">ENTER</div>
         </div>
       </a>
 
       <div class="desc">
-        NEW NODE RESERVED.
-        <br>DROP A COVER ART IN /images AND THIS SLOT GOES LIVE.
+        MAIN RPG NODE.
+        <br>FOREST · QUESTS · SURVIVE THE WAVES.
       </div>
 
       <div class="btnRow">
-        <a class="btn" href="adventuresofclawboi.html">PLAY</a>
+        <a class="btn" href="clawboi-game/">PLAY</a>
+      </div>
+    </div>
+
+    <!-- NEW SLOT 1 -->
+    <div class="card">
+      <div class="label">CLUB ZOMBIE CHIMP</div>
+
+      <a href="club-zombie-chimp.html" aria-label="Open Club Zombie Chimp">
+        <div class="preview">
+          <!-- swap this image later if you want -->
+          <img src="images/club-zombie-chimp.png" alt="Club Zombie Chimp cover art">
+          <div class="noise"></div>
+          <div class="badge v">NEW</div>
+          <div class="cta">ENTER</div>
+        </div>
+      </a>
+
+      <div class="desc">
+        CLUB LIGHTS. UNDEAD ENERGY. CHIMP CHAOS.
+        <br>DROP THE FILE IN ROOT AND THIS IS LIVE.
+      </div>
+
+      <div class="btnRow">
+        <a class="btn" href="club-zombie-chimp.html">PLAY</a>
+      </div>
+    </div>
+
+    <!-- NEW SLOT 2 -->
+    <div class="card">
+      <div class="label">GAME SLOT 5</div>
+
+      <a href="game-5.html" aria-label="Open Game Slot 5">
+        <div class="preview">
+          <img src="images/game-5.png" alt="Game Slot 5 cover art">
+          <div class="noise"></div>
+          <div class="badge">RESERVED</div>
+          <div class="cta">ENTER</div>
+        </div>
+      </a>
+
+      <div class="desc">
+        RESERVED NODE.
+        <br>RENAME game-5.html + /images/game-5.png WHEN READY.
+      </div>
+
+      <div class="btnRow">
+        <a class="btn" href="game-5.html">PLAY</a>
+      </div>
+    </div>
+
+    <!-- NEW SLOT 3 -->
+    <div class="card">
+      <div class="label">GAME SLOT 6</div>
+
+      <a href="game-6.html" aria-label="Open Game Slot 6">
+        <div class="preview">
+          <img src="images/game-6.png" alt="Game Slot 6 cover art">
+          <div class="noise"></div>
+          <div class="badge">RESERVED</div>
+          <div class="cta">ENTER</div>
+        </div>
+      </a>
+
+      <div class="desc">
+        RESERVED NODE.
+        <br>RENAME game-6.html + /images/game-6.png WHEN READY.
+      </div>
+
+      <div class="btnRow">
+        <a class="btn" href="game-6.html">PLAY</a>
       </div>
     </div>
 
