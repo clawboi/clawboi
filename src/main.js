@@ -180,8 +180,7 @@ function doHitStop(t = 0.05) {
 let atkHB = null;
 let atkHBt = 0;
 
-function getAttackHB() {
-  const hb = player?.getAttackHitbox?.();
+const hb = player && player.getAttackHitbox ? player.getAttackHitbox() : null;
   if (hb) return hb;
   if (atkHBt > 0 && atkHB) return atkHB;
   return null;
@@ -364,8 +363,9 @@ function update(dt) {
     if (ok) {
       cam.kick(1.8, 0.06);
 
-      const dirx = player.face?.x ?? 1;
-      const diry = player.face?.y ?? 0;
+      const dirx = player && player.face ? player.face.x : 1;
+      const diry = player && player.face ? player.face.y : 0;
+
 
       const fxX = player.x + dirx * 10;
       const fxY = player.y + diry * 10;
@@ -397,13 +397,13 @@ function update(dt) {
   if (hb) {
     if (typeof enemies.resolvePlayerAttack === "function") {
       const h = enemies.resolvePlayerAttack(player, hb);
-      hitCount = h?.count || 0;
-      hitKills = h?.kills || 0;
+      hitCount = h && h.count ? h.count : 0;
+      hitKills = h && h.kills ? h.kills : 0;
     } else if (typeof enemies.resolvePlayerHit === "function") {
       const h = enemies.resolvePlayerHit(hb);
       // some versions return {hits,kills}
-      hitCount = h?.hits || h?.count || 0;
-      hitKills = h?.kills || 0;
+      hitCount = h && (h.hits || h.count) ? (h.hits || h.count) : 0;
+      hitKills = h && h.kills ? h.kills : 0;
     }
   }
 
