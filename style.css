@@ -66,11 +66,33 @@ canvas{
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   border-radius:16px;
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,.06),
-    0 0 120px rgba(138,46,255,.18);
+  box-shadow: 0 0 120px rgba(138,46,255,.16);
   background:#000;
-  touch-action:none; /* crucial for mobile input later */
+
+  /* Safari + mobile */
+  touch-action: none;              /* prevents page scroll stealing touches */
+  -webkit-user-select: none;
+  user-select: none;
+  display:block;
+
+  /* IMPORTANT: let JS control pixel-perfect size */
+  width: auto;
+  height: auto;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 72px);
+}
+.stage{
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding-top:28px;
+  padding-left:12px;
+  padding-right:12px;
+}
+body{
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 /* soft scanline vibe (subtle) */
