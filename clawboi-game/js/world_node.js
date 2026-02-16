@@ -45,7 +45,7 @@ export class WorldNode {
 
   draw(ctx, camX, camY, t) {
     // node world is same size as view, so cam is ignored
-    (void)camX; (void)camY;
+    // cam not needed in this world
 
     ctx.fillStyle = "rgba(7,7,12,1)";
     ctx.fillRect(0, 0, 320, 180);
