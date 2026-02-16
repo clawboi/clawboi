@@ -29,9 +29,33 @@ function calcScale(){
   return clamp(Math.min(sx, sy), CONFIG.minScale, CONFIG.maxScale);
 }
 function resize(){
-  view.scale = calcScale();
-  view.pxW = CONFIG.baseW * view.scale;
-  view.pxH = CONFIG.baseH * view.scale;
+  const ww = window.innerWidth;
+  const wh = window.innerHeight;
+
+  // Use a safe available height (account for top HUD + iOS URL bar weirdness)
+  const safeH = Math.max(200, wh - 72);
+
+  const sx = Math.floor(ww / config.baseW);
+  const sy = Math.floor(safeH / config.baseH);
+  config.scale = Math.max(config.minScale, Math.min(config.maxScale, Math.min(sx, sy)));
+
+  // Set internal resolution EXACT
+  canvas.width  = config.baseW * config.scale;
+  canvas.height = config.baseH * config.scale;
+
+  // Let CSS size follow JS, not vice versa
+  canvas.style.width  = canvas.width + "px";
+  canvas.style.height = canvas.height + "px";
+
+  ctx.imageSmoothingEnabled = false;
+}
+window.addEventListener("resize", resize);
+resize();
+
+// iOS Safari: also re-run on orientation + after UI bars settle
+window.addEventListener("orientationchange", ()=> setTimeout(resize, 150));
+setTimeout(resize, 250);
+
 
   canvas.width = view.pxW;
   canvas.height = view.pxH;
