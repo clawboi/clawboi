@@ -1,17 +1,14 @@
+import { now } from "./utils.js";
+import { CONFIG } from "./config.js";
+
 export class Clock{
-
-constructor(){
-this.last=performance.now();
-this.dt=0;
-this.time=0;
-}
-
-tick(){
-let n=performance.now();
-this.dt=Math.min(.05,(n-this.last)/1000);
-this.time+=this.dt;
-this.last=n;
-return this.dt;
-}
-
+  constructor(){
+    this.t = now();
+  }
+  tick(){
+    const n = now();
+    const dt = (n - this.t)/1000;
+    this.t = n;
+    return Math.min(CONFIG.DT_CAP, Math.max(0, dt));
+  }
 }
