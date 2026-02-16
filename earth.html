@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>EARTH • TWO TIMES</title>
+<title>EARTH • ZAHH</title>
 <style>
 :root{--bg:#070707;--violet:#8a2eff;--fg:#fff;--sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
 *{box-sizing:border-box}
@@ -34,18 +34,36 @@ a{color:#fff;text-decoration:none}
 }
 @keyframes drift{to{transform:translate3d(180px,-140px,0)}}
 
+.fx{position:fixed;inset:0;z-index:1;pointer-events:none}
+.scan{position:fixed;inset:0;pointer-events:none;z-index:2;opacity:.06;mix-blend-mode:overlay;
+  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
+}
+
+.planetWrap{position:relative;width:260px;height:260px;margin:12px auto 0;animation:float 8.8s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-14px)}}
+
 .planet{
-  width:170px;height:170px;border-radius:50%;
-  margin:12px auto 0;
+  position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:176px;height:176px;border-radius:50%;
   background:
     radial-gradient(circle at 30% 30%, rgba(255,255,255,.18), transparent 35%),
     radial-gradient(circle at 55% 60%, rgba(30,190,255,.46), rgba(0,80,140,.25) 50%, transparent 78%),
     radial-gradient(circle at 40% 55%, rgba(70,255,160,.26), transparent 55%),
     radial-gradient(circle at 65% 75%, rgba(0,0,0,.35), transparent 60%);
   box-shadow:0 0 26px rgba(30,190,255,.16),0 0 90px rgba(138,46,255,.10);
-  animation:float 8.8s ease-in-out infinite;
+  will-change:transform,filter,box-shadow;
 }
-@keyframes float{50%{transform:translateY(-14px)}}
+
+/* waveform halo */
+.halo{
+  position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:260px;height:260px;border-radius:50%;
+  pointer-events:none;
+  opacity:.95;
+  filter:drop-shadow(0 0 18px rgba(30,190,255,.14)) drop-shadow(0 0 38px rgba(70,255,160,.10));
+}
 
 h1{margin:22px 0 0;letter-spacing:.34em;text-transform:uppercase;font-size:clamp(22px,5vw,52px);
   text-shadow:0 0 16px rgba(138,46,255,.30),0 0 60px rgba(138,46,255,.18);}
@@ -65,11 +83,13 @@ h1{margin:22px 0 0;letter-spacing:.34em;text-transform:uppercase;font-size:clamp
 @keyframes rainbow{0%{color:#ff2a2a}25%{color:#ffe600}50%{color:#00ff9c}75%{color:#4aa3ff}100%{color:#ff2aff}}
 .note{margin-top:14px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;opacity:.55}
 
-@media (prefers-reduced-motion: reduce){.stars,.planet,.player::before{animation:none!important}}
+@media (prefers-reduced-motion: reduce){.stars,.planetWrap,.player::before{animation:none!important}}
 </style>
 </head>
 <body>
 <div class="bg"><div class="stars"></div></div>
+<canvas class="fx" id="fx"></canvas>
+<div class="scan"></div>
 
 <div class="top">
   <div class="brand"><a href="index.html">CLAWBOI</a></div>
@@ -79,15 +99,18 @@ h1{margin:22px 0 0;letter-spacing:.34em;text-transform:uppercase;font-size:clamp
 </div>
 
 <div class="wrap">
-  <div class="planet" aria-hidden="true"></div>
+  <div class="planetWrap" aria-hidden="true">
+    <canvas class="halo" id="halo" width="520" height="520"></canvas>
+    <div class="planet" id="planet"></div>
+  </div>
   <h1>EARTH</h1>
-  <div class="sub">now playing: two times</div>
+  <div class="sub">now playing: zahh</div>
 
-  <div class="player" id="player" role="button" aria-label="Play or pause Two Times">
+  <div class="player" id="player" role="button" aria-label="Play or pause Zahh">
     <div class="hint" id="hint">TAP TO PLAY</div>
-    <div class="note">TWO TIMES</div>
+    <div class="note">ZAHH</div>
     <audio id="audio" playsinline preload="metadata">
-      <source src="audio/two-times.mp3?v=1" type="audio/mpeg">
+      <source src="audio/zahh.mp3?v=1" type="audio/mpeg">
     </audio>
   </div>
 </div>
@@ -96,16 +119,156 @@ h1{margin:22px 0 0;letter-spacing:.34em;text-transform:uppercase;font-size:clamp
 const player=document.getElementById("player");
 const audio=document.getElementById("audio");
 const hint=document.getElementById("hint");
+const planet=document.getElementById("planet");
 function setHint(on){hint.textContent=on?"PLAYING":"TAP TO PLAY";hint.classList.toggle("rainbow",on);}
+
+let aCtx, analyser, srcNode, data, playing=false, amp=0;
+function setupAudio(){
+  if(aCtx) return;
+  aCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = aCtx.createAnalyser();
+  analyser.fftSize = 1024;
+  data = new Uint8Array(analyser.frequencyBinCount);
+  srcNode = aCtx.createMediaElementSource(audio);
+  const gain = aCtx.createGain();
+  gain.gain.value = 0.95;
+  srcNode.connect(analyser);
+  analyser.connect(gain);
+  gain.connect(aCtx.destination);
+}
+function getAmp(){
+  if(!analyser || !playing) return amp*0.92;
+  analyser.getByteFrequencyData(data);
+  let sum=0;
+  const start=2, end=Math.min(80, data.length);
+  for(let i=start;i<end;i++) sum += data[i];
+  const avg = (sum/(end-start))/255;
+  amp = amp*0.82 + avg*0.18;
+  return amp;
+}
+
+/* halo */
+const halo=document.getElementById("halo");
+const hctx=halo.getContext("2d");
+function drawHalo(){
+  const level=getAmp();
+  const W=halo.width, H=halo.height;
+  hctx.clearRect(0,0,W,H);
+  const cx=W/2, cy=H/2;
+  const baseR=178;
+  const bars=96;
+
+  for(let i=0;i<bars;i++){
+    const t=i/bars*Math.PI*2;
+    const idx = data ? Math.min(data.length-1, Math.floor(i*(data.length/bars))) : i;
+    const raw = (analyser && data && playing) ? data[idx]/255 : 0;
+
+    const r1 = baseR + raw*16 + level*26;
+    const r2 = baseR + raw*44 + level*66;
+
+    const x1 = cx + Math.cos(t)*r1;
+    const y1 = cy + Math.sin(t)*r1;
+    const x2 = cx + Math.cos(t)*r2;
+    const y2 = cy + Math.sin(t)*r2;
+
+    hctx.lineWidth = 2;
+    hctx.strokeStyle = `rgba(70,255,160,${0.06 + raw*0.16 + level*0.10})`;
+    hctx.beginPath(); hctx.moveTo(x1,y1); hctx.lineTo(x2,y2); hctx.stroke();
+
+    hctx.lineWidth = 1;
+    hctx.strokeStyle = `rgba(30,190,255,${0.05 + raw*0.16 + level*0.10})`;
+    hctx.beginPath(); hctx.moveTo(x1,y1); hctx.lineTo(x2,y2); hctx.stroke();
+  }
+  requestAnimationFrame(drawHalo);
+}
+drawHalo();
+
+/* planet react */
+function tick(){
+  const level=getAmp();
+  const s = 1 + level*0.08;
+  planet.style.transform = `translate(-50%,-50%) scale(${s})`;
+  planet.style.filter = `saturate(${1.05 + level*0.45}) contrast(${1.0 + level*0.18})`;
+  planet.style.boxShadow = `0 0 ${26+level*26}px rgba(30,190,255,${0.16+level*0.16}),
+                            0 0 ${90+level*120}px rgba(70,255,160,${0.10+level*0.14})`;
+  requestAnimationFrame(tick);
+}
+tick();
+
+/* flying stars: orbital */
+const fx=document.getElementById("fx");
+const fctx=fx.getContext("2d");
+let dots=[];
+function resizeFX(){
+  const dpr = Math.max(1, devicePixelRatio||1);
+  fx.width = Math.floor(innerWidth*dpr);
+  fx.height = Math.floor(innerHeight*dpr);
+  fctx.setTransform(1,0,0,1,0,0);
+  fctx.scale(dpr,dpr);
+}
+addEventListener("resize", resizeFX);
+resizeFX();
+
+function spawnDot(){
+  const side = Math.random()<0.5 ? -40 : innerWidth+40;
+  const y = Math.random()*innerHeight*0.9;
+  const sp = 0.8 + Math.random()*2.4;
+  dots.push({
+    x: side, y,
+    vx: side<0 ? sp : -sp,
+    vy: (Math.random()-.5)*0.35,
+    a: 0.10+Math.random()*0.30,
+    r: 0.8+Math.random()*2.2,
+    teal: Math.random()<0.5
+  });
+}
+function drawFX(){
+  const level=getAmp();
+  fctx.clearRect(0,0,innerWidth,innerHeight);
+
+  if(Math.random() < (0.14 + level*0.16)) spawnDot();
+
+  for(let i=dots.length-1;i>=0;i--){
+    const d=dots[i];
+    const speed = 1 + level*1.6;
+    d.x += d.vx*speed;
+    d.y += d.vy*speed + Math.sin((performance.now()+i*400)*0.002)*(0.25+level*0.8);
+
+    fctx.fillStyle = d.teal
+      ? `rgba(30,190,255,${d.a + level*0.08})`
+      : `rgba(255,255,255,${d.a + level*0.06})`;
+    fctx.beginPath();
+    fctx.arc(d.x,d.y, d.r + level*1.0, 0, Math.PI*2);
+    fctx.fill();
+
+    if(d.x<-80 || d.x>innerWidth+80 || d.y<-80 || d.y>innerHeight+80) dots.splice(i,1);
+  }
+  requestAnimationFrame(drawFX);
+}
+drawFX();
+
+/* play */
 player.onclick=async()=>{
   try{
-    if(audio.paused){setHint(true);await audio.play();}
-    else{audio.pause();audio.currentTime=0;setHint(false);}
-  }catch(e){setHint(false);alert("Audio didn’t start. Check /audio/two-times.mp3");}
+    setupAudio();
+    if(aCtx.state==="suspended") await aCtx.resume();
+    if(audio.paused){setHint(true);await audio.play(); playing=true;}
+    else{audio.pause();audio.currentTime=0;setHint(false); playing=false;}
+  }catch(e){setHint(false);alert("Check /audio/zahh.mp3");}
 };
-audio.addEventListener("pause",()=>setHint(false));
-audio.addEventListener("play",()=>setHint(true));
+audio.addEventListener("pause",()=>{setHint(false); playing=false;});
+audio.addEventListener("play",()=>{setHint(true); playing=true;});
+
+/* iOS unlock */
+function unlockOnce(){
+  try{ setupAudio(); aCtx.resume?.(); }catch(e){}
+  removeEventListener("pointerdown", unlockOnce);
+  removeEventListener("touchstart", unlockOnce);
+  removeEventListener("keydown", unlockOnce);
+}
+addEventListener("pointerdown", unlockOnce, {passive:true});
+addEventListener("touchstart", unlockOnce, {passive:true});
+addEventListener("keydown", unlockOnce);
 </script>
 </body>
 </html>
-
