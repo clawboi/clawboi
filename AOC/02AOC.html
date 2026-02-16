@@ -1,0 +1,401 @@
+<!-- AOC/02AOC.html -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>AOC02 · Observatory Cutscene</title>
+<style>
+  :root{
+    --bg:#000;
+    --fg:#fff;
+    --violet:#8a2eff;
+    --cyan:#00ffd5;
+    --muted:rgba(255,255,255,.72);
+  }
+  html,body{height:100%; margin:0; background:var(--bg); overflow:hidden; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; color:var(--fg);}
+  canvas{position:fixed; inset:0; image-rendering:pixelated; image-rendering:crisp-edges; background:#000; z-index:0;}
+  .nav{
+    position:fixed; top:12px; left:14px; z-index:20;
+    font-size:12px; letter-spacing:.25em; text-transform:uppercase;
+    display:flex; gap:18px; align-items:center; user-select:none;
+    text-shadow:0 0 18px rgba(138,46,255,.22);
+  }
+  .nav a{color:#fff; text-decoration:none; opacity:.75; transition:.2s;}
+  .nav a:hover{opacity:1}
+  .hud{
+    position:fixed; left:14px; bottom:12px; z-index:20;
+    font-size:12px; letter-spacing:.06em; color:var(--muted);
+    max-width:min(540px,calc(100vw - 28px));
+    line-height:1.45;
+    background:rgba(0,0,0,.35);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:12px;
+    padding:10px 12px;
+    box-shadow:0 14px 40px rgba(0,0,0,.55);
+  }
+  .title{
+    position:fixed; left:14px; top:44px; z-index:20;
+    font-size:12px; letter-spacing:.24em; text-transform:uppercase; opacity:.78;
+  }
+  .panel{
+    position:fixed; right:14px; bottom:12px; z-index:21;
+    display:flex; flex-direction:column; gap:10px;
+    width:min(420px,calc(100vw - 28px));
+    background:rgba(0,0,0,.38);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:16px;
+    padding:12px;
+    box-shadow:0 14px 60px rgba(0,0,0,.65), 0 0 0 1px rgba(138,46,255,.08) inset;
+    backdrop-filter: blur(6px);
+  }
+  .panel .label{
+    font-size:11px; letter-spacing:.22em; text-transform:uppercase; opacity:.8;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .panel .label span{opacity:.65; font-size:10px; letter-spacing:.18em;}
+  .btnRow{display:flex; gap:10px; flex-wrap:wrap;}
+  .btn{
+    appearance:none; border:1px solid rgba(255,255,255,.18);
+    background:rgba(138,46,255,.14);
+    color:#fff; cursor:pointer;
+    padding:12px 14px; border-radius:999px;
+    letter-spacing:.22em; text-transform:uppercase; font-size:11px;
+    transition:.22s;
+  }
+  .btn:hover{background:rgba(138,46,255,.28); box-shadow:0 0 26px rgba(138,46,255,.18)}
+  .btn.alt{background:rgba(255,255,255,.06)}
+  .btn.alt:hover{background:rgba(255,255,255,.10)}
+  .small{opacity:.75; font-size:10px; letter-spacing:.14em; line-height:1.55}
+  .scan{
+    position:fixed; inset:0; z-index:9; pointer-events:none;
+    opacity:.08; mix-blend-mode:overlay;
+    background:repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
+  }
+  .vignette{
+    position:fixed; inset:0; z-index:10; pointer-events:none;
+    background:radial-gradient(circle at 55% 45%, transparent 40%, rgba(0,0,0,.78) 100%);
+  }
+</style>
+</head>
+<body>
+  <div class="nav">
+    <a href="../index.html">CLAWBOI</a>
+    <a href="../games.html">BACK TO GAMES</a>
+  </div>
+  <div class="title">AOC02 · Observatory</div>
+
+  <canvas id="c" width="960" height="540"></canvas>
+  <div class="scan"></div>
+  <div class="vignette"></div>
+
+  <div class="hud" id="hud">
+    <b style="color:#fff; letter-spacing:.22em;">CUTSCENE:</b>
+    CLAWBOI LIVES IN THE QUIET BETWEEN PLANETS. OBSERVATORY GLASS ABOVE. A ROACH GLOWS LIKE A TINY COMET.
+    <br><span style="opacity:.72">Make a choice. It will echo in AOC03.</span>
+  </div>
+
+  <div class="panel" id="panel">
+    <div class="label">
+      <div>DECISION NODE</div>
+      <span id="saveStatus">SAVE: CHECKING…</span>
+    </div>
+    <div class="small">
+      <b style="color:#00ffd5">Option A:</b> THROW THE ROACH. QUICK. LOUD. ASH ON THE FLOOR.
+      <br><b style="color:#8a2eff">Option B:</b> HIDE IT. CONTROLLED. POCKET THE EVIDENCE.
+      <br><span style="opacity:.7">Either way, the doors are about to remember your name.</span>
+    </div>
+    <div class="btnRow">
+      <button class="btn" id="btnThrow">THROW ROACH</button>
+      <button class="btn alt" id="btnHide">HIDE ROACH</button>
+      <button class="btn alt" id="btnLoad">LOAD SAVE</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ========= Canvas: chunky pixel world =========
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d", {alpha:false});
+  const W = 320, H = 180, SCALE = 3;
+  const world = document.createElement("canvas");
+  world.width=W; world.height=H;
+  const g = world.getContext("2d", {alpha:false});
+
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const randi=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+  const lerp=(a,b,t)=>a+(b-a)*t;
+
+  // ========= Save helpers =========
+  const SAVE_KEY = "AOC_SAVE";
+  const CHOICE_KEY = "AOC_CHOICE_ROACH"; // "throw" or "hide"
+  const statusEl = document.getElementById("saveStatus");
+
+  function getSave(){
+    try{
+      const raw = localStorage.getItem(SAVE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){ return null; }
+  }
+  function ensureSave(){
+    let s = getSave();
+    if(!s){
+      s = { name:"CLAWBOI", level:1, hp:100, xp:0, gold:0, created:Date.now() };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+    }
+    statusEl.textContent = "SAVE: OK";
+    return s;
+  }
+  ensureSave();
+
+  function setChoice(v){
+    localStorage.setItem(CHOICE_KEY, v);
+  }
+  function getChoice(){
+    return localStorage.getItem(CHOICE_KEY) || "";
+  }
+
+  // ========= Transitions =========
+  function fadeTo(url){
+    const d=document.createElement("div");
+    d.style.position="fixed";
+    d.style.inset="0";
+    d.style.background="#000";
+    d.style.opacity="0";
+    d.style.transition="900ms";
+    d.style.zIndex="999";
+    document.body.appendChild(d);
+    requestAnimationFrame(()=> d.style.opacity="1");
+    setTimeout(()=> location.href=url, 940);
+  }
+
+  // ========= UI Buttons =========
+  document.getElementById("btnThrow").onclick=()=>{
+    ensureSave();
+    setChoice("throw");
+    fadeTo("03AOC.html");
+  };
+  document.getElementById("btnHide").onclick=()=>{
+    ensureSave();
+    setChoice("hide");
+    fadeTo("03AOC.html");
+  };
+  document.getElementById("btnLoad").onclick=()=>{
+    const s = getSave();
+    if(!s) alert("NO SAVE FOUND");
+    else alert("SAVE LOADED: " + s.name + " · LV " + (s.level||1));
+  };
+
+  // ========= Scene: Observatory visuals =========
+  // Star layers
+  const stars=[];
+  for(let i=0;i<420;i++){
+    stars.push({x:Math.random()*W,y:Math.random()*H,z:rand(0.2,3.0),tw:rand(0,6.28)});
+  }
+  // Bad-guy drones (background flybys)
+  const drones=[];
+  function spawnDrone(){
+    const side=randi(0,3);
+    let x,y,vx,vy;
+    if(side===0){x=-18;y=rand(20,H-60);vx=rand(28,72);vy=rand(-8,8);}
+    if(side===1){x=W+18;y=rand(20,H-60);vx=-rand(28,72);vy=rand(-8,8);}
+    if(side===2){x=rand(18,W-18);y=-18;vx=rand(-10,10);vy=rand(26,60);}
+    if(side===3){x=rand(18,W-18);y=H+18;vx=rand(-10,10);vy=-rand(26,60);}
+    drones.push({x,y,vx,vy,t:0,life:rand(1.2,2.4),col:Math.random()<0.5?"#ff3b6b":"#00ffd5"});
+  }
+  setInterval(()=>{ if(drones.length<7 && Math.random()<0.9) spawnDrone(); }, 700);
+
+  // Roach ember particle
+  const ember=[];
+  function puffEmber(x,y){
+    for(let i=0;i<14;i++){
+      ember.push({x,y,vx:rand(-10,10),vy:rand(-22,-6),life:rand(0.35,0.8),c:Math.random()<0.7?"rgba(0,255,213,.9)":"rgba(138,46,255,.9)"});
+    }
+  }
+
+  // Camera / timing
+  let last=performance.now();
+  let t=0;
+
+  // “Clawboi” sprite consistent (simple purple/violet with accent)
+  function drawClawboi(px,py,frame){
+    const x=px|0, y=py|0;
+    const bob=((Math.sin(frame*0.18)*1.2)|0);
+
+    // shadow
+    g.fillStyle="rgba(0,0,0,.38)";
+    g.fillRect(x-8,y+10,16,3);
+
+    // legs
+    g.fillStyle="#3b153f";
+    g.fillRect(x-6,y+4+bob,5,6);
+    g.fillRect(x+1,y+4+bob,5,6);
+
+    // torso
+    g.fillStyle="#8a2eff";
+    g.fillRect(x-7,y-4+bob,14,12);
+
+    // belt accent
+    g.fillStyle="#00ffd5";
+    g.fillRect(x-7,y+2+bob,14,2);
+
+    // head
+    g.fillStyle="#b300ff";
+    g.fillRect(x-7,y-14+bob,14,10);
+
+    // face pixels
+    g.fillStyle="rgba(255,255,255,.85)";
+    g.fillRect(x-3,y-11+bob,2,2);
+    g.fillRect(x+1,y-11+bob,2,2);
+
+    // “smoke” pixels above
+    g.fillStyle="rgba(255,255,255,.25)";
+    if((frame%10)<5){
+      g.fillRect(x+6,y-18+bob,1,1);
+      g.fillRect(x+7,y-20+bob,1,1);
+      g.fillRect(x+5,y-21+bob,1,1);
+    }else{
+      g.fillRect(x+7,y-18+bob,1,1);
+      g.fillRect(x+6,y-20+bob,1,1);
+      g.fillRect(x+8,y-21+bob,1,1);
+    }
+  }
+
+  function drawDrone(d){
+    const x=d.x|0,y=d.y|0;
+    // glow trail
+    g.fillStyle = d.col===" #ff3b6b" ? "rgba(255,59,107,.15)" : "rgba(0,255,213,.15)";
+    // body
+    g.fillStyle = d.col;
+    g.fillRect(x-3,y-2,6,4);
+    g.fillStyle="rgba(255,255,255,.7)";
+    g.fillRect(x+2,y-1,1,2);
+    g.fillStyle="rgba(0,0,0,.4)";
+    g.fillRect(x-6,y-1,3,2);
+  }
+
+  function drawObservatory(){
+    // background
+    g.fillStyle="#000";
+    g.fillRect(0,0,W,H);
+
+    // nebula fog
+    for(let i=0;i<4;i++){
+      const fx=(W*(0.2+i*0.22) + Math.sin(t*0.18+i)*18);
+      const fy=(H*(0.18+i*0.16) + Math.cos(t*0.14+i)*14);
+      g.fillStyle=`rgba(138,46,255,${0.06+i*0.02})`;
+      g.fillRect(fx-34,fy-22,68,44);
+    }
+
+    // stars
+    for(const s of stars){
+      s.y += s.z*0.55;
+      s.x += Math.sin(t*0.4+s.tw)*(s.z*0.06);
+      if(s.y>H){s.y=0; s.x=Math.random()*W;}
+      if(s.x<0)s.x=W; if(s.x>W)s.x=0;
+      const tw = 0.35+0.65*(0.5+0.5*Math.sin(t*2+s.tw));
+      const a = Math.min(1,s.z/3)*tw;
+      g.fillStyle = Math.random()<0.003 ? `rgba(255,255,255,${a})` : `rgba(138,46,255,${a})`;
+      g.fillRect(s.x|0,s.y|0,(s.z*0.6)|0+1,(s.z*0.6)|0+1);
+    }
+
+    // observatory glass dome frame
+    // big arc-ish using rectangles (pixel style)
+    g.strokeStyle="rgba(255,255,255,.10)";
+    g.lineWidth=1;
+    g.beginPath();
+    g.rect(16,14,W-32,H-28);
+    g.stroke();
+
+    // inner pane lines
+    g.strokeStyle="rgba(0,255,213,.10)";
+    for(let x=24;x<W-24;x+=18){
+      g.beginPath(); g.moveTo(x,16); g.lineTo(x,H-16); g.stroke();
+    }
+    for(let y=24;y<H-24;y+=16){
+      g.beginPath(); g.moveTo(18,y); g.lineTo(W-18,y); g.stroke();
+    }
+
+    // telescope silhouette (right side)
+    g.fillStyle="rgba(0,0,0,.55)";
+    g.fillRect(W-92,H-76,64,10);
+    g.fillRect(W-76,H-120,10,60);
+    g.fillRect(W-86,H-126,30,10);
+    g.fillStyle="rgba(138,46,255,.16)";
+    g.fillRect(W-84,H-124,26,6);
+
+    // floor / observatory platform
+    g.fillStyle="#070414";
+    g.fillRect(0,H-46,W,46);
+    g.fillStyle="rgba(255,255,255,.05)";
+    for(let x=0;x<W;x+=10){
+      g.fillRect(x,H-46,1,46);
+    }
+
+    // roach ember near Clawboi hand
+    const rx=120, ry=H-58;
+    if(((t*10)|0)%9===0) puffEmber(rx+12, ry-6);
+    g.fillStyle="rgba(255,255,255,.12)";
+    g.fillRect(rx+8,ry-8,8,3);
+    g.fillStyle="rgba(0,255,213,.9)";
+    g.fillRect(rx+14,ry-9,2,1);
+
+    // Clawboi
+    drawClawboi(118,H-62,(t*60)|0);
+
+    // ember particles
+    for(let i=ember.length-1;i>=0;i--){
+      const p=ember[i];
+      p.life -= 1/60;
+      p.x += p.vx*(1/60);
+      p.y += p.vy*(1/60);
+      p.vx *= 0.98; p.vy *= 0.94;
+      g.fillStyle=p.c;
+      g.fillRect(p.x|0,p.y|0,1,1);
+      if(p.life<=0) ember.splice(i,1);
+    }
+
+    // drones
+    for(let i=drones.length-1;i>=0;i--){
+      const d=drones[i];
+      d.t += 1/60;
+      d.life -= 1/60;
+      d.x += d.vx*(1/60);
+      d.y += d.vy*(1/60) + Math.sin(d.t*6)*0.12;
+      drawDrone(d);
+      if(d.life<=0 || d.x<-40 || d.x>W+40 || d.y<-40 || d.y>H+40) drones.splice(i,1);
+    }
+
+    // subtle caption inside scene
+    g.fillStyle="rgba(255,255,255,.55)";
+    g.font="10px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+    g.fillText("OBSERVATORY // COSMOS-LENS ONLINE", 22, 28);
+
+    // show current hidden choice hint (if exists)
+    const ch = getChoice();
+    if(ch){
+      g.fillStyle="rgba(255,255,255,.35)";
+      g.fillText("MEMORY TAG: " + ch.toUpperCase(), 22, 42);
+    }
+  }
+
+  function loop(now){
+    const dt=Math.min(0.05,(now-last)/1000);
+    last=now;
+    t += dt;
+
+    drawObservatory();
+
+    // upscale
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(world,0,0,W,H,0,0,canvas.width,canvas.height);
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
