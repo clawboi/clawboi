@@ -1,237 +1,381 @@
-// effects.js
-// Screen shake, hit flashes, particles, hallucination post FX, simple audio synth.
-// Attached to window for plain script usage.
+/* =========================================================
+   EFFECTS MODULE — “legendary feel” kit
+   - screen shake
+   - hit flash (micro explosion)
+   - sparks (particles)
+   - rings (shockwaves)
+   - slash arc + dash trails
+   - beam telegraph (boss)
+   - hallucination overlay hooks (distortion-lite)
+   ========================================================= */
 
-window.Effects = (() => {
-  const state = {
-    shake: 0,
-    shakeX: 0,
-    shakeY: 0,
-    flash: 0,
-    time: 0,
-    particles: [],
-    trail: [],
-    hallu: { on:false, t:0, dur:0, intensity:0, meter:0 }
-  };
+const clamp = (n,a,b)=> Math.max(a, Math.min(b,n));
+const rand  = (a,b)=> a + Math.random()*(b-a);
 
-  function addShake(power=6){ state.shake = Math.max(state.shake, power); }
-  function addFlash(power=1){ state.flash = Math.max(state.flash, power); }
+export class Effects{
+  constructor(){
+    this.shakeMag = 0;
+    this.shakeT = 0;
 
-  function spawnParticle(x,y, vx,vy, life, col){
-    state.particles.push({x,y,vx,vy,life,max:life,col});
+    this.sparks = [];
+    this.rings = [];
+    this.flashes = [];
+    this.slashes = [];
+    this.trails = [];
+
+    // boss beams
+    this.beams = []; // {x1,y1,x2,y2,t,life,w}
+
+    // hallucination overlay (optional external toggle)
+    this.hallu = {
+      on:false,
+      t:0,
+      strength:0, // 0..1
+    };
+
+    // tiny synth SFX (no audio files)
+    this.audio = null;
+    this.master = null;
+    this.unlocked = false;
+
+    // canvas post overlay jitter
+    this.jitter = 0;
   }
-  function burst(x,y, n=10, col="rgba(138,46,255,.9)"){
-    for(let i=0;i<n;i++){
-      const a=Math.random()*Math.PI*2;
-      const s=0.6+Math.random()*1.8;
-      spawnParticle(x,y, Math.cos(a)*s, Math.sin(a)*s, 18+Math.random()*14, col);
+
+  /* =======================
+     AUDIO (optional)
+     call effects.unlockAudio() on first user gesture in main.js
+     ======================= */
+  unlockAudio(){
+    if(this.unlocked) return;
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.audio = new AC();
+      this.master = this.audio.createGain();
+      this.master.gain.value = 0.12;
+      this.master.connect(this.audio.destination);
+      this.unlocked = true;
+    }catch(e){}
+  }
+
+  _blip(type="square", freq=200, dur=0.08, gain=0.18){
+    if(!this.unlocked || !this.audio) return;
+    const o = this.audio.createOscillator();
+    const g = this.audio.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+
+    const t = this.audio.currentTime;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+
+    o.connect(g); g.connect(this.master);
+    o.start(t); o.stop(t+dur+0.02);
+  }
+
+  sfxSlash(){ this._blip("triangle", rand(260,520), 0.06, 0.20); }
+  sfxDash(){  this._blip("sine", rand(140,240), 0.08, 0.18); }
+
+  /* =======================
+     CORE FX
+     ======================= */
+  shake(mag=4, time=0.12){
+    this.shakeMag = Math.max(this.shakeMag, mag);
+    this.shakeT = Math.max(this.shakeT, time);
+  }
+
+  hitFlash(x,y){
+    this.flashes.push({x,y,t:0,life:0.10});
+  }
+
+  spark(x,y, color="violet", count=10){
+    for(let i=0;i<count;i++){
+      const ang = rand(0, Math.PI*2);
+      const sp = rand(40, 160);
+      this.sparks.push({
+        x,y,
+        vx: Math.cos(ang)*sp,
+        vy: Math.sin(ang)*sp,
+        r: rand(1,2.2),
+        t:0,
+        life: rand(0.18, 0.34),
+        color
+      });
     }
   }
 
-  function startHallucination(seconds=8, intensity=1){
-    state.hallu.on = true;
-    state.hallu.t = 0;
-    state.hallu.dur = seconds;
-    state.hallu.intensity = intensity;
-    state.hallu.meter = 1;
+  ring(x,y, radius=20, color="violet"){
+    this.rings.push({x,y,r:0, target:radius, t:0, life:0.22, color});
   }
 
-  function update(dt){
-    state.time += dt;
+  trail(x,y, dirX, dirY, color="violet"){
+    // little ghost afterimage dot
+    this.trails.push({x,y,t:0,life:0.16,color, dx:dirX, dy:dirY});
+  }
 
-    state.shake *= 0.86;
-    const s = state.shake;
-    state.shakeX = (Math.random()*2-1) * s;
-    state.shakeY = (Math.random()*2-1) * s;
+  slash(x,y, dirX, dirY){
+    // arc in facing direction
+    const a = Math.atan2(dirY, dirX);
+    this.slashes.push({
+      x,y,
+      a,
+      t:0,
+      life:0.12
+    });
+  }
 
-    state.flash *= 0.85;
+  beamTelegraph(x1,y1,x2,y2, life=0.45){
+    this.beams.push({x1,y1,x2,y2,t:0,life,w:10});
+  }
 
-    for(let i=state.particles.length-1;i>=0;i--){
-      const p=state.particles[i];
-      p.x += p.vx; p.y += p.vy;
-      p.vx *= 0.92; p.vy *= 0.92;
-      p.life -= 1;
-      if(p.life<=0) state.particles.splice(i,1);
+  // optional helper: “does beam hit player”
+  beamHitPlayer(player, x1,y1,x2,y2, thickness=10, dmg=12){
+    // quick segment-to-AABB distance check (approx)
+    const px = player.x + player.width/2;
+    const py = player.y + player.height/2;
+
+    const vx = x2-x1, vy = y2-y1;
+    const wx = px-x1, wy = py-y1;
+
+    const c1 = wx*vx + wy*vy;
+    const c2 = vx*vx + vy*vy;
+    const t = (c2>0) ? clamp(c1/c2, 0, 1) : 0;
+
+    const cx = x1 + vx*t;
+    const cy = y1 + vy*t;
+    const d = Math.hypot(px-cx, py-cy);
+
+    if(d < thickness){
+      if(typeof player.takeDamage === "function"){
+        player.takeDamage(dmg, (px-cx)*8, (py-cy)*8);
+      }
+      this.shake(6,0.12);
+      this.hitFlash(px,py);
+      this.spark(px,py,"white", 12);
+      this._blip("square", rand(80,140), 0.10, 0.22);
+      return true;
     }
+    return false;
+  }
 
-    if(state.hallu.on){
-      state.hallu.t += dt;
-      const k = state.hallu.t / state.hallu.dur;
-      state.hallu.meter = Math.max(0, 1 - k);
-      if(k >= 1){
-        state.hallu.on=false;
-        state.hallu.intensity = 0;
+  /* =======================
+     HALLUCINATION HOOKS
+     ======================= */
+  setHallucination(on, strength=1){
+    this.hallu.on = on;
+    this.hallu.strength = clamp(strength, 0, 1);
+    if(!on){
+      this.hallu.t = 0;
+    }
+  }
+
+  /* =======================
+     UPDATE / DRAW
+     camera returns shake offset you add in main render
+     ======================= */
+  update(dt){
+    // shake decay
+    if(this.shakeT>0){
+      this.shakeT -= dt;
+      if(this.shakeT<=0){
+        this.shakeT = 0;
+        this.shakeMag = 0;
+      }else{
+        this.shakeMag *= 0.92;
       }
     }
 
-    if(state.trail.length > 8) state.trail.shift();
+    // hallucination wobble
+    if(this.hallu.on){
+      this.hallu.t += dt;
+      this.jitter = 0.35 * this.hallu.strength * (0.6 + 0.4*Math.sin(this.hallu.t*7));
+    }else{
+      this.jitter *= 0.90;
+    }
+
+    // sparks
+    for(let i=this.sparks.length-1;i>=0;i--){
+      const s=this.sparks[i];
+      s.t += dt;
+      s.x += s.vx*dt;
+      s.y += s.vy*dt;
+      s.vx *= 0.90;
+      s.vy *= 0.90;
+      if(s.t>=s.life) this.sparks.splice(i,1);
+    }
+
+    // rings
+    for(let i=this.rings.length-1;i>=0;i--){
+      const r=this.rings[i];
+      r.t += dt;
+      r.r = (r.t/r.life) * r.target;
+      if(r.t>=r.life) this.rings.splice(i,1);
+    }
+
+    // flashes
+    for(let i=this.flashes.length-1;i>=0;i--){
+      const f=this.flashes[i];
+      f.t += dt;
+      if(f.t>=f.life) this.flashes.splice(i,1);
+    }
+
+    // slashes
+    for(let i=this.slashes.length-1;i>=0;i--){
+      const s=this.slashes[i];
+      s.t += dt;
+      if(s.t>=s.life) this.slashes.splice(i,1);
+    }
+
+    // trails
+    for(let i=this.trails.length-1;i>=0;i--){
+      const tr=this.trails[i];
+      tr.t += dt;
+      if(tr.t>=tr.life) this.trails.splice(i,1);
+    }
+
+    // beams
+    for(let i=this.beams.length-1;i>=0;i--){
+      const b=this.beams[i];
+      b.t += dt;
+      if(b.t>=b.life) this.beams.splice(i,1);
+    }
   }
 
-  function post(ctx, buffer){
-    const w = buffer.width, h = buffer.height;
+  getShakeOffset(){
+    if(this.shakeT<=0) return {x:0,y:0};
+    // crunchy shake
+    const mag = this.shakeMag;
+    return {
+      x: (Math.random()*2-1) * mag,
+      y: (Math.random()*2-1) * mag
+    };
+  }
 
-    if(state.hallu.on){
-      state.trail.push(bufferToCanvas(buffer));
+  /* =======================================================
+     DRAW
+     IMPORTANT: draw these AFTER world+actors (overlay pass)
+     You pass camera offsets for world coordinates
+     ======================================================= */
+  draw(ctx, camX, camY){
+    // RINGS
+    for(const r of this.rings){
+      const x = Math.floor(r.x - camX);
+      const y = Math.floor(r.y - camY);
+      const a = 1 - (r.t/r.life);
+
       ctx.save();
-      const it = state.hallu.intensity;
-      for(let i=0;i<state.trail.length;i++){
-        const alpha = (i/state.trail.length) * 0.10 * it;
-        ctx.globalAlpha = alpha;
-        ctx.drawImage(state.trail[i], 0, 0);
-      }
+      ctx.globalAlpha = 0.55*a;
+      ctx.strokeStyle = (r.color==="white") ? "rgba(255,255,255,0.9)" : "rgba(138,46,255,0.9)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x,y, r.r, 0, Math.PI*2);
+      ctx.stroke();
       ctx.restore();
     }
 
-    ctx.save();
-    if(state.hallu.on){
-      const it = state.hallu.intensity * state.hallu.meter;
-      const wob = Math.sin(state.time*4) * 2 * it;
-      ctx.translate(wob, -wob*0.6);
-      ctx.globalAlpha = 0.10 * it;
-      ctx.fillStyle = "rgba(138,46,255,1)";
-      ctx.fillRect(0,0,w,h);
-      ctx.globalAlpha = 1;
+    // BEAMS TELEGRAPH
+    for(const b of this.beams){
+      const a = 1 - (b.t/b.life);
+      ctx.save();
+      ctx.globalAlpha = 0.25 + 0.35*a;
+      ctx.strokeStyle = "rgba(138,46,255,0.9)";
+      ctx.lineWidth = 3 + 6*a;
+      ctx.beginPath();
+      ctx.moveTo(b.x1 - camX, b.y1 - camY);
+      ctx.lineTo(b.x2 - camX, b.y2 - camY);
+      ctx.stroke();
+
+      ctx.globalAlpha = 0.15 + 0.20*a;
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(b.x1 - camX, b.y1 - camY);
+      ctx.lineTo(b.x2 - camX, b.y2 - camY);
+      ctx.stroke();
+      ctx.restore();
     }
 
-    if(state.flash > 0.05){
-      ctx.globalAlpha = Math.min(0.35, state.flash*0.25);
-      ctx.fillStyle="#fff";
-      ctx.fillRect(0,0,w,h);
-      ctx.globalAlpha = 1;
+    // SLASH ARC
+    for(const s of this.slashes){
+      const k = s.t/s.life;
+      const a = 1-k;
+
+      ctx.save();
+      ctx.translate(s.x - camX, s.y - camY);
+      ctx.rotate(s.a);
+
+      ctx.globalAlpha = 0.50*a;
+      ctx.fillStyle = "rgba(138,46,255,0.95)";
+      ctx.fillRect(10, -3, 22, 6);
+
+      ctx.globalAlpha = 0.22*a;
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fillRect(14, -1, 18, 2);
+
+      ctx.restore();
     }
-    ctx.restore();
-  }
 
-  function bufferToCanvas(buffer){
-    const c = document.createElement("canvas");
-    c.width = buffer.width;
-    c.height = buffer.height;
-    c.getContext("2d").drawImage(buffer,0,0);
-    return c;
-  }
+    // TRAILS
+    for(const tr of this.trails){
+      const k = tr.t/tr.life;
+      const a = 1-k;
+      const x = Math.floor(tr.x - camX);
+      const y = Math.floor(tr.y - camY);
 
-  // WebAudio synth (no files)
-  let audio = null;
-  function initAudio(){
-    if(audio) return audio;
-    const AC = window.AudioContext || window.webkitAudioContext;
-    const ctx = new AC();
-    const master = ctx.createGain();
-    master.gain.value = 0.10;
-    master.connect(ctx.destination);
-
-    const osc = ctx.createOscillator();
-    osc.type="sine";
-    osc.frequency.value=62;
-    const padGain = ctx.createGain();
-    padGain.gain.value = 0.18;
-
-    const noise = ctx.createBufferSource();
-    const buffer = ctx.createBuffer(1, ctx.sampleRate*2, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for(let i=0;i<data.length;i++){
-      data[i] = (Math.random()*2-1) * 0.08;
+      ctx.save();
+      ctx.globalAlpha = 0.16*a;
+      ctx.fillStyle = "rgba(138,46,255,0.9)";
+      ctx.fillRect(x-6, y-6, 12, 12);
+      ctx.restore();
     }
-    noise.buffer = buffer;
-    noise.loop = true;
-    const noiseFilter = ctx.createBiquadFilter();
-    noiseFilter.type="lowpass";
-    noiseFilter.frequency.value = 420;
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.value = 0.10;
 
-    const halluFilter = ctx.createBiquadFilter();
-    halluFilter.type="allpass";
-    halluFilter.frequency.value = 520;
+    // SPARKS
+    for(const s of this.sparks){
+      const k = s.t/s.life;
+      const a = 1-k;
+      const x = Math.floor(s.x - camX);
+      const y = Math.floor(s.y - camY);
 
-    osc.connect(padGain);
-    padGain.connect(halluFilter);
+      ctx.save();
+      ctx.globalAlpha = 0.75*a;
+      if(s.color==="white") ctx.fillStyle="rgba(255,255,255,0.95)";
+      else if(s.color==="pink") ctx.fillStyle="rgba(255,74,122,0.95)";
+      else ctx.fillStyle="rgba(138,46,255,0.95)";
+      ctx.fillRect(x, y, s.r, s.r);
+      ctx.restore();
+    }
 
-    noise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(halluFilter);
+    // HIT FLASHES (tiny white pop)
+    for(const f of this.flashes){
+      const k=f.t/f.life;
+      const a=1-k;
+      const x=Math.floor(f.x - camX);
+      const y=Math.floor(f.y - camY);
 
-    halluFilter.connect(master);
+      ctx.save();
+      ctx.globalAlpha = 0.35*a;
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fillRect(x-10,y-10,20,20);
+      ctx.restore();
+    }
 
-    osc.start();
-    noise.start();
+    // HALLUCINATION SCREEN OVERLAY (cheap but effective)
+    if(this.hallu.on){
+      const t = this.hallu.t;
+      const s = this.hallu.strength;
 
-    audio = {
-      ctx, master, osc, padGain, noiseFilter, noiseGain, halluFilter,
-      unlocked:false,
-      unlock: async ()=>{
-        if(audio.unlocked) return;
-        try{ await ctx.resume(); audio.unlocked=true; }catch(e){}
-      },
-      sfx: {
-        slash: ()=>{
-          const o=ctx.createOscillator();
-          const g=ctx.createGain();
-          o.type="triangle";
-          o.frequency.setValueAtTime(520, ctx.currentTime);
-          o.frequency.exponentialRampToValueAtTime(140, ctx.currentTime+0.08);
-          g.gain.setValueAtTime(0.0001, ctx.currentTime);
-          g.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime+0.01);
-          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.10);
-          o.connect(g); g.connect(master);
-          o.start(); o.stop(ctx.currentTime+0.12);
-        },
-        hit: ()=>{
-          const o=ctx.createOscillator();
-          const g=ctx.createGain();
-          o.type="square";
-          o.frequency.setValueAtTime(180, ctx.currentTime);
-          o.frequency.exponentialRampToValueAtTime(70, ctx.currentTime+0.10);
-          g.gain.setValueAtTime(0.0001, ctx.currentTime);
-          g.gain.exponentialRampToValueAtTime(0.20, ctx.currentTime+0.01);
-          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.12);
-          o.connect(g); g.connect(master);
-          o.start(); o.stop(ctx.currentTime+0.14);
-        },
-        pickup: ()=>{
-          const o=ctx.createOscillator();
-          const g=ctx.createGain();
-          o.type="sine";
-          o.frequency.setValueAtTime(600, ctx.currentTime);
-          o.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime+0.08);
-          g.gain.setValueAtTime(0.0001, ctx.currentTime);
-          g.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime+0.01);
-          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.10);
-          o.connect(g); g.connect(master);
-          o.start(); o.stop(ctx.currentTime+0.12);
-        },
-        boss: ()=>{
-          const o=ctx.createOscillator();
-          const g=ctx.createGain();
-          o.type="sawtooth";
-          o.frequency.setValueAtTime(90, ctx.currentTime);
-          o.frequency.exponentialRampToValueAtTime(45, ctx.currentTime+0.40);
-          g.gain.setValueAtTime(0.0001, ctx.currentTime);
-          g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime+0.02);
-          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.48);
-          o.connect(g); g.connect(master);
-          o.start(); o.stop(ctx.currentTime+0.55);
-        }
-      },
-      setHallucination: (on, amt)=>{
-        const t=ctx.currentTime;
-        audio.osc.detune.setTargetAtTime(on? 80*amt : 0, t, 0.05);
-        audio.noiseFilter.frequency.setTargetAtTime(on? 220+amt*220 : 420, t, 0.08);
-        audio.master.gain.setTargetAtTime(on? 0.11 : 0.10, t, 0.10);
+      ctx.save();
+      ctx.globalAlpha = 0.10 + 0.10*s;
+      ctx.fillStyle = "rgba(138,46,255,0.9)";
+      // subtle banding pulse
+      const bandH = 18;
+      for(let y=0; y<ctx.canvas.height; y+=bandH){
+        const wob = Math.sin(t*4 + y*0.08) * 0.5*s;
+        ctx.globalAlpha = 0.06 + 0.06*s;
+        ctx.fillRect(0 + wob*8, y, ctx.canvas.width, 2);
       }
-    };
-    return audio;
+      ctx.restore();
+    }
   }
-
-  return {
-    state,
-    update,
-    post,
-    addShake,
-    addFlash,
-    burst,
-    startHallucination,
-    initAudio
-  };
-})();
-
+}
