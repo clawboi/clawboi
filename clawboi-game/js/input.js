@@ -1,39 +1,55 @@
 export class Input{
+  constructor(atkBtn, dashBtn){
+    this.keys = Object.create(null);
 
-constructor(a,d){
+    this._atkPressed = false;
+    this._dashPressed = false;
 
-this.k={};
-this.p={};
+    window.addEventListener("keydown", (e)=>{
+      this.keys[(e.key||"").toLowerCase()] = true;
+    });
 
-addEventListener("keydown",e=>{
-let k=e.key.toLowerCase();
-this.k[k]=1;
-this.p[k]=1;
-});
+    window.addEventListener("keyup", (e)=>{
+      this.keys[(e.key||"").toLowerCase()] = false;
+    });
 
-addEventListener("keyup",e=>{
-this.k[e.key.toLowerCase()]=0;
-});
+    if (atkBtn){
+      atkBtn.addEventListener("pointerdown", ()=>{ this._atkPressed = true; }, { passive:true });
+    }
+    if (dashBtn){
+      dashBtn.addEventListener("pointerdown", ()=>{ this._dashPressed = true; }, { passive:true });
+    }
+  }
 
-if(a)a.ontouchstart=()=>this.p.atk=1;
-if(d)d.ontouchstart=()=>this.p.dash=1;
-}
+  axis(){
+    const k = this.keys;
+    const left  = k["a"] || k["arrowleft"];
+    const right = k["d"] || k["arrowright"];
+    const up    = k["w"] || k["arrowup"];
+    const down  = k["s"] || k["arrowdown"];
+    return {
+      x: (right?1:0) - (left?1:0),
+      y: (down?1:0) - (up?1:0),
+    };
+  }
 
-down(k){return this.k[k]}
+  attack(){
+    const k = this.keys;
+    return !!(this._atkPressed || k["j"] || k[" "] || k["enter"]);
+  }
 
-mx(){return (this.down("d")||this.down("arrowright")?1:0)-(this.down("a")||this.down("arrowleft")?1:0)}
-my(){return (this.down("s")||this.down("arrowdown")?1:0)-(this.down("w")||this.down("arrowup")?1:0)}
+  dash(){
+    const k = this.keys;
+    return !!(this._dashPressed || k["k"] || k["shift"]);
+  }
 
-attack(){
-if(this.p[" "]||this.p["j"]||this.p.atk){this.p={};return 1}
-return 0
-}
+  interact(){
+    const k = this.keys;
+    return !!(k["e"]);
+  }
 
-dash(){
-if(this.p["k"]||this.p["shift"]||this.p.dash){this.p={};return 1}
-return 0
-}
-
-end(){this.p={}}
-
+  end(){
+    this._atkPressed = false;
+    this._dashPressed = false;
+  }
 }
