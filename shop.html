@@ -117,7 +117,7 @@
       box-shadow:0 0 16px rgba(138,46,255,.35);
     }
 
-    /* ===== NEW: filter bar (doesn't change your layout, just adds) ===== */
+    /* ===== filters ===== */
     .filters{
       margin-top:14px;
       display:flex;
@@ -183,7 +183,7 @@
       opacity:.9;
     }
 
-    /* ===== NEW: image switcher inside thumb ===== */
+    /* ===== image switcher inside thumb ===== */
     .thumb{
       position:relative;
       aspect-ratio: 4 / 3;
@@ -196,7 +196,7 @@
       position:absolute;
       inset:0;
     }
-    .stage iframe{
+    .stage img{
       position:absolute;
       inset:0;
       width:100%;
@@ -205,13 +205,18 @@
       opacity:0;
       pointer-events:none;
       transition:opacity .22s ease;
+
+      /* fuller frame (no crop) */
+      object-fit:contain;
+      object-position:center;
+      background:rgba(0,0,0,.55);
     }
-    .stage iframe.on{
+    .stage img.on{
       opacity:1;
       pointer-events:auto;
     }
 
-    /* fallback overlay (same as before but tuned to coexist) */
+    /* fallback overlay */
     .thumbFallback{
       position:absolute;
       inset:0;
@@ -333,7 +338,7 @@
       line-height:1.6;
     }
 
-    /* ===== NEW: pricing + single buy button + next arrow ===== */
+    /* pricing + single buy button */
     .priceRow{
       margin-top:10px;
       display:flex;
@@ -413,26 +418,6 @@
       line-height:1;
     }
 
-    .nextCard{
-      flex:0 0 auto;
-      width:44px;
-      height:44px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.06);
-      color:#fff;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      cursor:pointer;
-      transition:.2s;
-    }
-    .nextCard:hover{
-      background:rgba(255,255,255,.10);
-      border-color:rgba(255,255,255,.18);
-      transform:translateY(-1px);
-    }
-
     /* Coming soon block */
     .soon{
       margin: 22px 0 0;
@@ -500,7 +485,6 @@
         </a>
       </div>
 
-      <!-- NEW: filters -->
       <div class="filters" aria-label="Filters">
         <button class="chip active" data-filter="all">All</button>
         <button class="chip" data-filter="apparel">Apparel</button>
@@ -511,23 +495,14 @@
 
     <section class="grid" aria-label="Merch grid" id="grid">
 
-      <!-- NOTE: Each item has TWO preview URLs.
-           Replace data-img2 with your second picture/preview URL for that same product.
-           If you want image files instead (best for guaranteed previews), set data-mode="img"
-           and set data-img1="/images/shop/xxx-1.jpg" data-img2="/images/shop/xxx-2.jpg" and remove iframe URLs. -->
-
       <!-- 1 -->
       <article class="card" data-cat="apparel" data-title="BMA" data-buy="https://www.redbubble.com/i/t-shirt/BMA-by-clawboi/178525489.WFLAH"
-        data-img1="images/shop/001-01.jpg"
-        data-img2="images/shop/001-02.jpg">
+        data-img1="001-01.jpg"
+        data-img2="001-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <iframe class="on" loading="lazy" title="BMA Preview 1"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-            <iframe loading="lazy" title="BMA Preview 2"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+            <img class="on" loading="lazy" alt="BMA Preview 1" />
+            <img loading="lazy" alt="BMA Preview 2" />
           </div>
           <div class="imgNav">
             <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
@@ -536,7 +511,7 @@
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
           </div>
-          <div class="thumbFallback">If preview is blocked, BUY still works.</div>
+          <div class="thumbFallback">Loading preview…</div>
         </div>
         <div class="body">
           <div class="tag"><span class="pill"></span> T-Shirt</div>
@@ -552,23 +527,18 @@
               href="https://www.redbubble.com/i/t-shirt/BMA-by-clawboi/178525489.WFLAH">
               Buy <span class="arr">›</span>
             </a>
-            <button class="nextCard" type="button" aria-label="Next item">›</button>
           </div>
         </div>
       </article>
 
       <!-- 2 -->
       <article class="card" data-cat="apparel" data-title="Broken Minds Anonymous Tee" data-buy="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.WFLAH"
-        data-img1="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.WFLAH"
-        data-img2="https://www.redbubble.com/people/clawboi/shop?asc=u">
+        data-img1="002-01.jpg"
+        data-img2="002-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <iframe class="on" loading="lazy" title="BMA Tee Preview 1"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-            <iframe loading="lazy" title="BMA Tee Preview 2"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+            <img class="on" loading="lazy" alt="BMA Tee Preview 1" />
+            <img loading="lazy" alt="BMA Tee Preview 2" />
           </div>
           <div class="imgNav">
             <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
@@ -577,7 +547,7 @@
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
           </div>
-          <div class="thumbFallback">If preview is blocked, BUY still works.</div>
+          <div class="thumbFallback">Loading preview…</div>
         </div>
         <div class="body">
           <div class="tag"><span class="pill"></span> T-Shirt</div>
@@ -593,23 +563,18 @@
               href="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.WFLAH">
               Buy <span class="arr">›</span>
             </a>
-            <button class="nextCard" type="button" aria-label="Next item">›</button>
           </div>
         </div>
       </article>
 
       <!-- 3 -->
       <article class="card" data-cat="apparel" data-title="BMA Sweatshirt" data-buy="https://www.redbubble.com/i/sweatshirt/Broken-Minds-Anonymous-by-clawboi/178525222.E3041"
-        data-img1="https://www.redbubble.com/i/sweatshirt/Broken-Minds-Anonymous-by-clawboi/178525222.E3041"
-        data-img2="https://www.redbubble.com/people/clawboi/shop?asc=u">
+        data-img1="003-01.jpg"
+        data-img2="003-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <iframe class="on" loading="lazy" title="BMA Sweatshirt Preview 1"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-            <iframe loading="lazy" title="BMA Sweatshirt Preview 2"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+            <img class="on" loading="lazy" alt="BMA Sweatshirt Preview 1" />
+            <img loading="lazy" alt="BMA Sweatshirt Preview 2" />
           </div>
           <div class="imgNav">
             <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
@@ -618,7 +583,7 @@
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
           </div>
-          <div class="thumbFallback">If preview is blocked, BUY still works.</div>
+          <div class="thumbFallback">Loading preview…</div>
         </div>
         <div class="body">
           <div class="tag"><span class="pill"></span> Sweatshirt</div>
@@ -634,23 +599,18 @@
               href="https://www.redbubble.com/i/sweatshirt/Broken-Minds-Anonymous-by-clawboi/178525222.E3041">
               Buy <span class="arr">›</span>
             </a>
-            <button class="nextCard" type="button" aria-label="Next item">›</button>
           </div>
         </div>
       </article>
 
       <!-- 4 -->
       <article class="card" data-cat="apparel" data-title="JUMP Tee" data-buy="https://www.redbubble.com/i/t-shirt/JUMP-by-clawboi/178524500.IJ6L0"
-        data-img1="https://www.redbubble.com/i/t-shirt/JUMP-by-clawboi/178524500.IJ6L0"
-        data-img2="https://www.redbubble.com/people/clawboi/shop?asc=u">
+        data-img1="004-01.jpg"
+        data-img2="004-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <iframe class="on" loading="lazy" title="JUMP Tee Preview 1"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-            <iframe loading="lazy" title="JUMP Tee Preview 2"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+            <img class="on" loading="lazy" alt="JUMP Tee Preview 1" />
+            <img loading="lazy" alt="JUMP Tee Preview 2" />
           </div>
           <div class="imgNav">
             <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
@@ -659,7 +619,7 @@
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
           </div>
-          <div class="thumbFallback">If preview is blocked, BUY still works.</div>
+          <div class="thumbFallback">Loading preview…</div>
         </div>
         <div class="body">
           <div class="tag"><span class="pill"></span> T-Shirt</div>
@@ -677,23 +637,18 @@
               href="https://www.redbubble.com/i/t-shirt/JUMP-by-clawboi/178524500.IJ6L0">
               Buy <span class="arr">›</span>
             </a>
-            <button class="nextCard" type="button" aria-label="Next item">›</button>
           </div>
         </div>
       </article>
 
       <!-- 5 -->
       <article class="card" data-cat="accessories" data-title="ANGELS IN BACKD00RS Print" data-buy="https://www.redbubble.com/i/photographic-print/ANGELS-IN-BACKD00RS-by-clawboi/178524760.6Q0TX"
-        data-img1="https://www.redbubble.com/i/photographic-print/ANGELS-IN-BACKD00RS-by-clawboi/178524760.6Q0TX"
-        data-img2="https://www.redbubble.com/people/clawboi/shop?asc=u">
+        data-img1="005-01.jpg"
+        data-img2="005-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <iframe class="on" loading="lazy" title="ANGELS Print Preview 1"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-            <iframe loading="lazy" title="ANGELS Print Preview 2"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+            <img class="on" loading="lazy" alt="ANGELS Print Preview 1" />
+            <img loading="lazy" alt="ANGELS Print Preview 2" />
           </div>
           <div class="imgNav">
             <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
@@ -702,7 +657,7 @@
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
           </div>
-          <div class="thumbFallback">If preview is blocked, BUY still works.</div>
+          <div class="thumbFallback">Loading preview…</div>
         </div>
         <div class="body">
           <div class="tag"><span class="pill"></span> Print</div>
@@ -720,23 +675,18 @@
               href="https://www.redbubble.com/i/photographic-print/ANGELS-IN-BACKD00RS-by-clawboi/178524760.6Q0TX">
               Buy <span class="arr">›</span>
             </a>
-            <button class="nextCard" type="button" aria-label="Next item">›</button>
           </div>
         </div>
       </article>
 
       <!-- 6 -->
       <article class="card" data-cat="accessories" data-title="Two Times Backpack" data-buy="https://www.redbubble.com/i/backpack/Two-Times-by-clawboi/178524644.K1KHE"
-        data-img1="https://www.redbubble.com/i/backpack/Two-Times-by-clawboi/178524644.K1KHE"
-        data-img2="https://www.redbubble.com/people/clawboi/shop?asc=u">
+        data-img1="006-01.jpg"
+        data-img2="006-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <iframe class="on" loading="lazy" title="Two Times Backpack Preview 1"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-            <iframe loading="lazy" title="Two Times Backpack Preview 2"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+            <img class="on" loading="lazy" alt="Two Times Backpack Preview 1" />
+            <img loading="lazy" alt="Two Times Backpack Preview 2" />
           </div>
           <div class="imgNav">
             <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
@@ -745,7 +695,7 @@
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
           </div>
-          <div class="thumbFallback">If preview is blocked, BUY still works.</div>
+          <div class="thumbFallback">Loading preview…</div>
         </div>
         <div class="body">
           <div class="tag"><span class="pill"></span> Backpack</div>
@@ -763,23 +713,18 @@
               href="https://www.redbubble.com/i/backpack/Two-Times-by-clawboi/178524644.K1KHE">
               Buy <span class="arr">›</span>
             </a>
-            <button class="nextCard" type="button" aria-label="Next item">›</button>
           </div>
         </div>
       </article>
 
       <!-- 7 -->
       <article class="card" data-cat="accessories" data-title="BMA Sticker" data-buy="https://www.redbubble.com/i/sticker/Broken-Minds-Anonymous-by-clawboi/178525222.EJUG5"
-        data-img1="https://www.redbubble.com/i/sticker/Broken-Minds-Anonymous-by-clawboi/178525222.EJUG5"
-        data-img2="https://www.redbubble.com/people/clawboi/shop?asc=u">
+        data-img1="007-01.jpg"
+        data-img2="007-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <iframe class="on" loading="lazy" title="BMA Sticker Preview 1"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-            <iframe loading="lazy" title="BMA Sticker Preview 2"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+            <img class="on" loading="lazy" alt="BMA Sticker Preview 1" />
+            <img loading="lazy" alt="BMA Sticker Preview 2" />
           </div>
           <div class="imgNav">
             <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
@@ -788,7 +733,7 @@
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
           </div>
-          <div class="thumbFallback">If preview is blocked, BUY still works.</div>
+          <div class="thumbFallback">Loading preview…</div>
         </div>
         <div class="body">
           <div class="tag"><span class="pill"></span> Sticker</div>
@@ -806,23 +751,18 @@
               href="https://www.redbubble.com/i/sticker/Broken-Minds-Anonymous-by-clawboi/178525222.EJUG5">
               Buy <span class="arr">›</span>
             </a>
-            <button class="nextCard" type="button" aria-label="Next item">›</button>
           </div>
         </div>
       </article>
 
       <!-- 8 -->
       <article class="card" data-cat="accessories" data-title="JUMP Pillow" data-buy="https://www.redbubble.com/i/throw-pillow/JUMP-by-clawboi/178524500.5X2YF"
-        data-img1="https://www.redbubble.com/i/throw-pillow/JUMP-by-clawboi/178524500.5X2YF"
-        data-img2="https://www.redbubble.com/people/clawboi/shop?asc=u">
+        data-img1="008-01.jpg"
+        data-img2="008-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <iframe class="on" loading="lazy" title="JUMP Pillow Preview 1"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-            <iframe loading="lazy" title="JUMP Pillow Preview 2"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+            <img class="on" loading="lazy" alt="JUMP Pillow Preview 1" />
+            <img loading="lazy" alt="JUMP Pillow Preview 2" />
           </div>
           <div class="imgNav">
             <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
@@ -831,7 +771,7 @@
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
           </div>
-          <div class="thumbFallback">If preview is blocked, BUY still works.</div>
+          <div class="thumbFallback">Loading preview…</div>
         </div>
         <div class="body">
           <div class="tag"><span class="pill"></span> Pillow</div>
@@ -849,23 +789,18 @@
               href="https://www.redbubble.com/i/throw-pillow/JUMP-by-clawboi/178524500.5X2YF">
               Buy <span class="arr">›</span>
             </a>
-            <button class="nextCard" type="button" aria-label="Next item">›</button>
           </div>
         </div>
       </article>
 
       <!-- 9 -->
       <article class="card" data-cat="accessories" data-title="Two Times iPhone Case" data-buy="https://www.redbubble.com/i/iphone-case/Two-Times-by-clawboi/178524644.4UP47"
-        data-img1="https://www.redbubble.com/i/iphone-case/Two-Times-by-clawboi/178524644.4UP47"
-        data-img2="https://www.redbubble.com/people/clawboi/shop?asc=u">
+        data-img1="009-01.jpg"
+        data-img2="009-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <iframe class="on" loading="lazy" title="Two Times Case Preview 1"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-            <iframe loading="lazy" title="Two Times Case Preview 2"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+            <img class="on" loading="lazy" alt="Two Times Case Preview 1" />
+            <img loading="lazy" alt="Two Times Case Preview 2" />
           </div>
           <div class="imgNav">
             <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
@@ -874,7 +809,7 @@
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
           </div>
-          <div class="thumbFallback">If preview is blocked, BUY still works.</div>
+          <div class="thumbFallback">Loading preview…</div>
         </div>
         <div class="body">
           <div class="tag"><span class="pill"></span> iPhone Case</div>
@@ -892,23 +827,18 @@
               href="https://www.redbubble.com/i/iphone-case/Two-Times-by-clawboi/178524644.4UP47">
               Buy <span class="arr">›</span>
             </a>
-            <button class="nextCard" type="button" aria-label="Next item">›</button>
           </div>
         </div>
       </article>
 
       <!-- 10 -->
       <article class="card" data-cat="apparel" data-title="Two Times Dress" data-buy="https://www.redbubble.com/i/dress/Two-Times-by-clawboi/178524644.V4WQ8"
-        data-img1="https://www.redbubble.com/i/dress/Two-Times-by-clawboi/178524644.V4WQ8"
-        data-img2="https://www.redbubble.com/people/clawboi/shop?asc=u">
+        data-img1="010-01.jpg"
+        data-img2="010-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <iframe class="on" loading="lazy" title="Two Times Dress Preview 1"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-            <iframe loading="lazy" title="Two Times Dress Preview 2"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+            <img class="on" loading="lazy" alt="Two Times Dress Preview 1" />
+            <img loading="lazy" alt="Two Times Dress Preview 2" />
           </div>
           <div class="imgNav">
             <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
@@ -917,7 +847,7 @@
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
           </div>
-          <div class="thumbFallback">If preview is blocked, BUY still works.</div>
+          <div class="thumbFallback">Loading preview…</div>
         </div>
         <div class="body">
           <div class="tag"><span class="pill"></span> Dress</div>
@@ -935,23 +865,18 @@
               href="https://www.redbubble.com/i/dress/Two-Times-by-clawboi/178524644.V4WQ8">
               Buy <span class="arr">›</span>
             </a>
-            <button class="nextCard" type="button" aria-label="Next item">›</button>
           </div>
         </div>
       </article>
 
       <!-- 11 -->
       <article class="card" data-cat="apparel" data-title="BMA Tee (Alt)" data-buy="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.5U9OZ"
-        data-img1="shop/"
-        data-img2="https://www.redbubble.com/people/clawboi/shop?asc=u">
+        data-img1="011-01.jpg"
+        data-img2="011-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <iframe class="on" loading="lazy" title="BMA Tee Alt Preview 1"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-            <iframe loading="lazy" title="BMA Tee Alt Preview 2"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+            <img class="on" loading="lazy" alt="BMA Tee Alt Preview 1" />
+            <img loading="lazy" alt="BMA Tee Alt Preview 2" />
           </div>
           <div class="imgNav">
             <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
@@ -960,7 +885,7 @@
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
           </div>
-          <div class="thumbFallback">If preview is blocked, BUY still works.</div>
+          <div class="thumbFallback">Loading preview…</div>
         </div>
         <div class="body">
           <div class="tag"><span class="pill"></span> T-Shirt</div>
@@ -978,23 +903,18 @@
               href="https://www.redbubble.com/i/t-shirt/Broken-Minds-Anonymous-by-clawboi/178525222.5U9OZ">
               Buy <span class="arr">›</span>
             </a>
-            <button class="nextCard" type="button" aria-label="Next item">›</button>
           </div>
         </div>
       </article>
 
       <!-- 12 -->
       <article class="card" data-cat="accessories" data-title="BMA Hat" data-buy="https://www.redbubble.com/i/hat/Broken-Minds-Anonymous-by-clawboi/178525222/fce2"
-        data-img1="https://www.redbubble.com/i/hat/Broken-Minds-Anonymous-by-clawboi/178525222/fce2"
-        data-img2="https://www.redbubble.com/people/clawboi/shop?asc=u">
+        data-img1="012-01.jpg"
+        data-img2="012-02.jpg">
         <div class="thumb">
           <div class="stage">
-            <iframe class="on" loading="lazy" title="BMA Hat Preview 1"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-            <iframe loading="lazy" title="BMA Hat Preview 2"
-              referrerpolicy="no-referrer-when-downgrade"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+            <img class="on" loading="lazy" alt="BMA Hat Preview 1" />
+            <img loading="lazy" alt="BMA Hat Preview 2" />
           </div>
           <div class="imgNav">
             <button class="arrowBtn prev" aria-label="Previous image"><span class="arrowIcon">‹</span></button>
@@ -1003,7 +923,7 @@
           <div class="dots" aria-hidden="true">
             <div class="dot on"></div><div class="dot"></div>
           </div>
-          <div class="thumbFallback">If preview is blocked, BUY still works.</div>
+          <div class="thumbFallback">Loading preview…</div>
         </div>
         <div class="body">
           <div class="tag"><span class="pill"></span> Hat</div>
@@ -1021,7 +941,6 @@
               href="https://www.redbubble.com/i/hat/Broken-Minds-Anonymous-by-clawboi/178525222/fce2">
               Buy <span class="arr">›</span>
             </a>
-            <button class="nextCard" type="button" aria-label="Next item">›</button>
           </div>
         </div>
       </article>
@@ -1057,10 +976,10 @@
     }
     chips.forEach(c=>c.addEventListener('click', ()=>setFilter(c.dataset.filter)));
 
-    // ===== 2-image swipe/arrow system (works with iframes, or swap to images later) =====
-    function initCard(card, idx){
+    // ===== 2-image swipe/arrow system (local images) =====
+    function initCard(card){
       const stage = card.querySelector('.stage');
-      const iframes = Array.from(stage.querySelectorAll('iframe'));
+      const imgs = Array.from(stage.querySelectorAll('img'));
       const prevBtn = card.querySelector('.arrowBtn.prev');
       const nextBtn = card.querySelector('.arrowBtn.next');
       const dots = Array.from(card.querySelectorAll('.dot'));
@@ -1070,24 +989,26 @@
       const u2 = card.getAttribute('data-img2') || "";
       const urls = [u1, u2].filter(Boolean);
 
-      // assign iframe sources
-      if(iframes[0] && urls[0]) iframes[0].src = urls[0];
-      if(iframes[1] && urls[1]) iframes[1].src = urls[1];
+      // assign image sources
+      if(imgs[0] && urls[0]) imgs[0].src = urls[0];
+      if(imgs[1] && urls[1]) imgs[1].src = urls[1];
 
-      // show fallback unless iframe loads AND isn't blocked
-      let loadedCount = 0;
-      iframes.forEach((f)=>{
-        f.addEventListener('load', ()=>{
-          loadedCount++;
-          // if at least one loaded, hide the fallback (best effort)
-          if(loadedCount>=1) fallback.style.opacity = "0";
+      // hide fallback once at least one image loads
+      let loaded = 0;
+      imgs.forEach((im)=>{
+        im.addEventListener('load', ()=>{
+          loaded++;
+          if(loaded>=1) fallback.style.opacity = "0";
+        });
+        im.addEventListener('error', ()=>{
+          // keep fallback visible if both fail
         });
       });
 
       let i = 0;
       function show(n){
         i = (n+2)%2;
-        iframes.forEach((f, k)=> f.classList.toggle('on', k===i));
+        imgs.forEach((im, k)=> im.classList.toggle('on', k===i));
         dots.forEach((d, k)=> d.classList.toggle('on', k===i));
       }
 
@@ -1120,16 +1041,6 @@
         });
       }
 
-      // Next-item arrow button
-      const nextCardBtn = card.querySelector('.nextCard');
-      nextCardBtn.addEventListener('click', ()=>{
-        // find next visible card
-        const visible = cards.filter(c=>!c.classList.contains('hidden'));
-        const pos = visible.indexOf(card);
-        const next = visible[(pos+1) % visible.length];
-        if(next) next.scrollIntoView({behavior:'smooth', block:'start'});
-      });
-
       show(0);
     }
 
@@ -1139,10 +1050,9 @@
     // default filter
     setFilter('all');
 
-    // keyboard convenience (optional): left/right to swap images when focused on page
+    // keyboard convenience: left/right to swap images when focused on page
     document.addEventListener('keydown', (e)=>{
       if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-      // operate on the first card in viewport
       const midY = window.scrollY + window.innerHeight*0.35;
       const target = cards.find(c=>{
         const r=c.getBoundingClientRect();
