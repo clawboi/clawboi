@@ -1,3 +1,4 @@
+import {GameScene} from "./gameScene.js";
 import {CONFIG} from "./config.js";
 import {scale} from "./scaler.js";
 import {Clock} from "./time.js";
