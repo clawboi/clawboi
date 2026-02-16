@@ -26,12 +26,17 @@ const mobileDashBtn = document.getElementById("mDash");
 
 const view = { scale: CONFIG.minScale, pxW: 0, pxH: 0 };
 
-function calcScale() {
-  const ww = window.innerWidth;
-  const wh = window.innerHeight;
+function calcScale(){
+  const vv = window.visualViewport;
+  const ww = vv ? vv.width  : window.innerWidth;
+  const wh = vv ? vv.height : window.innerHeight;
+
   const sx = Math.floor(ww / CONFIG.baseW);
   const sy = Math.floor(wh / CONFIG.baseH);
-  return clamp(Math.min(sx, sy), CONFIG.minScale, CONFIG.maxScale);
+
+  // leave a tiny safety margin so Safari UI bars don’t force scale down
+  const s = Math.min(sx, sy) || CONFIG.minScale;
+  return clamp(s, CONFIG.minScale, CONFIG.maxScale);
 }
 
 /**
