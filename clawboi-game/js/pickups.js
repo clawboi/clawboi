@@ -1,35 +1,54 @@
-export class Pickups{
+import { dist2 } from "./utils.js";
 
-constructor(){
-this.shards=[];
-this.need=3;
-}
+export class PickupManager{
+  constructor(){
+    this.shards = [];
+    this.collected = 0;
+    this.target = 3;
+  }
 
-spawn(x,y){
-this.shards.push({x,y,r:6});
-}
+  reset(target=3){
+    this.target = target;
+    this.collected = 0;
+    this.shards.length = 0;
+  }
 
-collect(player){
-let c=0;
-this.shards=this.shards.filter(s=>{
-let dx=s.x-player.x;
-let dy=s.y-player.y;
-if(dx*dx+dy*dy<120){
-c++; return false;
-}
-return true;
-});
-return c;
-}
+  addShard(x, y){
+    this.shards.push({ x, y, r: 4, alive:true });
+  }
 
-draw(ctx,cam){
-ctx.fillStyle="#b388ff";
-for(let s of this.shards)
-ctx.fillRect(s.x-cam.x,s.y-cam.y,6,6);
-}
+  done(){
+    return this.collected >= this.target;
+  }
 
-done(){
-return this.shards.length===0;
-}
+  update(dt){ (void)dt; }
 
+  collect(player){
+    for (const s of this.shards){
+      if (!s.alive) continue;
+      const rr = (player.r + s.r + 2);
+      if (dist2(player.x, player.y, s.x, s.y) <= rr*rr){
+        s.alive = false;
+        this.collected++;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  draw(ctx, camX, camY){
+    for (const s of this.shards){
+      if (!s.alive) continue;
+      const x = (s.x - camX)|0;
+      const y = (s.y - camY)|0;
+
+      ctx.fillStyle = "rgba(179,136,255,0.9)";
+      ctx.beginPath();
+      ctx.arc(x, y, s.r, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,255,255,0.65)";
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
 }
