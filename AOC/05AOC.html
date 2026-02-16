@@ -131,7 +131,7 @@
 
   // Scene layout: long run to the right
   const road={x0:10,y0:26,x1:W-10,y1:H-18};
-  const gate={x:W-18, y:H/2-22, w:8, h:44, hp:220, broken:false};
+  const gate={x:W-18, y:H/2-22, w:8, h:44, hp:1, broken:false};
 
   // Car
   const car={
@@ -392,35 +392,41 @@
     }
 
     // gate collision
-    if(!gate.broken){
-      const inGateX = (car.x > gate.x-8 && car.x < gate.x+gate.w+8);
-      const inGateY = (car.y > gate.y-10 && car.y < gate.y+gate.h+10);
-      if(inGateX && inGateY){
-        const impact = Math.max(0, Math.abs(car.speed) - 25);
-        if(impact>0){
-          const dmg = impact * 0.9;
-          gate.hp -= dmg;
-          car.hp -= impact * 0.18; // ramming costs you
-          particles(gate.x, car.y, 30, 2.2, 140, 0.55, "#00ffd5", "#b300ff");
-          shake=Math.max(shake,10);
-          hitstop=0.016;
-          car.speed *= -0.35; // bounce back
-          msgEl.textContent="RAM IT AGAIN. HARDER.";
-          if(gate.hp<=0){
-            gate.broken=true;
-            gate.hp=0;
-            particles(gate.x+4, gate.y+gate.h/2, 120, 3.0, 180, 1.0, "#00ffd5","#ff3b6b");
-            shake=Math.max(shake,14);
-            msgEl.textContent="GATE BROKE. GO.";
-          }
-        }else{
-          // too slow, you just bump it
-          car.speed *= 0.35;
-        }
-      }else{
-        msgEl.textContent="RUN THEM OVER. BUILD SPEED. BREAK THE GATE.";
-      }
+    // gate collision
+if(!gate.broken){
+  const inGateX = (car.x > gate.x-8 && car.x < gate.x+gate.w+8);
+  const inGateY = (car.y > gate.y-10 && car.y < gate.y+gate.h+10);
+  if(inGateX && inGateY){
+    // ONE-HIT BREAK if you're moving fast enough
+    const SPEED_TO_BREAK = 78; // tweak: 70-90 feels good
+    const sp = Math.abs(car.speed);
+
+    if(sp >= SPEED_TO_BREAK){
+      gate.broken = true;
+      gate.hp = 0;
+
+      // you still take a little damage, but you *burst through* (no bounce-back)
+      car.hp -= 10; 
+      particles(gate.x+4, gate.y+gate.h/2, 140, 3.0, 190, 1.05, "#00ffd5","#ff3b6b");
+      shake = Math.max(shake, 16);
+      hitstop = 0.020;
+
+      // keep momentum forward so it feels like you shattered it
+      car.speed = Math.max(car.speed, SPEED_TO_BREAK * 0.9);
+
+      msgEl.textContent="ONE HIT. GATE SHATTERED. GO.";
     }else{
+      // too slow: bump, lose speed, small damage
+      car.speed *= 0.35;
+      car.hp -= 2;
+      shake = Math.max(shake, 4);
+      msgEl.textContent="FASTER. FULL SEND INTO THE GATE.";
+    }
+  }else{
+    msgEl.textContent="RUN THEM OVER. BUILD SPEED. BREAK THE GATE.";
+  }
+}else{
+
       msgEl.textContent="ESCAPE LINE OPEN. DRIVE THROUGH.";
       // escape condition: cross beyond right boundary
       if(car.x > W-6){
