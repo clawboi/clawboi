@@ -7,6 +7,34 @@ import { clamp, rand, rint } from "./utils.js";
    - spawns waves + mini-boss
 */
 
+resolvePlayerAttack(player){
+  const hb = player.getAttackHitbox?.();
+  if(!hb) return {count:0,kills:0};
+
+  let count = 0;
+  let kills = 0;
+
+  for(const e of this.list || this.enemies || []){
+    if(!e || e.hp <= 0) continue;
+
+    const dx = e.x - hb.x;
+    const dy = e.y - hb.y;
+    const dist = Math.hypot(dx,dy);
+
+    if(dist < (hb.r + (e.r||6))){
+      e.hp -= hb.dmg || 10;
+      e.hitFlash = 0.12;
+      count++;
+
+      if(e.hp <= 0){
+        kills++;
+      }
+    }
+  }
+
+  return {count, kills};
+}
+
 export class EnemyManager {
   constructor(world){
     this.world = world;
