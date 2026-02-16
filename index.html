@@ -105,24 +105,20 @@ header a:hover{opacity:1}
   margin-right:calc(50% - 50vw);
 }
 
-/* CHANGE: make the moving/fading violet field cover the ENTIRE PAGE */
 .hero::before{
   content:"";
-  position:fixed;
+  position:absolute;
   inset:0;
   pointer-events:none;
-  z-index:0;
   background:radial-gradient(circle at var(--x,50%) var(--y,50%), rgba(138,46,255,.08), transparent 60%);
   mix-blend-mode:screen;
 }
 
-/* CHANGE: same for the animated storm layer so it isn’t only “top half” */
 .hero:after{
   content:"";
-  position:fixed;
+  position:absolute;
   inset:0;
   pointer-events:none;
-  z-index:0;
   background:
     radial-gradient(circle at 30% 30%,rgba(138,46,255,.14),transparent 65%),
     radial-gradient(circle at 70% 40%,rgba(138,46,255,.09),transparent 68%);
@@ -657,3 +653,5 @@ if(treePortal){
 
 </body>
 </html>
+
+
