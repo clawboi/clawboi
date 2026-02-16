@@ -9,13 +9,22 @@
 <body>
   <div class="hudTop">
     <a class="brand" href="./index.html">CLAWBOI</a>
-    <div class="hint">WASD/ARROWS · J/Space Attack · K/Shift Dash · Enter Start</div>
+    <div class="hint">WASD/ARROWS · J/Space Attack · K/Shift Dash · Enter Start · M Mute · ` Debug</div>
   </div>
 
   <div class="stage">
-    <canvas id="game"></canvas>
+    <canvas id="game" aria-label="The Adventures of Clawboi canvas"></canvas>
+
+    <!-- Mobile buttons (optional, doesn’t break desktop) -->
+    <div class="mobileControls" id="mobileControls" aria-hidden="true">
+      <button class="mBtn" id="mAtk">ATK</button>
+      <button class="mBtn" id="mDash">DASH</button>
+    </div>
+
+    <!-- Debug overlay -->
+    <div class="debug" id="debug"></div>
   </div>
 
-  <script type="module" src="./main.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>
