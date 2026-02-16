@@ -32,16 +32,48 @@ a{color:#fff;text-decoration:none}
 }
 @keyframes storm{50%{opacity:.18;transform:translateY(-10px)}}
 
+.fx{position:fixed;inset:0;z-index:1;pointer-events:none}
+.scan{position:fixed;inset:0;pointer-events:none;z-index:2;opacity:.06;mix-blend-mode:overlay;
+  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
+}
+
+.planetWrap{position:relative;width:260px;height:260px;margin:12px auto 0;animation:float 7.2s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-16px)}}
+
 .planet{
-  width:190px;height:190px;border-radius:50%;margin:12px auto 0;
+  position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:195px;height:195px;border-radius:50%;
   background:
     radial-gradient(circle at 30% 30%, rgba(255,255,255,.16), transparent 35%),
     repeating-linear-gradient(12deg, rgba(255,170,90,.32), rgba(255,170,90,.32) 12px, rgba(130,70,30,.18) 12px, rgba(130,70,30,.18) 24px),
     radial-gradient(circle at 60% 70%, rgba(0,0,0,.38), transparent 58%);
   box-shadow:0 0 28px rgba(255,170,90,.14),0 0 110px rgba(180,90,255,.10);
-  animation:float 7.2s ease-in-out infinite;
+  will-change:transform,filter,box-shadow;
 }
-@keyframes float{50%{transform:translateY(-16px)}}
+
+/* audio reactive storm-bands sheen */
+.band{
+  position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:205px;height:205px;border-radius:50%;
+  background:repeating-linear-gradient(18deg, rgba(255,255,255,.03), rgba(255,255,255,.03) 10px, transparent 10px, transparent 22px);
+  mix-blend-mode:screen;
+  opacity:.35;
+  filter:blur(.3px);
+  pointer-events:none;
+  will-change:transform,opacity;
+}
+
+/* waveform halo */
+.halo{
+  position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:260px;height:260px;border-radius:50%;
+  pointer-events:none;
+  opacity:.95;
+  filter:drop-shadow(0 0 18px rgba(255,170,90,.14)) drop-shadow(0 0 38px rgba(180,90,255,.12));
+}
 
 h1{margin:22px 0 0;letter-spacing:.34em;text-transform:uppercase;font-size:clamp(22px,5vw,52px);
   text-shadow:0 0 16px rgba(255,170,90,.18),0 0 60px rgba(138,46,255,.18);}
@@ -58,11 +90,13 @@ h1{margin:22px 0 0;letter-spacing:.34em;text-transform:uppercase;font-size:clamp
 .hint.rainbow{animation:rainbow 4s linear infinite;}
 @keyframes rainbow{0%{color:#ff2a2a}25%{color:#ffe600}50%{color:#00ff9c}75%{color:#4aa3ff}100%{color:#ff2aff}}
 .note{margin-top:14px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;opacity:.55}
-@media (prefers-reduced-motion: reduce){.smoke,.planet,.player::before{animation:none!important}}
+@media (prefers-reduced-motion: reduce){.smoke,.planetWrap,.player::before{animation:none!important}}
 </style>
 </head>
 <body>
 <div class="bg"><div class="smoke"></div></div>
+<canvas class="fx" id="fx"></canvas>
+<div class="scan"></div>
 
 <div class="top">
   <div class="brand"><a href="index.html">CLAWBOI</a></div>
@@ -72,9 +106,14 @@ h1{margin:22px 0 0;letter-spacing:.34em;text-transform:uppercase;font-size:clamp
 </div>
 
 <div class="wrap">
-  <div class="planet" aria-hidden="true"></div>
+  <div class="planetWrap" aria-hidden="true">
+    <canvas class="halo" id="halo" width="520" height="520"></canvas>
+    <div class="planet" id="planet"></div>
+    <div class="band" id="band"></div>
+  </div>
+
   <h1>JUPITER</h1>
-  <div class="sub">now playing: body count</div>
+  <div class="sub">now playing: body-count</div>
 
   <div class="player" id="player" role="button" aria-label="Play or pause Body Count">
     <div class="hint" id="hint">TAP TO PLAY</div>
@@ -89,15 +128,170 @@ h1{margin:22px 0 0;letter-spacing:.34em;text-transform:uppercase;font-size:clamp
 const player=document.getElementById("player");
 const audio=document.getElementById("audio");
 const hint=document.getElementById("hint");
+const planet=document.getElementById("planet");
+const band=document.getElementById("band");
+
 function setHint(on){hint.textContent=on?"PLAYING":"TAP TO PLAY";hint.classList.toggle("rainbow",on);}
+
+let aCtx, analyser, srcNode, data, playing=false, amp=0;
+function setupAudio(){
+  if(aCtx) return;
+  aCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = aCtx.createAnalyser();
+  analyser.fftSize = 1024;
+  data = new Uint8Array(analyser.frequencyBinCount);
+  srcNode = aCtx.createMediaElementSource(audio);
+  const gain = aCtx.createGain();
+  gain.gain.value = 0.95;
+  srcNode.connect(analyser);
+  analyser.connect(gain);
+  gain.connect(aCtx.destination);
+}
+function getAmp(){
+  if(!analyser || !playing) return amp*0.92;
+  analyser.getByteFrequencyData(data);
+  let sum=0;
+  const start=2, end=Math.min(90, data.length);
+  for(let i=start;i<end;i++) sum += data[i];
+  const avg = (sum/(end-start))/255;
+  amp = amp*0.82 + avg*0.18;
+  return amp;
+}
+
+/* halo */
+const halo=document.getElementById("halo");
+const hctx=halo.getContext("2d");
+function drawHalo(){
+  const level=getAmp();
+  const W=halo.width, H=halo.height;
+  hctx.clearRect(0,0,W,H);
+  const cx=W/2, cy=H/2;
+  const baseR=182;
+  const bars=104;
+
+  for(let i=0;i<bars;i++){
+    const t=i/bars*Math.PI*2;
+    const idx = data ? Math.min(data.length-1, Math.floor(i*(data.length/bars))) : i;
+    const raw = (analyser && data && playing) ? data[idx]/255 : 0;
+
+    const r1 = baseR + raw*18 + level*28;
+    const r2 = baseR + raw*42 + level*64;
+
+    const x1 = cx + Math.cos(t)*r1;
+    const y1 = cy + Math.sin(t)*r1;
+    const x2 = cx + Math.cos(t)*r2;
+    const y2 = cy + Math.sin(t)*r2;
+
+    hctx.lineWidth = 2;
+    hctx.strokeStyle = `rgba(255,170,90,${0.06 + raw*0.18 + level*0.10})`;
+    hctx.beginPath(); hctx.moveTo(x1,y1); hctx.lineTo(x2,y2); hctx.stroke();
+
+    hctx.lineWidth = 1;
+    hctx.strokeStyle = `rgba(180,90,255,${0.05 + raw*0.16 + level*0.12})`;
+    hctx.beginPath(); hctx.moveTo(x1,y1); hctx.lineTo(x2,y2); hctx.stroke();
+  }
+
+  requestAnimationFrame(drawHalo);
+}
+drawHalo();
+
+/* planet react */
+function tick(){
+  const level=getAmp();
+  const s = 1 + level*0.09;
+  planet.style.transform = `translate(-50%,-50%) scale(${s})`;
+  planet.style.filter = `saturate(${1.05 + level*0.55}) contrast(${1.0 + level*0.22})`;
+  planet.style.boxShadow = `0 0 ${28+level*28}px rgba(255,170,90,${0.14+level*0.18}),
+                            0 0 ${110+level*150}px rgba(180,90,255,${0.10+level*0.18})`;
+  band.style.opacity = `${0.22 + level*0.55}`;
+  band.style.transform = `translate(-50%,-50%) rotate(${(performance.now()*0.01) + level*40}deg)`;
+  requestAnimationFrame(tick);
+}
+tick();
+
+/* flying stars */
+const fx=document.getElementById("fx");
+const fctx=fx.getContext("2d");
+let stars=[];
+function resizeFX(){
+  const dpr = Math.max(1, devicePixelRatio||1);
+  fx.width = Math.floor(innerWidth*dpr);
+  fx.height = Math.floor(innerHeight*dpr);
+  fctx.setTransform(1,0,0,1,0,0);
+  fctx.scale(dpr,dpr);
+}
+addEventListener("resize", resizeFX);
+resizeFX();
+
+function spawnMeteor(){
+  const y = Math.random()*innerHeight*0.75;
+  const x = innerWidth + 60;
+  const sp = 2.2 + Math.random()*4.8;
+  stars.push({
+    x,y,
+    vx: -sp,
+    vy: (Math.random()-.5)*0.7,
+    len: 34+Math.random()*92,
+    a: 0.18+Math.random()*0.35,
+    w: 1+Math.random()*1.8,
+    violet: Math.random()<0.45
+  });
+}
+function drawFX(){
+  const level=getAmp();
+  fctx.clearRect(0,0,innerWidth,innerHeight);
+
+  if(Math.random() < (0.08 + level*0.20)) spawnMeteor();
+
+  for(let i=stars.length-1;i>=0;i--){
+    const s=stars[i];
+    const speed = (1 + level*2.2);
+    s.x += s.vx*speed;
+    s.y += s.vy*speed;
+
+    const grad = fctx.createLinearGradient(s.x, s.y, s.x+s.len, s.y);
+    if(s.violet){
+      grad.addColorStop(0, `rgba(180,90,255,0)`);
+      grad.addColorStop(1, `rgba(180,90,255,${s.a + level*0.12})`);
+    }else{
+      grad.addColorStop(0, `rgba(255,255,255,0)`);
+      grad.addColorStop(1, `rgba(255,255,255,${s.a + level*0.10})`);
+    }
+    fctx.strokeStyle = grad;
+    fctx.lineWidth = s.w;
+    fctx.beginPath();
+    fctx.moveTo(s.x, s.y);
+    fctx.lineTo(s.x+s.len, s.y);
+    fctx.stroke();
+
+    if(s.x < -s.len-80 || s.y < -100 || s.y > innerHeight+100) stars.splice(i,1);
+  }
+  requestAnimationFrame(drawFX);
+}
+drawFX();
+
+/* click play */
 player.onclick=async()=>{
-  try{ if(audio.paused){setHint(true);await audio.play();}
-  else{audio.pause();audio.currentTime=0;setHint(false);} }
-  catch(e){setHint(false);alert("Check /audio/body-count.mp3");}
+  try{
+    setupAudio();
+    if(aCtx.state==="suspended") await aCtx.resume();
+    if(audio.paused){setHint(true);await audio.play(); playing=true;}
+    else{audio.pause();audio.currentTime=0;setHint(false); playing=false;}
+  }catch(e){setHint(false);alert("Check /audio/body-count.mp3");}
 };
-audio.addEventListener("pause",()=>setHint(false));
-audio.addEventListener("play",()=>setHint(true));
+audio.addEventListener("pause",()=>{setHint(false); playing=false;});
+audio.addEventListener("play",()=>{setHint(true); playing=true;});
+
+/* iOS unlock */
+function unlockOnce(){
+  try{ setupAudio(); aCtx.resume?.(); }catch(e){}
+  removeEventListener("pointerdown", unlockOnce);
+  removeEventListener("touchstart", unlockOnce);
+  removeEventListener("keydown", unlockOnce);
+}
+addEventListener("pointerdown", unlockOnce, {passive:true});
+addEventListener("touchstart", unlockOnce, {passive:true});
+addEventListener("keydown", unlockOnce);
 </script>
 </body>
 </html>
-
