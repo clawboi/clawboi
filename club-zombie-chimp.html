@@ -106,7 +106,10 @@
     const k = e.key.toLowerCase();
     keys.add(k);
     pressed.add(k);
+
+    // keep controls reliable, stop browser stealing keys
     if([" ", "arrowup","arrowdown","arrowleft","arrowright"].includes(e.key)) e.preventDefault();
+    if(e.key === "Escape") e.preventDefault(); // don't let fullscreen "escape" auto-kick us
   }, {passive:false});
 
   window.addEventListener('keyup', (e)=> keys.delete(e.key.toLowerCase()));
@@ -126,6 +129,28 @@
   const STATE = { BUNKER:1, PLAY:2, DEAD:3 };
   let state = STATE.BUNKER;
   let paused = false;
+
+  // Fullscreen handling (fix ESC behavior)
+  const fs = {
+    wanted: false,
+    lastEsc: 0,
+    toggle(){
+      if(!document.fullscreenElement){
+        fs.wanted = true;
+        (canvas.requestFullscreen?.() || document.documentElement.requestFullscreen?.())?.catch(()=>{});
+      } else {
+        fs.wanted = false;
+        document.exitFullscreen?.().catch(()=>{});
+      }
+    }
+  };
+  document.addEventListener("fullscreenchange", ()=>{
+    // if we wanted fullscreen but got kicked, try once more quickly (some browsers are touchy)
+    if(fs.wanted && !document.fullscreenElement){
+      // do nothing aggressive; just mark as not wanted
+      fs.wanted = false;
+    }
+  });
 
   // High score
   const HS_KEY = "club_chimp_zombie_highscore_v3";
@@ -310,12 +335,6 @@
     g.fillRect(x+3, y-18+wob, 6, 4);
 
     // eyes
-    g.fillStyle = (b.kind===2) ? "#0a0a12" : "#0a0a12";
-    g.fillStyle = (b.kind===2) ? "#0a0a12" : "#0a0a12";
-    g.fillStyle = (b.kind===2) ? "#0a0a12" : "#0a0a12";
-    g.fillStyle = (b.kind===2) ? "#0a0a12" : "#0a0a12";
-    g.fillStyle = (b.kind===2) ? "#0a0a12" : "#0a0a12";
-
     g.fillStyle = (b.kind===0) ? "#b300ff" : (b.kind===1 ? "#00ffd5" : "#ff3b6b");
     g.fillRect(x-7, y-17+wob, 2, 2);
     g.fillRect(x+5, y-17+wob, 2, 2);
@@ -857,6 +876,22 @@
 
     // Play
     if(state === STATE.PLAY){
+      // ESC: if shop open, close shop (existing behavior). If not, toggle fullscreen without exiting.
+      if(pressed.has("escape")){
+        const now = performance.now();
+        // simple debounce so key repeat doesn't spam toggle
+        if(now - fs.lastEsc > 220){
+          fs.lastEsc = now;
+          if(shopOpen){
+            shopOpen = false;
+            wave.shopPhase = "READY";
+          } else {
+            fs.toggle();
+          }
+        }
+        pressed.delete("escape");
+      }
+
       player.timeAlive += dt;
       player.frame += 1;
 
@@ -880,11 +915,7 @@
           if(pressed.has("enter") || pressed.has("e")){
             buyWeapon(SHOP_EXCLUSIVE[shopCursor]);
           }
-          if(pressed.has("escape")){
-            shopOpen = false;
-            wave.shopPhase = "READY";
-          }
-          // You can still open crates while shop is up? keep it simple: shop captures inputs.
+          // ESC handling moved above (doesn't kick fullscreen)
           pressed.clear();
           return;
         } else {
@@ -1398,17 +1429,17 @@
     drawText(`DASH ${player.dashCD>0?player.dashCD.toFixed(1):"OK"}`, 214, 24, 0.9, "rgba(232,232,255,0.62)");
     drawText(`Q ${player.pulseCD>0?player.pulseCD.toFixed(0):"READY"}`, 276, 24, 0.9, "rgba(232,232,255,0.62)");
 
-    // HP bar
+    // HP bar (slightly smaller)
     const hpP = clamp(player.hp/100, 0, 1);
     g.fillStyle = "rgba(255,255,255,0.10)";
-    g.fillRect(8, 34, 170, 10);
+    g.fillRect(8, 34, 150, 8);
     g.fillStyle = hpP>0.4 ? "#7CFF6B" : "#ff3b6b";
-    g.fillRect(8, 34, 170*hpP, 10);
+    g.fillRect(8, 34, 150*hpP, 8);
     g.strokeStyle = "rgba(255,255,255,0.16)";
-    g.strokeRect(8, 34, 170, 10);
-    drawText(`HP`, 184, 43, 0.9, "rgba(232,232,255,0.78)");
+    g.strokeRect(8, 34, 150, 8);
+    drawText(`HP`, 164, 41, 0.9, "rgba(232,232,255,0.78)");
 
-    // Boss bar
+    // Boss bar (unchanged)
     if(boss){
       const bp = clamp(boss.hp/boss.maxHp, 0, 1);
       g.fillStyle = "rgba(0,0,0,0.50)";
@@ -1421,8 +1452,8 @@
       drawText(bname, 264, 56, 0.9, "#e8e8ff");
     }
 
-    // minimap
-    const mmW = 84, mmH = 48;
+    // minimap (slightly smaller)
+    const mmW = 72, mmH = 40;
     const mmX = W - mmW - 8;
     const mmY = 34;
     g.fillStyle = "rgba(0,0,0,0.42)";
@@ -1559,5 +1590,3 @@
 </script>
 </body>
 </html>
-
-
