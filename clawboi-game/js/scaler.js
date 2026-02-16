@@ -1,22 +1,45 @@
-import {CONFIG} from "./config.js";
+// scaler.js — keep internal resolution fixed, scale via CSS only (crash-proof)
+
+import { CONFIG } from "./config.js";
+
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+function calcScale(){
+  const vv = window.visualViewport;
+  const ww = vv ? vv.width  : window.innerWidth;
+  const wh = vv ? vv.height : window.innerHeight;
+
+  const sx = Math.floor(ww / CONFIG.WIDTH);
+  const sy = Math.floor(wh / CONFIG.HEIGHT);
+
+  const s = Math.min(sx, sy) || 1;
+  return clamp(s, CONFIG.MIN_SCALE || 1, CONFIG.MAX_SCALE || 6);
+}
 
 export function scale(...canvases){
+  function apply(){
+    const s = calcScale();
+    const cssW = CONFIG.WIDTH * s;
+    const cssH = CONFIG.HEIGHT * s;
 
-function resize(){
+    for (const c of canvases){
+      if (!c) continue;
 
-let sx=Math.floor(innerWidth/CONFIG.WIDTH);
-let sy=Math.floor(innerHeight/CONFIG.HEIGHT);
-let s=Math.min(sx,sy)||1;
-s=Math.max(CONFIG.MIN_SCALE,Math.min(CONFIG.MAX_SCALE,s));
+      // internal render resolution (NEVER change)
+      c.width  = CONFIG.WIDTH;
+      c.height = CONFIG.HEIGHT;
 
-for(let c of canvases){
-c.width=CONFIG.WIDTH;
-c.height=CONFIG.HEIGHT;
-c.style.width=CONFIG.WIDTH*s+"px";
-c.style.height=CONFIG.HEIGHT*s+"px";
+      // CSS display size (ONLY thing that scales)
+      c.style.width  = cssW + "px";
+      c.style.height = cssH + "px";
+    }
+  }
+
+  window.addEventListener("resize", apply, { passive: true });
+  apply();
 }
-}
 
-addEventListener("resize",resize);
-resize();
-}
+
+
+
+<script type="module" src="./js/main.js"></script>
