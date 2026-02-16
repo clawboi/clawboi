@@ -1,1 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Adventures of Clawboi</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo">CLAWBOI</span>
+        <span class="sub">Adventures</span>
+      </div>
+
+      <div class="hint">
+        <div>Move: WASD / Arrows</div>
+        <div>Attack: J / Space • Dash: K / Shift • Interact: E</div>
+        <div>Weapons: 1 Punch • 2 Claw • 3 Gun • Restart: R</div>
+      </div>
+    </header>
+
+    <main class="stage">
+      <!-- The three layers (world/fx/ui) -->
+      <div class="canvasStack" id="stack">
+        <canvas id="world" width="320" height="180"></canvas>
+        <canvas id="fx" width="320" height="180"></canvas>
+        <canvas id="ui" width="320" height="180"></canvas>
+      </div>
+
+      <!-- Mobile buttons -->
+      <div class="mobileBar">
+        <button id="atk" class="btn violet">ATTACK</button>
+        <button id="dash" class="btn ghost">DASH</button>
+      </div>
+
+      <div class="card">
+        <div class="cardTitle">Quest</div>
+        <div class="cardBody">
+          <div>Collect 3 shards to activate the gate.</div>
+          <div>Find the key (optional) to open it early.</div>
+          <div>Enter the node and survive.</div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="foot">
+      <span>⚡ Pixel build. No assets needed. Runs on GitHub Pages.</span>
+    </footer>
+  </div>
+
+  <!-- IMPORTANT: module path is relative to this index.html -->
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
 
