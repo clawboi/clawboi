@@ -63,14 +63,16 @@ this.waveTimer=10;
 this.cam.setWorld(this.world.worldW,this.world.worldH);
 this.boss.update(dt,this.world,this.player);
 
-let atk=this.input.attack()?this.player.attack():null;
-if(atk){
-let dx=this.boss.x-atk.x;
-let dy=this.boss.y-atk.y;
-if(dx*dx+dy*dy<400){
-this.boss.hit(atk.dmg);
-this.fx.burst(atk.x,atk.y);
-}
+let bossAtk = this.input.attack() ? this.player.attack() : null;
+
+if (bossAtk) {
+  let dx = this.boss.x - bossAtk.x;
+  let dy = this.boss.y - bossAtk.y;
+
+  if (dx * dx + dy * dy < 400) {
+    this.boss.hit(bossAtk.dmg);
+    this.fx.burst(bossAtk.x, bossAtk.y);
+  }
 }
 
 if(this.boss.dead){
