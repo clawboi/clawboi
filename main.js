@@ -11,7 +11,7 @@ import { Player } from "./player.js";
 import { World } from "./world.js";
 import { EnemyManager } from "./enemies.js";
 import { Effects } from "./effects.js";
-import { UI } from "./ui.js";
+import { UIManager } from "./ui.js";
 
 /* ------------------ Canvas setup ------------------ */
 const canvas = document.getElementById("game");
@@ -190,7 +190,7 @@ function startGame(){
 
   enemies = new EnemyManager(world);
   effects = new Effects();
-  ui = new UI();
+  ui = new UIManager();
 
   spawnT = 0;
   bossGate.active = false;
