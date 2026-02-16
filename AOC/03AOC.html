@@ -1,0 +1,663 @@
+<!-- AOC/03AOC.html -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>AOC03 · Security Breach</title>
+<style>
+  :root{
+    --bg:#05030a;
+    --ui:#e8e8ff;
+    --muted:#9aa0c6;
+    --violet:#8a2eff;
+    --accent:#b300ff;
+    --cyan:#00ffd5;
+    --danger:#ff3b6b;
+    --ok:#7CFF6B;
+  }
+  html,body{height:100%; margin:0; background:radial-gradient(1100px 740px at 50% 40%, #140a2a 0%, #05030a 60%, #02010a 100%); color:var(--ui); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; overflow:hidden;}
+  #wrap{height:100%; display:grid; place-items:center;}
+  canvas{
+    image-rendering:pixelated; image-rendering:crisp-edges;
+    border:1px solid rgba(255,255,255,0.14);
+    border-radius:14px;
+    background:#03020a;
+    box-shadow:0 18px 60px rgba(0,0,0,0.62), 0 0 0 1px rgba(179,0,255,0.10) inset;
+  }
+  .nav{
+    position:fixed; top:12px; left:14px; z-index:50;
+    font-size:12px; letter-spacing:.25em; text-transform:uppercase;
+    display:flex; gap:18px; align-items:center; user-select:none;
+  }
+  .nav a{color:#fff; text-decoration:none; opacity:.75; transition:.2s; text-shadow:0 0 18px rgba(138,46,255,.22);}
+  .nav a:hover{opacity:1}
+  .hint{
+    position:fixed; left:14px; bottom:12px; z-index:50;
+    font-size:12px; color:rgba(232,232,255,0.72);
+    user-select:none; opacity:0.95;
+    background:rgba(0,0,0,0.35);
+    border:1px solid rgba(255,255,255,0.10);
+    border-radius:12px;
+    padding:10px 12px;
+    max-width:min(620px,calc(100vw - 28px));
+    line-height:1.45;
+  }
+  .topright{
+    position:fixed; right:14px; top:12px; z-index:50;
+    font-size:12px; color:rgba(232,232,255,0.70);
+    user-select:none; opacity:0.95; text-align:right;
+    background:rgba(0,0,0,0.28);
+    border:1px solid rgba(255,255,255,0.10);
+    border-radius:12px;
+    padding:10px 12px;
+  }
+</style>
+</head>
+<body>
+  <div class="nav">
+    <a href="../index.html">CLAWBOI</a>
+    <a href="../games.html">BACK TO GAMES</a>
+  </div>
+
+  <div id="wrap">
+    <canvas id="c" width="960" height="540"></canvas>
+  </div>
+
+  <div class="topright" id="meta">
+    AOC03 · SECURITY BREACH<br/>
+    <span style="opacity:.7">3 waves. then exit.</span>
+  </div>
+
+  <div class="hint" id="hint">
+    <b>Move</b> WASD · <b>Aim/Shoot</b> Mouse · <b>Punch</b> Space · <b>Dash</b> Shift · <b>Restart</b> R
+    <br><span id="choiceLine" style="opacity:.75"></span>
+  </div>
+
+<script>
+(() => {
+  // ======== Canvas & Pixel Scale ========
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  const W = 320, H = 180;          // logical resolution
+  const world = document.createElement('canvas');
+  world.width = W; world.height = H;
+  const g = world.getContext('2d', { alpha: false });
+
+  // ======== Utils ========
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const rand = (a,b)=>a+Math.random()*(b-a);
+  const randi = (a,b)=> (a + Math.floor(Math.random()*(b-a+1)));
+  const lerp = (a,b,t)=>a+(b-a)*t;
+  const dist2 = (ax,ay,bx,by)=>{ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; };
+
+  // ======== Save + choice ========
+  const CHOICE_KEY = "AOC_CHOICE_ROACH";
+  const choice = localStorage.getItem(CHOICE_KEY) || "unknown";
+  const choiceLine = document.getElementById("choiceLine");
+  choiceLine.textContent =
+    choice==="throw" ? "MEMORY: YOU THREW THE ROACH. IT HIT THE FLOOR. THEY HEARD IT."
+    : choice==="hide" ? "MEMORY: YOU HID THE ROACH. QUIET HANDS. QUIET LIES."
+    : "MEMORY: UNSET. (GO BACK TO AOC02 IF YOU WANT IT LOGGED.)";
+
+  // ======== Fixed timestep ========
+  let last = performance.now();
+  let acc = 0;
+  const DT = 1/60;
+
+  // ======== Input ========
+  const keys = new Set();
+  const pressed = new Set();
+  let mouse = { x: W/2, y: H/2, down:false };
+
+  window.addEventListener('keydown', (e)=>{
+    const k = e.key.toLowerCase();
+    keys.add(k);
+    pressed.add(k);
+    if([" ", "arrowup","arrowdown","arrowleft","arrowright"].includes(e.key)) e.preventDefault();
+  }, {passive:false});
+
+  window.addEventListener('keyup', (e)=> keys.delete(e.key.toLowerCase()));
+
+  canvas.addEventListener('mousemove', (e)=>{
+    const rect = canvas.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) / rect.width;
+    const sy = (e.clientY - rect.top) / rect.height;
+    mouse.x = clamp(Math.floor(sx * W), 0, W-1);
+    mouse.y = clamp(Math.floor(sy * H), 0, H-1);
+  });
+
+  canvas.addEventListener('mousedown', ()=>{ mouse.down=true; });
+  window.addEventListener('mouseup', ()=>{ mouse.down=false; });
+
+  // ======== FX ========
+  let shake = 0;
+  let hitstop = 0;
+  const sparks = []; // {x,y,vx,vy,life,col}
+  const floats = []; // {x,y,vx,vy,life,text,col}
+
+  const particles = (x,y,count,spread,speed,life,colA,colB)=>{
+    for(let i=0;i<count;i++){
+      const a = rand(0,Math.PI*2);
+      const s = rand(speed*0.3, speed);
+      sparks.push({
+        x,y,
+        vx: Math.cos(a)*s + rand(-spread,spread),
+        vy: Math.sin(a)*s + rand(-spread,spread),
+        life: rand(life*0.6, life),
+        col: (Math.random()<0.5?colA:colB)
+      });
+    }
+  };
+
+  // ======== Player (Clawboi consistent) ========
+  const player = {
+    x: W/2, y: H/2,
+    vx: 0, vy: 0,
+    hp: 100,
+    dir: 1,
+    inv: 0,
+    shootCD: 0,
+    punchCD: 0,
+    dashCD: 0,
+    score: 0
+  };
+
+  // ======== Arena & observatory room ========
+  const room = { x0: 18, y0: 16, x1: W-18, y1: H-18 };
+
+  // Door to exit (opens after wave 3)
+  const exitDoor = { x: W-34, y: H/2-14, w: 18, h: 28 };
+
+  // ======== Enemies: security guards ========
+  const guards = [];  // {x,y,vx,vy,hp,spd,t,elite,shootCD}
+  const bullets = []; // {x,y,vx,vy,dmg,life,col,from}
+
+  // Difficulty choices influenced slightly by roach memory
+  const choiceMod = (choice==="throw") ? 1.08 : (choice==="hide") ? 0.98 : 1.0;
+
+  // Waves
+  let wave = 1;
+  let between = 1.2;
+  let waveAliveTarget = 0;
+  let doorUnlocked = false;
+
+  function resetRun(){
+    guards.length=0; bullets.length=0; sparks.length=0; floats.length=0;
+    player.x=W/2; player.y=H/2; player.vx=0; player.vy=0;
+    player.hp=100; player.inv=0; player.shootCD=0; player.punchCD=0; player.dashCD=0;
+    player.score=0;
+    wave=1; between=1.2; doorUnlocked=false;
+    spawnWave(wave);
+  }
+
+  function spawnGuard(elite=false){
+    // spawn at "barging doors" on left side
+    const x = room.x0-6;
+    const y = rand(room.y0+10, room.y1-10);
+    const hp = elite ? 80 : 55;
+    const spd = elite ? rand(20,28) : rand(16,24);
+    guards.push({ x,y,vx:0,vy:0,hp,spd,t:rand(0,999),elite,shootCD: rand(0.4,1.2) });
+  }
+
+  function spawnWave(n){
+    const base = 4 + n*2;                       // 1:6, 2:8, 3:10
+    const elites = (n===3) ? 3 : (n===2) ? 2 : 1;
+    for(let i=0;i<base;i++) spawnGuard(false);
+    for(let i=0;i<elites;i++) spawnGuard(true);
+    waveAliveTarget = guards.length;
+    // impact
+    particles(room.x0+4, H/2, 40, 2.0, 70, 0.55, "#ff3b6b", "#b300ff");
+    shake = Math.max(shake, 8);
+  }
+
+  // ======== Drawing: pixel sprites ========
+  function drawClawboi(px,py,dir,frame,aimAng){
+    const x = px|0, y = py|0;
+    const bob = (Math.sin(frame*0.25)*1)|0;
+
+    // shadow
+    g.fillStyle="rgba(0,0,0,0.35)";
+    g.fillRect(x-7, y+9, 14, 3);
+
+    // legs
+    g.fillStyle="#2a0f2d";
+    g.fillRect(x-6, y+3+bob, 5, 6);
+    g.fillRect(x+1, y+3+bob, 5, 6);
+
+    // torso
+    g.fillStyle="#8a2eff";
+    g.fillRect(x-6, y-4+bob, 12, 10);
+
+    // belt accent
+    g.fillStyle="#00ffd5";
+    g.fillRect(x-6, y+1+bob, 12, 2);
+
+    // head
+    g.fillStyle="#b300ff";
+    g.fillRect(x-6, y-13+bob, 12, 9);
+
+    // face
+    g.fillStyle="rgba(255,255,255,0.85)";
+    const ex = dir>0 ? 1 : -3;
+    g.fillRect(x+ex, y-10+bob, 2, 2);
+    g.fillRect(x+ex+4, y-10+bob, 2, 2);
+
+    // aim line
+    const ax = x + Math.cos(aimAng)*12;
+    const ay = y + Math.sin(aimAng)*12;
+    g.strokeStyle = "rgba(0,255,213,0.28)";
+    g.beginPath(); g.moveTo(x, y-2+bob); g.lineTo(ax, ay); g.stroke();
+  }
+
+  function drawGuard(e){
+    const x=e.x|0, y=e.y|0;
+    const bob=(Math.sin(e.t*0.18)*1)|0;
+
+    // shadow
+    g.fillStyle="rgba(0,0,0,0.35)";
+    g.fillRect(x-5, y+7, 10, 3);
+
+    // suit
+    g.fillStyle = e.elite ? "#ff3b6b" : "#58b0ff";
+    g.fillRect(x-4, y-5+bob, 8, 10);
+
+    // helmet
+    g.fillStyle = e.elite ? "#b300ff" : "#2b6bd6";
+    g.fillRect(x-5, y-14+bob, 10, 9);
+
+    // visor
+    g.fillStyle="rgba(0,0,0,0.55)";
+    g.fillRect(x-3, y-11+bob, 6, 2);
+
+    // badge
+    g.fillStyle="rgba(255,255,255,0.25)";
+    g.fillRect(x-1, y-1+bob, 2, 2);
+  }
+
+  function drawRoomBackdrop(tt){
+    // base
+    g.fillStyle="#070517";
+    g.fillRect(0,0,W,H);
+
+    // glass panes (top area)
+    g.fillStyle="rgba(138,46,255,0.06)";
+    g.fillRect(room.x0, room.y0, room.x1-room.x0, 58);
+
+    g.strokeStyle="rgba(255,255,255,0.08)";
+    g.strokeRect(room.x0, room.y0, room.x1-room.x0, room.y1-room.y0);
+
+    // pane grid
+    g.strokeStyle="rgba(0,255,213,0.08)";
+    for(let x=room.x0+6;x<room.x1-6;x+=18){
+      g.beginPath(); g.moveTo(x, room.y0+2); g.lineTo(x, room.y0+56); g.stroke();
+    }
+    for(let y=room.y0+8;y<room.y0+56;y+=14){
+      g.beginPath(); g.moveTo(room.x0+2, y); g.lineTo(room.x1-2, y); g.stroke();
+    }
+
+    // floor glow
+    g.fillStyle="rgba(0,0,0,0.35)";
+    g.fillRect(room.x0, room.y0+58, room.x1-room.x0, room.y1-(room.y0+58));
+    g.strokeStyle=`rgba(179,0,255,0.25)`;
+    for(let y=room.y0+64;y<room.y1;y+=10){
+      g.beginPath(); g.moveTo(room.x0+2, y); g.lineTo(room.x1-2, y); g.stroke();
+    }
+
+    // left “doors that barged in”
+    g.fillStyle="rgba(255,255,255,0.06)";
+    g.fillRect(room.x0-2, H/2-22, 8, 44);
+    g.fillStyle="rgba(255,255,255,0.10)";
+    g.fillRect(room.x0+2, H/2-22, 1, 44);
+
+    // exit door (right)
+    g.fillStyle = doorUnlocked ? "rgba(0,255,213,0.16)" : "rgba(255,255,255,0.06)";
+    g.fillRect(exitDoor.x, exitDoor.y, exitDoor.w, exitDoor.h);
+    g.strokeStyle = doorUnlocked ? "rgba(0,255,213,0.55)" : "rgba(255,255,255,0.16)";
+    g.strokeRect(exitDoor.x, exitDoor.y, exitDoor.w, exitDoor.h);
+    g.fillStyle = doorUnlocked ? "rgba(0,255,213,0.85)" : "rgba(255,255,255,0.35)";
+    g.fillRect(exitDoor.x+6, exitDoor.y+12, 2, 4);
+
+    // subtle text
+    g.fillStyle="rgba(255,255,255,0.35)";
+    g.font="10px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+    g.fillText("OBSERVATORY // SECURITY OVERRIDE", room.x0+6, room.y0+12);
+
+    // wave banner
+    g.fillStyle="rgba(0,0,0,0.35)";
+    g.fillRect(0,0,W,18);
+    g.fillStyle="rgba(232,232,255,0.85)";
+    g.fillText("WAVE " + wave + " / 3", 8, 13);
+    g.fillStyle="rgba(232,232,255,0.62)";
+    g.fillText(doorUnlocked ? "EXIT: UNLOCKED" : "EXIT: LOCKED", 110, 13);
+
+    // HP bar
+    const hpP = clamp(player.hp/100, 0, 1);
+    g.fillStyle="rgba(255,255,255,0.08)";
+    g.fillRect(8, 22, 140, 8);
+    g.fillStyle = hpP>0.4 ? "#7CFF6B" : "#ff3b6b";
+    g.fillRect(8, 22, 140*hpP, 8);
+    g.strokeStyle="rgba(255,255,255,0.14)";
+    g.strokeRect(8, 22, 140, 8);
+  }
+
+  // ======== Combat ========
+  function shoot(ang){
+    if(player.shootCD>0) return;
+    player.shootCD = 1 / 10.5; // fast gun feel
+    const spd = 280;
+    const dmg = 26;
+    bullets.push({
+      x: player.x + Math.cos(ang)*7,
+      y: player.y + Math.sin(ang)*7,
+      vx: Math.cos(ang)*spd,
+      vy: Math.sin(ang)*spd,
+      dmg,
+      life: 0.9,
+      col: "#00ffd5",
+      from:"p"
+    });
+    particles(player.x+Math.cos(ang)*7, player.y+Math.sin(ang)*7, 8, 0.7, 55, 0.25, "#00ffd5", "rgba(255,255,255,0.75)");
+    shake = Math.max(shake, 4);
+  }
+
+  function punch(ang){
+    if(player.punchCD>0) return;
+    player.punchCD = 0.42;
+    const reach = 14;
+    const hx = player.x + Math.cos(ang)*reach;
+    const hy = player.y + Math.sin(ang)*reach;
+
+    let hit=false;
+    for(let i=guards.length-1;i>=0;i--){
+      const e=guards[i];
+      if(dist2(hx,hy,e.x,e.y) < 10*10){
+        e.hp -= 55; // big punch
+        hit=true;
+        particles(e.x,e.y,18,1.4,75,0.35,"#ffd24a","#ff3b6b");
+        floats.push({x:e.x,y:e.y-8,vx:rand(-10,10),vy:rand(-20,-10),life:0.7,text:"-55",col:"#ffd24a"});
+        shake = Math.max(shake, 7);
+      }
+    }
+    particles(hx,hy, hit?10:7, 1.0, 55, 0.22, "#ffd24a", "rgba(255,255,255,0.7)");
+  }
+
+  function dash(ang){
+    if(player.dashCD>0) return;
+    player.dashCD = 1.0;
+    player.vx += Math.cos(ang)*160;
+    player.vy += Math.sin(ang)*160;
+    player.inv = 0.18;
+    particles(player.x,player.y,36,2.0,110,0.42,"#b300ff","#00ffd5");
+    shake = Math.max(shake, 10);
+  }
+
+  function hurtPlayer(amount){
+    if(player.inv>0) return;
+    player.hp -= amount;
+    player.inv = 0.55;
+    shake = Math.max(shake, 8);
+    particles(player.x, player.y, 36, 2.0, 90, 0.6, "#ff3b6b", "#b300ff");
+  }
+
+  // ======== Enemy fire ========
+  function guardShoot(e){
+    const a = Math.atan2(player.y-e.y, player.x-e.x);
+    const spd = e.elite ? 190 : 170;
+    const dmg = e.elite ? 10 : 8;
+    bullets.push({
+      x: e.x + Math.cos(a)*6,
+      y: e.y + Math.sin(a)*6,
+      vx: Math.cos(a)*spd,
+      vy: Math.sin(a)*spd,
+      dmg,
+      life: 1.1,
+      col: e.elite ? "#ff3b6b" : "#58b0ff",
+      from:"e"
+    });
+    particles(e.x+Math.cos(a)*6, e.y+Math.sin(a)*6, 6, 0.8, 55, 0.22, bullets[bullets.length-1].col, "rgba(255,255,255,0.6)");
+  }
+
+  // ======== Update & Render ========
+  function update(dt){
+    if(hitstop>0){ hitstop -= dt; return; }
+
+    // restart
+    if(pressed.has("r")){
+      resetRun();
+      pressed.clear();
+      return;
+    }
+
+    // movement
+    let mx=0,my=0;
+    if(keys.has("a")) mx -= 1;
+    if(keys.has("d")) mx += 1;
+    if(keys.has("w")) my -= 1;
+    if(keys.has("s")) my += 1;
+    const len = Math.hypot(mx,my) || 1;
+    mx/=len; my/=len;
+
+    const spd = 62;
+    player.vx = lerp(player.vx, mx*spd, 0.22);
+    player.vy = lerp(player.vy, my*spd, 0.22);
+    player.x += player.vx*dt;
+    player.y += player.vy*dt;
+
+    player.x = clamp(player.x, room.x0+8, room.x1-8);
+    player.y = clamp(player.y, room.y0+10, room.y1-10);
+
+    // aim
+    const ang = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+    player.dir = Math.cos(ang)>=0 ? 1 : -1;
+
+    // timers
+    player.inv = Math.max(0, player.inv - dt);
+    player.shootCD = Math.max(0, player.shootCD - dt);
+    player.punchCD = Math.max(0, player.punchCD - dt);
+    player.dashCD = Math.max(0, player.dashCD - dt);
+
+    // actions
+    if(keys.has("shift")) dash(ang);
+    if(mouse.down) shoot(ang);
+    if(pressed.has(" ")) { punch(ang); hitstop = 0.02; }
+    pressed.clear();
+
+    // bullets
+    for(let i=bullets.length-1;i>=0;i--){
+      const b=bullets[i];
+      b.life -= dt;
+      b.x += b.vx*dt;
+      b.y += b.vy*dt;
+      if(b.life<=0 || b.x<0||b.x>W||b.y<0||b.y>H){
+        bullets.splice(i,1); continue;
+      }
+
+      if(b.from==="p"){
+        // hit guards
+        for(let j=guards.length-1;j>=0;j--){
+          const e=guards[j];
+          if(dist2(b.x,b.y,e.x,e.y) < 7*7){
+            e.hp -= b.dmg * (1.15/choiceMod); // tiny choice flavor: throw => slightly tougher
+            particles(b.x,b.y,10,1.0,70,0.28,b.col,"rgba(255,255,255,0.7)");
+            floats.push({x:e.x,y:e.y-7,vx:rand(-8,8),vy:rand(-18,-10),life:0.6,text:`-${Math.floor(b.dmg)}`,col:b.col});
+            bullets.splice(i,1);
+            hitstop = 0.012;
+            shake = Math.max(shake, 4);
+            if(e.hp<=0){
+              guards.splice(j,1);
+              player.score += e.elite ? 35 : 22;
+              particles(e.x,e.y,22,1.5,95,0.45,"#00ffd5","#b300ff");
+            }
+            break;
+          }
+        }
+      }else{
+        // enemy bullet hits player
+        if(dist2(b.x,b.y,player.x,player.y) < 8*8){
+          hurtPlayer(b.dmg);
+          bullets.splice(i,1);
+          hitstop = 0.012;
+        }
+      }
+    }
+
+    // guards AI
+    for(let i=guards.length-1;i>=0;i--){
+      const e=guards[i];
+      e.t += 1;
+      const a = Math.atan2(player.y - e.y, player.x - e.x);
+
+      // move in
+      e.vx = Math.cos(a)*e.spd*choiceMod;
+      e.vy = Math.sin(a)*e.spd*choiceMod;
+      e.x += e.vx*dt;
+      e.y += e.vy*dt;
+
+      e.x = clamp(e.x, room.x0-10, room.x1+10);
+      e.y = clamp(e.y, room.y0-10, room.y1+10);
+
+      // contact damage
+      if(dist2(e.x,e.y,player.x,player.y) < 10*10){
+        hurtPlayer(e.elite ? 12 : 9);
+      }
+
+      // shooting (guards fire in bursts)
+      e.shootCD -= dt;
+      const fireRange2 = (e.elite ? 120 : 95);
+      if(e.shootCD<=0 && dist2(e.x,e.y,player.x,player.y) < fireRange2*fireRange2){
+        e.shootCD = e.elite ? rand(0.55,0.9) : rand(0.85,1.35);
+        guardShoot(e);
+      }
+    }
+
+    // wave progression
+    if(guards.length===0 && !doorUnlocked){
+      between -= dt;
+      if(between<=0){
+        if(wave<3){
+          wave++;
+          between = 1.5;
+          spawnWave(wave);
+        }else{
+          doorUnlocked = true;
+          particles(exitDoor.x+exitDoor.w/2, exitDoor.y+exitDoor.h/2, 60, 2.4, 120, 0.7, "#00ffd5", "#b300ff");
+          shake = Math.max(shake, 9);
+        }
+      }
+    }
+
+    // exit condition
+    if(doorUnlocked){
+      const cx = player.x, cy=player.y;
+      if(cx>exitDoor.x && cx<exitDoor.x+exitDoor.w && cy>exitDoor.y && cy<exitDoor.y+exitDoor.h){
+        // write progress flag
+        localStorage.setItem("AOC_PROGRESS", "AOC03_COMPLETE");
+        fadeTo("04AOC.html");
+      }
+    }
+
+    // death -> restart wave 1
+    if(player.hp<=0){
+      resetRun();
+    }
+  }
+
+  function draw(){
+    const sx = shake>0 ? randi(-shake, shake) : 0;
+    const sy = shake>0 ? randi(-shake, shake) : 0;
+    shake = Math.max(0, shake - 0.35);
+
+    drawRoomBackdrop(performance.now()/1000);
+
+    g.save();
+    g.translate(sx, sy);
+
+    // bullets
+    for(const b of bullets){
+      g.fillStyle=b.col;
+      g.fillRect((b.x|0)-1, (b.y|0)-1, 3, 3);
+    }
+
+    // guards
+    for(const e of guards) drawGuard(e);
+
+    // player (blink when invulnerable)
+    const aimAng = Math.atan2(mouse.y-player.y, mouse.x-player.x);
+    const blink = player.inv>0 && ((performance.now()/70|0)%2===0);
+    if(!blink) drawClawboi(player.x,player.y,player.dir,(performance.now()/16)|0,aimAng);
+
+    // particles
+    for(let i=sparks.length-1;i>=0;i--){
+      const p=sparks[i];
+      p.life -= DT;
+      p.x += p.vx*DT;
+      p.y += p.vy*DT;
+      p.vx *= 0.90;
+      p.vy *= 0.90;
+      g.fillStyle=p.col;
+      g.fillRect(p.x|0,p.y|0,1,1);
+      if(p.life<=0) sparks.splice(i,1);
+    }
+
+    // float text
+    for(let i=floats.length-1;i>=0;i--){
+      const f=floats[i];
+      f.life -= DT;
+      f.x += f.vx*DT;
+      f.y += f.vy*DT;
+      f.vx *= 0.88;
+      f.vy += 34*DT;
+      g.fillStyle=f.col;
+      g.font="10px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+      g.fillText(f.text, f.x|0, f.y|0);
+      if(f.life<=0) floats.splice(i,1);
+    }
+
+    // exit hint
+    if(doorUnlocked){
+      g.fillStyle="rgba(0,255,213,0.18)";
+      g.fillRect(exitDoor.x-6, exitDoor.y-6, exitDoor.w+12, exitDoor.h+12);
+      g.fillStyle="rgba(232,232,255,0.75)";
+      g.font="10px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+      g.fillText("EXIT", exitDoor.x+3, exitDoor.y-2);
+    }
+
+    g.restore();
+
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(world, 0,0,W,H, 0,0,canvas.width,canvas.height);
+  }
+
+  function fadeTo(url){
+    const d=document.createElement("div");
+    d.style.position="fixed";
+    d.style.inset="0";
+    d.style.background="#000";
+    d.style.opacity="0";
+    d.style.transition="900ms";
+    d.style.zIndex="999";
+    document.body.appendChild(d);
+    requestAnimationFrame(()=> d.style.opacity="1");
+    setTimeout(()=> location.href=url, 940);
+  }
+
+  function loop(now){
+    const dt = Math.min(0.05, (now-last)/1000);
+    last = now;
+    acc += dt;
+    while(acc >= DT){
+      update(DT);
+      acc -= DT;
+    }
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  resetRun();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
