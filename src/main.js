@@ -204,7 +204,7 @@ function startGame() {
   world = forest;
   room = "forest";
 
-  player = new PlayerTest(world.spawn.x, world.spawn.y);
+  player = new PlayerTest(world..x, world.spawn.y);
 
   cam = new Camera({
     viewW: CONFIG.baseW,
@@ -504,24 +504,19 @@ function update(dt) {
     }
   }
 
-  // spawn waves
-  waveTimer -= dt;
-  if (waveTimer <= 0) {
-    const cap = room === "node" ? 6 : 11;
-    if (enemies.aliveCount() < cap) {
-      enemies.spawnWaveAround(player.x, player.y, player.level);
-      fx.text(
-        player.x,
-        player.y - 26,
-        room === "node" ? "NODE ECHOES…" : "SHADOWS APPROACH",
-        ""
-      );
-    }
-    waveTimer =
-      room === "node"
-        ? Math.max(2.6, 3.6 - player.level * 0.1)
-        : Math.max(2.0, 3.1 - player.level * 0.12);
+  // spawn waves (10s downtime after a wave is cleared)
+waveTimer -= dt;
+
+if (waveTimer <= 0) {
+  // only spawn a new wave when the current one is cleared
+  if (enemies.aliveCount() === 0) {
+    enemies.spawnWaveAround(player.x, player.y, player.level);
+    fx.text(player.x, player.y - 26, "WAVE INCOMING", "");
+    waveTimer = 10; // <-- chill time after spawning the wave
+  } else {
+    waveTimer = 0.5; // recheck soon until wave is cleared
   }
+}
 
   // camera follow
   cam.worldW = world.worldW;
