@@ -65,6 +65,8 @@ overflow:hidden;
 
 /* make it feel like it actually goes "into" the screen */
 .title{
+position:relative;            /* FIX: anchors ::after so it doesn’t “float” */
+display:inline-block;         /* FIX: keeps the haze bound to the text box */
 font-size:clamp(32px,6vw,86px);
 letter-spacing:.25em;
 text-align:center;
@@ -149,7 +151,7 @@ box-shadow:0 0 20px #8a2eff;
 transform:scale(1.05);
 }
 
-/* tiny audio toggle */
+/* tiny audio toggle (kept but unused now) */
 .smallBtn{
 padding:14px 14px;
 min-width:56px;
@@ -217,7 +219,7 @@ transparent 6px);
 <div class="menu">
   <button class="btn" onclick="createSave()">CREATE GAME</button>
   <button class="btn" onclick="loadSave()">LOAD</button>
-  <button class="btn smallBtn" onclick="toggleAudio()" id="audioBtn">AUDIO</button>
+  <!-- REMOVED: audio stop/toggle button -->
 </div>
 
 <div class="footer">ENGINE BUILD 01</div>
@@ -287,16 +289,17 @@ setInterval(()=>{
   if(ships.length<10 && Math.random()<0.8) spawnShip();
 },600);
 
-/* ===== Audio: synth pad + pulse (no external file needed) ===== */
+/* ===== Audio: synth pad + pulse (auto-start on first interaction) ===== */
 let audioCtx=null, master=null, pad=null, pulse=null, noise=null;
-let audioOn=false;
+let startedAudio=false;
 
 function initAudio(){
   if(audioCtx) return;
+
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
   master = audioCtx.createGain();
-  master.gain.value = 0.0;
+  master.gain.value = 0.0;                 // start silent, fade in
   master.connect(audioCtx.destination);
 
   // pad
@@ -340,7 +343,7 @@ function initAudio(){
 
   // pulse rhythm
   let t = audioCtx.currentTime + 0.1;
-  for(let i=0;i<128;i++){
+  for(let i=0;i<256;i++){
     pulseGain.gain.setValueAtTime(0.0, t);
     pulseGain.gain.linearRampToValueAtTime(0.05, t+0.02);
     pulseGain.gain.linearRampToValueAtTime(0.0, t+0.18);
@@ -348,21 +351,20 @@ function initAudio(){
   }
 }
 
-function toggleAudio(){
+function startAudioOnce(){
+  if(startedAudio) return;
+  startedAudio = true;
+
   initAudio();
   if(audioCtx.state==="suspended") audioCtx.resume();
 
-  audioOn = !audioOn;
-  document.getElementById("audioBtn").textContent = audioOn ? "AUDIO ON" : "AUDIO";
-
-  if(audioOn){
-    master.gain.cancelScheduledValues(audioCtx.currentTime);
-    master.gain.linearRampToValueAtTime(0.55, audioCtx.currentTime+0.4);
-  }else{
-    master.gain.cancelScheduledValues(audioCtx.currentTime);
-    master.gain.linearRampToValueAtTime(0.0, audioCtx.currentTime+0.35);
-  }
+  master.gain.cancelScheduledValues(audioCtx.currentTime);
+  master.gain.linearRampToValueAtTime(0.55, audioCtx.currentTime+0.6);
 }
+
+/* Autoplay rules: start on first user interaction */
+window.addEventListener("pointerdown", startAudioOnce, { once:true });
+window.addEventListener("keydown", startAudioOnce, { once:true });
 
 /* ===== Draw helpers ===== */
 function drawPixelShip(s){
