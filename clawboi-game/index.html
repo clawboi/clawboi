@@ -2,26 +2,108 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#05050a" />
   <title>The Adventures of Clawboi</title>
+
+  <!-- IMPORTANT: these are relative to clawboi-game/ -->
   <link rel="stylesheet" href="./style.css" />
+
+  <!-- optional but helps if you ever add a favicon -->
+  <link rel="icon" href="data:," />
 </head>
 
 <body>
-  <div id="engineRoot">
-    <canvas id="world"></canvas>
-    <canvas id="fx"></canvas>
-    <canvas id="ui"></canvas>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand__title">THE ADVENTURES OF</span>
+        <span class="brand__logo">CLAWBOI</span>
+      </div>
 
-    <div id="debug" aria-hidden="true"></div>
+      <div class="topbar__right">
+        <a class="pill" href="/" aria-label="Back to Clawboi Home">HOME</a>
+        <a class="pill" href="/listen.html" aria-label="Listen">LISTEN</a>
+        <a class="pill" href="/visuals.html" aria-label="Visuals">VISUALS</a>
+      </div>
+    </header>
 
-    <div id="mobile" aria-label="Mobile controls">
-      <button id="atk" aria-label="Attack">⚔️</button>
-      <button id="dash" aria-label="Dash">✨</button>
-    </div>
+    <main class="stage">
+      <!-- ENGINE ROOT: your JS scaler can target these canvases -->
+      <div id="engineRoot" class="engineRoot">
+        <canvas id="world" class="layer" aria-label="World layer"></canvas>
+        <canvas id="fx" class="layer" aria-label="Effects layer"></canvas>
+        <canvas id="ui" class="layer" aria-label="UI layer"></canvas>
+
+        <!-- debug overlay (your code can write into this) -->
+        <pre id="debug" class="debug" aria-hidden="true"></pre>
+
+        <!-- mobile controls -->
+        <div id="mobile" class="mobile">
+          <button id="atk" class="btn btn--atk" aria-label="Attack">
+            <span class="btn__icon">✕</span>
+            <span class="btn__label">ATK</span>
+          </button>
+
+          <button id="dash" class="btn btn--dash" aria-label="Dash">
+            <span class="btn__icon">✦</span>
+            <span class="btn__label">DASH</span>
+          </button>
+        </div>
+
+        <!-- start/help card (does not require JS) -->
+        <div class="hintCard" id="hintCard">
+          <div class="hintCard__title">CONTROLS</div>
+          <div class="hintCard__line"><b>Move</b>: WASD / Arrow Keys</div>
+          <div class="hintCard__line"><b>Attack</b>: J / Space</div>
+          <div class="hintCard__line"><b>Dash</b>: K / Shift</div>
+          <div class="hintCard__line"><b>Interact</b>: E</div>
+          <div class="hintCard__tiny">Tip: if it looks blurry, refresh once. iOS Safari sometimes lies on first load.</div>
+        </div>
+      </div>
+
+      <aside class="sidebar">
+        <div class="panel">
+          <div class="panel__title">STATUS</div>
+          <div class="panel__body">
+            <div class="row"><span>Build</span><span class="violet">RPG-Pixel</span></div>
+            <div class="row"><span>Mode</span><span class="muted">Forest → Node</span></div>
+            <div class="row"><span>Goal</span><span class="muted">Shards + Key</span></div>
+            <div class="row"><span>Reset</span><span class="muted">R (if enabled)</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel__title">LORE</div>
+          <div class="panel__body muted">
+            The forest is a simulation with teeth.  
+            Shards are its eyes.  
+            The key remembers what you forgot.
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel__title">NOTES</div>
+          <div class="panel__body muted">
+            If you see a black screen, open Console and look for a missing file path.
+            Most 404s are because the script path is wrong.
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="footer">
+      <span>© <span id="yr"></span> CLAWBOI</span>
+      <span class="muted">Pixel engine build</span>
+    </footer>
   </div>
 
-  <!-- IMPORTANT: correct path for GitHub Pages subfolder -->
+  <script>
+    // safe, no-module tiny helper
+    document.getElementById("yr").textContent = new Date().getFullYear();
+  </script>
+
+  <!-- IMPORTANT: this fixes your 404 issue. -->
   <script type="module" src="./js/main.js"></script>
 </body>
 </html>
