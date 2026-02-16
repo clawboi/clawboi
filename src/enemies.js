@@ -7,34 +7,6 @@ import { clamp, rand, rint } from "./utils.js";
    - spawns waves + mini-boss
 */
 
-resolvePlayerAttack(player){
-  const hb = player.getAttackHitbox?.();
-  if(!hb) return {count:0,kills:0};
-
-  let count = 0;
-  let kills = 0;
-
-  for(const e of this.list || this.enemies || []){
-    if(!e || e.hp <= 0) continue;
-
-    const dx = e.x - hb.x;
-    const dy = e.y - hb.y;
-    const dist = Math.hypot(dx,dy);
-
-    if(dist < (hb.r + (e.r||6))){
-      e.hp -= hb.dmg || 10;
-      e.hitFlash = 0.12;
-      count++;
-
-      if(e.hp <= 0){
-        kills++;
-      }
-    }
-  }
-
-  return {count, kills};
-}
-
 export class EnemyManager {
   constructor(world){
     this.world = world;
@@ -84,49 +56,42 @@ export class EnemyManager {
     for(const e of this.list){
       if(e.hp<=0) continue;
 
-      // cooldowns
       e.hitFlash = Math.max(0, e.hitFlash - dt);
       e.atkCD = Math.max(0, e.atkCD - dt);
       e.stun = Math.max(0, e.stun - dt);
 
-      // physics drift
       e.vx *= Math.pow(0.001, dt*6);
       e.vy *= Math.pow(0.001, dt*6);
 
-      if(e.stun > 0) {
-        // stunned, only drift
+      if(e.stun > 0){
         e.x += e.vx*dt;
         e.y += e.vy*dt;
         continue;
       }
 
-      // chase player (simple)
       const dx = player.x - e.x;
       const dy = player.y - e.y;
       const dist = Math.hypot(dx,dy) || 1;
       const dirx = dx/dist;
       const diry = dy/dist;
 
-      // steering: if forward is blocked, sidestep a bit
-      const trySp = e.speed;
       let mx = dirx;
       let my = diry;
 
-      const nxF = e.x + mx*trySp*dt;
-      const nyF = e.y + my*trySp*dt;
+      const nxF = e.x + mx*e.speed*dt;
+      const nyF = e.y + my*e.speed*dt;
 
       if(world.isBlockedCircle(nxF, nyF, e.r)){
-        // rotate left/right random
         const s = (Math.random()<0.5 ? -1 : 1);
         const rx = mx*Math.cos(0.9*s) - my*Math.sin(0.9*s);
         const ry = mx*Math.sin(0.9*s) + my*Math.cos(0.9*s);
-        mx = rx; my = ry;
+        mx = rx;
+        my = ry;
       }
 
       e.vx += mx * e.speed * (1 - Math.pow(0.001, dt*12));
       e.vy += my * e.speed * (1 - Math.pow(0.001, dt*12));
 
-      // integrate with collision slide
       const nx = e.x + e.vx*dt;
       if(!world.isBlockedCircle(nx, e.y, e.r)) e.x = nx;
       else e.vx *= 0.25;
@@ -135,45 +100,41 @@ export class EnemyManager {
       if(!world.isBlockedCircle(e.x, ny, e.r)) e.y = ny;
       else e.vy *= 0.25;
 
-      // attack if close
       if(e.atkCD<=0 && dist < (player.r + e.r + 2)){
         e.atkCD = e.boss ? 0.85 : 0.65;
         player.takeDamage(e.dmg);
-
-        // knockback player
         player.kick(dirx*220*(e.boss?1.25:1.0), diry*220*(e.boss?1.25:1.0), 0.10);
       }
     }
   }
 
-  // resolve player attack hitbox vs enemies
-  resolvePlayerHit(hitbox){
-    if(!hitbox) return { hits:0, kills:0 };
+  /* ✅ THIS IS THE METHOD YOUR GAME WAS CRASHING FOR */
+  resolvePlayerAttack(player){
+    const hb = player.getAttackHitbox?.();
+    if(!hb) return {count:0,kills:0};
 
-    let hits=0, kills=0;
+    let count = 0;
+    let kills = 0;
+
     for(const e of this.list){
-      if(e.hp<=0) continue;
-      const d = Math.hypot(e.x-hitbox.x, e.y-hitbox.y);
-      if(d < (e.r + hitbox.r)){
-        e.hp -= hitbox.dmg;
+      if(!e || e.hp <= 0) continue;
+
+      const dx = e.x - hb.x;
+      const dy = e.y - hb.y;
+      const dist = Math.hypot(dx,dy);
+
+      if(dist < (hb.r + (e.r||6))){
+        e.hp -= hb.dmg || 10;
         e.hitFlash = 0.12;
-        e.stun = 0.07;
+        count++;
 
-        // knockback enemy away from hitbox
-        const dx = e.x - hitbox.x;
-        const dy = e.y - hitbox.y;
-        const len = Math.hypot(dx,dy) || 1;
-        const k = hitbox.kb;
-        e.vx += (dx/len)*k;
-        e.vy += (dy/len)*k;
-
-        hits++;
-        if(e.hp<=0){
+        if(e.hp <= 0){
           kills++;
         }
       }
     }
-    return { hits, kills };
+
+    return {count, kills};
   }
 
   draw(ctx, camX, camY){
@@ -182,40 +143,25 @@ export class EnemyManager {
       const x = (e.x - camX)|0;
       const y = (e.y - camY)|0;
 
-      // shadow
       ctx.fillStyle = "rgba(0,0,0,0.35)";
       ctx.fillRect(x-6, y+7, 12, 3);
 
-      // glow
       ctx.fillStyle = e.boss ? "rgba(255,74,122,0.10)" : "rgba(138,46,255,0.14)";
       ctx.fillRect(x-10, y-10, 20, 20);
 
-      // body
       const flash = e.hitFlash>0 ? 0.55 : 0.0;
       ctx.fillStyle = e.boss
         ? `rgba(30,0,10,${0.90+flash})`
         : `rgba(18,0,26,${0.90+flash})`;
       ctx.fillRect(x-6, y-6, 12, 12);
 
-      // core
       ctx.fillStyle = e.boss ? "rgba(255,74,122,0.85)" : "rgba(138,46,255,0.85)";
       ctx.fillRect(x-2, y-2, 4, 4);
-
-      // tiny hp bar
-      const w = 14;
-      const hp = Math.max(0, e.hp)/e.hpMax;
-      ctx.fillStyle = "rgba(0,0,0,0.6)";
-      ctx.fillRect(x-7, y-12, w, 2);
-      ctx.fillStyle = e.boss ? "rgba(255,74,122,0.95)" : "rgba(255,255,255,0.75)";
-      ctx.fillRect(x-7, y-12, (w*hp)|0, 2);
-
-      if(e.boss){
-        ctx.fillStyle = "rgba(255,255,255,0.45)";
-        ctx.fillRect(x-7, y-15, 14, 1);
-      }
     }
   }
 }
+
+/* ---------- helpers ---------- */
 
 function makeEnemy(x,y,level,isBoss){
   const hpMax = isBoss ? (90 + level*18) : (26 + level*8);
@@ -242,4 +188,3 @@ function findOpenSpot(world, x, y){
   }
   return {x:x|0,y:y|0};
 }
-
