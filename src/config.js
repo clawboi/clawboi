@@ -1,6 +1,8 @@
 export const CONFIG = {
   baseW: 320,
   baseH: 180,
+  // ...rest
+};
 
   // scaling rules (canvas is base * scale)
   minScale: 3,
