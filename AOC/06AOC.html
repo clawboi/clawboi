@@ -1,1 +1,268 @@
+<!-- AOC/06AOC.html -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>AOC06 · The Car’s Fate</title>
+<style>
+  :root{
+    --bg:#000;
+    --fg:#fff;
+    --violet:#8a2eff;
+    --cyan:#00ffd5;
+    --muted:rgba(255,255,255,.72);
+  }
+  html,body{height:100%; margin:0; background:radial-gradient(1000px 680px at 50% 40%, #140a2a 0%, #070414 55%, #02010a 100%); overflow:hidden; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; color:var(--fg);}
+  canvas{position:fixed; inset:0; width:100vw; height:100vh; image-rendering:pixelated; image-rendering:crisp-edges; background:#000; z-index:0;}
+  .nav{
+    position:fixed; top:12px; left:14px; z-index:20;
+    font-size:12px; letter-spacing:.25em; text-transform:uppercase;
+    display:flex; gap:18px; align-items:center; user-select:none;
+    text-shadow:0 0 18px rgba(138,46,255,.22);
+  }
+  .nav a{color:#fff; text-decoration:none; opacity:.75; transition:.2s;}
+  .nav a:hover{opacity:1}
+  .panel{
+    position:fixed; right:14px; bottom:12px; z-index:21;
+    display:flex; flex-direction:column; gap:10px;
+    width:min(460px,calc(100vw - 28px));
+    background:rgba(0,0,0,.38);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:16px;
+    padding:12px;
+    box-shadow:0 14px 60px rgba(0,0,0,.65), 0 0 0 1px rgba(138,46,255,.08) inset;
+    backdrop-filter: blur(6px);
+  }
+  .label{font-size:11px; letter-spacing:.22em; text-transform:uppercase; opacity:.85;}
+  .small{opacity:.75; font-size:10px; letter-spacing:.14em; line-height:1.6}
+  .btnRow{display:flex; gap:10px; flex-wrap:wrap;}
+  .btn{
+    appearance:none; border:1px solid rgba(255,255,255,.18);
+    background:rgba(138,46,255,.14);
+    color:#fff; cursor:pointer;
+    padding:12px 14px; border-radius:999px;
+    letter-spacing:.22em; text-transform:uppercase; font-size:11px;
+    transition:.22s;
+  }
+  .btn:hover{background:rgba(138,46,255,.28); box-shadow:0 0 26px rgba(138,46,255,.18)}
+  .btn.alt{background:rgba(255,255,255,.06)}
+  .btn.alt:hover{background:rgba(255,255,255,.10)}
+  .hud{
+    position:fixed; left:14px; bottom:12px; z-index:20;
+    font-size:12px; letter-spacing:.06em; color:var(--muted);
+    max-width:min(520px,calc(100vw - 28px));
+    line-height:1.45;
+    background:rgba(0,0,0,.35);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:12px;
+    padding:10px 12px;
+    box-shadow:0 14px 40px rgba(0,0,0,.55);
+  }
+  .scan{
+    position:fixed; inset:0; z-index:9; pointer-events:none;
+    opacity:.08; mix-blend-mode:overlay;
+    background:repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
+  }
+  .vignette{position:fixed; inset:0; z-index:10; pointer-events:none; background:radial-gradient(circle at 55% 45%, transparent 40%, rgba(0,0,0,.78) 100%);}
+</style>
+</head>
+<body>
+  <div class="nav">
+    <a href="../index.html">CLAWBOI</a>
+    <a href="../07AOC.html">BACK TO GAMES</a>
+  </div>
+
+  <canvas id="c" width="960" height="540"></canvas>
+  <div class="scan"></div>
+  <div class="vignette"></div>
+
+  <div class="hud" id="hud">
+    <b style="color:#fff; letter-spacing:.22em;">CUTSCENE:</b>
+    YOU PARK IN A DEAD QUIET PLACE WHERE THE WIND SOUNDS LIKE STATIC.
+    THE CAR IDLES LIKE A LIE. YOU CAN’T KEEP IT.
+    <br><span style="opacity:.72" id="fateLine">Pick the fate. It will echo later.</span>
+  </div>
+
+  <div class="panel">
+    <div class="label">AOC06 · THE CAR’S FATE</div>
+    <div class="small">
+      <b style="color:#00ffd5">A:</b> BLOW IT UP. ERASE THE TRAIL.
+      <br><b style="color:#8a2eff">B:</b> LEAVE IT BEHIND. WALK AWAY CLEAN.
+      <br><b style="color:#ff3b6b">C:</b> DRIVE IT OFF A CLIFF. LET IT FALL FOREVER.
+    </div>
+    <div class="btnRow">
+      <button class="btn" id="a">BLOW IT UP</button>
+      <button class="btn alt" id="b">LEAVE IT</button>
+      <button class="btn alt" id="cbtn">OFF A CLIFF</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const canvas=document.getElementById("c");
+  const ctx=canvas.getContext("2d",{alpha:false});
+
+  const W=320,H=180;
+  const world=document.createElement("canvas");
+  world.width=W; world.height=H;
+  const g=world.getContext("2d",{alpha:false});
+
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const randi=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+
+  const PROG_KEY="AOC_PROGRESS";
+  localStorage.setItem(PROG_KEY,"AOC06");
+
+  let last=performance.now();
+  let t=0;
+  let fxMode="idle"; // "boom" "leave" "cliff"
+  let fxT=0;
+
+  const fateLine=document.getElementById("fateLine");
+
+  function setFate(v){
+    localStorage.setItem("AOC06_CAR_FATE", v);
+    fateLine.textContent="LOGGED: " + v.toUpperCase();
+  }
+
+  function fadeTo(url){
+    const d=document.createElement("div");
+    d.style.position="fixed";
+    d.style.inset="0";
+    d.style.background="#000";
+    d.style.opacity="0";
+    d.style.transition="900ms";
+    d.style.zIndex="999";
+    document.body.appendChild(d);
+    requestAnimationFrame(()=>d.style.opacity="1");
+    setTimeout(()=>location.href=url, 940);
+  }
+
+  document.getElementById("a").onclick=()=>{
+    setFate("blow_up");
+    fxMode="boom"; fxT=0;
+    setTimeout(()=>fadeTo("../games.html"), 1200); // placeholder destination
+  };
+  document.getElementById("b").onclick=()=>{
+    setFate("leave");
+    fxMode="leave"; fxT=0;
+    setTimeout(()=>fadeTo("../games.html"), 900);
+  };
+  document.getElementById("cbtn").onclick=()=>{
+    setFate("cliff");
+    fxMode="cliff"; fxT=0;
+    setTimeout(()=>fadeTo("../games.html"), 1200);
+  };
+
+  function drawScene(){
+    g.fillStyle="#070517";
+    g.fillRect(0,0,W,H);
+
+    // fog
+    for(let i=0;i<5;i++){
+      const fx=(W*(0.12+i*0.2)+Math.sin(t*0.7+i)*10);
+      const fy=(H*(0.16+i*0.13)+Math.cos(t*0.55+i)*10);
+      g.fillStyle=`rgba(138,46,255,${0.045+i*0.014})`;
+      g.fillRect(fx-34,fy-22,68,44);
+    }
+
+    // ground
+    g.fillStyle="rgba(0,0,0,0.42)";
+    g.fillRect(16,90,W-32,66);
+    g.strokeStyle="rgba(255,255,255,0.10)";
+    g.strokeRect(16,90,W-32,66);
+
+    // car sprite
+    let carX=140, carY=118, tilt=0;
+    if(fxMode==="cliff"){
+      carX = 140 + fxT*60;
+      carY = 118 + fxT*24;
+      tilt = fxT*1.2;
+    }
+    g.save();
+    g.translate(carX|0, carY|0);
+    g.rotate(tilt);
+
+    g.fillStyle="rgba(0,255,213,0.16)";
+    g.fillRect(-14,-8,28,16);
+    g.strokeStyle="rgba(0,255,213,0.55)";
+    g.strokeRect(-14,-8,28,16);
+    g.fillStyle="rgba(0,0,0,0.45)";
+    g.fillRect(-10,-6,20,6);
+    g.fillStyle="rgba(255,255,255,0.45)";
+    g.fillRect(12,-2,2,4);
+    g.fillStyle="rgba(255,59,107,0.45)";
+    g.fillRect(-14,-2,2,4);
+
+    g.restore();
+
+    // effects
+    if(fxMode==="boom"){
+      const r=fxT*80;
+      g.fillStyle=`rgba(255,59,107,${clamp(1-fxT,0,1)})`;
+      g.fillRect(0,0,W,H);
+      g.fillStyle=`rgba(0,255,213,${clamp(0.8-fxT,0,1)})`;
+      g.fillRect((carX-20)|0,(carY-20)|0,(r)|0,(r)|0);
+      // debris pixels
+      for(let i=0;i<80;i++){
+        const a=Math.random()*Math.PI*2;
+        const s=Math.random()*r;
+        const px=(carX + Math.cos(a)*s)|0;
+        const py=(carY + Math.sin(a)*s)|0;
+        g.fillStyle=Math.random()<0.5?"rgba(0,255,213,0.8)":"rgba(255,255,255,0.5)";
+        g.fillRect(px,py,1,1);
+      }
+    }
+
+    if(fxMode==="leave"){
+      // dimming
+      g.fillStyle=`rgba(0,0,0,${clamp(fxT*0.7,0,0.7)})`;
+      g.fillRect(0,0,W,H);
+      // footsteps
+      g.fillStyle="rgba(255,255,255,0.18)";
+      for(let i=0;i<8;i++){
+        g.fillRect(58+i*10, 136 + (i%2), 2, 1);
+      }
+    }
+
+    // text
+    g.fillStyle="rgba(232,232,255,0.7)";
+    g.font="10px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+    g.fillText("AOC06 // QUIET SPOT", 18, 18);
+
+    if(fxMode==="boom"){
+      g.fillStyle="rgba(255,255,255,0.85)";
+      g.fillText("THE FIRE EATS THE EVIDENCE.", 18, 34);
+    }else if(fxMode==="leave"){
+      g.fillStyle="rgba(255,255,255,0.85)";
+      g.fillText("YOU WALK AWAY. THE ENGINE STILL HUMS.", 18, 34);
+    }else if(fxMode==="cliff"){
+      g.fillStyle="rgba(255,255,255,0.85)";
+      g.fillText("THE CAR FALLS. YOU DON'T LOOK DOWN.", 18, 34);
+    }else{
+      g.fillStyle="rgba(255,255,255,0.7)";
+      g.fillText("THE CAR IDLES LIKE A SECRET.", 18, 34);
+    }
+  }
+
+  function loop(now){
+    const dt=Math.min(0.05,(now-last)/1000);
+    last=now;
+    t += dt;
+    if(fxMode!=="idle") fxT = Math.min(1.2, fxT + dt);
+
+    drawScene();
+
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(world,0,0,W,H,0,0,canvas.width,canvas.height);
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
 
