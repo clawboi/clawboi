@@ -1,320 +1,500 @@
-// main.js
-// Boot + game loop + input + states + camera + orchestration.
+/* =========================================================
+   MAIN — Game Loop + States + Camera + Spawning + Mobile
+   - Start screen
+   - Play state
+   - Boss state (simple intro + lock arena)
+   - Death screen + restart
+   - Optimized canvas scaling (pixel sharp)
+   ========================================================= */
 
-(() => {
-  const canvas = document.getElementById("game");
-  const ctx = canvas.getContext("2d", { alpha:false });
+import { Player } from "./player.js";
+import { World } from "./world.js";
+import { EnemyManager } from "./enemies.js";
+import { Effects } from "./effects.js";
+import { UI } from "./ui.js";
 
-  // offscreen buffer to keep pixel sharp + allow post fx
-  const buffer = document.createElement("canvas");
-  buffer.width = canvas.width;
-  buffer.height = canvas.height;
-  const bctx = buffer.getContext("2d", { alpha:false });
+/* ------------------ Canvas setup ------------------ */
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d", { alpha: false });
 
-  // audio
-  window.Audio = window.Effects.initAudio();
+const STATE = {
+  START: "start",
+  PLAY: "play",
+  BOSS: "boss",
+  DEAD: "dead",
+};
 
-  // controls
-  const keys = new Set();
-  const input = {
-    mx:0, my:0,
-    attack:false,
-    dash:false,
-    consumeMushroom:false,
-    consumeCrystal:false,
-    consumePotion:false
+const config = {
+  baseW: 320,
+  baseH: 180,
+  scale: 4,               // auto-adjusted by resize
+  maxScale: 6,
+  minScale: 3,
+  dtCap: 1/30,            // prevents big physics jumps
+};
+
+let viewW = config.baseW * config.scale;
+let viewH = config.baseH * config.scale;
+
+function resize(){
+  // keep pixel sharpness: integer scaling
+  const ww = window.innerWidth;
+  const wh = window.innerHeight;
+
+  const sx = Math.floor(ww / config.baseW);
+  const sy = Math.floor(wh / config.baseH);
+  config.scale = Math.max(config.minScale, Math.min(config.maxScale, Math.min(sx, sy)));
+
+  viewW = config.baseW * config.scale;
+  viewH = config.baseH * config.scale;
+
+  canvas.width = viewW;
+  canvas.height = viewH;
+
+  canvas.style.width = viewW + "px";
+  canvas.style.height = viewH + "px";
+
+  ctx.imageSmoothingEnabled = false;
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ------------------ Input ------------------ */
+const keys = new Set();
+
+window.addEventListener("keydown", (e)=>{
+  if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
+  keys.add(e.key.toLowerCase());
+  // Start/restart convenience
+  if(state === STATE.START && (e.key === "Enter" || e.key === " ")){
+    startGame();
+  }
+  if(state === STATE.DEAD && (e.key === "Enter" || e.key === " ")){
+    startGame();
+  }
+});
+
+window.addEventListener("keyup", (e)=>{
+  keys.delete(e.key.toLowerCase());
+});
+
+function isDown(k){ return keys.has(k); }
+
+/* Mobile virtual stick + buttons (optional)
+   If you don’t have these in HTML yet, this code safely no-ops.
+*/
+const mobile = {
+  stick: document.getElementById("stick"),
+  knob: document.getElementById("knob"),
+  btnA: document.getElementById("btnA"), // attack
+  btnB: document.getElementById("btnB"), // dash
+  active: false,
+  ax: 0, ay: 0,
+};
+
+function setupMobile(){
+  if(!mobile.stick || !mobile.knob) return;
+
+  let sx=0, sy=0, dragging=false;
+
+  const setAxes = (dx,dy)=>{
+    const r = 32; // knob radius
+    const len = Math.hypot(dx,dy);
+    const nx = len ? dx/len : 0;
+    const ny = len ? dy/len : 0;
+    const mag = Math.min(1, len/r);
+
+    mobile.ax = nx * mag;
+    mobile.ay = ny * mag;
+    mobile.knob.style.transform = `translate(${Math.floor(nx*mag*r)}px, ${Math.floor(ny*mag*r)}px)`;
   };
 
-  // touch joystick
-  const joy = document.getElementById("joy");
-  const knob = document.getElementById("joyKnob");
-  let joyActive=false, joyId=null, joyCx=0, joyCy=0;
-  let joyDX=0, joyDY=0;
+  mobile.stick.addEventListener("pointerdown",(e)=>{
+    dragging=true;
+    mobile.active=true;
+    const rect = mobile.stick.getBoundingClientRect();
+    sx = rect.left + rect.width/2;
+    sy = rect.top + rect.height/2;
+    setAxes(e.clientX - sx, e.clientY - sy);
+    e.preventDefault();
+  }, {passive:false});
 
-  function setKnob(dx,dy){
-    const max=36;
-    const d=Math.hypot(dx,dy);
-    if(d>max){ dx=dx/d*max; dy=dy/d*max; }
-    knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-    joyDX = dx/max;
-    joyDY = dy/max;
+  window.addEventListener("pointermove",(e)=>{
+    if(!dragging) return;
+    setAxes(e.clientX - sx, e.clientY - sy);
+  }, {passive:true});
+
+  window.addEventListener("pointerup",()=>{
+    dragging=false;
+    mobile.active=false;
+    mobile.ax=0; mobile.ay=0;
+    if(mobile.knob) mobile.knob.style.transform = `translate(0px,0px)`;
+  }, {passive:true});
+
+  if(mobile.btnA){
+    mobile.btnA.addEventListener("pointerdown",(e)=>{
+      keys.add("j"); e.preventDefault();
+    }, {passive:false});
+    mobile.btnA.addEventListener("pointerup",()=> keys.delete("j"), {passive:true});
+    mobile.btnA.addEventListener("pointercancel",()=> keys.delete("j"), {passive:true});
   }
+  if(mobile.btnB){
+    mobile.btnB.addEventListener("pointerdown",(e)=>{
+      keys.add("k"); e.preventDefault();
+    }, {passive:false});
+    mobile.btnB.addEventListener("pointerup",()=> keys.delete("k"), {passive:true});
+    mobile.btnB.addEventListener("pointercancel",()=> keys.delete("k"), {passive:true});
+  }
+}
+setupMobile();
 
-  joy.addEventListener("pointerdown",(e)=>{
-    joyActive=true; joyId=e.pointerId;
-    joy.setPointerCapture(e.pointerId);
-    const r=joy.getBoundingClientRect();
-    joyCx=r.left+r.width/2; joyCy=r.top+r.height/2;
-    setKnob(e.clientX-joyCx, e.clientY-joyCy);
-    window.Audio.unlock();
+/* ------------------ Game objects ------------------ */
+let state = STATE.START;
+
+let world = null;
+let player = null;
+let enemies = null;
+let effects = null;
+let ui = null;
+
+const camera = {
+  x: 0, y: 0,
+  shake: 0,
+  shakeT: 0,
+};
+
+function camShake(power=3, time=0.15){
+  camera.shake = Math.max(camera.shake, power);
+  camera.shakeT = Math.max(camera.shakeT, time);
+}
+
+/* ------------------ Progression + Spawning ------------------ */
+let spawnT = 0;
+let bossGate = {
+  nextAtLevel: 3,
+  active: false,
+  bossName: "THE WATCHER",
+  bossId: "watcher",
+};
+
+function startGame(){
+  world = new World({
+    seed: Math.floor(Math.random()*1e9),
+    w: 256, h: 256,
   });
 
-  joy.addEventListener("pointermove",(e)=>{
-    if(!joyActive || e.pointerId!==joyId) return;
-    setKnob(e.clientX-joyCx, e.clientY-joyCy);
+  player = new Player({
+    x: world.spawnX,
+    y: world.spawnY,
   });
 
-  joy.addEventListener("pointerup",(e)=>{
-    if(e.pointerId!==joyId) return;
-    joyActive=false; joyId=null;
-    setKnob(0,0);
-  });
+  enemies = new EnemyManager(world);
+  effects = new Effects();
+  ui = new UI();
 
-  document.getElementById("btnAttack").addEventListener("pointerdown", ()=>{ input.attack=true; window.Audio.unlock(); });
-  document.getElementById("btnDash").addEventListener("pointerdown", ()=>{ input.dash=true; window.Audio.unlock(); });
+  spawnT = 0;
+  bossGate.active = false;
+  bossGate.nextAtLevel = 3;
 
-  // keyboard
-  addEventListener("keydown",(e)=>{ keys.add(e.key.toLowerCase()); window.Audio.unlock(); });
-  addEventListener("keyup",(e)=>{ keys.delete(e.key.toLowerCase()); });
+  ui.toast("ENTER THE FOREST NODE", 1.2);
+  state = STATE.PLAY;
+}
 
-  // states
-  const State = {
-    START:"START",
-    PLAY:"PLAY",
-    BOSS_INTRO:"BOSS_INTRO",
-    BOSS:"BOSS",
-    DEATH:"DEATH"
-  };
-  let state = State.START;
-  let introT = 0;
+function spawnWave(){
+  // scales with level + hallucination
+  const base = 2 + Math.floor(player.level * 0.6);
+  const extra = effects.hallucination > 0.2 ? 2 : 0;
 
-  // setup world
-  window.World.gen(Math.floor(Math.random()*999999)+1);
-
-  // spawn initial enemies
-  window.Enemies.spawnWave(window.Player.p);
-
-  // camera
-  const cam = { x:0, y:0 };
-
-  function setState(s){
-    state=s;
-    window.UI.setState(s);
-    if(s===State.START){
-      window.UI.showCenter("THE ADVENTURES OF CLAWBOI", "PRESS ENTER / TAP TO START");
-    }
-    if(s===State.PLAY){
-      window.UI.showCenter("", "");
-    }
-    if(s===State.DEATH){
-      window.UI.showCenter("YOU DIED", "PRESS R / TAP RESTART");
-    }
+  const count = Math.min(10, base + extra);
+  for(let i=0;i<count;i++){
+    const p = world.randomPointNear(player.x, player.y, 220, 420);
+    enemies.spawnRandom(p.x, p.y, player.level);
   }
-  setState(State.START);
+}
 
-  // start on tap anywhere (so mobile is easy)
-  addEventListener("pointerdown", ()=>{
-    if(state===State.START){
-      setState(State.PLAY);
-    }
-  });
+/* Boss trigger rules:
+   - When player hits a level milestone, show intro + lock arena
+*/
+function maybeTriggerBoss(){
+  if(bossGate.active) return;
+  if(player.level < bossGate.nextAtLevel) return;
 
-  function resetGame(){
-    window.Enemies.clear();
-    const p = window.Player.p;
-    p.x = 16*16+8; p.y=16*16+8;
-    p.vx=0; p.vy=0;
-    p.hpMax=18; p.hp=18;
-    p.lvl=1; p.xp=0; p.xpNeed=8;
-    p.atk=2; p.speed=1.15;
-    p.inv.fill(null);
-    p.invCount={mushroom:0, crystal:0, potion:0};
-    p.dead=false; p.deathT=0;
-    p.iFrames=0;
-    p.glow=1;
+  bossGate.active = true;
+  state = STATE.BOSS;
 
-    window.World.gen(Math.floor(Math.random()*999999)+1);
-    window.Enemies.spawnWave(p);
-    setState(State.START);
+  // cinematic
+  ui.bannerText(bossGate.bossName, "IT SEES THROUGH YOU", 2.6);
+  ui.toast("BOSS APPROACHING", 1.2);
+  camShake(6, 0.25);
+
+  // clear trash mobs, spawn boss
+  enemies.clearAllNonBoss?.();
+  enemies.spawnBoss?.(bossGate.bossId, player, world);
+
+  // arena lock (optional: world can support soft walls)
+  world.lockArena?.(player.x, player.y, 420);
+}
+
+/* ------------------ Update ------------------ */
+function getMoveInput(){
+  // keyboard (WASD or arrows)
+  let mx = 0, my = 0;
+
+  if(isDown("a") || isDown("arrowleft")) mx -= 1;
+  if(isDown("d") || isDown("arrowright")) mx += 1;
+  if(isDown("w") || isDown("arrowup")) my -= 1;
+  if(isDown("s") || isDown("arrowdown")) my += 1;
+
+  // mobile stick overrides/adds
+  if(mobile.active){
+    mx += mobile.ax;
+    my += mobile.ay;
   }
 
-  function readInput(){
-    // reset one-frame buttons
-    input.attack = false;
-    input.dash = false;
-    input.consumeMushroom=false;
-    input.consumeCrystal=false;
-    input.consumePotion=false;
+  // normalize
+  const len = Math.hypot(mx,my);
+  if(len>1e-6){
+    mx /= Math.max(1, len);
+    my /= Math.max(1, len);
+  }
+  return {mx,my};
+}
 
-    // movement from keys
-    let mx = 0, my = 0;
-    if(keys.has("arrowleft")||keys.has("a")) mx -= 1;
-    if(keys.has("arrowright")||keys.has("d")) mx += 1;
-    if(keys.has("arrowup")||keys.has("w")) my -= 1;
-    if(keys.has("arrowdown")||keys.has("s")) my += 1;
-
-    // combine with joystick
-    mx += joyDX;
-    my += joyDY;
-
-    input.mx = mx;
-    input.my = my;
-
-    if(keys.has(" ") || keys.has("k")) input.attack = true;
-    if(keys.has("shift") || keys.has("l")) input.dash = true;
-
-    // consume keys
-    if(keys.has("1")) input.consumeMushroom=true;
-    if(keys.has("2")) input.consumeCrystal=true;
-    if(keys.has("3")) input.consumePotion=true;
-
-    if(keys.has("enter") && state===State.START){
-      setState(State.PLAY);
-    }
-    if(keys.has("r") && state===State.DEATH){
-      resetGame();
-    }
+function update(dt){
+  if(state === STATE.START){
+    // subtle background animation could go here
+    return;
   }
 
-  function update(dt){
-    readInput();
-
-    const hallu = window.Effects.state.hallu;
-    const halluAmt = hallu.on ? (hallu.intensity * hallu.meter) : 0;
-
-    // audio hallucination shading
-    window.Audio.setHallucination(hallu.on, halluAmt);
-
-    window.UI.update(dt);
-    window.Effects.update(dt);
-    window.World.update(dt);
-
-    const p = window.Player.p;
-
-    // camera follow
-    cam.x = Math.floor(p.x - canvas.width/2);
-    cam.y = Math.floor(p.y - canvas.height/2);
-
-    // state machine
-    if(state===State.PLAY){
-      window.Player.update(dt, input, window.World);
-      window.Enemies.update(dt, window.World, p, halluAmt);
-
-      // wave spawns
-      if(window.Enemies.list.length < 4 && !window.Enemies.boss){
-        window.Enemies.spawnWave(p);
-      }
-
-      // boss trigger (simple): hit level 4 or walk deep enough
-      const deep = (p.x > window.World.W*window.World.TILE*0.68 && p.y > window.World.H*window.World.TILE*0.62);
-      if(!window.Enemies.boss && (p.lvl>=4 || deep)){
-        state = State.BOSS_INTRO;
-        introT = 1.8;
-        window.Enemies.startBoss(p, "WATCHER");
-        window.UI.showCenter("BOSS APPROACHING", "THE WATCHER ARRIVES");
-        window.Effects.addShake(8);
-      }
-
-      if(p.dead){
-        state = State.DEATH;
-        window.UI.showCenter("YOU DIED", "PRESS R / TAP RESTART");
-      }
-    }
-
-    if(state===State.BOSS_INTRO){
-      window.Player.update(dt, input, window.World);
-      introT -= dt;
-      if(introT<=0){
-        state = State.BOSS;
-        window.UI.showCenter("THE WATCHER", "DON’T LOOK AWAY.");
-      }
-    }
-
-    if(state===State.BOSS){
-      window.Player.update(dt, input, window.World);
-      window.Enemies.update(dt, window.World, p, halluAmt);
-
-      // if boss dead return to play
-      if(window.Enemies.boss && !window.Enemies.boss.alive){
-        state = State.PLAY;
-        window.UI.showCenter("SILENCE", "The forest exhales.");
-        window.Enemies.boss = null; // (boss getter is read-only, so we just let it be null via clear if you prefer)
-      }
-
-      if(p.dead){
-        state = State.DEATH;
-        window.UI.showCenter("YOU DIED", "PRESS R / TAP RESTART");
-      }
-    }
-
-    if(state===State.DEATH){
-      // allow tap restart on mobile
-      // (we keep the UI message)
-    }
-
-    window.UI.sync(p, window.Effects.state.hallu);
+  if(state === STATE.DEAD){
+    // allow UI fade etc.
+    ui?.update(dt);
+    effects?.update(dt);
+    return;
   }
 
-  function draw(){
-    const hallu = window.Effects.state.hallu;
-    const halluAmt = hallu.on ? (hallu.intensity * hallu.meter) : 0;
+  // global
+  ui.update(dt);
+  effects.update(dt);
 
-    // clear buffer
-    bctx.imageSmoothingEnabled = false;
-    bctx.clearRect(0,0,buffer.width,buffer.height);
+  const {mx,my} = getMoveInput();
 
-    // apply screen shake to camera
-    const sx = window.Effects.state.shakeX|0;
-    const sy = window.Effects.state.shakeY|0;
+  // player controls
+  player.setMove(mx,my);
 
-    // draw world
-    window.World.draw(bctx, {x:cam.x - sx, y:cam.y - sy}, window.Effects.state.time, halluAmt);
+  const attacking = isDown("j") || isDown(" ");
+  const dashing = isDown("k") || isDown("shift");
 
-    // draw enemies + boss
-    window.Enemies.draw(bctx, {x:cam.x - sx, y:cam.y - sy}, window.Effects.state.time, halluAmt);
+  if(attacking) player.tryAttack();
+  if(dashing) player.tryDash();
 
-    // draw player
-    window.Player.draw(bctx, {x:cam.x - sx, y:cam.y - sy}, window.Effects.state.time, halluAmt);
+  // update player + world interactions
+  player.update(dt, world, effects);
 
-    // draw particles
-    for(const p of window.Effects.state.particles){
-      const x = (p.x - (cam.x - sx))|0;
-      const y = (p.y - (cam.y - sy))|0;
-      bctx.globalAlpha = Math.max(0, p.life/p.max);
-      bctx.fillStyle = p.col;
-      bctx.fillRect(x, y, 1, 1);
-      bctx.globalAlpha = 1;
+  // item pickups
+  const pickup = world.tryPickup(player.x, player.y);
+  if(pickup){
+    // inventory / xp / hallucination trigger
+    player.addItem(pickup);
+    player.addXP(pickup.xp ?? 2);
+
+    ui.floater((player.x - camera.x) * config.scale, (player.y - camera.y) * config.scale, `+${pickup.xp ?? 2} XP`);
+
+    if(pickup.kind === "mushroom" || pickup.kind === "potion"){
+      effects.triggerHallucination(1.0);
+      ui.toast("HALLUCINATION MODE", 1.1);
+      camShake(4,0.12);
     }
-
-    // final to screen
-    ctx.imageSmoothingEnabled = false;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(buffer,0,0);
-
-    // post effects on main ctx using the current buffer
-    window.Effects.post(ctx, buffer);
-
-    // overlay state hints in-canvas (tiny)
-    if(state===State.START){
-      // slight glow pulse
-      const a = 0.12 + 0.08*Math.sin(window.Effects.state.time*2);
-      ctx.globalAlpha = a;
-      ctx.fillStyle = "rgba(138,46,255,1)";
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.globalAlpha = 1;
+    if(pickup.kind === "crystal"){
+      ui.toast("VIOLET CRYSTAL", 0.9);
     }
   }
 
-  // mobile tap restart
-  addEventListener("pointerdown", ()=>{
-    if(state===State.DEATH){
-      resetGame();
+  // enemies
+  enemies.update(dt, player, world, effects);
+
+  // combat resolution: player sword vs enemies
+  const hit = enemies.resolvePlayerAttack(player);
+  if(hit?.count){
+    camShake(2 + hit.count, 0.08);
+    effects.hitFlash(0.12);
+    // XP per kill handled inside enemies or here:
+    if(hit.kills){
+      player.addXP(hit.kills * 6);
+      ui.floater((player.x - camera.x) * config.scale, (player.y - camera.y) * config.scale, `+${hit.kills*6} XP`);
     }
-  });
-
-  // main loop
-  let last = performance.now();
-  function loop(now){
-    const dt = Math.min(0.033, (now-last)/1000);
-    last = now;
-
-    update(dt);
-    draw();
-
-    requestAnimationFrame(loop);
   }
+
+  // enemy attacks vs player
+  const took = enemies.resolveEnemyHits(player);
+  if(took){
+    effects.damagePulse(0.22);
+    camShake(5, 0.12);
+    ui.toast("HIT", 0.35);
+  }
+
+  // level up check (player module usually handles this, but we support either)
+  if(player.didLevelUp){
+    const n = player.didLevelUp();
+    if(n){
+      ui.toast(`LEVEL UP → ${player.level}`, 1.0);
+      camShake(6, 0.18);
+    }
+  }
+
+  // spawning loop
+  spawnT -= dt;
+  if(spawnT <= 0 && state === STATE.PLAY){
+    spawnWave();
+    spawnT = Math.max(1.6, 3.2 - player.level*0.12);
+  }
+
+  // boss triggers
+  maybeTriggerBoss();
+
+  // boss state exit if boss dead
+  if(state === STATE.BOSS){
+    const bossAlive = enemies.hasBossAlive?.() ?? false;
+    if(!bossAlive){
+      ui.toast("BOSS DEFEATED", 1.4);
+      camShake(8, 0.25);
+      effects.hallucination = Math.max(effects.hallucination, 0.35);
+
+      // unlock arena and schedule next boss
+      world.unlockArena?.();
+      bossGate.active = false;
+      bossGate.nextAtLevel += 3;
+      state = STATE.PLAY;
+    }
+  }
+
+  // camera follow
+  camera.x += (player.x - config.baseW/2 - camera.x) * (1 - Math.pow(0.001, dt));
+  camera.y += (player.y - config.baseH/2 - camera.y) * (1 - Math.pow(0.001, dt));
+
+  // clamp to world bounds if available
+  if(world.bounds){
+    camera.x = clamp(camera.x, 0, world.bounds.w - config.baseW);
+    camera.y = clamp(camera.y, 0, world.bounds.h - config.baseH);
+  }
+
+  // camera shake
+  if(camera.shakeT > 0){
+    camera.shakeT -= dt;
+    camera.shake *= 0.86;
+    if(camera.shakeT <= 0) camera.shake = 0;
+  }
+
+  // death
+  if(player.hp <= 0 && state !== STATE.DEAD){
+    state = STATE.DEAD;
+    ui.bannerText("YOU DIED", "PRESS ENTER / TAP TO RESTART", 999);
+    ui.toast("THE FOREST ATE YOU", 1.6);
+    camShake(10, 0.28);
+  }
+}
+
+/* ------------------ Render ------------------ */
+function draw(){
+  // clear
+  ctx.fillStyle = "#050508";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+
+  // pixel world render uses base resolution coords
+  // We render everything in base resolution then scale up
+  ctx.scale(config.scale, config.scale);
+
+  // shake offset in base pixels
+  let sx=0, sy=0;
+  if(camera.shake>0){
+    sx = (Math.random()*2-1) * camera.shake * 0.7;
+    sy = (Math.random()*2-1) * camera.shake * 0.7;
+  }
+
+  const camX = Math.floor(camera.x + sx);
+  const camY = Math.floor(camera.y + sy);
+
+  // world
+  world?.draw(ctx, camX, camY, effects);
+
+  // enemies
+  enemies?.draw(ctx, camX, camY, effects);
+
+  // player
+  player?.draw(ctx, camX, camY, effects);
+
+  // screen-space effects overlay (drawn in base res)
+  effects?.drawOverlay(ctx, config.baseW, config.baseH);
+
+  ctx.restore();
+
+  // UI in scaled pixels (full-res canvas coords)
+  if(ui && player && effects){
+    ui.draw(ctx, player, effects);
+  }
+
+  // Start / Dead overlays
+  if(state === STATE.START){
+    drawStart();
+  }else if(state === STATE.DEAD){
+    drawDead();
+  }
+
+  requestAnimationFrame(draw);
+}
+
+function drawStart(){
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle = "rgba(138,46,255,0.95)";
+  ctx.font = "22px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("THE ADVENTURES OF CLAWBOI", canvas.width/2, canvas.height/2 - 20);
+
+  ctx.fillStyle = "rgba(255,255,255,0.72)";
+  ctx.font = "14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+  ctx.fillText("PRESS ENTER / TAP TO BEGIN", canvas.width/2, canvas.height/2 + 16);
+
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+  ctx.fillText("MOVE: WASD / ARROWS  •  ATTACK: J  •  DASH: K", canvas.width/2, canvas.height/2 + 44);
+
+  ctx.restore();
+
+  // allow tap to start
+  canvas.onclick = ()=> startGame();
+}
+
+function drawDead(){
+  ctx.save();
+  // UI already draws banner, but we darken a bit
+  ctx.fillStyle = "rgba(0,0,0,0.30)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  canvas.onclick = ()=> startGame();
+  ctx.restore();
+}
+
+/* ------------------ Loop ------------------ */
+let last = performance.now();
+function loop(now){
+  const rawDt = (now - last) / 1000;
+  last = now;
+  const dt = Math.min(config.dtCap, rawDt);
+
+  update(dt);
+  // draw is on rAF; we also draw here for deterministic timing
+  // (But keep single draw call: we call draw separately)
   requestAnimationFrame(loop);
-})();
+}
 
+requestAnimationFrame(loop);
+requestAnimationFrame(draw);
 
-
+/* ------------------ Boot ------------------ */
+state = STATE.START;
