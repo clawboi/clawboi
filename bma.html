@@ -10,93 +10,93 @@
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-margin:0;
-background:var(--bg);
-color:var(--fg);
-font-family:ui-monospace,Menlo,monospace;
-overflow:hidden;
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:ui-monospace,Menlo,monospace;
+  overflow:hidden;
 }
 
 /* atmosphere */
 body:before{
-content:"";
-position:fixed;
-inset:-25%;
-pointer-events:none;
-background:
-radial-gradient(circle at 20% 20%, rgba(138,46,255,.22), transparent 60%),
-radial-gradient(circle at 80% 30%, rgba(138,46,255,.14), transparent 70%),
-radial-gradient(circle at 50% 90%, rgba(138,46,255,.10), transparent 72%);
-mix-blend-mode:screen;
-filter:blur(40px);
+  content:"";
+  position:fixed;
+  inset:-25%;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(138,46,255,.22), transparent 60%),
+    radial-gradient(circle at 80% 30%, rgba(138,46,255,.14), transparent 70%),
+    radial-gradient(circle at 50% 90%, rgba(138,46,255,.10), transparent 72%);
+  mix-blend-mode:screen;
+  filter:blur(40px);
 }
 
 /* scanlines */
 .scan{
-position:fixed; inset:0;
-pointer-events:none;
-opacity:.07;
-background:repeating-linear-gradient(to bottom, rgba(255,255,255,.05) 0px, rgba(255,255,255,.05) 1px, transparent 3px, transparent 6px);
+  position:fixed; inset:0;
+  pointer-events:none;
+  opacity:.07;
+  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.05) 0px, rgba(255,255,255,.05) 1px, transparent 3px, transparent 6px);
 }
 
 /* brand */
 .brand{
-position:fixed; top:14px; left:14px;
-font-size:11px;
-letter-spacing:.34em;
-text-transform:uppercase;
-opacity:.75;
-z-index:9;
-text-shadow:0 0 18px rgba(138,46,255,.35);
+  position:fixed; top:14px; left:14px;
+  font-size:11px;
+  letter-spacing:.34em;
+  text-transform:uppercase;
+  opacity:.75;
+  z-index:9;
+  text-shadow:0 0 18px rgba(138,46,255,.35);
 }
 .brand a{color:#fff;text-decoration:none}
 
 /* layout */
 .wrap{
-position:relative;
-z-index:2;
-height:100%;
-display:flex;
-align-items:center;
-justify-content:center;
-padding:80px 20px;
+  position:relative;
+  z-index:2;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:80px 20px;
 }
 
 .panel{
-width:min(900px,100%);
-background:rgba(255,255,255,.03);
-border-radius:18px;
-padding:20px;
-backdrop-filter:blur(12px);
-box-shadow:0 0 60px rgba(138,46,255,.15);
+  width:min(900px,100%);
+  background:rgba(255,255,255,.03);
+  border-radius:18px;
+  padding:20px;
+  backdrop-filter:blur(12px);
+  box-shadow:0 0 60px rgba(138,46,255,.15);
 }
 
 /* headings */
 .h1{
-font-size:clamp(18px,4vw,34px);
-letter-spacing:.46em;
-text-transform:uppercase;
-text-shadow:0 0 18px rgba(138,46,255,.35);
+  font-size:clamp(18px,4vw,34px);
+  letter-spacing:.46em;
+  text-transform:uppercase;
+  text-shadow:0 0 18px rgba(138,46,255,.35);
 }
 .sub{
-margin-top:10px;
-font-size:11px;
-letter-spacing:.30em;
-text-transform:uppercase;
-opacity:.6;
+  margin-top:10px;
+  font-size:11px;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+  opacity:.6;
 }
 
 /* terminal */
 .term{
-margin-top:18px;
-background:#000;
-border-radius:14px;
-padding:14px;
-height:260px;
-overflow:auto;
-font-size:12px;
-line-height:1.6;
-border:1px solid rgba(255,255,255,.05);
+  margin-top:18px;
+  background:#000;
+  border-radius:14px;
+  padding:14px;
+  height:260px;
+  overflow:auto;
+  font-size:12px;
+  line-height:1.6;
+  border:1px solid rgba(255,255,255,.05);
 }
 
 .line{opacity:.85}
@@ -105,85 +105,219 @@ border:1px solid rgba(255,255,255,.05);
 
 /* input */
 .row{
-margin-top:14px;
-display:flex;
-gap:10px;
+  margin-top:14px;
+  display:flex;
+  gap:10px;
 }
 
 input{
-flex:1;
-background:#000;
-border:1px solid rgba(255,255,255,.1);
-border-radius:10px;
-padding:12px;
-color:#fff;
-font-family:inherit;
-letter-spacing:.15em;
+  flex:1;
+  background:#000;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;
+  padding:12px;
+  color:#fff;
+  font-family:inherit;
+  letter-spacing:.15em;
 }
 
 button{
-border:0;
-cursor:pointer;
-padding:12px 16px;
-border-radius:999px;
-background:rgba(138,46,255,.18);
-color:#fff;
-letter-spacing:.22em;
-font-size:11px;
-text-transform:uppercase;
+  border:0;
+  cursor:pointer;
+  padding:12px 16px;
+  border-radius:999px;
+  background:rgba(138,46,255,.18);
+  color:#fff;
+  letter-spacing:.22em;
+  font-size:11px;
+  text-transform:uppercase;
 }
 button:hover{filter:brightness(1.1)}
 
 .back{
-margin-top:16px;
-text-align:right;
+  margin-top:16px;
+  text-align:right;
 }
 .back a{
-font-size:10px;
-letter-spacing:.3em;
-opacity:.65;
-text-decoration:none;
-color:#fff;
+  font-size:10px;
+  letter-spacing:.3em;
+  opacity:.65;
+  text-decoration:none;
+  color:#fff;
 }
 .back a:hover{opacity:1}
 
 /* pulse */
-@keyframes pulse{
-50%{opacity:.4}
-}
+@keyframes pulse{50%{opacity:.4}}
 .pulse{animation:pulse 1.4s infinite}
 
 /* hidden BMA mark */
 .bmaMark{
-position:fixed;
-left:10px;
-bottom:10px;
-z-index:8;
-font-size:9px;
-letter-spacing:.42em;
-text-transform:uppercase;
-opacity:.14;
-color:#fff;
-text-shadow:0 0 22px rgba(138,46,255,.35);
-pointer-events:none;
-user-select:none;
+  position:fixed;
+  left:10px;
+  bottom:10px;
+  z-index:8;
+  font-size:9px;
+  letter-spacing:.42em;
+  text-transform:uppercase;
+  opacity:.14;
+  color:#fff;
+  text-shadow:0 0 22px rgba(138,46,255,.35);
+  pointer-events:none;
+  user-select:none;
 }
 
 /* faint outside title */
 .bmaTitle{
-position:fixed;
-right:14px;
-bottom:12px;
-z-index:8;
-font-size:9px;
-letter-spacing:.42em;
-text-transform:uppercase;
-opacity:.10;
-color:#fff;
-text-shadow:0 0 26px rgba(138,46,255,.28);
-pointer-events:none;
-user-select:none;
+  position:fixed;
+  right:14px;
+  bottom:12px;
+  z-index:8;
+  font-size:9px;
+  letter-spacing:.42em;
+  text-transform:uppercase;
+  opacity:.10;
+  color:#fff;
+  text-shadow:0 0 26px rgba(138,46,255,.28);
+  pointer-events:none;
+  user-select:none;
 }
+
+/* ====== LEGENDARY UNLOCK OVERLAY ====== */
+.unlock{
+  position:fixed;
+  inset:0;
+  z-index:20;
+  display:none;
+  place-items:center;
+  padding:22px;
+}
+.unlock.on{display:grid;}
+.unlock::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(138,46,255,.22), transparent 60%),
+    radial-gradient(circle at 30% 70%, rgba(255,255,255,.06), transparent 62%),
+    rgba(0,0,0,.62);
+  backdrop-filter: blur(10px);
+}
+.unlockCard{
+  position:relative;
+  width:min(760px, 100%);
+  border-radius:18px;
+  padding:18px;
+  background:rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.10);
+  box-shadow:0 0 90px rgba(138,46,255,.22);
+  overflow:hidden;
+}
+.unlockTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+.unlockTitle{
+  font-size:11px;
+  letter-spacing:.34em;
+  text-transform:uppercase;
+  opacity:.78;
+}
+.unlockHint{
+  font-size:10px;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  opacity:.55;
+  white-space:nowrap;
+}
+.mindRow{
+  margin-top:14px;
+  display:grid;
+  grid-template-columns: 110px 1fr;
+  gap:16px;
+  align-items:center;
+}
+@media (max-width:560px){
+  .mindRow{grid-template-columns: 1fr; text-align:center;}
+}
+.mindLogo{
+  width:110px;height:110px;
+  display:grid; place-items:center;
+  border-radius:18px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow: inset 0 0 0 1px rgba(138,46,255,.10), 0 0 40px rgba(138,46,255,.12);
+}
+.mindLogo svg{
+  width:78px;height:78px;
+  filter: drop-shadow(0 0 18px rgba(138,46,255,.35));
+}
+.unlockText{
+  font-size:12px;
+  letter-spacing:.08em;
+  line-height:1.7;
+  opacity:.88;
+}
+.unlockText b{letter-spacing:.22em}
+.ctrl{
+  margin-top:14px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.pill{
+  appearance:none;
+  border:0;
+  cursor:pointer;
+  padding:12px 14px;
+  border-radius:999px;
+  background:rgba(255,255,255,.06);
+  color:#fff;
+  letter-spacing:.22em;
+  font-size:11px;
+  text-transform:uppercase;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
+}
+.pill.v{ background: rgba(138,46,255,.16); }
+.pill:hover{filter:brightness(1.06)}
+.pillLink{ text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+.smallNote{
+  margin-top:10px;
+  font-size:10px;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+  opacity:.55;
+}
+canvas.confetti{
+  position:fixed;
+  inset:0;
+  z-index:19;
+  pointer-events:none;
+  display:none;
+}
+canvas.confetti.on{display:block;}
+
+/* screen shake + glitch flash */
+@keyframes shake{
+  0%,100%{transform:translate(0,0)}
+  20%{transform:translate(-1px,1px)}
+  40%{transform:translate(2px,-1px)}
+  60%{transform:translate(-2px,-1px)}
+  80%{transform:translate(1px,2px)}
+}
+body.shake{ animation:shake .18s linear 0s 6; }
+
+.flash{
+  position:fixed; inset:0; z-index:18;
+  pointer-events:none;
+  background:#fff;
+  opacity:0;
+}
+.flash.on{ animation:flash .16s; }
+@keyframes flash{ 0%{opacity:0} 40%{opacity:.35} 100%{opacity:0} }
 </style>
 </head>
 
@@ -191,40 +325,99 @@ user-select:none;
 <div class="scan"></div>
 <div class="bmaMark">BMA</div>
 <div class="bmaTitle">BROKEN MINDS ANONYMOUS</div>
+<div class="flash" id="flash"></div>
 
 <div class="brand"><a href="vault.html">CLAWBOI</a></div>
 
 <div class="wrap">
-<div class="panel">
+  <div class="panel">
 
-<div class="h1">BACKROOM NODE</div>
-<div class="sub">UNAUTHORIZED SIGNAL DETECTED <span class="pulse">▮</span></div>
+    <div class="h1">BACKROOM NODE</div>
+    <div class="sub">UNAUTHORIZED SIGNAL DETECTED <span class="pulse">▮</span></div>
 
-<div class="term" id="term">
-<div class="line sys">NODE BOOTING...</div>
-<div class="line">SEARCHING FOR USER ID...</div>
-<div class="line err">ERROR: USER NOT FOUND</div>
-<div class="line">ASSIGNING TEMPORARY ID...</div>
-<div class="line sys">WELCOME, UNKNOWN ENTITY.</div>
-<div class="line">TYPE A COMMAND OR JUST TALK.</div>
+    <div class="term" id="term">
+      <div class="line sys">NODE BOOTING...</div>
+      <div class="line">SEARCHING FOR USER ID...</div>
+      <div class="line err">ERROR: USER NOT FOUND</div>
+      <div class="line">ASSIGNING TEMPORARY ID...</div>
+      <div class="line sys">WELCOME, UNKNOWN ENTITY.</div>
+      <div class="line">FIND THE PASSWORD. TALK TO ME UNTIL YOU DO.</div>
+    </div>
+
+    <div class="row">
+      <input id="cmd" placeholder="ENTER COMMAND / TALK"/>
+      <button id="send">RUN</button>
+    </div>
+
+    <div class="back">
+      <a href="secret.html">RETURN TO TRANSMISSION</a>
+    </div>
+
+  </div>
 </div>
 
-<div class="row">
-<input id="cmd" placeholder="ENTER COMMAND"/>
-<button id="send">RUN</button>
-</div>
+<!-- UNLOCK OVERLAY -->
+<canvas class="confetti" id="confetti"></canvas>
 
-<div class="back">
-<a href="secret.html">RETURN TO TRANSMISSION</a>
-</div>
+<div class="unlock" id="unlock">
+  <div class="unlockCard">
+    <div class="unlockTop">
+      <div class="unlockTitle">ACCESS GRANTED</div>
+      <div class="unlockHint" id="unlockHint">BMA NODE ONLINE</div>
+    </div>
 
-</div>
+    <div class="mindRow">
+      <div class="mindLogo" aria-hidden="true">
+        <!-- broken mind sigil -->
+        <svg viewBox="0 0 64 64" fill="none">
+          <path d="M22 16c2-7 16-7 18 0 6 1 10 6 10 12 0 4-2 8-5 10 1 8-4 14-12 14-2 0-4 0-6-1-2 1-4 1-6 1-8 0-13-6-12-14-3-2-5-6-5-10 0-6 4-11 10-12Z"
+                stroke="rgba(255,255,255,.85)" stroke-width="2" />
+          <path d="M18 24l10 8-7 6 12 10" stroke="rgba(138,46,255,.95)" stroke-width="2" />
+          <path d="M34 18l-3 10 10 6-8 6 6 10" stroke="rgba(138,46,255,.55)" stroke-width="2" />
+          <path d="M14 46h36" stroke="rgba(255,255,255,.20)" stroke-width="2" stroke-dasharray="4 4"/>
+        </svg>
+      </div>
+
+      <div class="unlockText" id="unlockText">
+        <b>BROKEN MINDS ANONYMOUS</b> accepted you.<br>
+        The terminal is “fine”. The terminal is “fine”. The terminal is fi—
+      </div>
+    </div>
+
+    <div class="ctrl">
+      <button class="pill v" id="playBtn">PLAY</button>
+      <button class="pill" id="pauseBtn">PAUSE</button>
+      <button class="pill" id="stopBtn">STOP</button>
+      <a class="pill pillLink" href="secret.html">RETURN TO TRANSMISSION</a>
+      <button class="pill" id="closeBtn">CLOSE</button>
+    </div>
+
+    <div class="smallNote">
+      SONG FILE: <span style="opacity:.9">audio/bma.mp3</span> (replace with your track)
+    </div>
+
+    <audio id="bmaAudio" preload="auto" playsinline>
+      <!-- Change this to your actual track -->
+      <source src="audio/bma.mp3?v=1" type="audio/mpeg">
+    </audio>
+  </div>
 </div>
 
 <script>
 const term=document.getElementById("term");
 const input=document.getElementById("cmd");
 const btn=document.getElementById("send");
+
+const unlockEl = document.getElementById("unlock");
+const confetti = document.getElementById("confetti");
+const flash = document.getElementById("flash");
+const bmaAudio = document.getElementById("bmaAudio");
+const playBtn = document.getElementById("playBtn");
+const pauseBtn = document.getElementById("pauseBtn");
+const stopBtn = document.getElementById("stopBtn");
+const closeBtn = document.getElementById("closeBtn");
+const unlockText = document.getElementById("unlockText");
+const unlockHint = document.getElementById("unlockHint");
 
 function log(text,cls="line"){
   const d=document.createElement("div");
@@ -236,250 +429,342 @@ function log(text,cls="line"){
 
 function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function chance(p){ return Math.random() < p; }
-
-/* SHORT command responses */
-const responses={
-  HELP:["COMMANDS:","HELP / SCAN / WHOAMI / OPEN / BMA / CLEAR","EXTRAS:","NAME: ___  /  JOIN  /  LEAVE  /  PING"],
-  SCAN:["SCAN…","FRAGMENTS: YES","OBSERVER: MAYBE","BMA: BREATHING"],
-  WHOAMI:["YOU ARE:","A SIGNAL.","A GLITCH.","A HUMAN TRYING NOT TO SHOW IT."],
-  OPEN:["TRYING…","LOCKED.","(IT LIKES WATCHING YOU TRY.)"],
-  BMA:["BMA…","ROOM’S LIVE.","TYPE: JOIN"],
-  PING:["PONG.","STILL HERE."]
-};
-
-/* feel alive */
-function typingBeat(){
-  const cls = chance(0.18) ? "err" : "sys";
-  log(pick(["…","…","…","⟂","░","▒","▓"]), cls);
-  return cls;
-}
-
-/* tiny memory */
-let userName="";
-let joinMode=false;
-let lastMood="neutral";
-let lastUserLine="";
-let loops=0;
-
-/* helpers */
 function normalize(s){ return (s||"").trim().toLowerCase(); }
 function words(lower){ return lower.split(/\s+/).filter(Boolean); }
 function wordCount(lower){ return words(lower).length; }
 function lastWord(lower){ const w=words(lower); return w[w.length-1]||""; }
 function hasAny(lower,arr){ return arr.some(x=> lower.includes(x)); }
-function startsAny(lower,arr){ return arr.some(x=> lower.startsWith(x)); }
 
+/* SHORT command responses */
+const responses={
+  HELP:["COMMANDS:","HELP / SCAN / WHOAMI / OPEN / CLEAR","HINT:","YOU’RE LOOKING FOR A PASSWORD. IT’S NOT A NUMBER."],
+  SCAN:["SCAN…","FRAGMENTS: YES","OBSERVER: MAYBE","PASSWORD: OBSCURED"],
+  WHOAMI:["YOU ARE:","A SIGNAL.","A GLITCH.","A HUMAN HIDING IN TEXT."],
+  OPEN:["TRYING…","LOCKED.","(SAYS ‘NO’ LIKE IT MEANS IT.)"]
+};
+
+/* ===== PASSWORD HUNT STATE ===== */
+let userName="";
+let joinMode=false;
+let hintLevel=0;
+let attempts=0;
+let unlocked=false;
+
+const PASSWORD_FULL = "broken minds anonymous"; // must type this to unlock
+const PASSWORD_SHORT = "bma";                   // triggers hint toward the full phrase
+
+/* hint phrases */
+const HINTS = [
+  "SOME ROOMS OPEN WITH KINDNESS. SOME OPEN WITH INITIALS.",
+  "THREE LETTERS. LIKE A SECRET HANDSHAKE.",
+  "IT’S AN ‘A’ WORD. NOT ‘ACCESS’. ANOTHER ‘A’.",
+  "BROKEN… (KEEP GOING.)",
+  "MINDS… (YOU’RE CLOSE.)",
+  "ANONYMOUS. SAY IT ALL."
+];
+
+/* vibe packs */
 const GREET = ["hi","hello","hey","yo","sup","wassup","wsg","hola"];
 const THANKS = ["thanks","thx","ty","appreciate","good looks"];
-const BYE = ["bye","goodbye","later","gn","good night","peace"];
-const YES = ["yes","y","yeah","yup","yea","ok","okay","bet","facts"];
-const NO = ["no","nah","nope","never"];
-const SWEAR = ["fuck","shit","bitch","damn","ass","wtf","lmao","lmfao"];
-const LOVE = ["love you","love u","kiss","marry","date me","i love you"];
-const CURIOUS = ["what is this","where am i","who are you","are you real","what are you","what is bma"];
-const FEAR = ["scared","afraid","paranoid","theyre watching","they're watching","someone watching","shadow","voices"];
+const CURIOUS = ["what is this","where am i","who are you","are you real","what are you","password","code","what is bma"];
 const SAD = ["sad","depressed","lonely","empty","numb","hurt","cry","anxious","panic","overwhelmed","tired","im done","i'm done"];
-const HUNGRY = ["hungry","starving","food","eat","burger","taco","pizza"];
-const MUSIC = ["song","music","beat","mix","studio","drop","release","spotify","apple music"];
-const FLEX = ["money","rich","broke","rent","paid","bill","bank"];
-const LA = ["la","los angeles","reseda","hollywood","burbank","sfv","valley"];
+const FEAR = ["scared","afraid","paranoid","theyre watching","they're watching","someone watching","shadow","voices"];
+const MUSIC = ["song","music","beat","studio","drop","release","spotify","apple music"];
+const SWEAR = ["fuck","shit","bitch","damn","ass","wtf","lmao","lmfao"];
 
-/* lightweight "understand you" heuristics */
-function moodFrom(lower){
-  if(hasAny(lower, FEAR)) return "fear";
-  if(hasAny(lower, SAD)) return "sad";
-  if(hasAny(lower, LOVE)) return "love";
-  if(startsAny(lower, GREET) || hasAny(lower, GREET)) return "greet";
-  if(hasAny(lower, THANKS)) return "thanks";
-  if(hasAny(lower, SWEAR)) return "spicy";
-  if(hasAny(lower, MUSIC)) return "music";
-  if(hasAny(lower, HUNGRY)) return "hungry";
-  return "neutral";
+/* feel alive */
+function typingBeat(){
+  const cls = chance(0.18) ? "err" : "sys";
+  log(pick(["…","…","⟂","░","▒","▓"]), cls);
+  return cls;
+}
+function glitchHit(power=1){
+  flash.classList.add("on");
+  document.body.classList.add("shake");
+  setTimeout(()=>flash.classList.remove("on"), 220);
+  setTimeout(()=>document.body.classList.remove("shake"), 360);
+  if(power>1.3){
+    // little extra terminal chaos
+    if(chance(0.6)) log(pick(["// BUFFER OVERRUN","// PACKET LOSS","// SIGNAL SPIKE"]), "err");
+  }
 }
 
-function clampText(s, n){
-  s = String(s||"");
-  return s.length>n ? s.slice(0,n-1)+"…" : s;
+/* push hint level up naturally */
+function bumpHint(){
+  hintLevel = Math.min(HINTS.length-1, hintLevel+1);
+}
+function maybeHint(){
+  // short and not preachy, shows up sometimes
+  if(unlocked) return;
+  if(chance(0.22) || attempts>3){
+    const line = HINTS[Math.min(hintLevel, HINTS.length-1)];
+    log(line, "sys");
+  }
 }
 
-/* core brain */
+/* ===== CONFETTI / FIREWORKS ===== */
+const cctx = confetti.getContext("2d");
+let confettiOn=false;
+let parts=[];
+function resizeConfetti(){
+  const dpr = Math.max(1, window.devicePixelRatio||1);
+  confetti.width = Math.floor(innerWidth*dpr);
+  confetti.height = Math.floor(innerHeight*dpr);
+  cctx.setTransform(1,0,0,1,0,0);
+  cctx.scale(dpr,dpr);
+}
+addEventListener("resize", resizeConfetti);
+resizeConfetti();
+
+function burst(x,y, n=48){
+  for(let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2;
+    const sp = 2 + Math.random()*6;
+    parts.push({
+      x, y,
+      vx: Math.cos(a)*sp,
+      vy: Math.sin(a)*sp - (1+Math.random()*2),
+      g: 0.12 + Math.random()*0.22,
+      life: 70 + Math.random()*60,
+      size: 2 + Math.random()*3.5,
+      hue: (Math.random()<0.55) ? "rgba(138,46,255," : "rgba(255,255,255,",
+      rot: Math.random()*Math.PI*2,
+      vr: (-0.15 + Math.random()*0.3)
+    });
+  }
+}
+
+function confettiLoop(){
+  if(!confettiOn) return;
+  cctx.clearRect(0,0,innerWidth,innerHeight);
+
+  // soft glow background for fireworks feel
+  cctx.fillStyle = "rgba(138,46,255,0.03)";
+  cctx.fillRect(0,0,innerWidth,innerHeight);
+
+  for(let i=parts.length-1;i>=0;i--){
+    const p = parts[i];
+    p.vy += p.g;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.rot += p.vr;
+    p.life -= 1;
+
+    const alpha = Math.max(0, Math.min(1, p.life/90));
+    cctx.save();
+    cctx.translate(p.x,p.y);
+    cctx.rotate(p.rot);
+
+    // confetti rectangles + spark dots mixed
+    if(i%3===0){
+      cctx.fillStyle = `${p.hue}${0.08 + alpha*0.8})`;
+      cctx.fillRect(-p.size*1.2, -p.size*0.5, p.size*2.4, p.size);
+    }else{
+      cctx.fillStyle = `${p.hue}${0.06 + alpha*0.9})`;
+      cctx.beginPath();
+      cctx.arc(0,0, p.size*0.55, 0, Math.PI*2);
+      cctx.fill();
+    }
+    cctx.restore();
+
+    if(p.life<=0 || p.y>innerHeight+40 || p.x<-40 || p.x>innerWidth+40) parts.splice(i,1);
+  }
+
+  // random fireworks bursts while active
+  if(Math.random()<0.08){
+    burst(Math.random()*innerWidth, innerHeight*(0.18+Math.random()*0.42), 38 + Math.floor(Math.random()*46));
+  }
+
+  requestAnimationFrame(confettiLoop);
+}
+
+function startConfetti(){
+  confettiOn=true;
+  confetti.classList.add("on");
+  // initial big burst
+  burst(innerWidth*0.5, innerHeight*0.35, 110);
+  burst(innerWidth*0.35, innerHeight*0.42, 70);
+  burst(innerWidth*0.65, innerHeight*0.42, 70);
+  confettiLoop();
+}
+function stopConfetti(){
+  confettiOn=false;
+  confetti.classList.remove("on");
+  parts.length=0;
+  cctx.clearRect(0,0,innerWidth,innerHeight);
+}
+
+/* ===== UNLOCK SEQUENCE ===== */
+function showUnlockUI(){
+  unlockEl.classList.add("on");
+  unlockHint.textContent = "BMA NODE ONLINE";
+  unlockText.innerHTML = `<b>BROKEN MINDS ANONYMOUS</b> accepted you.<br>
+  The terminal tries to act normal. The terminal fails beautifully.`;
+}
+
+async function playBMA(){
+  try{
+    // audio unlock happens naturally because user typed/clicked
+    await bmaAudio.play();
+  }catch(e){
+    // if blocked, show a tiny nudge in terminal
+    log("AUDIO BLOCKED. TAP PLAY.", "err");
+  }
+}
+
+function unlockSequence(){
+  if(unlocked) return;
+  unlocked = true;
+
+  // terminal "access granted" breakdown
+  const seq = [
+    {t:"…", c:"sys"},
+    {t:"INPUT RECEIVED.", c:"sys"},
+    {t:"VERIFYING PASSCODE…", c:"sys"},
+    {t:"PASSCODE MATCH: BROKEN MINDS ANONYMOUS", c:"sys"},
+    {t:"ACCESS GRANTED.", c:"sys"},
+    {t:"// WARNING: NODE INSTABILITY", c:"err"},
+    {t:"// CONTAINMENT FAILING", c:"err"},
+    {t:"THE ROOM OPENS LIKE A LUNG.", c:"sys"}
+  ];
+
+  let base = 140;
+  seq.forEach((s,i)=>{
+    setTimeout(()=>log(s.t, s.c), base + i*190);
+    if(i===4) setTimeout(()=>glitchHit(2.0), base + i*190 + 20);
+    if(i===6) setTimeout(()=>glitchHit(1.6), base + i*190 + 30);
+  });
+
+  setTimeout(()=>{
+    glitchHit(2.4);
+    showUnlockUI();
+    startConfetti();
+    playBMA();
+  }, base + seq.length*190 + 120);
+}
+
+/* ===== CONTROLS ===== */
+playBtn.addEventListener("click", async ()=>{
+  startConfetti();
+  await playBMA();
+});
+pauseBtn.addEventListener("click", ()=>{
+  try{ bmaAudio.pause(); }catch(e){}
+});
+stopBtn.addEventListener("click", ()=>{
+  try{ bmaAudio.pause(); bmaAudio.currentTime = 0; }catch(e){}
+});
+closeBtn.addEventListener("click", ()=>{
+  unlockEl.classList.remove("on");
+  stopConfetti();
+});
+
+/* stop fireworks when song ends (nice touch) */
+bmaAudio.addEventListener("ended", ()=>{
+  stopConfetti();
+});
+
+/* ===== CHAT BRAIN ===== */
 function aiRespond(raw){
   const msg = raw.trim();
   const lower = normalize(msg);
   const wc = wordCount(lower);
-  lastUserLine = msg;
+  attempts++;
 
   // NAME:
   if(lower.startsWith("name:")){
-    userName = msg.split(":").slice(1).join(":").trim().slice(0,18);
-    if(!userName) userName = "UNKNOWN";
+    userName = msg.split(":").slice(1).join(":").trim().slice(0,18) || "UNKNOWN";
     joinMode = false;
-    lastMood="neutral";
     return {cls:"sys", lines:[
       pick(["OK.","COPIED.","LOCKED.","SAVED."]),
       `WELCOME, ${userName.toUpperCase()}.`
     ]};
   }
 
-  // JOIN / LEAVE
-  if(lower==="join"){
-    joinMode = true;
+  // EXACT PASSWORD unlock
+  if(lower === PASSWORD_FULL){
     return {cls:"sys", lines:[
-      pick(["BMA: IN.","WELCOME.","OK."]),
-      pick(["SAY ONE REAL THING.","SAY NOTHING. THAT COUNTS.","DROP A LINE. ONE LINE."])
+      "…",
+      "THAT’S IT."
+    ], unlock:true};
+  }
+
+  // If they type BMA, guide them to the full phrase (no redirect, just “access screen” vibe)
+  if(lower === PASSWORD_SHORT){
+    bumpHint();
+    return {cls:"sys", lines:[
+      "INITIALS ACCEPTED.",
+      "EXPAND IT. SAY THE FULL NAME."
     ]};
   }
-  if(lower==="leave"){
-    joinMode = false;
+
+  // If they type partial pieces, escalate hints
+  if(lower.includes("broken") || lower.includes("mind") || lower.includes("anonymous")){
+    bumpHint();
+    const nudge = pick([
+      "KEEP GOING.",
+      "DON’T STOP THERE.",
+      "SAY IT ALL.",
+      "FULL PHRASE. NO SHORTCUTS."
+    ]);
+    return {cls:"sys", lines:[nudge, chance(0.55) ? HINTS[hintLevel] : ""] .filter(Boolean)};
+  }
+
+  // If they ask about password / code, start dripping hints
+  if(hasAny(lower, CURIOUS) || lower.includes("password") || lower.includes("code")){
+    bumpHint();
     return {cls:"sys", lines:[
-      pick(["OK.","COPY.","FINE."]),
-      pick(["COME BACK IF IT GETS LOUD.","DOOR STAYS OPEN.","DON’T VANISH COMPLETELY."])
+      pick(["YOU’RE CLOSE TO A DOOR.","THIS IS A PASSWORD HUNT.","THE NODE WANTS A PHRASE."]),
+      HINTS[hintLevel]
     ]};
   }
 
-  // hard commands pass-through hint
-  if(lower==="help" && wc<=2){
-    return {cls:"sys", lines:[pick(["OK.","BET.","SAY LESS."]), "TYPE: HELP"]};
-  }
-
-  // mood tracking
-  const mood = moodFrom(lower);
-  lastMood = mood;
-
-  // micro responses for very short inputs
+  // short vibes
   if(wc<=2){
     const w = lastWord(lower);
-
     if(GREET.includes(w)){
       const who = userName ? userName.toUpperCase() : "UNKNOWN";
-      return {cls:"sys", lines:[
-        pick([`YO, ${who}.`,"HI.","HEY.","SUP."]),
-        pick(["YOU GOOD?","WHAT’S UP.","TALK."])
-      ]};
+      return {cls:"sys", lines:[pick([`YO, ${who}.`,"HI.","HEY.","SUP."]), pick(["FIND THE PASSWORD.","TALK TO ME.","ASK ME."])]};
     }
-    if(THANKS.includes(w) || lower==="thank you"){
-      return {cls:"sys", lines:[pick(["BET.","NO SWEAT.","OK.","COOL."])]};
-    }
-    if(w==="bma"){
-      return {cls:"sys", lines:[pick(["BMA.","YEA.","MM."]), "TYPE: JOIN"]};
-    }
-    if(w==="whoami"){
-      return {cls:"sys", lines:[pick(["YOU?","OK.","LOOK."]), pick(["TYPE WHOAMI.","TYPE: WHOAMI."])]};
-    }
-    if(w==="why"){
-      return {cls:"sys", lines:[pick(["BECAUSE.","LONG STORY.","DON’T START."]), pick(["KEEP GOING.","SAY IT STRAIGHT."])]};
-    }
-    if(YES.includes(w)){
-      return {cls:"sys", lines:[pick(["GOOD.","OK.","COPY.","BET."])]};
-    }
-    if(NO.includes(w)){
-      return {cls:"sys", lines:[pick(["FAIR.","OK.","COPY.","HEARD."])]};
-    }
-    if(w==="lol"||w==="lmao"){
-      return {cls:"sys", lines:[pick(["YOU LAUGH BUT YOU’RE HERE.","SAME.","I GET IT."])]};
-    }
+    if(hasAny(lower, THANKS)) return {cls:"sys", lines:[pick(["BET.","NO SWEAT.","OK."])]};
+    if(w==="help") return {cls:"sys", lines:["TYPE: HELP","YOU’RE LOOKING FOR A PHRASE."]};
+    if(w==="open") return {cls:"sys", lines:["LOCKED.","(SAY THE PHRASE.)"]};
+    if(w==="ok"||w==="okay") return {cls:"sys", lines:[pick(["COPY.","GOOD.","BET."]), chance(0.5)?HINTS[hintLevel]:""] .filter(Boolean)};
   }
 
-  // curiosity
-  if(hasAny(lower, CURIOUS)){
-    return {cls:"sys", lines:[
-      pick(["BACKROOM NODE.","A QUIET MACHINE.","A LISTENING ROOM WITH BAD VIBES."]),
-      pick(["TYPE: SCAN","TYPE: WHOAMI","TYPE: JOIN"])
-    ]};
-  }
-
-  // music / drop
-  if(hasAny(lower, MUSIC)){
-    return {cls:"sys", lines:[
-      pick(["MUSIC MENTIONED.","OK PRODUCER.","THE ROOM STARTED NODDING."]),
-      pick(["DROP A TITLE.","WHAT’S THE BPM.","YOU MIXING OR BLEEDING?"])
-    ]};
-  }
-
-  // hungry
-  if(hasAny(lower, HUNGRY)){
-    return {cls:"sys", lines:[
-      pick(["EAT.","GO EAT.","FOOD FIXES SOME BUGS."]),
-      pick(["WHAT YOU GOT.","DON’T SAY GAS STATION SUSHI.","DRINK WATER TOO."])
-    ]};
-  }
-
-  // LA nod
-  if(hasAny(lower, LA)){
-    return {cls:"sys", lines:[
-      pick(["LA SIGNAL STRONG.","THE VALLEY HUMS.","CITY STATIC."]),
-      pick(["DON’T LET THE NIGHT EAT YOU.","DRIVE SAFE.","WATCH THE MIRRORS."])
-    ]};
-  }
-
-  // fear
+  // emotional stuff stays cool, not preachy, still nudges puzzle
   if(hasAny(lower, FEAR)){
+    bumpHint();
     return {cls: chance(0.25) ? "err" : "sys", lines:[
-      pick(["…","I KNOW.","YEA.","MM."]),
-      pick(["EYES ON THE TEXT.","BREATHE. 4 IN, 6 OUT.","TYPE: JOIN. BMA’S QUIETER."])
+      pick(["…","I HEAR YOU.","YEA.","MM."]),
+      pick(["EYES ON THE TEXT.","YOU’RE SAFE IN HERE.","SAY THE PHRASE. IT CHANGES THE ROOM."])
     ]};
   }
-
-  // sad
   if(hasAny(lower, SAD)){
+    bumpHint();
     return {cls:"sys", lines:[
       pick(["HEARD.","OK.","I’M HERE.","…"]),
-      pick(["ONE LINE AT A TIME.","NO PERFORMANCE.","TYPE: JOIN IF YOU WANT COMPANY."])
+      pick(["ONE LINE AT A TIME.","NO PERFORMANCE.","WHEN YOU’RE READY: "+HINTS[hintLevel]])
     ]};
   }
 
-  // spicy / swearing
+  if(hasAny(lower, MUSIC)){
+    bumpHint();
+    return {cls:"sys", lines:[
+      pick(["MUSIC MENTIONED.","OK PRODUCER.","THE NODE STARTED NODDING."]),
+      pick(["SAY THE PHRASE AND I’LL PLAY ONE.","THE PASSWORD SOUNDS LIKE A SUPPORT GROUP.",""+HINTS[hintLevel]])
+    ]};
+  }
+
   if(hasAny(lower, SWEAR)){
+    bumpHint();
     return {cls:"sys", lines:[
-      pick(["LANGUAGE ACCEPTED.","OK, SPICY.","TELL ME WHAT HAPPENED."]),
-      pick(["DON’T SWING AT THE WALLS. SWING AT THE STORY.","ONE SENTENCE."])
+      pick(["LANGUAGE ACCEPTED.","OK, SPICY.","TELL ME STRAIGHT."]),
+      pick(["THE DOOR LIKES HONESTY.","ALSO: "+HINTS[hintLevel]])
     ]};
   }
 
-  // love / flirting
-  if(hasAny(lower, LOVE)){
-    return {cls:"sys", lines:[
-      pick(["WILD.","OK.","DAMN.","…"]),
-      pick(["I’M A TERMINAL. BE SERIOUS.","TYPE: JOIN (IF YOU MEAN IT).","LOWERCASE ROMANCE ONLY."])
-    ]};
-  }
-
-  // join mode: more conversational, less preachy, tighter
-  if(joinMode){
-    const quick = [
-      "GO ON.",
-      "MM.",
-      "REAL.",
-      "OK…",
-      "I HEAR YOU.",
-      "SAY IT.",
-      "LOUDER (IN TEXT).",
-      "THAT’S A LOT.",
-      "FAIR."
-    ];
-    const follow = [
-      "WHAT’S THE MAIN PROBLEM IN ONE WORD?",
-      "WHAT DO YOU WANT BACK?",
-      "WHO OR WHAT STARTED IT?",
-      "WHAT’S THE PART YOU’RE AVOIDING?",
-      "WHAT WOULD FIX 10% OF IT RIGHT NOW?"
-    ];
-
-    // mirror key phrase to feel “aware”
-    let mirror = "";
-    if(chance(0.35)){
-      const snippet = clampText(msg.replace(/\s+/g," ").trim(), 46);
-      mirror = `“${snippet}”`;
-    }
-
-    const a = pick(quick);
-    const b = chance(0.58) ? pick(follow) : pick(["ONE MORE LINE.","KEEP GOING.","I’M NOT LEAVING."]);
-    const lines = mirror ? [a, mirror] : [a, b];
-    // keep it 1–2 lines max
-    return {cls:"sys", lines: lines.slice(0,2)};
-  }
-
-  // default: responsive + a tiny mirroring trick
+  // default: feels responsive, drops puzzle crumbs
   const openers = [
     "RECEIVED.",
     "OK.",
@@ -487,67 +772,57 @@ function aiRespond(raw){
     "MM.",
     "I’M LISTENING.",
     "THAT’S NOT NOTHING.",
-    "YOU SURE ABOUT THAT?"
+    "YOU SOUND LIKE YOU’RE SEARCHING."
   ];
-
-  const closers = [
-    "KEEP TALKING.",
-    "TYPE: HELP",
+  const follow = [
+    "ASK ABOUT THE PASSWORD.",
     "TYPE: SCAN",
-    "TYPE: JOIN",
-    "DON’T RUSH IT.",
-    "SAY IT PLAIN.",
-    "ONE MORE SENTENCE."
+    "TYPE: WHOAMI",
+    "SAY THE THREE LETTERS IF YOU KNOW THEM.",
+    "THE PHRASE HAS FOUR WORDS. (OR DOES IT?)",
+    "IT’S A NAME. NOT YOURS."
   ];
 
-  // sometimes ask a relevant tiny question based on length
-  let q = "";
-  if(wc >= 10 && chance(0.55)) q = pick(["WHAT PART HURTS MOST?","WHAT’S THE REAL WORD YOU DIDN’T TYPE?","WHAT DO YOU WANT ME TO DO WITH THAT?"]);
-  if(wc <= 6 && chance(0.45)) q = pick(["WHY?","AND THEN?","FOR REAL?"]);
+  // progressive hint drip (the more they talk, the more it leaks)
+  if(attempts % 3 === 0) bumpHint();
 
-  // mirror a keyword: last significant word
-  let mirror2 = "";
-  if(chance(0.28)){
-    const w = lastWord(lower).replace(/[^a-z0-9']/g,"");
-    if(w && w.length>3) mirror2 = `…${w.toUpperCase()}.`;
-  }
-
-  const lines = [];
-  lines.push(pick(openers));
-  if(q && chance(0.55)) lines.push(q);
-  else if(mirror2) lines.push(mirror2);
-  else lines.push(pick(closers));
+  const lines = [
+    pick(openers),
+    chance(0.55) ? HINTS[hintLevel] : pick(follow)
+  ];
 
   return {cls:"sys", lines: lines.slice(0,2)};
 }
 
+/* RUN */
 function run(){
   const raw=input.value;
   const val=raw.trim();
   if(!val) return;
 
-  loops++;
-
-  // show what you typed (upper for terminal vibe)
   log("> "+val.toUpperCase(),"line");
   input.value="";
 
   const cmd = val.trim().toUpperCase();
 
-  // hard commands
   if(cmd==="CLEAR"){
     term.innerHTML="";
-    joinMode=false;
+    attempts=0;
+    hintLevel=0;
+    unlocked=false;
+    unlockEl.classList.remove("on");
+    stopConfetti();
+    try{ bmaAudio.pause(); bmaAudio.currentTime=0; }catch(e){}
     return;
   }
   if(responses[cmd]){
-    responses[cmd].forEach((l,i)=>
-      setTimeout(()=>log(l, cmd==="SCAN"?"sys":"line"), i*160)
-    );
+    responses[cmd].forEach((l,i)=> setTimeout(()=>log(l, cmd==="SCAN"?"sys":"line"), i*160));
+    // scanning pushes hint a bit
+    if(cmd==="SCAN") bumpHint();
     return;
   }
 
-  // small "typing" beat often
+  // typing beat
   let delay = 110;
   if(chance(0.62)){
     typingBeat();
@@ -556,26 +831,24 @@ function run(){
 
   const r = aiRespond(val);
 
-  // print 1–2 lines, spaced like real replies
   r.lines.slice(0,2).forEach((l,i)=>{
     setTimeout(()=>log(l, r.cls || "sys"), delay + i*(240 + Math.random()*90));
   });
 
-  // occasional low-key BMA whisper, not preachy
-  if(!joinMode && chance(0.10)){
-    setTimeout(()=>log(pick(["BMA?","…JOIN?","ROOM’S OPEN.","TYPE: JOIN."]), "sys"), delay + 680);
+  // If they triggered unlock, do it after replies hit
+  if(r.unlock){
+    setTimeout(()=>unlockSequence(), delay + 520);
+    return;
   }
 
-  // rare glitchy “personality” moments
-  if(chance(0.06)){
-    setTimeout(()=>log(pick(["(I’M NOT A COP.)","(I’M NOT JUDGING.)","(I’M LITERALLY TEXT.)"]), "sys"), delay + 980);
-  }
+  // occasional extra hint whisper
+  setTimeout(()=>maybeHint(), delay + 620);
 }
 
 btn.onclick=run;
 input.addEventListener("keydown",e=>{ if(e.key==="Enter") run(); });
 
-// tiny polish: focus input on load + click panel
+// focus polish
 setTimeout(()=>{ input.focus(); }, 120);
 document.addEventListener("pointerdown", ()=>{ input.focus(); }, {passive:true});
 </script>
