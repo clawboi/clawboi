@@ -22,14 +22,11 @@
       overflow:hidden;
     }
     #wrap{height:100%; display:grid; place-items:center;}
-
-    /* Fullscreen-friendly canvas */
     canvas{
       width:min(96vw, 1280px);
       height:auto;
       max-height:88vh;
       aspect-ratio: 16 / 9;
-
       image-rendering: pixelated;
       image-rendering: crisp-edges;
       border: 1px solid rgba(255,255,255,0.18);
@@ -79,7 +76,6 @@
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d', { alpha: false });
 
-  // Viewport logical res (rendered then upscaled)
   const W = 320, H = 180;
   const world = document.createElement('canvas');
   world.width = W; world.height = H;
@@ -97,23 +93,56 @@
   let acc = 0;
   const DT = 1/60;
 
-  // ======== Input ========
-  const keys = new Set();
-  const pressed = new Set();
-  let mouse = { x: W/2, y: H/2, down:false };
+  // ======== Input (UPGRADED: reliable action mapping) ========
+  // Some keyboards/browsers can behave weird with .key; we track BOTH .key and .code.
+  const keys = new Set();     // continuous: "w", "KeyW", "shift", "ShiftLeft", etc
+  const pressed = new Set();  // edge: same identifiers
+
+  const ACTION = {
+    up: ["w","arrowup","KeyW","ArrowUp"],
+    down: ["s","arrowdown","KeyS","ArrowDown"],
+    left: ["a","arrowleft","KeyA","ArrowLeft"],
+    right:["d","arrowright","KeyD","ArrowRight"],
+    punch:[" ","Space","space"],
+    interact:["e","KeyE"],
+    cont:["c","KeyC"],
+    pause:["p","KeyP"],
+    pulse:["q","KeyQ"],
+    dash:["shift","ShiftLeft","ShiftRight"],
+    slot1:["1","Digit1"],
+    slot2:["2","Digit2"],
+    slot3:["3","Digit3"],
+    enter:["enter","Enter"],
+    esc:["escape","Escape"]
+  };
+  const hasAny = (set, arr)=>{ for(const a of arr){ if(set.has(a)) return true; } return false; };
+  const isDown = (name)=> hasAny(keys, ACTION[name]||[]);
+  const wasPressed = (name)=> hasAny(pressed, ACTION[name]||[]);
+  const consume = (name)=>{ for(const a of (ACTION[name]||[])) pressed.delete(a); };
 
   window.addEventListener('keydown', (e)=>{
-    const k = e.key.toLowerCase();
+    const k = (e.key || "").toLowerCase();
+    const c = (e.code || "");
     keys.add(k);
+    if(c) keys.add(c);
     pressed.add(k);
+    if(c) pressed.add(c);
 
-    // keep controls reliable, stop browser stealing keys
-    if([" ", "arrowup","arrowdown","arrowleft","arrowright"].includes(e.key)) e.preventDefault();
-    if(e.key === "Escape") e.preventDefault(); // don't let fullscreen "escape" auto-kick us
+    // stop browser stealing keys (expanded)
+    const block = [" ","Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"];
+    if(block.includes(e.key) || block.includes(e.code)) e.preventDefault();
+    if(e.key === "Escape") e.preventDefault();
   }, {passive:false});
 
-  window.addEventListener('keyup', (e)=> keys.delete(e.key.toLowerCase()));
+  window.addEventListener('keyup', (e)=>{
+    const k = (e.key || "").toLowerCase();
+    const c = (e.code || "");
+    keys.delete(k);
+    if(c) keys.delete(c);
+  });
 
+  // Mouse
+  let mouse = { x: W/2, y: H/2, down:false };
   canvas.addEventListener('mousemove', (e)=>{
     const rect = canvas.getBoundingClientRect();
     const sx = (e.clientX - rect.left) / rect.width;
@@ -121,7 +150,6 @@
     mouse.x = clamp(Math.floor(sx * W), 0, W-1);
     mouse.y = clamp(Math.floor(sy * H), 0, H-1);
   });
-
   canvas.addEventListener('mousedown', ()=>{ mouse.down=true; });
   window.addEventListener('mouseup', ()=>{ mouse.down=false; });
 
@@ -145,22 +173,21 @@
     }
   };
   document.addEventListener("fullscreenchange", ()=>{
-    // if we wanted fullscreen but got kicked, try once more quickly (some browsers are touchy)
     if(fs.wanted && !document.fullscreenElement){
-      // do nothing aggressive; just mark as not wanted
       fs.wanted = false;
     }
   });
 
   // High score
-  const HS_KEY = "club_chimp_zombie_highscore_v3";
+  const HS_KEY = "club_chimp_zombie_highscore_v4";
   let highScore = Number(localStorage.getItem(HS_KEY) || 0);
 
   // ======== FX ========
   let shake = 0;
-  const sparks = [];   // {x,y,vx,vy,life,col}
-  const floats = [];   // {x,y,vx,vy,life,text,col}
-  const trails = [];   // dash trails {x,y,life}
+  const sparks = [];
+  const floats = [];
+  const trails = [];
+
   const particles = (x,y,count,spread,speed,life,colA,colB)=>{
     for(let i=0;i<count;i++){
       const a = rand(0,Math.PI*2);
@@ -187,8 +214,7 @@
   // ======== Arena ========
   const arena = { x0: 36, y0: 30, x1: MAP_W-36, y1: MAP_H-36 };
 
-  // ======== Calm “realistic” floor (NO disco, NO cycling) ========
-  // Muted concrete grid + subtle static speckle (stable, non-flashing).
+  // ======== Floor Cache ========
   const FLOOR_TILE = 12;
   const floorCache = document.createElement('canvas');
   floorCache.width = MAP_W;
@@ -196,11 +222,9 @@
   const fg = floorCache.getContext('2d', { alpha:false });
 
   function buildFloor(){
-    // base concrete
     fg.fillStyle = "#0b0a12";
     fg.fillRect(0,0,MAP_W,MAP_H);
 
-    // faint mottling (static)
     for(let i=0;i<22000;i++){
       const x = (Math.random()*MAP_W)|0;
       const y = (Math.random()*MAP_H)|0;
@@ -209,27 +233,18 @@
       fg.fillRect(x,y,1,1);
     }
 
-    // grid lines (very subtle)
     fg.strokeStyle = "rgba(255,255,255,0.05)";
     fg.lineWidth = 1;
     for(let x=0; x<MAP_W; x+=FLOOR_TILE){
-      fg.beginPath();
-      fg.moveTo(x+0.5, 0);
-      fg.lineTo(x+0.5, MAP_H);
-      fg.stroke();
+      fg.beginPath(); fg.moveTo(x+0.5, 0); fg.lineTo(x+0.5, MAP_H); fg.stroke();
     }
     for(let y=0; y<MAP_H; y+=FLOOR_TILE){
-      fg.beginPath();
-      fg.moveTo(0, y+0.5);
-      fg.lineTo(MAP_W, y+0.5);
-      fg.stroke();
+      fg.beginPath(); fg.moveTo(0, y+0.5); fg.lineTo(MAP_W, y+0.5); fg.stroke();
     }
 
-    // arena boundary tint (static)
     fg.fillStyle = "rgba(179,0,255,0.06)";
     fg.fillRect(arena.x0, arena.y0, (arena.x1-arena.x0), (arena.y1-arena.y0));
 
-    // small scuffs
     for(let i=0;i<260;i++){
       const x = rand(arena.x0+20, arena.x1-20);
       const y = rand(arena.y0+20, arena.y1-20);
@@ -272,7 +287,6 @@
     g.fillRect(x-7, y-5+bob, 2, 8);
     g.fillRect(x+5, y-5+bob, 2, 8);
 
-    // aim line
     const ax = x + Math.cos(aimAng)*10;
     const ay = y + Math.sin(aimAng)*10;
     g.strokeStyle = "rgba(0,255,213,0.28)";
@@ -304,7 +318,6 @@
     g.fillRect(x-7, y-4+bob, 2, 7);
     g.fillRect(x+5, y-4+bob, 2, 7);
 
-    // small burn indicator (stable)
     if(z.burn > 0.1){
       g.fillStyle = "rgba(255,210,74,0.55)";
       g.fillRect(x-5, y-16+bob, 3, 1);
@@ -313,12 +326,9 @@
     }
   }
 
-  // Boss variants (every 5 waves, up to 3)
   function drawBoss(b){
     const x = Math.floor(b.x), y = Math.floor(b.y);
     const wob = Math.floor(Math.sin(b.t*0.12)*2);
-
-    // color by type
     const base = (b.kind===0) ? "#ff3b6b" : (b.kind===1 ? "#b300ff" : "#00ffd5");
     const lite = (b.kind===0) ? "#ff7aa0" : (b.kind===1 ? "#d07bff" : "#7fffee");
 
@@ -334,7 +344,6 @@
     g.fillRect(x-9, y-18+wob, 6, 4);
     g.fillRect(x+3, y-18+wob, 6, 4);
 
-    // eyes
     g.fillStyle = (b.kind===0) ? "#b300ff" : (b.kind===1 ? "#00ffd5" : "#ff3b6b");
     g.fillRect(x-7, y-17+wob, 2, 2);
     g.fillRect(x+5, y-17+wob, 2, 2);
@@ -345,24 +354,19 @@
     g.fillStyle = "rgba(0,0,0,0.25)";
     g.fillRect(x-2, y-2+wob, 4, 6);
 
-    // corners
     g.fillStyle = (b.kind===0) ? "rgba(0,255,213,0.8)" : (b.kind===1 ? "rgba(255,59,107,0.75)" : "rgba(179,0,255,0.75)");
     g.fillRect(x-13, y-28+wob, 4, 4);
     g.fillRect(x+9, y-28+wob, 4, 4);
   }
 
-  // ======== Backdrop ========
   function drawArenaBackdrop(){
-    // floor slice (static, calm)
     g.drawImage(floorCache, camera.x, camera.y, W, H, 0, 0, W, H);
 
-    // vignette + top shade for legibility
     g.fillStyle = "rgba(0,0,0,0.16)";
     g.fillRect(0,0,W,H);
     g.fillStyle = "rgba(0,0,0,0.22)";
     g.fillRect(0,0,W,18);
 
-    // walls
     const ax0 = arena.x0 - camera.x;
     const ay0 = arena.y0 - camera.y;
     const aw = (arena.x1 - arena.x0);
@@ -374,7 +378,6 @@
     g.strokeStyle = "rgba(179,0,255,0.52)";
     g.strokeRect(Math.floor(ax0), Math.floor(ay0), Math.floor(aw), Math.floor(ah));
 
-    // subtle corner plates (static)
     g.fillStyle = "rgba(255,255,255,0.04)";
     g.fillRect(Math.floor(ax0)-1, Math.floor(ay0)-1, 8, 8);
     g.fillRect(Math.floor(ax0+aw)-7, Math.floor(ay0)-1, 8, 8);
@@ -416,23 +419,21 @@
     burstLeft: 0,
     burstCD: 0,
 
-    // Dash
     dashCD: 0,
     dashing: 0,
     dashVX: 0,
     dashVY: 0,
 
-    // Skill: Pulse (EMP-ish)
     pulseCD: 0
   };
 
-  const bullets = []; // {x,y,vx,vy,dmg,life,col,pierce,splash,dot}
-  const zombies = []; // {x,y,vx,vy,hp,spd,t,elite,burn,slow}
-  let boss = null;    // {x,y,hp,maxHp,spd,t,atkCD,kind,slow}
+  const bullets = [];
+  const zombies = [];
+  let boss = null;
   let bossesDefeated = 0;
 
-  // “More to do”: crates between waves
-  const crates = []; // {x,y,open:false,kind}
+  // crates between waves
+  const crates = [];
   function spawnCrates(){
     crates.length = 0;
     const n = 2;
@@ -442,6 +443,30 @@
       crates.push({x,y,open:false,kind: (Math.random()<0.60 ? "cash" : "hp")});
     }
   }
+
+  // ======== Difficulty Director (UPGRADED: gets harder over time) ========
+  const director = {
+    intensity: 0,      // slowly rises with waves and time
+    spawnJitter: 0,
+    tick(dt){
+      // rises with wave and survival time
+      const waveBoost = (wave.n-1) * 0.075;
+      const timeBoost = Math.min(1.0, player.timeAlive / 180) * 0.45;
+      this.intensity = clamp(0.15 + waveBoost + timeBoost, 0, 2.0);
+      this.spawnJitter = 0.10 + this.intensity*0.12;
+    },
+    hpMul(){
+      return 1.0 + this.intensity*0.32;
+    },
+    spdMul(){
+      return 1.0 + this.intensity*0.18;
+    },
+    eliteChance(){
+      // smooth ramp, capped
+      const base = clamp((wave.n - 2) / 14, 0, 0.32);
+      return clamp(base + this.intensity*0.06, 0, 0.42);
+    }
+  };
 
   function resetRun(){
     bullets.length = 0;
@@ -477,25 +502,26 @@
     updateCamera();
   }
 
-  // ======== Bunker ========
+  // ======== Bunker (UPGRADED: real 3-slot selection) ========
   let bunkerCursor = 0;
-  let bunkerPicked = [];
+  let bunkerSlots = ["pistol","shotgun","hammer"];
+  let bunkerSlotFocus = 0; // which slot we’re editing (0..2)
   function bunkerInit(){
     bunkerCursor = 0;
-    bunkerPicked = ["pistol","shotgun","hammer"];
+    bunkerSlots = ["pistol","shotgun","hammer"];
+    bunkerSlotFocus = 0;
   }
   bunkerInit();
 
   // ======== Waves + Auto Shop ========
   const wave = {
     n: 1,
-    phase: "REST",     // REST | FIGHT | CLEAR
+    phase: "REST",
     timer: 2.2,
     toSpawn: 0,
     spawned: 0,
     spawnCD: 0,
-    // Between-wave shop flow:
-    shopPhase: "OPEN", // OPEN | CLOSED (still resting) | READY (press C)
+    shopPhase: "OPEN",
     restLock: 0.35
   };
 
@@ -511,18 +537,18 @@
     wave.shopPhase = "OPEN";
     wave.restLock = 0.35;
     spawnCrates();
-    shopOpen = true; // auto-open shop every rest round
+    shopOpen = true;
   }
 
   function beginWave(){
     wave.phase = "FIGHT";
     wave.spawned = 0;
 
-    const base = 6 + Math.floor(wave.n * 1.6);
-    wave.toSpawn = clamp(base, 6, 26);
-    wave.spawnCD = 0.18;
+    // harder over time (director also influences)
+    const base = 6 + Math.floor(wave.n * 1.9);
+    wave.toSpawn = clamp(base, 6, 34);
+    wave.spawnCD = clamp(0.22 - (wave.n*0.004), 0.10, 0.22);
 
-    // close shop on wave start
     shopOpen = false;
     wave.shopPhase = "CLOSED";
 
@@ -538,12 +564,13 @@
     wave.restLock = 0.35;
 
     spawnCrates();
-    shopOpen = true; // auto-open each rest
+    shopOpen = true;
   }
 
-  // ======== Shop ========
+  // ======== Shop (UPGRADED: pick slot to replace + C works) ========
   const SHOP_EXCLUSIVE = ["ar","burst","sniper","laser","rocket","flame","rail","smg"];
   let shopCursor = 0;
+  let shopSlotFocus = 0; // 0..2 which slot will be replaced when you buy
 
   function canBuy(id){
     const w = byId[id];
@@ -554,15 +581,16 @@
 
   function buyWeapon(id){
     const w = byId[id];
-    if(!w) return;
-    if(!canBuy(id)) return;
+    if(!w || !canBuy(id)) return;
 
     player.cash -= w.price;
 
-    // Put into first empty, else replace current slot
+    // Replace focused slot, but if empty exists, use first empty.
     let slot = player.selected.findIndex(v=>!v);
-    if(slot < 0) slot = player.slot;
+    if(slot < 0) slot = shopSlotFocus;
+
     player.selected[slot] = id;
+    player.slot = slot;
 
     particles(player.x, player.y, 22, 1.4, 85, 0.30, "#00ffd5", "#b300ff");
     shake = Math.max(shake, 3);
@@ -577,12 +605,15 @@
     if(side===2){ x = rand(arena.x0, arena.x1); y = arena.y0-10; }
     if(side===3){ x = rand(arena.x0, arena.x1); y = arena.y1+10; }
 
-    const hp = elite ? (95 + wave.n*6) : (60 + wave.n*4);
-    const spd = elite ? rand(20,30) : rand(15,24);
+    const hpBase = elite ? (95 + wave.n*6) : (60 + wave.n*4);
+    const spdBase = elite ? rand(20,30) : rand(15,24);
+
+    const hp = Math.floor(hpBase * director.hpMul());
+    const spd = spdBase * director.spdMul();
+
     zombies.push({ x,y,vx:0,vy:0,hp,spd,t:rand(0,999), elite, burn:0, slow:0 });
   }
 
-  // Boss every 5 rounds, up to 3 bosses (waves 5,10,15).
   function shouldSpawnBossThisWave(){
     if(bossesDefeated >= 3) return false;
     const targets = [5,10,15];
@@ -597,10 +628,9 @@
     if(side===2){ x = rand(arena.x0, arena.x1); y = arena.y0-26; }
     if(side===3){ x = rand(arena.x0, arena.x1); y = arena.y1+26; }
 
-    // 3 distinct boss kinds
-    const kind = bossesDefeated; // 0,1,2
-    const maxHp = 1200 + wave.n*140 + kind*220;
-    const spd = 16 + kind*2;
+    const kind = bossesDefeated;
+    const maxHp = Math.floor((1200 + wave.n*150 + kind*240) * (1.0 + director.intensity*0.18));
+    const spd = (16 + kind*2) * (1.0 + director.intensity*0.06);
 
     boss = { x,y, hp:maxHp, maxHp, spd, t:0, atkCD: 1.20, kind, slow:0 };
     particles(x,y,70,1.6,75,0.75,"#ff3b6b","#b300ff");
@@ -694,17 +724,15 @@
   }
 
   // ======== Skills ========
-  // Dash: Shift. Short burst, tiny invuln window, trail.
   function doDash(){
     if(player.dashCD > 0 || player.dashing > 0) return;
 
     let mx=0,my=0;
-    if(keys.has("a")) mx -= 1;
-    if(keys.has("d")) mx += 1;
-    if(keys.has("w")) my -= 1;
-    if(keys.has("s")) my += 1;
+    if(isDown("left")) mx -= 1;
+    if(isDown("right")) mx += 1;
+    if(isDown("up")) my -= 1;
+    if(isDown("down")) my += 1;
 
-    // if no input, dash toward aim
     const aimWorldX = camera.x + mouse.x;
     const aimWorldY = camera.y + mouse.y;
 
@@ -729,7 +757,6 @@
     shake = Math.max(shake, 3);
   }
 
-  // Pulse: Q. Short-radius shock that damages + slows.
   function doPulse(){
     if(player.pulseCD > 0) return;
     player.pulseCD = 6.5;
@@ -753,7 +780,6 @@
       particles(boss.x,boss.y,14,1.2,65,0.26,"#00ffd5","#b300ff");
     }
 
-    // ring FX (stable, not flashing)
     for(let i=0;i<42;i++){
       const a = (i/42)*Math.PI*2;
       sparks.push({
@@ -776,21 +802,16 @@
     g.font = `${8*scale}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace`;
     g.fillText(txt, x, y);
   }
-  function niceTime(s){
-    const m = Math.floor(s/60);
-    const r = Math.floor(s%60).toString().padStart(2,"0");
-    return `${m}:${r}`;
-  }
 
   // ======== Update ========
   function update(dt){
-    // Always allow pause toggle even when paused (fixes “P won’t resume”)
-    if(pressed.has("p") && state === STATE.PLAY){
+    // Pause toggle
+    if(wasPressed("pause") && state === STATE.PLAY){
       paused = !paused;
-      pressed.delete("p");
+      consume("pause");
     }
 
-    // If paused, still tick tiny UI/fx (very minimal)
+    // paused: minimal tick
     if(paused){
       for(let i=sparks.length-1;i>=0;i--){
         const p = sparks[i];
@@ -810,6 +831,8 @@
       pressed.clear();
       return;
     }
+
+    director.tick(dt);
 
     // FX
     for(let i=sparks.length-1;i>=0;i--){
@@ -836,37 +859,40 @@
       if(t.life<=0) trails.splice(i,1);
     }
 
-    // Bunker screen
+    // ===== BUNKER =====
     if(state === STATE.BUNKER){
-      if(pressed.has("arrowdown") || pressed.has("s")) bunkerCursor = (bunkerCursor+1) % WEAPONS.length;
-      if(pressed.has("arrowup") || pressed.has("w")) bunkerCursor = (bunkerCursor-1+WEAPONS.length) % WEAPONS.length;
+      if(wasPressed("down")) bunkerCursor = (bunkerCursor+1) % WEAPONS.length;
+      if(wasPressed("up")) bunkerCursor = (bunkerCursor-1+WEAPONS.length) % WEAPONS.length;
 
-      if(pressed.has("enter") || pressed.has("e")){
+      if(wasPressed("slot1")) bunkerSlotFocus = 0;
+      if(wasPressed("slot2")) bunkerSlotFocus = 1;
+      if(wasPressed("slot3")) bunkerSlotFocus = 2;
+
+      // Enter/E: assign selected weapon to focused slot
+      if(wasPressed("enter") || wasPressed("interact")){
         const id = WEAPONS[bunkerCursor].id;
-        const idx = bunkerPicked.indexOf(id);
-        if(idx>=0) bunkerPicked.splice(idx,1);
-        else{
-          if(bunkerPicked.length < 3) bunkerPicked.push(id);
-          else bunkerPicked[bunkerPicked.length-1] = id;
-        }
+        bunkerSlots[bunkerSlotFocus] = id;
+        particles(MAP_W/2, MAP_H/2, 10, 1.2, 65, 0.20, "#00ffd5", "#b300ff");
       }
-      if(pressed.has(" ")){
-        if(bunkerPicked.length === 0) bunkerPicked = ["pistol"];
-        player.selected = bunkerPicked.slice(0,3);
+
+      // Space: deploy
+      if(wasPressed("punch")){
+        player.selected = bunkerSlots.slice(0,3);
         resetRun();
         state = STATE.PLAY;
       }
+
       pressed.clear();
       return;
     }
 
-    // Dead
+    // ===== DEAD =====
     if(state === STATE.DEAD){
-      if(pressed.has("enter")){
+      if(wasPressed("enter")){
         resetRun();
         state = STATE.PLAY;
       }
-      if(pressed.has("escape")){
+      if(wasPressed("esc")){
         state = STATE.BUNKER;
         bunkerInit();
       }
@@ -874,12 +900,11 @@
       return;
     }
 
-    // Play
+    // ===== PLAY =====
     if(state === STATE.PLAY){
-      // ESC: if shop open, close shop (existing behavior). If not, toggle fullscreen without exiting.
-      if(pressed.has("escape")){
+      // ESC behavior: close shop if open, else toggle fullscreen (no leaving game)
+      if(wasPressed("esc")){
         const now = performance.now();
-        // simple debounce so key repeat doesn't spam toggle
         if(now - fs.lastEsc > 220){
           fs.lastEsc = now;
           if(shopOpen){
@@ -889,18 +914,16 @@
             fs.toggle();
           }
         }
-        pressed.delete("escape");
+        consume("esc");
       }
 
       player.timeAlive += dt;
       player.frame += 1;
 
-      // skill cooldowns
       player.dashCD = Math.max(0, player.dashCD - dt);
       player.pulseCD = Math.max(0, player.pulseCD - dt);
 
-      // Auto shop behavior between waves:
-      // REST always opens shop first, then you press C to continue.
+      // REST phase logic (SHOP + crates + C continue)
       if(wave.phase === "REST"){
         wave.restLock = Math.max(0, wave.restLock - dt);
 
@@ -908,19 +931,31 @@
           shopOpen = true;
         }
 
-        // allow you to close shop (ESC) and then press C to start
+        // If shop open, you can still choose slot focus, buy, or press C to close+continue.
         if(shopOpen){
-          if(pressed.has("arrowdown") || pressed.has("s")) shopCursor = (shopCursor+1) % SHOP_EXCLUSIVE.length;
-          if(pressed.has("arrowup") || pressed.has("w")) shopCursor = (shopCursor-1+SHOP_EXCLUSIVE.length) % SHOP_EXCLUSIVE.length;
-          if(pressed.has("enter") || pressed.has("e")){
+          if(wasPressed("down")) shopCursor = (shopCursor+1) % SHOP_EXCLUSIVE.length;
+          if(wasPressed("up")) shopCursor = (shopCursor-1+SHOP_EXCLUSIVE.length) % SHOP_EXCLUSIVE.length;
+
+          if(wasPressed("slot1")) shopSlotFocus = 0;
+          if(wasPressed("slot2")) shopSlotFocus = 1;
+          if(wasPressed("slot3")) shopSlotFocus = 2;
+
+          if(wasPressed("enter") || wasPressed("interact")){
             buyWeapon(SHOP_EXCLUSIVE[shopCursor]);
           }
-          // ESC handling moved above (doesn't kick fullscreen)
+
+          // FIX: C ALWAYS WORKS. In shop: C closes shop and immediately starts wave (after lock).
+          if(wasPressed("cont") && wave.restLock<=0){
+            shopOpen = false;
+            wave.shopPhase = "READY";
+            wave.timer = 0;
+          }
+
           pressed.clear();
           return;
         } else {
-          // crates + continue prompt
-          if(pressed.has("e")){
+          // Interact E opens crates (FIXED: reliable)
+          if(wasPressed("interact")){
             for(const c of crates){
               if(c.open) continue;
               if(dist2(c.x,c.y,player.x,player.y) < (16*16)){
@@ -943,8 +978,8 @@
             }
           }
 
-          // press C to start next wave (rest lock prevents accidental instant start)
-          if(pressed.has("c") && wave.restLock<=0){
+          // FIX: C starts wave (when not in shop)
+          if(wasPressed("cont") && wave.restLock<=0){
             wave.timer = 0;
           }
 
@@ -955,36 +990,29 @@
         }
       }
 
-      // movement / aim computed regardless (feels responsive)
+      // Aim / movement
       let mx=0,my=0;
-      if(keys.has("a")) mx -= 1;
-      if(keys.has("d")) mx += 1;
-      if(keys.has("w")) my -= 1;
-      if(keys.has("s")) my += 1;
+      if(isDown("left")) mx -= 1;
+      if(isDown("right")) mx += 1;
+      if(isDown("up")) my -= 1;
+      if(isDown("down")) my += 1;
 
-      // aim world
       const aimWorldX = camera.x + mouse.x;
       const aimWorldY = camera.y + mouse.y;
       const ang = Math.atan2(aimWorldY - player.y, aimWorldX - player.x);
       player.dir = Math.cos(ang) >= 0 ? 1 : -1;
 
-      // dash
-      if(pressed.has("shift")) doDash();
+      if(wasPressed("dash")) doDash();
+      if(wasPressed("pulse")) doPulse();
 
-      // pulse
-      if(pressed.has("q")) doPulse();
-
-      // invuln
       player.invuln = Math.max(0, player.invuln - dt);
 
-      // handle dash movement override
       const baseSpd = 64;
       if(player.dashing > 0){
         player.dashing = Math.max(0, player.dashing - dt);
         player.vx = player.dashVX;
         player.vy = player.dashVY;
 
-        // trail stamps
         if(Math.random() < 0.55){
           trails.push({x:player.x, y:player.y, life:0.22});
         }
@@ -997,15 +1025,14 @@
 
       player.x += player.vx*dt;
       player.y += player.vy*dt;
-
       player.x = clamp(player.x, arena.x0+6, arena.x1-6);
       player.y = clamp(player.y, arena.y0+8, arena.y1-8);
       updateCamera();
 
       // swap weapons
-      if(pressed.has("1")) player.slot = 0;
-      if(pressed.has("2")) player.slot = 1;
-      if(pressed.has("3")) player.slot = 2;
+      if(wasPressed("slot1")) player.slot = 0;
+      if(wasPressed("slot2")) player.slot = 1;
+      if(wasPressed("slot3")) player.slot = 2;
 
       const wId = player.selected[player.slot] || player.selected[0] || "pistol";
       const weapon = byId[wId] || byId.pistol;
@@ -1039,17 +1066,19 @@
 
       // wave logic
       if(wave.phase === "FIGHT"){
-        // spawn controlled
         wave.spawnCD -= dt;
-        if(wave.spawned < wave.toSpawn && wave.spawnCD <= 0){
-          wave.spawnCD = 0.22;
-          const eliteChance = clamp((wave.n - 3) / 12, 0, 0.35);
+
+        // spawn pacing gets gnarlier as intensity rises
+        const spawnNow = (wave.spawned < wave.toSpawn && wave.spawnCD <= 0);
+        if(spawnNow){
+          wave.spawnCD = clamp(0.22 - director.intensity*0.05 + rand(-director.spawnJitter, director.spawnJitter)*0.02, 0.09, 0.24);
+          const eliteChance = director.eliteChance();
           spawnZombie(Math.random() < eliteChance);
           wave.spawned++;
         }
+
         if(wave.spawned >= wave.toSpawn) wave.phase = "CLEAR";
 
-        // boss milestone: every 5 rounds, up to 3
         if(shouldSpawnBossThisWave()){
           spawnBoss();
         }
@@ -1059,11 +1088,11 @@
         }
       }
 
-      // Combat allowed in FIGHT/CLEAR (and also if you shoot)
-      const canCombat = (wave.phase !== "REST") || mouse.down || pressed.has(" ");
+      // combat allowed
+      const canCombat = (wave.phase !== "REST") || mouse.down || wasPressed("punch");
       if(canCombat){
         if(weapon.melee){
-          if((mouse.down || pressed.has(" ")) && player.meleeCD <= 0){
+          if((mouse.down || wasPressed("punch")) && player.meleeCD <= 0){
             player.meleeCD = weapon.cooldown || 0.50;
             meleeHit(weapon, ang);
           }
@@ -1073,7 +1102,7 @@
             player.shootCD = 1 / rate;
             shootWeapon(weapon, ang);
           }
-          if(pressed.has(" ") && player.meleeCD <= 0){
+          if(wasPressed("punch") && player.meleeCD <= 0){
             player.meleeCD = 0.42;
             meleeHit({dmg:30, reach:12}, ang);
           }
@@ -1092,16 +1121,13 @@
           continue;
         }
 
-        // hit zombies
         for(let j=zombies.length-1;j>=0;j--){
           const z = zombies[j];
           if(dist2(b.x,b.y,z.x,z.y) < (7*7)){
             z.hp -= b.dmg;
             if(b.dot) z.burn = Math.max(z.burn, b.dot);
             particles(b.x,b.y,8,0.8,52,0.20,b.col,"rgba(232,232,255,0.45)");
-
             if(b.splash) applySplash(b.x,b.y,b.splash,b.dmg,b.col);
-
             if(!b.pierce) bullets.splice(i,1);
 
             if(z.hp<=0){
@@ -1115,7 +1141,6 @@
           }
         }
 
-        // hit boss
         if(boss && dist2(b.x,b.y,boss.x,boss.y) < (22*22)){
           boss.hp -= b.dmg;
           if(b.splash) applySplash(b.x,b.y,b.splash,b.dmg,b.col);
@@ -1125,12 +1150,11 @@
         }
       }
 
-      // zombies update
+      // zombies
       for(let i=zombies.length-1;i>=0;i--){
         const z = zombies[i];
         z.t += 1;
 
-        // burn DOT
         if(z.burn > 0){
           z.burn = Math.max(0, z.burn - dt);
           if(Math.random() < 0.22){
@@ -1139,7 +1163,6 @@
           }
         }
 
-        // slow from pulse
         if(z.slow > 0) z.slow = Math.max(0, z.slow - dt);
         const slowMul = z.slow > 0 ? 0.55 : 1.0;
 
@@ -1157,7 +1180,7 @@
         }
       }
 
-      // boss update (3 types)
+      // boss
       if(boss){
         boss.t += 1;
 
@@ -1167,10 +1190,6 @@
         const a = Math.atan2(player.y - boss.y, player.x - boss.x);
         const hpP = boss.hp / boss.maxHp;
 
-        // Kind behaviors:
-        // 0: Bruiser (charges more)
-        // 1: Warper (side-step drift)
-        // 2: Siren (summons + pulse hit)
         const drift = (boss.kind===1) ? (Math.sin(boss.t*0.05)*12) : (Math.sin(boss.t*0.04)*7);
         const spdBoost = hpP < 0.6 ? 1.25 : 1.0;
 
@@ -1182,12 +1201,10 @@
 
         boss.atkCD -= dt;
         if(boss.atkCD <= 0){
-          // attack cadence differs by kind
           boss.atkCD = (boss.kind===0) ? (hpP < 0.5 ? 0.85 : 1.05)
                      : (boss.kind===1) ? (hpP < 0.5 ? 0.95 : 1.15)
                      : (hpP < 0.5 ? 0.90 : 1.10);
 
-          // FX
           particles(boss.x,boss.y,52,2.0,90,0.55,
             boss.kind===2 ? "#00ffd5" : "#ff3b6b",
             boss.kind===1 ? "#b300ff" : "#00ffd5"
@@ -1196,20 +1213,15 @@
 
           const d = Math.sqrt(dist2(boss.x,boss.y,player.x,player.y));
 
-          // Kind effects
           if(boss.kind===0){
-            // Bruiser: heavier close hit
             if(d < 40) hurtPlayer(hpP < 0.5 ? 20 : 15);
             for(let k=0;k<(hpP<0.5?3:2);k++) spawnZombie(Math.random()<0.30);
           } else if(boss.kind===1){
-            // Warper: mid-range chip + more elites
             if(d < 54) hurtPlayer(hpP < 0.5 ? 14 : 11);
             for(let k=0;k<(hpP<0.5?2:2);k++) spawnZombie(Math.random()<0.45);
           } else {
-            // Siren: pulse wave slows you + summons
             if(d < 70){
               hurtPlayer(hpP < 0.5 ? 12 : 10);
-              // mini slow on player (implemented as small invuln reduction, feels like “drag”)
               player.dashCD = Math.max(player.dashCD, 0.35);
             }
             for(let k=0;k<(hpP<0.5?4:3);k++) spawnZombie(Math.random()<0.28);
@@ -1228,7 +1240,6 @@
           boss = null;
           bossesDefeated++;
 
-          // after boss: rest with auto-shop
           wave.phase = "REST";
           wave.timer = 1.2;
           wave.shopPhase = "OPEN";
@@ -1238,10 +1249,8 @@
         }
       }
 
-      // score drip (tiny)
       player.score += dt * (4 + wave.n*0.22);
 
-      // death
       if(player.hp <= 0){
         state = STATE.DEAD;
         if(player.score > highScore){
@@ -1267,41 +1276,33 @@
     g.save();
     g.translate(sx, sy);
 
-    // ===== BUNKER (better cover / start screen) =====
+    // ===== BUNKER =====
     if(state === STATE.BUNKER){
-      // dark poster base
       g.fillStyle = "#050214";
       g.fillRect(0,0,W,H);
 
-      // static “cover” panels (no flicker)
       g.fillStyle = "rgba(179,0,255,0.18)";
       g.fillRect(0,0,W,54);
       g.fillStyle = "rgba(0,255,213,0.10)";
       g.fillRect(0,54,W,10);
 
-      // subtle diagonal texture
       g.fillStyle = "rgba(255,255,255,0.03)";
       for(let i=-H;i<W;i+=10){
         g.fillRect(i, 0, 3, H);
       }
 
-      // title block
       drawText("CLUB DECAY", 18, 20, 2.2, "#e8e8ff");
       drawText("CHIMP VS ZOMBIES", 18, 38, 1.25, "rgba(0,255,213,0.92)");
       drawText("BUNKER LOADOUT", 18, 56, 1.0, "rgba(232,232,255,0.78)");
-      drawText("W/S or ↑/↓ select · ENTER toggle · SPACE deploy", 18, 70, 0.95, "rgba(232,232,255,0.62)");
-      drawText("SHIFT dash · Q pulse · P pause", 18, 82, 0.95, "rgba(232,232,255,0.56)");
+      drawText("W/S select · 1/2/3 choose slot · E/ENTER equip · SPACE deploy", 18, 70, 0.92, "rgba(232,232,255,0.62)");
 
-      // list
-      const startY = 100;
+      const startY = 92;
       for(let i=0;i<WEAPONS.length;i++){
         const w = WEAPONS[i];
         const y = startY + i*12;
-        if(y > H-22) break;
+        if(y > H-30) break;
 
-        const picked = bunkerPicked.includes(w.id);
         const cur = (i===bunkerCursor);
-
         if(cur){
           g.fillStyle = "rgba(0,255,213,0.10)";
           g.fillRect(12, y-9, W-24, 11);
@@ -1309,13 +1310,10 @@
           g.fillRect(12, y-9, 6, 11);
         }
 
-        g.fillStyle = picked ? "rgba(0,255,213,0.16)" : "rgba(255,255,255,0.05)";
+        g.fillStyle = "rgba(255,255,255,0.06)";
         g.fillRect(16, y-8, 10, 10);
-        if(picked){
-          g.fillStyle = "#00ffd5";
-          g.fillRect(18, y-6, 6, 2);
-          g.fillRect(22, y-4, 2, 4);
-        }
+        g.fillStyle = w.color;
+        g.fillRect(18, y-6, 6, 6);
 
         drawText(w.name.toUpperCase(), 34, y, 1.0, w.color);
         const meta = w.melee ? `MELEE dmg:${w.dmg}` : `dmg:${w.dmg} rate:${w.fireRate.toFixed(1)}`;
@@ -1323,21 +1321,19 @@
       }
 
       // slots bar
-      g.fillStyle = "rgba(0,0,0,0.35)";
-      g.fillRect(0,H-18,W,18);
-      drawText("SLOTS:", 18, H-6, 0.95, "rgba(232,232,255,0.82)");
+      g.fillStyle = "rgba(0,0,0,0.38)";
+      g.fillRect(0,H-24,W,24);
+
+      drawText("SLOTS:", 12, H-8, 0.95, "rgba(232,232,255,0.82)");
       for(let i=0;i<3;i++){
-        const id = bunkerPicked[i];
-        g.fillStyle = "rgba(255,255,255,0.06)";
-        g.fillRect(70+i*82, H-16, 76, 12);
-        if(id){
-          const w = byId[id];
-          g.fillStyle = w.color;
-          g.fillRect(72+i*82, H-14, 8, 8);
-          drawText(`${i+1}:${w.name}`, 84+i*82, H-6, 0.85, "#e8e8ff");
-        } else {
-          drawText(`${i+1}: -`, 84+i*82, H-6, 0.85, "rgba(232,232,255,0.4)");
-        }
+        const id = bunkerSlots[i];
+        const w = byId[id] || byId.pistol;
+        const x = 64+i*86;
+        g.fillStyle = (i===bunkerSlotFocus) ? "rgba(179,0,255,0.35)" : "rgba(255,255,255,0.07)";
+        g.fillRect(x, H-20, 80, 14);
+        g.fillStyle = w.color;
+        g.fillRect(x+3, H-17, 8, 8);
+        drawText(`${i+1}:${w.name}`, x+14, H-8, 0.85, "#e8e8ff");
       }
 
       g.restore();
@@ -1349,7 +1345,6 @@
     // ===== PLAY / DEAD =====
     const ox = camera.x, oy = camera.y;
 
-    // dash trails (subtle, stable)
     for(const t of trails){
       const x = Math.floor(t.x - ox), y = Math.floor(t.y - oy);
       if(x<-10||x>W+10||y<-10||y>H+10) continue;
@@ -1359,7 +1354,6 @@
       g.fillRect(x-2,y-2,4,4);
     }
 
-    // crates
     for(const c of crates){
       const x = Math.floor(c.x - ox), y = Math.floor(c.y - oy);
       if(x<-10||x>W+10||y<-10||y>H+10) continue;
@@ -1369,7 +1363,6 @@
       g.fillRect(x-3,y-3,6,6);
     }
 
-    // bullets
     for(const b of bullets){
       const sxp = Math.floor(b.x - ox);
       const syp = Math.floor(b.y - oy);
@@ -1380,26 +1373,22 @@
       g.fillRect(sxp, syp, 1, 1);
     }
 
-    // zombies
     for(const z of zombies){
       const sxz = z.x - ox, syz = z.y - oy;
       if(sxz<-24 || sxz>W+24 || syz<-24 || syz>H+24) continue;
       drawZombie({ ...z, x:sxz, y:syz });
     }
 
-    // boss
     if(boss){
       drawBoss({ ...boss, x:boss.x-ox, y:boss.y-oy });
     }
 
-    // player
     const aimWorldX = camera.x + mouse.x;
     const aimWorldY = camera.y + mouse.y;
     const aimAng = Math.atan2(aimWorldY-player.y, aimWorldX-player.x);
     const blink = player.invuln>0 && (Math.floor(performance.now()/70)%2===0);
     if(!blink) drawChimp(player.x-ox, player.y-oy, player.dir, player.frame, aimAng);
 
-    // sparks
     for(const p of sparks){
       const spx = Math.floor(p.x - ox);
       const spy = Math.floor(p.y - oy);
@@ -1407,7 +1396,6 @@
       g.fillStyle = p.col;
       g.fillRect(spx, spy, 1, 1);
     }
-    // floats
     for(const f of floats){
       const fx = Math.floor(f.x - ox);
       const fy = Math.floor(f.y - oy);
@@ -1416,7 +1404,6 @@
     }
 
     // ===== HUD =====
-    // top bar
     g.fillStyle = "rgba(0,0,0,0.52)";
     g.fillRect(0,0,W,30);
     g.fillStyle = "rgba(179,0,255,0.12)";
@@ -1429,7 +1416,6 @@
     drawText(`DASH ${player.dashCD>0?player.dashCD.toFixed(1):"OK"}`, 214, 24, 0.9, "rgba(232,232,255,0.62)");
     drawText(`Q ${player.pulseCD>0?player.pulseCD.toFixed(0):"READY"}`, 276, 24, 0.9, "rgba(232,232,255,0.62)");
 
-    // HP bar (slightly smaller)
     const hpP = clamp(player.hp/100, 0, 1);
     g.fillStyle = "rgba(255,255,255,0.10)";
     g.fillRect(8, 34, 150, 8);
@@ -1439,7 +1425,6 @@
     g.strokeRect(8, 34, 150, 8);
     drawText(`HP`, 164, 41, 0.9, "rgba(232,232,255,0.78)");
 
-    // Boss bar (unchanged)
     if(boss){
       const bp = clamp(boss.hp/boss.maxHp, 0, 1);
       g.fillStyle = "rgba(0,0,0,0.50)";
@@ -1452,7 +1437,6 @@
       drawText(bname, 264, 56, 0.9, "#e8e8ff");
     }
 
-    // minimap (slightly smaller)
     const mmW = 72, mmH = 40;
     const mmX = W - mmW - 8;
     const mmY = 34;
@@ -1481,44 +1465,57 @@
       g.fillRect(Math.floor(mmX + boss.x*sxm)-1, Math.floor(mmY + boss.y*sym)-1, 3, 3);
     }
 
-    // weapon slots
-    const y = H-16;
+    const yb = H-16;
     for(let i=0;i<3;i++){
       const id = player.selected[i];
       g.fillStyle = "rgba(255,255,255,0.07)";
-      g.fillRect(8+i*104, y, 96, 12);
+      g.fillRect(8+i*104, yb, 96, 12);
       if(id){
         const w = byId[id];
         g.fillStyle = (i===player.slot) ? "rgba(179,0,255,0.34)" : "rgba(0,0,0,0.25)";
-        g.fillRect(8+i*104, y, 96, 12);
+        g.fillRect(8+i*104, yb, 96, 12);
         g.fillStyle = w.color;
-        g.fillRect(10+i*104, y+2, 8, 8);
-        drawText(`${i+1}:${w.name}`, 22+i*104, y+10, 0.9, "#e8e8ff");
+        g.fillRect(10+i*104, yb+2, 8, 8);
+        drawText(`${i+1}:${w.name}`, 22+i*104, yb+10, 0.9, "#e8e8ff");
       } else {
-        drawText(`${i+1}: -`, 22+i*104, y+10, 0.9, "rgba(232,232,255,0.4)");
+        drawText(`${i+1}: -`, 22+i*104, yb+10, 0.9, "rgba(232,232,255,0.4)");
       }
     }
 
-    // REST hint (and boss schedule)
     if(wave.phase === "REST"){
       g.fillStyle = "rgba(0,0,0,0.55)";
-      g.fillRect(50, 64, 220, 46);
+      g.fillRect(44, 62, 232, 52);
       drawText("REST ROUND", 112, 80, 1.3, "#00ffd5");
-      drawText("Shop is open. ESC to close.", 76, 96, 1.0, "rgba(232,232,255,0.78)");
-      drawText("Open crates: E · Start wave: C", 70, 108, 1.0, "rgba(232,232,255,0.72)");
+      drawText("Shop auto-opens. C starts wave.", 64, 96, 1.0, "rgba(232,232,255,0.78)");
+      drawText("Crates: E · Close shop: ESC", 70, 108, 1.0, "rgba(232,232,255,0.72)");
       const nxtBoss = bossesDefeated>=3 ? "NO MORE BOSSES" : `BOSS AT WAVE ${[5,10,15][bossesDefeated]}`;
       drawText(nxtBoss, 96, 120, 0.95, "rgba(232,232,255,0.55)");
     }
 
-    // SHOP overlay
     if(shopOpen){
       g.fillStyle = "rgba(0,0,0,0.78)";
       g.fillRect(0,0,W,H);
-      drawText("SHOP (BETWEEN WAVES)", 52, 30, 1.6, "#00ffd5");
-      drawText(`CASH ${Math.floor(player.cash)}$`, 118, 48, 1.1, "rgba(232,232,255,0.9)");
-      drawText("W/S or ↑/↓ select · E/ENTER buy · ESC close", 16, 64, 1.0, "rgba(232,232,255,0.72)");
+      drawText("SHOP (BETWEEN WAVES)", 52, 26, 1.6, "#00ffd5");
+      drawText(`CASH ${Math.floor(player.cash)}$`, 118, 44, 1.1, "rgba(232,232,255,0.9)");
+      drawText("W/S select · E/ENTER buy · 1/2/3 target slot · C start", 16, 60, 0.95, "rgba(232,232,255,0.72)");
 
-      const startY = 84;
+      // slot chooser banner
+      g.fillStyle = "rgba(255,255,255,0.06)";
+      g.fillRect(16, 68, W-32, 12);
+      drawText("REPLACE SLOT:", 22, 78, 0.9, "rgba(232,232,255,0.72)");
+      for(let i=0;i<3;i++){
+        const id = player.selected[i];
+        const w = id ? byId[id] : null;
+        const bx = 124 + i*62;
+        g.fillStyle = (i===shopSlotFocus) ? "rgba(179,0,255,0.32)" : "rgba(0,0,0,0.25)";
+        g.fillRect(bx, 70, 56, 10);
+        g.fillStyle = w ? w.color : "rgba(232,232,255,0.25)";
+        g.fillRect(bx+2, 72, 6, 6);
+        drawText(`${i+1}`, bx+12, 78, 0.9, "#e8e8ff");
+        drawText(w ? w.name : "-", bx+24, 78, 0.9, "rgba(232,232,255,0.75)");
+      }
+
+      const startY = 92;
       for(let i=0;i<SHOP_EXCLUSIVE.length;i++){
         const id = SHOP_EXCLUSIVE[i];
         const w = byId[id];
@@ -1531,9 +1528,9 @@
           g.fillStyle = "rgba(179,0,255,0.20)";
           g.fillRect(16, yy-9, W-32, 11);
         }
+
         g.fillStyle = "rgba(255,255,255,0.06)";
         g.fillRect(20, yy-8, 10, 10);
-
         g.fillStyle = w.color;
         g.fillRect(22, yy-6, 6, 6);
 
@@ -1546,7 +1543,6 @@
       }
     }
 
-    // DEAD overlay
     if(state === STATE.DEAD){
       g.fillStyle = "rgba(0,0,0,0.70)";
       g.fillRect(0,0,W,H);
@@ -1557,7 +1553,6 @@
       drawText("ENTER retry | ESC bunker", 86, 142, 1.0, "rgba(232,232,255,0.80)");
     }
 
-    // PAUSED overlay
     if(paused){
       g.fillStyle = "rgba(0,0,0,0.62)";
       g.fillRect(0,0,W,H);
