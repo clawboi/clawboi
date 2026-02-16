@@ -1,0 +1,376 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CLAWBOI OMEGA ENGINE</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+html,body{margin:0;background:#05030a;overflow:hidden;font-family:monospace}
+canvas{display:block;margin:auto;image-rendering:pixelated}
+.nav{position:fixed;top:10px;left:14px;font-size:12px;letter-spacing:.25em;z-index:10}
+.nav a{color:#fff;text-decoration:none;margin-right:18px;opacity:.7}
+.nav a:hover{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="nav">
+<a href="index.html">CLAWBOI</a>
+<a href="games.html">GAMES</a>
+</div>
+
+<canvas id="c" width="960" height="540"></canvas>
+
+<script>
+(()=>{
+
+//===================== CORE =====================
+const canvas=c;
+const ctx=canvas.getContext("2d");
+
+const W=320,H=180;
+const world=document.createElement("canvas");
+world.width=W;world.height=H;
+const g=world.getContext("2d");
+
+let last=performance.now(),time=0;
+
+//===================== INPUT =====================
+const keys={};
+let mouse={x:0,y:0,down:false};
+
+onkeydown=e=>keys[e.key.toLowerCase()]=1;
+onkeyup=e=>keys[e.key.toLowerCase()]=0;
+
+canvas.onmousemove=e=>{
+const r=canvas.getBoundingClientRect();
+mouse.x=(e.clientX-r.left)/r.width*W;
+mouse.y=(e.clientY-r.top)/r.height*H;
+};
+canvas.onmousedown=()=>mouse.down=true;
+onmouseup=()=>mouse.down=false;
+
+//===================== UTIL =====================
+const rand=(a,b)=>a+Math.random()*(b-a);
+const dist=(a,b)=>((a.x-b.x)**2+(a.y-b.y)**2);
+
+//===================== GLOBAL FX =====================
+let shake=0,zoom=1,flash=0,slow=1;
+
+//===================== PLAYER =====================
+const p={
+x:W/2,y:H/2,
+vx:0,vy:0,
+hp:100,maxHp:100,
+xp:0,lvl:1,
+score:0,
+gold:0,
+dash:0,
+shoot:0,
+combo:0,
+comboT:0,
+weapon:0,
+crit:0.05,
+lifesteal:0
+};
+
+//===================== WEAPONS =====================
+const weapons=[
+{ name:"Pulse", dmg:18, rate:8, spd:240, col:"#7CFF6B", lvl:1 },
+{ name:"Burst", dmg:10, rate:14, spd:300, col:"#00ffd5", lvl:1 },
+{ name:"Scatter", dmg:7, rate:2, spd:220, pel:6, col:"#ff3b6b", lvl:1 }
+];
+
+//===================== ARRAYS =====================
+const bullets=[];
+const enemies=[];
+const sparks=[];
+const texts=[];
+const drops=[];
+
+//===================== BIOMES =====================
+const biomes=[
+{bg1:"#0a0416",bg2:"#1a0930",fog:"#5b2cff"},
+{bg1:"#021018",bg2:"#052a30",fog:"#00ffd5"},
+{bg1:"#140303",bg2:"#330707",fog:"#ff3b6b"}
+];
+let biome=0;
+
+//===================== SPAWN DIRECTOR =====================
+let wave=1;
+let spawnTimer=2;
+
+function spawnWave(){
+for(let i=0;i<wave+2;i++){
+let t=Math.random();
+if(wave%6===0 && i===0) spawnBoss();
+else if(t<.2) spawnEnemy("tank");
+else if(t<.4) spawnEnemy("runner");
+else spawnEnemy("grunt");
+}
+}
+
+function spawnEnemy(type){
+let e={x:rand(0,W),y:-10,type};
+
+if(type==="grunt"){e.hp=40;e.spd=40;e.col="#58b0ff";}
+if(type==="runner"){e.hp=25;e.spd=80;e.col="#ff5e5e";}
+if(type==="tank"){e.hp=140;e.spd=20;e.col="#9b6bff";}
+
+if(Math.random()<.12){
+e.elite=1;
+e.hp*=2;
+}
+
+enemies.push(e);
+}
+
+function spawnBoss(){
+enemies.push({
+x:W/2,y:-20,
+hp:900+wave*60,
+spd:25,
+boss:1,
+phase:0,
+col:"#ff2f92"
+});
+}
+
+//===================== SHOOT =====================
+function shoot(){
+let w=weapons[p.weapon];
+if(p.shoot>0)return;
+p.shoot=1/w.rate;
+
+let ang=Math.atan2(mouse.y-p.y,mouse.x-p.x);
+
+for(let i=0;i<(w.pel||1);i++){
+let a=ang+rand(-.2,.2);
+bullets.push({
+x:p.x,y:p.y,
+vx:Math.cos(a)*w.spd,
+vy:Math.sin(a)*w.spd,
+d:w.dmg*(1+w.lvl*.3),
+c:w.col
+});
+}
+shake=5;
+}
+
+//===================== DASH =====================
+function dash(){
+if(p.dash>0)return;
+p.dash=1;
+let a=Math.atan2(mouse.y-p.y,mouse.x-p.x);
+p.vx=Math.cos(a)*300;
+p.vy=Math.sin(a)*300;
+shake=10;
+}
+
+//===================== UPDATE =====================
+function update(dt){
+
+dt*=slow;
+
+// movement
+let mx=(keys.d?1:0)-(keys.a?1:0);
+let my=(keys.s?1:0)-(keys.w?1:0);
+let l=Math.hypot(mx,my)||1;
+mx/=l;my/=l;
+
+p.vx+=mx*140*dt;
+p.vy+=my*140*dt;
+p.vx*=0.82;p.vy*=0.82;
+p.x+=p.vx*dt;
+p.y+=p.vy*dt;
+
+p.x=Math.max(10,Math.min(W-10,p.x));
+p.y=Math.max(10,Math.min(H-10,p.y));
+
+// actions
+if(mouse.down) shoot();
+if(keys.shift) dash();
+
+p.shoot-=dt;
+p.dash-=dt;
+
+// bullets
+for(let i=bullets.length-1;i>=0;i--){
+let b=bullets[i];
+b.x+=b.vx*dt;
+b.y+=b.vy*dt;
+
+if(b.x<0||b.y<0||b.x>W||b.y>H){bullets.splice(i,1);continue;}
+
+for(const e of enemies){
+if(dist(b,e)<80){
+e.hp-=b.d;
+texts.push({x:e.x,y:e.y,v:b.d,t:1});
+bullets.splice(i,1);
+p.combo++;
+p.comboT=2;
+break;
+}
+}
+}
+
+// enemies
+for(let i=enemies.length-1;i>=0;i--){
+let e=enemies[i];
+let a=Math.atan2(p.y-e.y,p.x-e.x);
+
+e.x+=Math.cos(a)*e.spd*dt;
+e.y+=Math.sin(a)*e.spd*dt;
+
+if(dist(e,p)<90){
+p.hp-=20*dt;
+flash=.3;
+}
+
+if(e.boss){
+if(e.hp<500 && e.phase===0){
+e.phase=1;
+spawnEnemy("runner");
+spawnEnemy("runner");
+}
+}
+
+// death
+if(e.hp<=0){
+p.score+=10;
+p.xp+=5;
+if(Math.random()<.3)drops.push({x:e.x,y:e.y});
+enemies.splice(i,1);
+}
+}
+
+// collect drops
+for(let i=drops.length-1;i>=0;i--){
+let d=drops[i];
+if(dist(d,p)<100){
+p.gold+=1;
+drops.splice(i,1);
+}
+}
+
+// level up
+if(p.xp>p.lvl*40){
+p.xp=0;
+p.lvl++;
+weapons[p.weapon].lvl++;
+}
+
+// combo decay
+p.comboT-=dt;
+if(p.comboT<=0)p.combo=0;
+
+// waves
+if(enemies.length===0){
+spawnTimer-=dt;
+if(spawnTimer<=0){
+wave++;
+spawnTimer=3;
+biome=(biome+1)%biomes.length;
+spawnWave();
+}
+}
+
+// death reset
+if(p.hp<=0){
+wave=1;p.hp=p.maxHp;p.score=0;p.gold=0;
+enemies.length=0;
+spawnWave();
+}
+}
+
+//===================== DRAW =====================
+function draw(){
+
+let b=biomes[biome];
+
+// background gradient
+let grad=g.createLinearGradient(0,0,0,H);
+grad.addColorStop(0,b.bg1);
+grad.addColorStop(1,b.bg2);
+g.fillStyle=grad;
+g.fillRect(0,0,W,H);
+
+// bullets
+for(const b of bullets){
+g.fillStyle=b.c;
+g.fillRect(b.x,b.y,2,2);
+}
+
+// enemies
+for(const e of enemies){
+g.fillStyle=e.col;
+g.fillRect(e.x-5,e.y-5,10,10);
+if(e.elite){
+g.strokeStyle="#fff";
+g.strokeRect(e.x-7,e.y-7,14,14);
+}
+}
+
+// player
+g.fillStyle="#b300ff";
+g.fillRect(p.x-6,p.y-6,12,12);
+
+// drops
+g.fillStyle="#ffd700";
+for(const d of drops) g.fillRect(d.x,d.y,4,4);
+
+// floating dmg
+for(let i=texts.length-1;i>=0;i--){
+let t=texts[i];
+t.y-=.3;
+t.t-=.02;
+g.fillStyle="#fff";
+g.fillText(Math.floor(t.v),t.x,t.y);
+if(t.t<=0)texts.splice(i,1);
+}
+
+// UI
+g.fillStyle="#111";
+g.fillRect(8,8,100,8);
+g.fillStyle="#7CFF6B";
+g.fillRect(8,8,p.hp,8);
+
+g.fillStyle="#fff";
+g.fillText("WAVE "+wave,120,14);
+g.fillText("LV "+p.lvl,200,14);
+g.fillText("GOLD "+p.gold,8,170);
+g.fillText("COMBO "+p.combo,140,170);
+
+// hit flash
+if(flash>0){
+g.fillStyle="rgba(255,0,0,"+flash+")";
+g.fillRect(0,0,W,H);
+flash*=.9;
+}
+
+// upscale
+ctx.save();
+ctx.imageSmoothingEnabled=false;
+ctx.drawImage(world,(Math.random()-.5)*shake,(Math.random()-.5)*shake,canvas.width*zoom,canvas.height*zoom);
+ctx.restore();
+
+shake*=.9;
+}
+
+//===================== LOOP =====================
+function loop(n){
+let dt=(n-last)/1000;
+last=n;
+time+=dt;
+update(dt);
+draw();
+requestAnimationFrame(loop);
+}
+
+spawnWave();
+requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
