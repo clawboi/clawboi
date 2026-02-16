@@ -1,1 +1,254 @@
+:root{
+  --bg:#050507;
+  --fg:#fff;
+  --violet:#8a2eff;
+  --deep:#0b0820;
+  --muted:rgba(255,255,255,.65);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background: radial-gradient(circle at 40% 20%, rgba(138,46,255,.10), transparent 55%),
+              radial-gradient(circle at 70% 70%, rgba(40,30,120,.10), transparent 55%),
+              var(--bg);
+  color:var(--fg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  overflow:hidden;
+}
+
+#gameWrap{
+  position:relative;
+  width:100vw;
+  height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+canvas#game{
+  width:min(1100px, 96vw);
+  height:auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background: #000;
+  box-shadow: 0 0 120px rgba(138,46,255,.12);
+}
+
+#hud{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  width:min(1100px, 96vw);
+  height:auto;
+  aspect-ratio: 16/9;
+}
+
+#hud .row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 14px;
+  gap:10px;
+}
+.brand{
+  letter-spacing:.42em;
+  text-transform:uppercase;
+  font-size:11px;
+  opacity:.85;
+  text-shadow:0 0 18px rgba(138,46,255,.35);
+}
+.tiny{
+  font-size:10px;
+  letter-spacing:.26em;
+  opacity:.7;
+  text-transform:uppercase;
+}
+
+.bars{
+  padding:0 14px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.bar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.label{
+  font-size:10px;
+  letter-spacing:.22em;
+  opacity:.75;
+  width:34px;
+}
+.track{
+  flex:1;
+  height:10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.06);
+}
+.fill{
+  height:100%;
+  width:0%;
+  border-radius:999px;
+  background: linear-gradient(90deg, rgba(138,46,255,.95), rgba(255,255,255,.22));
+  box-shadow: 0 0 18px rgba(138,46,255,.25);
+}
+
+.row.bottom{
+  position:absolute;
+  left:0; right:0;
+  bottom:10px;
+  padding:10px 14px;
+  justify-content:flex-start;
+}
+.chip{
+  font-size:10px;
+  letter-spacing:.20em;
+  text-transform:uppercase;
+  padding:8px 10px;
+  border-radius:999px;
+  background:rgba(0,0,0,.40);
+  border:1px solid rgba(255,255,255,.08);
+  opacity:.85;
+}
+
+.inv{
+  position:absolute;
+  right:14px;
+  bottom:56px;
+  width:220px;
+  padding:10px;
+  border-radius:14px;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.08);
+}
+.invTitle{
+  font-size:10px;
+  letter-spacing:.30em;
+  text-transform:uppercase;
+  opacity:.75;
+  margin-bottom:8px;
+}
+.slots{
+  display:grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap:6px;
+}
+.slot{
+  height:28px;
+  border-radius:8px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.06);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:10px;
+  opacity:.85;
+}
+.slot.on{
+  border-color: rgba(138,46,255,.45);
+  box-shadow: 0 0 18px rgba(138,46,255,.18);
+}
+.slot span{opacity:.9}
+
+.centerMsg{
+  position:absolute;
+  left:50%;
+  top:46%;
+  transform:translate(-50%,-50%);
+  font-size:14px;
+  letter-spacing:.38em;
+  text-transform:uppercase;
+  text-align:center;
+  opacity:0;
+  transition:opacity .18s;
+  text-shadow:0 0 26px rgba(138,46,255,.30);
+  max-width: 80%;
+}
+.subMsg{
+  position:absolute;
+  left:50%;
+  top:54%;
+  transform:translate(-50%,-50%);
+  font-size:10px;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  text-align:center;
+  opacity:0;
+  transition:opacity .18s;
+  color:var(--muted);
+  max-width: 80%;
+}
+.centerMsg.on, .subMsg.on{opacity:1}
+
+/* Mobile controls */
+.touch{
+  position:absolute;
+  inset:0;
+  width:min(1100px, 96vw);
+  aspect-ratio:16/9;
+  pointer-events:none;
+}
+.joy{
+  position:absolute;
+  left:14px;
+  bottom:14px;
+  width:120px;
+  height:120px;
+  pointer-events:auto;
+  touch-action:none;
+  opacity:.88;
+}
+.joyBase{
+  position:absolute; inset:0;
+  border-radius:50%;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.10);
+}
+.joyKnob{
+  position:absolute;
+  left:50%; top:50%;
+  width:48px; height:48px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:rgba(138,46,255,.26);
+  border:1px solid rgba(138,46,255,.35);
+  box-shadow:0 0 24px rgba(138,46,255,.18);
+}
+
+.btns{
+  position:absolute;
+  right:14px;
+  bottom:14px;
+  display:flex;
+  gap:10px;
+  pointer-events:auto;
+}
+.tbtn{
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.35);
+  color:#fff;
+  padding:12px 14px;
+  border-radius:999px;
+  font-size:10px;
+  letter-spacing:.26em;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.tbtn:active{
+  transform:translateY(1px);
+  border-color: rgba(138,46,255,.35);
+}
+
+/* Hide touch controls on large pointer devices */
+@media (hover:hover) and (pointer:fine){
+  .touch{display:none}
+}
 
