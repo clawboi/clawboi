@@ -3,186 +3,206 @@ import { clamp, lerp, now, fmt, isTouchDevice } from "./utils.js";
 import { Input } from "./input.js";
 import { PlayerTest } from "./player_test.js";
 import { WorldForest } from "./world_forest.js";
+import { WorldNode } from "./world_node.js";
 import { Camera } from "./camera.js";
 import { PickupManager } from "./pickups.js";
 import { EnemyManager } from "./enemies.js";
 import { DropManager } from "./drops.js";
 import { FX } from "./fx.js";
+import { Quest } from "./quest.js";
+import { Interactables } from "./interactables.js";
 
- canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d", { alpha:false });
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d", { alpha: false });
 
 const debugEl = document.getElementById("debug");
 let debugOn = false;
 
+// IMPORTANT: cam declared BEFORE resize() can run (prevents TDZ crash)
+let cam = null;
+
 const mobileAtkBtn = document.getElementById("mAtk");
 const mobileDashBtn = document.getElementById("mDash");
 
-/* ---------- canvas scaling ---------- */
-const view = { scale: CONFIG.minScale, pxW:0, pxH:0 };
+const view = { scale: CONFIG.minScale, pxW: 0, pxH: 0 };
 
 function calcScale(){
-  const ww = window.innerWidth;
-  const wh = window.innerHeight;
+  const vv = window.visualViewport;
+  const ww = vv ? vv.width  : window.innerWidth;
+  const wh = vv ? vv.height : window.innerHeight;
+
   const sx = Math.floor(ww / CONFIG.baseW);
   const sy = Math.floor(wh / CONFIG.baseH);
-  return clamp(Math.min(sx, sy), CONFIG.minScale, CONFIG.maxScale);
+
+  // leave a tiny safety margin so Safari UI bars don’t force scale down
+  const s = Math.min(sx, sy) || CONFIG.minScale;
+  return clamp(s, CONFIG.minScale, CONFIG.maxScale);
 }
-function resize(){
-  const ww = window.innerWidth;
-  const wh = window.innerHeight;
 
-  // Use a safe available height (account for top HUD + iOS URL bar weirdness)
-  const safeH = Math.max(200, wh - 72);
+/**
+ * ✅ FIX: Keep internal canvas at BASE resolution always.
+ * Scale ONLY via CSS. This prevents "giant minimap / whole map" double-scaling.
+ */
+function resize() {
+  view.scale = calcScale();
+  view.pxW = CONFIG.baseW * view.scale;
+  view.pxH = CONFIG.baseH * view.scale;
 
-  const sx = Math.floor(ww / config.baseW);
-  const sy = Math.floor(safeH / config.baseH);
-  config.scale = Math.max(config.minScale, Math.min(config.maxScale, Math.min(sx, sy)));
+  // internal render resolution
+  canvas.width = CONFIG.baseW;
+  canvas.height = CONFIG.baseH;
 
-  // Set internal resolution EXACT
-  canvas.width  = config.baseW * config.scale;
-  canvas.height = config.baseH * config.scale;
-
-  // Let CSS size follow JS, not vice versa
-  canvas.style.width  = canvas.width + "px";
-  canvas.style.height = canvas.height + "px";
-
-  ctx.imageSmoothingEnabled = false;
-}
-window.addEventListener("resize", resize);
-resize();
-
-// iOS Safari: also re-run on orientation + after UI bars settle
-window.addEventListener("orientationchange", ()=> setTimeout(resize, 150));
-setTimeout(resize, 250);
-
-
-  canvas.width = view.pxW;
-  canvas.height = view.pxH;
+  // display size
   canvas.style.width = view.pxW + "px";
   canvas.style.height = view.pxH + "px";
+
   ctx.imageSmoothingEnabled = false;
 
-  if(cam) cam.resizeView(CONFIG.baseW, CONFIG.baseH);
+  if (cam && cam.resizeView) cam.resizeView(CONFIG.baseW, CONFIG.baseH);
 }
-window.addEventListener("resize", resize, {passive:true});
+window.addEventListener("resize", resize, { passive: true });
 resize();
 
 /* ---------- debug toggle ---------- */
-window.addEventListener("keydown", (e)=>{
-  if(e.key === "`"){
-    debugOn = !debugOn;
-    debugEl.style.display = debugOn ? "block" : "none";
-  }
-}, {passive:true});
+window.addEventListener(
+  "keydown",
+  (e) => {
+    if (e.key === "`") {
+      debugOn = !debugOn;
+      debugEl.style.display = debugOn ? "block" : "none";
+    }
+  },
+  { passive: true }
+);
 
 /* ---------- input ---------- */
 const input = new Input({ canvas, mobileAtkBtn, mobileDashBtn });
 
+// INTERACT pressed flag (E key) independent of Input
+let interactPressed = false;
+window.addEventListener(
+  "keydown",
+  (e) => {
+    const k = (e.key || "").toLowerCase();
+    if (k === "e") interactPressed = true;
+  },
+  { passive: true }
+);
+
 /* ---------- state ---------- */
-const STATE = { START:"start", PLAY:"play", WIN:"win", DEAD:"dead" };
+const STATE = { START: "start", PLAY: "play", WIN: "win", DEAD: "dead" };
 let state = STATE.START;
 
 let world = null;
+let forest = null;
+let node = null;
+
 let player = null;
-let cam = null;
 let pickups = null;
 let enemies = null;
 let drops = null;
 let fx = null;
 
-let tWorld = 0;
+let quest = null;
+let interact = null;
 
-let hitStop = 0;
-function doHitStop(t=0.05){
-  hitStop = Math.max(hitStop, t);
-}
-
-// objective
-const objective = {
-  shardsNeeded: 3,
-  portalOpen: false,
-  win: false
-};
+// room
+let room = "forest"; // "forest" | "node"
 
 // minimap cache
 let mapCanvas = null;
 let mapCtx = null;
 let mapDirty = true;
 
-function ensureMapCanvas(){
-  if(mapCanvas) return;
+function ensureMapCanvas() {
+  if (mapCanvas) return;
   mapCanvas = document.createElement("canvas");
-  mapCtx = mapCanvas.getContext("2d", { alpha:true });
+  mapCtx = mapCanvas.getContext("2d", { alpha: true });
 }
 
-// build minimap once per world
-function rebuildMinimap(){
+function rebuildMinimap() {
   ensureMapCanvas();
   mapDirty = false;
 
-  // We try a few possible world formats. If missing, we still draw a fallback.
-  const tilesW = world.tilesW ?? world.w ?? 0;
-  const tilesH = world.tilesH ?? world.h ?? 0;
-  const tiles = world.tiles ?? world.tile ?? null;
+  const tilesW = world?.tilesW ?? world?.w ?? 0;
+  const tilesH = world?.tilesH ?? world?.h ?? 0;
+  const tiles = world?.tiles ?? world?.tile ?? null;
 
-  // default small map size
-  const MW = 96, MH = 72;
+  const MW = 96,
+    MH = 72;
   mapCanvas.width = MW;
   mapCanvas.height = MH;
 
-  mapCtx.clearRect(0,0,MW,MH);
-
-  // background
+  mapCtx.clearRect(0, 0, MW, MH);
   mapCtx.fillStyle = "rgba(0,0,0,0.35)";
-  mapCtx.fillRect(0,0,MW,MH);
+  mapCtx.fillRect(0, 0, MW, MH);
 
-  if(tiles && tilesW>0 && tilesH>0){
-    // downsample tiles onto MWxMH
+  if (tiles && tilesW > 0 && tilesH > 0) {
     const sx = MW / tilesW;
     const sy = MH / tilesH;
 
-    for(let y=0; y<tilesH; y++){
-      for(let x=0; x<tilesW; x++){
-        const i = x + y*tilesW;
+    for (let y = 0; y < tilesH; y++) {
+      for (let x = 0; x < tilesW; x++) {
+        const i = x + y * tilesW;
         const t = tiles[i];
-        if(t){
-          // blocked
+        if (t) {
           mapCtx.fillStyle = "rgba(10,10,16,0.85)";
-        }else{
-          // floor
-          mapCtx.fillStyle = ((x+y)&1) ? "rgba(12,32,23,0.75)" : "rgba(11,27,20,0.72)";
+        } else {
+          mapCtx.fillStyle =
+            (x + y) & 1 ? "rgba(12,32,23,0.75)" : "rgba(11,27,20,0.72)";
         }
-        mapCtx.fillRect(x*sx, y*sy, sx+0.5, sy+0.5);
+        mapCtx.fillRect(x * sx, y * sy, sx + 0.5, sy + 0.5);
       }
     }
 
-    // slight fog
     mapCtx.fillStyle = "rgba(138,46,255,0.06)";
-    mapCtx.fillRect(0,0,MW,MH);
-  }else{
-    // fallback: just a nice frame
+    mapCtx.fillRect(0, 0, MW, MH);
+  } else {
     mapCtx.strokeStyle = "rgba(138,46,255,0.35)";
-    mapCtx.strokeRect(1,1,MW-2,MH-2);
+    mapCtx.strokeRect(1, 1, MW - 2, MH - 2);
     mapCtx.fillStyle = "rgba(255,255,255,0.25)";
     mapCtx.font = "10px ui-monospace, Menlo, Consolas, monospace";
     mapCtx.textAlign = "center";
-    mapCtx.fillText("MINIMAP", MW/2, MH/2);
+    mapCtx.fillText("MINIMAP", MW / 2, MH / 2);
   }
 
-  // border
   mapCtx.strokeStyle = "rgba(138,46,255,0.55)";
-  mapCtx.strokeRect(0.5,0.5,MW-1,MH-1);
+  mapCtx.strokeRect(0.5, 0.5, MW - 1, MH - 1);
 }
 
-/* ---------- start ---------- */
-function startGame(){
-  world = new WorldForest({
+/* ---------- hit-stop (safe, no ui/effects deps) ---------- */
+let hitStop = 0;
+function doHitStop(t = 0.05) {
+  hitStop = Math.max(hitStop, t);
+}
+
+/* ---------- fallback hitbox so enemies never become “invincible” ---------- */
+let atkHB = null;
+let atkHBt = 0;
+
+function getAttackHB() {
+  const hb = player?.getAttackHitbox?.();
+  if (hb) return hb;
+  if (atkHBt > 0 && atkHB) return atkHB;
+  return null;
+}
+
+/* ---------- inventory ---------- */
+const inv = { key: false };
+
+/* ---------- game start ---------- */
+function startGame() {
+  forest = new WorldForest({
     tilesW: 160,
     tilesH: 120,
     tileSize: 8,
-    seed: (Math.random()*1e9)|0
+    seed: (Math.random() * 1e9) | 0,
   });
+
+  node = new WorldNode();
+
+  world = forest;
+  room = "forest";
 
   player = new PlayerTest(world.spawn.x, world.spawn.y);
 
@@ -190,11 +210,14 @@ function startGame(){
     viewW: CONFIG.baseW,
     viewH: CONFIG.baseH,
     worldW: world.worldW,
-    worldH: world.worldH
+    worldH: world.worldH,
   });
 
+  // now safe
+  resize();
+
   pickups = new PickupManager();
-  pickups.reset(objective.shardsNeeded);
+  pickups.reset(3);
 
   enemies = new EnemyManager(world);
   enemies.reset();
@@ -205,413 +228,591 @@ function startGame(){
   fx = new FX();
   fx.reset();
 
-  // shards around spawn
-  for(let i=0;i<objective.shardsNeeded;i++){
-    const p = findOpenSpot(world, world.spawn.x, world.spawn.y, 220 + i*90);
+  quest = new Quest();
+  quest.reset();
+
+  interact = new Interactables();
+  interact.reset();
+
+  inv.key = false;
+
+  // place shards in forest
+  for (let i = 0; i < 3; i++) {
+    const p = findOpenSpot(world, world.spawn.x, world.spawn.y, 220 + i * 90);
     pickups.addShard(p.x, p.y);
   }
 
-  objective.portalOpen = false;
-  objective.win = false;
-  world.setPortalActive(false);
+  // interactables in forest
+  interact.add("note", world.spawn.x + 60, world.spawn.y + 10, {
+    text:
+      "THE FOREST IS A SIMULATION WITH TEETH.\n" +
+      "SHARDS ARE ITS EYES.\n" +
+      "THE KEY REMEMBERS WHAT YOU FORGOT.",
+  });
 
-  // enemies
+  const c = findOpenSpot(world, world.spawn.x, world.spawn.y, 320);
+  interact.add("chest", c.x, c.y, { contains: "key" });
+
+  const g = findOpenSpot(world, world.spawn.x, world.spawn.y, 420);
+  interact.add("gate", g.x, g.y, { locked: true });
+  interact.add("entrance", g.x + 70, g.y, {});
+
+  // start enemies
   enemies.spawnWaveAround(player.x, player.y, player.level);
 
-  // minimap
+  fx.text(player.x, player.y - 10, "E: INTERACT (NOTE/CHEST/GATE)", "violet");
+  fx.pulseGood(0.2);
+
   mapDirty = true;
   rebuildMinimap();
 
   state = STATE.PLAY;
-  fx.text(player.x, player.y-10, "ENTER THE NODE", "violet");
-  fx.pulseGood(0.22);
 }
 
-function findOpenSpot(world, cx, cy, radius){
-  for(let tries=0; tries<1200; tries++){
-    const a = Math.random()*Math.PI*2;
-    const d = radius * (0.35 + Math.random()*0.65);
-    const x = cx + Math.cos(a)*d;
-    const y = cy + Math.sin(a)*d;
-    if(!world.isBlockedCircle(x,y,10)) return {x:x|0,y:y|0};
+function findOpenSpot(worldObj, cx, cy, radius) {
+  for (let tries = 0; tries < 1200; tries++) {
+    const a = Math.random() * Math.PI * 2;
+    const d = radius * (0.35 + Math.random() * 0.65);
+    const x = cx + Math.cos(a) * d;
+    const y = cy + Math.sin(a) * d;
+    if (!worldObj.isBlockedCircle(x, y, 10)) return { x: x | 0, y: y | 0 };
   }
-  return {x:cx|0,y:cy|0};
+  return { x: cx | 0, y: cy | 0 };
 }
 
-canvas.addEventListener("pointerdown", ()=>{
-  if(state === STATE.START) startGame();
-  if(state === STATE.WIN) startGame();
-  if(state === STATE.DEAD) startGame();
-}, { passive:true });
+canvas.addEventListener(
+  "pointerdown",
+  () => {
+    if (state === STATE.START || state === STATE.WIN || state === STATE.DEAD)
+      startGame();
+  },
+  { passive: true }
+);
 
-window.addEventListener("keydown", (e)=>{
-  const k = (e.key||"").toLowerCase();
-  if((state === STATE.START || state === STATE.WIN || state === STATE.DEAD) && (k==="enter" || k===" ")) startGame();
-}, { passive:true });
+window.addEventListener(
+  "keydown",
+  (e) => {
+    const k = (e.key || "").toLowerCase();
+    if (
+      (state === STATE.START || state === STATE.WIN || state === STATE.DEAD) &&
+      (k === "enter" || k === " ")
+    )
+      startGame();
+  },
+  { passive: true }
+);
 
 /* ---------- loop ---------- */
 let last = now();
 let fpsS = 0;
+let waveTimer = 0;
+let tWorld = 0;
 
-function loop(t){
-  const rawDt = (t - last)/1000;
+function loop(t) {
+  const rawDt = (t - last) / 1000;
   last = t;
   const dt = Math.min(CONFIG.dtCap, rawDt);
 
-  const fps = dt>0 ? 1/dt : 0;
+  const fps = dt > 0 ? 1 / dt : 0;
   fpsS = lerp(fpsS || fps, fps, 0.08);
 
   update(dt);
   draw(fpsS);
 
   input.endFrame();
+  interactPressed = false;
+
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
-let waveTimer = 0;
+function update(dt) {
+  if (state === STATE.START || state === STATE.WIN || state === STATE.DEAD)
+    return;
 
-function update(dt){
-  if(state === STATE.START || state === STATE.WIN || state === STATE.DEAD) return;
+  // tick fallback hitbox timer
+  atkHBt = Math.max(0, atkHBt - dt);
 
-  if(hitStop > 0){
-  hitStop = Math.max(0, hitStop - dt);
-  ui.update(dt);
-  effects.update(dt * 0.35);
-  return;
-}
+  // hit-stop: freeze gameplay a tiny moment (fx still moves a bit)
+  if (hitStop > 0) {
+    hitStop = Math.max(0, hitStop - dt);
+    fx.update(dt * 0.35);
+    return;
+  }
 
   tWorld += dt;
   fx.update(dt);
 
-  // actions
-  if(input.dash()){
+  // activate forest portal after shards
+  if (room === "forest" && world?.setPortalActive) {
+    world.setPortalActive(pickups.done());
+  }
+
+  // dash
+  if (input.dash()) {
     const ok = player.tryDash();
-    if(ok){
-      cam.kick(3.5, 0.10);
+    if (ok) {
+      cam.kick(3.5, 0.1);
       fx.sparksHit(player.x, player.y, 8, "violet");
-      fx.pulseGood(0.10);
+      fx.pulseGood(0.1);
     }
   }
 
-  if(input.attack()){
-     ok = player.tryAttack();
-    if(ok){
+  // attack
+  if (input.attack()) {
+    const ok = player.tryAttack();
+    if (ok) {
       cam.kick(1.8, 0.06);
-      fx.sparksHit(player.x + player.face.x*10, player.y + player.face.y*10, 10, "violet");
+
+      const dirx = player.face?.x ?? 1;
+      const diry = player.face?.y ?? 0;
+
+      const fxX = player.x + dirx * 10;
+      const fxY = player.y + diry * 10;
+      fx.sparksHit(fxX, fxY, 10, "violet");
+
+      // reliable fallback HB
+      atkHB = {
+        x: player.x + dirx * 14,
+        y: player.y + diry * 14,
+        r: 14,
+        dmg: 14 + ((player.level | 0) * 2),
+        kb: 220,
+      };
+      atkHBt = 0.09;
     }
   }
 
-  // movement + collision
+  // movement
   player.update(dt, input, world);
 
-  // enemies update
+  // enemies
   enemies.update(dt, player, world);
 
-  // --- enemy hits player (Part 7) ---
-const hit = enemies.resolvePlayerAttack(player);
-if(hit.count){
-  camShake(3 + hit.count*1.2, 0.10);
-  effects.hitFlash(0.10);
-  doHitStop(0.035 + Math.min(0.03, hit.count*0.01));
+  // resolve player hit vs enemies (supports BOTH APIs)
+  const hb = getAttackHB();
+  let hitCount = 0;
+  let hitKills = 0;
 
-  if(hit.kills){
-    player.addXP(hit.kills * 6);
-    ui.floatText(player.x, player.y - 10, `+${hit.kills*6} XP`, "good");
-  }
-}
-
-  // resolve player attack
-   hb = player.getHitbox();
-   res = enemies.resolvePlayerHit(hb);
-  if(res.hits){
-    cam.kick(2.2 + res.hits*0.4, 0.08);
-    fx.hitFlash(0.12);
-    fx.sparksHit(hb.x, hb.y, 16 + res.hits*3, "violet");
-    fx.text(hb.x, hb.y-8, `HIT x${res.hits}`, "violet");
+  if (hb) {
+    if (typeof enemies.resolvePlayerAttack === "function") {
+      const h = enemies.resolvePlayerAttack(player);
+      hitCount = h?.count || 0;
+      hitKills = h?.kills || 0;
+    } else if (typeof enemies.resolvePlayerHit === "function") {
+      const h = enemies.resolvePlayerHit(hb);
+      // some versions return {hits,kills}
+      hitCount = h?.hits || h?.count || 0;
+      hitKills = h?.kills || 0;
+    }
   }
 
-  if(res.kills){
-    // drop essence + XP
-    drops.spawnEssence(hb.x, hb.y, 8 + res.kills*4);
-     xpGain = res.kills * 10;
-    player.addXP(xpGain);
-    fx.text(player.x, player.y-16, `+${xpGain} XP`, "good");
-    fx.pulseGood(0.18);
+  if (hitCount > 0) {
+    cam.kick(2.6 + hitCount * 0.7, 0.09);
+    if (fx.hitFlash) fx.hitFlash(0.1);
+    doHitStop(0.03 + Math.min(0.03, hitCount * 0.01));
+
+    if (hitKills > 0) {
+      const xpGain = hitKills * 6;
+      player.addXP(xpGain);
+      fx.text(player.x, player.y - 10, `+${xpGain} XP`, "good");
+      fx.pulseGood(0.16);
+    }
   }
 
   // drops
   drops.update(dt, world);
-   got = drops.tryCollect(player);
-  if(got){
+  const got = drops.tryCollect(player);
+  if (got) {
     player.heal(got * 2);
     player.addXP(got * 1);
     fx.burst(player.x, player.y, 10);
-    fx.text(player.x, player.y-12, `+${got*2} HP`, "good");
+    fx.text(player.x, player.y - 12, `+${got * 2} HP`, "good");
   }
 
   // shards
   pickups.update(dt);
-   gotShard = pickups.tryCollect(player);
-  if(gotShard){
+  const gotShard = pickups.tryCollect(player);
+  if (gotShard) {
     cam.kick(6.0, 0.14);
-    fx.hitFlash(0.14);
-    fx.burst(player.x, player.y-6, 14);
-    fx.text(player.x, player.y-18, "SHARD +1", "violet");
+    if (fx.hitFlash) fx.hitFlash(0.14);
+    fx.burst(player.x, player.y - 6, 14);
+    fx.text(player.x, player.y - 18, "SHARD +1", "violet");
+    mapDirty = true;
+  }
 
-    // boss after shard 2
-    if(pickups.collected === 2){
-      enemies.spawnBoss(player.x, player.y, player.level);
-      cam.kick(12, 0.20);
-      fx.pulseDamage(0.20);
-      fx.text(player.x, player.y-24, "BOSS EMERGES", "danger");
+  if (pickups.done()) quest.setShardsDone(true);
+
+  // interactions
+  const evt = interact.tryInteract(player, interactPressed);
+  if (evt) {
+    if (evt.type === "note") {
+      quest.done("read");
+      fx.text(player.x, player.y - 18, "NOTE READ", "violet");
+      fx.pulseGood(0.18);
+
+      const msg = evt.obj.data?.text || "THE NOTE IS BLANK. THAT'S WORSE.";
+      const lines = msg.split("\n");
+      fx.text(player.x, player.y - 30, lines[0] || "", "");
+      fx.text(player.x, player.y - 40, lines[1] || "", "");
+      fx.text(player.x, player.y - 50, lines[2] || "", "");
+    }
+
+    if (evt.type === "chest") {
+      fx.burst(evt.obj.x, evt.obj.y, 18);
+      if (fx.hitFlash) fx.hitFlash(0.12);
+      if (evt.obj.data?.contains === "key") {
+        interact.add("key", evt.obj.x + 18, evt.obj.y - 4, {});
+        fx.text(player.x, player.y - 18, "CHEST OPENED", "good");
+      } else {
+        fx.text(player.x, player.y - 18, "CHEST EMPTY", "");
+      }
+    }
+
+    if (evt.type === "key") {
+      inv.key = true;
+      quest.done("key");
+      fx.text(player.x, player.y - 18, "KEY ACQUIRED", "good");
+      fx.pulseGood(0.22);
+    }
+
+    if (evt.type === "gate") {
+      if (!inv.key) {
+        fx.text(player.x, player.y - 18, "NEED KEY", "danger");
+        fx.pulseDamage(0.18);
+      } else {
+        evt.obj.data.locked = false;
+        quest.done("gate");
+        fx.text(player.x, player.y - 18, "GATE OPENED", "good");
+        if (fx.hitFlash) fx.hitFlash(0.1);
+        fx.pulseGood(0.18);
+      }
+    }
+
+    if (evt.type === "entrance") {
+      const gateOk = quest.isDone("gate") || pickups.done();
+      if (!gateOk) {
+        fx.text(player.x, player.y - 18, "FOREST RESISTS", "danger");
+        fx.pulseDamage(0.14);
+      } else {
+        enterNode();
+      }
+    }
+
+    if (evt.type === "exit") {
+      exitNode();
     }
   }
 
-  // portal open condition
-   bossAlive = enemies.list.some(e=>e.boss && e.hp>0);
-   canOpen = pickups.done() && !bossAlive;
-
-  if(!objective.portalOpen && canOpen){
-    objective.portalOpen = true;
-    world.setPortalActive(true);
-    cam.kick(10, 0.18);
-    fx.pulseGood(0.22);
-    fx.text(world.portal.x, world.portal.y-10, "PORTAL OPEN", "good");
-  }
-
-  // waves
+  // spawn waves
   waveTimer -= dt;
-  if(waveTimer <= 0){
-    if(enemies.aliveCount() < 11){
+  if (waveTimer <= 0) {
+    const cap = room === "node" ? 6 : 11;
+    if (enemies.aliveCount() < cap) {
       enemies.spawnWaveAround(player.x, player.y, player.level);
-      fx.text(player.x, player.y-26, "SHADOWS APPROACH", "");
+      fx.text(
+        player.x,
+        player.y - 26,
+        room === "node" ? "NODE ECHOES…" : "SHADOWS APPROACH",
+        ""
+      );
     }
-    waveTimer = Math.max(2.0, 3.1 - player.level*0.12);
+    waveTimer =
+      room === "node"
+        ? Math.max(2.6, 3.6 - player.level * 0.1)
+        : Math.max(2.0, 3.1 - player.level * 0.12);
   }
 
-  // --- boss trigger ---
-if(player.level >= 5 && enemies.bossAlive !== true){
-  enemies.spawnBoss(player.x, player.y, player.level);
-  ui.toast("THE NODE GUARDIAN WAKES", 1.2, "good");
-  effects.hitFlash(0.12);
-  camShake(10, 0.20);
-}
-
-  // camera
+  // camera follow
+  cam.worldW = world.worldW;
+  cam.worldH = world.worldH;
   cam.update(dt, player.x, player.y);
 
   // death
-  if(player.hp <= 0){
+  if (player.hp <= 0) {
     state = STATE.DEAD;
     cam.kick(16, 0.25);
     fx.pulseDamage(0.35);
-    fx.hitFlash(0.18);
+    if (fx.hitFlash) fx.hitFlash(0.18);
     return;
   }
 
-  // win
-  if(world.inPortal(player.x, player.y, player.r)){
-    objective.win = true;
+  // node completion
+  if (room === "node" && world.inPortal(player.x, player.y, player.r)) {
+    quest.done("exit");
+    fx.text(player.x, player.y - 18, "NODE COMPLETE", "good");
+    fx.pulseGood(0.25);
+    exitNode();
+  }
+
+  // full win
+  if (quest.isDone("exit")) {
     state = STATE.WIN;
-    fx.pulseGood(0.30);
-    fx.hitFlash(0.14);
+    fx.pulseGood(0.3);
+    if (fx.hitFlash) fx.hitFlash(0.14);
   }
 }
 
-function draw(fps){
-  ctx.fillStyle = CONFIG.bg;
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+function enterNode() {
+  room = "node";
+  world = node;
 
-  if(state === STATE.START){
+  enemies = new EnemyManager(world);
+  enemies.reset();
+  enemies.spawnWaveAround(world.spawn.x, world.spawn.y, player.level);
+
+  interact.reset();
+  interact.add("exit", world.portal.x, world.portal.y + 20, {});
+  quest.done("node");
+
+  player.x = world.spawn.x;
+  player.y = world.spawn.y;
+
+  cam.x = clamp(player.x - CONFIG.baseW / 2, 0, world.worldW - CONFIG.baseW);
+  cam.y = clamp(player.y - CONFIG.baseH / 2, 0, world.worldH - CONFIG.baseH);
+
+  mapDirty = true;
+  rebuildMinimap();
+
+  fx.text(player.x, player.y - 18, "ENTERED NODE", "violet");
+  if (fx.hitFlash) fx.hitFlash(0.12);
+  fx.pulseGood(0.18);
+}
+
+function exitNode() {
+  room = "forest";
+  world = forest;
+
+  enemies = new EnemyManager(world);
+  enemies.reset();
+  enemies.spawnWaveAround(player.x, player.y, player.level);
+
+  interact.reset();
+
+  interact.add("note", world.spawn.x + 60, world.spawn.y + 10, {
+    text:
+      "THE FOREST IS A SIMULATION WITH TEETH.\n" +
+      "SHARDS ARE ITS EYES.\n" +
+      "THE KEY REMEMBERS WHAT YOU FORGOT.",
+  });
+
+  const c = findOpenSpot(world, world.spawn.x, world.spawn.y, 320);
+  interact.add("chest", c.x, c.y, { contains: "key" });
+
+  const g = findOpenSpot(world, world.spawn.x, world.spawn.y, 420);
+  interact.add("gate", g.x, g.y, { locked: !quest.isDone("gate") });
+  interact.add("entrance", g.x + 70, g.y, {});
+
+  player.x = world.spawn.x;
+  player.y = world.spawn.y;
+
+  cam.x = clamp(player.x - CONFIG.baseW / 2, 0, world.worldW - CONFIG.baseW);
+  cam.y = clamp(player.y - CONFIG.baseH / 2, 0, world.worldH - CONFIG.baseH);
+
+  mapDirty = true;
+  rebuildMinimap();
+
+  fx.text(player.x, player.y - 18, "BACK TO FOREST", "");
+  fx.pulseGood(0.1);
+}
+
+function draw(fps) {
+  ctx.fillStyle = CONFIG.bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (state === STATE.START) {
     drawStart();
-    if(debugOn){
-      debugEl.textContent = `STATE ${state}\nSCALE ${view.scale}x\nFPS ${fmt(fps,0)}\n`;
+    if (debugOn) {
+      debugEl.textContent = `STATE ${state}\nSCALE ${view.scale}x\nFPS ${fmt(
+        fps,
+        0
+      )}\n`;
     }
     return;
   }
 
   ctx.save();
-  ctx.scale(view.scale, view.scale);
 
-   { sx, sy } = cam.getShakeOffset();
-   camX = (cam.x + sx) | 0;
-   camY = (cam.y + sy) | 0;
+  const { sx, sy } = cam.getShakeOffset();
+  const camX = (cam.x + sx) | 0;
+  const camY = (cam.y + sy) | 0;
 
-  // world
   world.draw(ctx, camX, camY, tWorld);
-  pickups.draw(ctx, camX, camY);
+
+  if (room === "forest") pickups.draw(ctx, camX, camY);
   drops.draw(ctx, camX, camY);
   enemies.draw(ctx, camX, camY);
+  interact.draw(ctx, camX, camY);
   player.draw(ctx, camX, camY);
 
-  // world FX (sparks + floaters)
   fx.drawWorld(ctx, camX, camY);
 
-  // HUD
   drawHUD(ctx);
 
-  // overlays
   fx.drawOverlay(ctx, CONFIG.baseW, CONFIG.baseH);
 
-  if(state === STATE.WIN){
-    overlayMessage("PORTAL BREACHED", "PRESS ENTER / TAP TO RUN IT BACK", "NEXT: REAL QUESTS + INTERACT + CHESTS");
+  if (state === STATE.WIN) {
+    overlayMessage(
+      "REALM CLEARED",
+      "PRESS ENTER / TAP TO RESTART",
+      "QUEST COMPLETE"
+    );
   }
-  if(state === STATE.DEAD){
-    overlayMessage("YOU DIED", "PRESS ENTER / TAP TO RESTART", "DASH THROUGH THEM • SLASH BACK");
+  if (state === STATE.DEAD) {
+    overlayMessage("YOU DIED", "PRESS ENTER / TAP TO RESTART", "DASH • SLASH");
   }
 
   ctx.restore();
 
-  if(debugOn){
-     bossAlive = enemies?.list?.some(e=>e.boss && e.hp>0);
+  if (debugOn) {
     debugEl.textContent =
-      `STATE ${state}\n`+
-      `SCALE ${view.scale}x\n`+
-      `FPS ${fmt(fps,0)}\n`+
-      `P ${player.x|0},${player.y|0}\n`+
-      `HP ${player.hp|0}/${player.hpMax|0}\n`+
-      `LV ${player.level} XP ${player.x|0}\n`+
-      `SHARDS ${pickups.collected}/${pickups.target}\n`+
-      `BOSS ${bossAlive?"ALIVE":"NO"}\n`+
-      `PORTAL ${objective.portalOpen ? "OPEN" : "LOCKED"}\n`+
-      `ENEMIES ${enemies.aliveCount()}\n`;
+      `STATE ${state}\nROOM ${room}\nSCALE ${view.scale}x\nFPS ${fmt(fps, 0)}\n` +
+      `P ${player.x | 0},${player.y | 0}\nHP ${player.hp | 0}/${
+        player.hpMax | 0
+      }\n` +
+      `SHARDS ${pickups.collected}/3\nKEY ${inv.key ? "YES" : "NO"}\n`;
   }
 }
 
-function drawHUD(ctx){
-   pad = 10;
+function drawHUD(ctx2) {
+  const pad = 10;
 
-  // Left panel
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.fillRect(pad-2, pad-2, 176, 58);
+  // left panel
+  ctx2.fillStyle = "rgba(0,0,0,0.55)";
+  ctx2.fillRect(pad - 2, pad - 2, 196, 76);
 
   // HP
-   barW = 156;
-   hp = player.hp / player.hpMax;
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.fillRect(pad+6, pad+6, barW, 10);
-  ctx.fillStyle = "rgba(255,74,122,0.95)";
-  ctx.fillRect(pad+6, pad+6, (barW*hp)|0, 10);
+  const barW = 176;
+  const hp = player.hp / player.hpMax;
+  ctx2.fillStyle = "rgba(0,0,0,0.55)";
+  ctx2.fillRect(pad + 6, pad + 6, barW, 10);
+  ctx2.fillStyle = "rgba(255,74,122,0.95)";
+  ctx2.fillRect(pad + 6, pad + 6, (barW * hp) | 0, 10);
 
   // XP
-   xp = player.xp / player.xpNext;
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.fillRect(pad+6, pad+20, barW, 6);
-  ctx.fillStyle = "rgba(138,46,255,0.95)";
-  ctx.fillRect(pad+6, pad+20, (barW*xp)|0, 6);
+  const xp = player.xp / player.xpNext;
+  ctx2.fillStyle = "rgba(0,0,0,0.55)";
+  ctx2.fillRect(pad + 6, pad + 20, barW, 6);
+  ctx2.fillStyle = "rgba(138,46,255,0.95)";
+  ctx2.fillRect(pad + 6, pad + 20, (barW * xp) | 0, 6);
 
-  // Level text
-  ctx.textAlign = "left";
-  ctx.fillStyle = "rgba(255,255,255,0.80)";
-  ctx.font = "10px ui-monospace, Menlo, Consolas, monospace";
-  ctx.fillText(`LV ${player.level}`, pad+6, pad+40);
+  // text row
+  ctx2.textAlign = "left";
+  ctx2.fillStyle = "rgba(255,255,255,0.8)";
+  ctx2.font = "10px ui-monospace, Menlo, Consolas, monospace";
+  ctx2.fillText(`LV ${player.level}`, pad + 6, pad + 40);
+  ctx2.fillStyle = "rgba(255,255,255,0.6)";
+  ctx2.fillText(`ROOM: ${room.toUpperCase()}`, pad + 60, pad + 40);
 
-  // Objective line
-  ctx.fillStyle = "rgba(255,255,255,0.62)";
-  ctx.fillText(`SHARDS ${pickups.collected}/${pickups.target}`, pad+60, pad+40);
+  // inventory
+  ctx2.fillStyle = inv.key
+    ? "rgba(125,255,177,0.85)"
+    : "rgba(255,255,255,0.4)";
+  ctx2.fillText(inv.key ? "KEY: YES" : "KEY: NO", pad + 6, pad + 54);
 
-  // Right panel (status + minimap)
-   rightW = 112;
-   rightX = CONFIG.baseW - rightW - pad;
-
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.fillRect(rightX, pad-2, rightW, 90);
-
-   bossAlive = enemies.list.some(e=>e.boss && e.hp>0);
-   status = objective.portalOpen ? "PORTAL OPEN"
-              : bossAlive ? "KILL BOSS"
-              : pickups.done() ? "UNLOCKING"
-              : "FIND SHARDS";
-
-  ctx.textAlign = "center";
-  ctx.fillStyle = objective.portalOpen ? "rgba(125,255,177,0.90)" : "rgba(255,255,255,0.70)";
-  ctx.fillText(status, rightX + rightW/2, pad+12);
-
-  // minimap draw (cached) + live markers
-  if(mapDirty) rebuildMinimap();
-
-  // map frame area
-   mx = rightX + 8;
-   my = pad + 18;
-   MW = 96, MH = 72;
-
-  // map image
-  ctx.drawImage(mapCanvas, mx, my);
-
-  // markers (convert world coords -> map coords)
-   tilesW = world.tilesW ?? world.w ?? 1;
-   tilesH = world.tilesH ?? world.h ?? 1;
-   tileSize = world.tileSize ?? 8;
-
-   wx = player.x / (tilesW*tileSize);
-   wy = player.y / (tilesH*tileSize);
-
-  // player
-  ctx.fillStyle = "rgba(255,255,255,0.95)";
-  ctx.fillRect(mx + (wx*MW)|0, my + (wy*MH)|0, 2, 2);
-
-  // portal
-  if(world.portal){
-     px = world.portal.x / (tilesW*tileSize);
-     py = world.portal.y / (tilesH*tileSize);
-    ctx.fillStyle = objective.portalOpen ? "rgba(138,46,255,0.95)" : "rgba(255,255,255,0.45)";
-    ctx.fillRect(mx + (px*MW)|0, my + (py*MH)|0, 2, 2);
+  // interact prompt
+  if (interact.prompt) {
+    ctx2.fillStyle = "rgba(255,255,255,0.85)";
+    ctx2.fillText(interact.prompt, pad + 60, pad + 54);
   }
 
-  // enemies (tiny dots)
-  let shown = 0;
-  ctx.fillStyle = "rgba(255,74,122,0.55)";
-  for( e of enemies.list){
-    if(e.hp<=0) continue;
-    if(shown++ > 18) break;
-     ex = e.x / (tilesW*tileSize);
-     ey = e.y / (tilesH*tileSize);
-    ctx.fillRect(mx + (ex*MW)|0, my + (ey*MH)|0, 1, 1);
+  // right panel
+  const rightW = 132;
+  const rightX = CONFIG.baseW - rightW - pad;
+
+  ctx2.fillStyle = "rgba(0,0,0,0.55)";
+  ctx2.fillRect(rightX, pad - 2, rightW, 154);
+
+  // minimap
+  if (mapDirty) rebuildMinimap();
+  const mx = rightX + 18;
+  const my = pad + 6;
+  const MW = 96,
+    MH = 72;
+  ctx2.drawImage(mapCanvas, mx, my);
+
+  // markers
+  const tilesW = world.tilesW ?? world.w ?? 1;
+  const tilesH = world.tilesH ?? world.h ?? 1;
+  const tileSize = world.tileSize ?? 8;
+
+  const wx = player.x / (tilesW * tileSize);
+  const wy = player.y / (tilesH * tileSize);
+  ctx2.fillStyle = "rgba(255,255,255,0.95)";
+  ctx2.fillRect(mx + ((wx * MW) | 0), my + ((wy * MH) | 0), 2, 2);
+
+  if (world.portal) {
+    const px = world.portal.x / (tilesW * tileSize);
+    const py = world.portal.y / (tilesH * tileSize);
+    ctx2.fillStyle = "rgba(138,46,255,0.95)";
+    ctx2.fillRect(mx + ((px * MW) | 0), my + ((py * MH) | 0), 2, 2);
+  }
+
+  // quest log
+  ctx2.textAlign = "left";
+  ctx2.fillStyle = "rgba(255,255,255,0.75)";
+  ctx2.fillText("QUEST", rightX + 10, pad + 92);
+
+  let y = pad + 104;
+  for (const s of quest.list()) {
+    const done = s.done;
+    ctx2.fillStyle = done
+      ? "rgba(125,255,177,0.78)"
+      : "rgba(255,255,255,0.55)";
+    ctx2.fillText(`${done ? "✓" : "·"} ${s.text}`, rightX + 10, y);
+    y += 12;
+    if (y > pad + 150) break;
   }
 }
 
-function overlayMessage(title, sub, foot){
+function overlayMessage(title, sub, foot) {
   ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.fillRect(0,0,CONFIG.baseW,CONFIG.baseH);
+  ctx.fillRect(0, 0, CONFIG.baseW, CONFIG.baseH);
 
   ctx.textAlign = "center";
   ctx.fillStyle = "rgba(138,46,255,0.95)";
   ctx.font = "18px ui-monospace, Menlo, Consolas, monospace";
-  ctx.fillText(title, CONFIG.baseW/2, 78);
+  ctx.fillText(title, CONFIG.baseW / 2, 78);
 
-  ctx.fillStyle = "rgba(255,255,255,0.80)";
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
   ctx.font = "12px ui-monospace, Menlo, Consolas, monospace";
-  ctx.fillText(sub, CONFIG.baseW/2, 104);
+  ctx.fillText(sub, CONFIG.baseW / 2, 104);
 
   ctx.fillStyle = "rgba(255,255,255,0.55)";
   ctx.font = "10px ui-monospace, Menlo, Consolas, monospace";
-  ctx.fillText(foot || "", CONFIG.baseW/2, 126);
+  ctx.fillText(foot || "", CONFIG.baseW / 2, 126);
 }
 
-function drawStart(){
+function drawStart() {
   ctx.save();
-  ctx.scale(view.scale, view.scale);
 
   ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.fillRect(0,0,CONFIG.baseW,CONFIG.baseH);
+  ctx.fillRect(0, 0, CONFIG.baseW, CONFIG.baseH);
 
   ctx.textAlign = "center";
   ctx.fillStyle = "rgba(138,46,255,0.95)";
   ctx.font = "18px ui-monospace, Menlo, Consolas, monospace";
-  ctx.fillText("THE ADVENTURES OF CLAWBOI", CONFIG.baseW/2, 66);
+  ctx.fillText("THE ADVENTURES OF CLAWBOI", CONFIG.baseW / 2, 66);
 
-  ctx.fillStyle = "rgba(255,255,255,0.80)";
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
   ctx.font = "12px ui-monospace, Menlo, Consolas, monospace";
-  ctx.fillText("PART 5: JUICE + MINIMAP", CONFIG.baseW/2, 90);
+  ctx.fillText("FOREST • QUESTS • NODE", CONFIG.baseW / 2, 90);
 
-  ctx.fillStyle = "rgba(255,255,255,0.70)";
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
   ctx.font = "11px ui-monospace, Menlo, Consolas, monospace";
-  ctx.fillText(isTouchDevice() ? "TAP TO START" : "PRESS ENTER TO START", CONFIG.baseW/2, 116);
+  ctx.fillText(
+    isTouchDevice() ? "TAP TO START" : "PRESS ENTER TO START",
+    CONFIG.baseW / 2,
+    116
+  );
 
   ctx.fillStyle = "rgba(255,255,255,0.55)";
   ctx.font = "10px ui-monospace, Menlo, Consolas, monospace";
-  ctx.fillText("SLASH (J/SPACE) • DASH (K/SHIFT) • GET 3 SHARDS • KILL BOSS", CONFIG.baseW/2, 136);
+  ctx.fillText(
+    "E = INTERACT • J/SPACE = SLASH • K/SHIFT = DASH",
+    CONFIG.baseW / 2,
+    136
+  );
 
   ctx.restore();
 }
