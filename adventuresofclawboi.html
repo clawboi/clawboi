@@ -1,1 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>THE ADVENTURES OF CLAWBOI — Pixel RPG</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="gameWrap">
+    <canvas id="game" width="320" height="180"></canvas>
+
+    <!-- UI overlay (DOM) -->
+    <div id="hud">
+      <div class="row">
+        <div class="brand">CLAWBOI</div>
+        <div class="tiny" id="stateHint">START</div>
+      </div>
+
+      <div class="bars">
+        <div class="bar">
+          <div class="label">HP</div>
+          <div class="track"><div class="fill" id="hpFill"></div></div>
+        </div>
+        <div class="bar">
+          <div class="label">XP</div>
+          <div class="track"><div class="fill" id="xpFill"></div></div>
+        </div>
+      </div>
+
+      <div class="row bottom">
+        <div class="chip">LV <span id="lvl">1</span></div>
+        <div class="chip">ATK <span id="atk">1</span></div>
+        <div class="chip">SPD <span id="spd">1.0</span></div>
+        <div class="chip">HALLU <span id="hall">0%</span></div>
+      </div>
+
+      <div class="inv">
+        <div class="invTitle">INVENTORY</div>
+        <div class="slots" id="slots"></div>
+      </div>
+
+      <div class="centerMsg" id="centerMsg"></div>
+      <div class="subMsg" id="subMsg"></div>
+    </div>
+
+    <!-- Mobile controls -->
+    <div id="touch" class="touch">
+      <div class="joy" id="joy">
+        <div class="joyBase"></div>
+        <div class="joyKnob" id="joyKnob"></div>
+      </div>
+      <div class="btns">
+        <button class="tbtn" id="btnAttack">ATTACK</button>
+        <button class="tbtn" id="btnDash">DASH</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order matters -->
+  <script src="effects.js"></script>
+  <script src="world.js"></script>
+  <script src="player.js"></script>
+  <script src="enemies.js"></script>
+  <script src="ui.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
 
