@@ -1,301 +1,372 @@
-// player.js
-// Clawboi: movement, dash, sword, hp, xp, inventory, level, animations.
+/* =========================================================
+   PLAYER MODULE — CLAWBOI (pixel RPG-ready)
+   - 4-dir movement
+   - dash (i-frames + trail)
+   - sword attack (fast + responsive)
+   - health + damage + death
+   - XP + leveling (stats scale)
+   - inventory slots (minimal but expandable)
+   - clean hooks for EnemyManager + Effects
+   ========================================================= */
 
-window.Player = (() => {
-  const p = {
-    x: 16*16 + 8,
-    y: 16*16 + 8,
-    vx: 0, vy: 0,
-    dir: {x:0, y:1}, // facing
-    speed: 1.15,
-    dashCD: 0,
-    dashT: 0,
-    atkCD: 0,
-    atkT: 0,
-    atkArc: 0,
-    hp: 18,
-    hpMax: 18,
-    lvl: 1,
-    xp: 0,
-    xpNeed: 8,
-    atk: 2,
-    inv: Array(10).fill(null), // slots
-    invCount: {mushroom:0, crystal:0, potion:0},
-    iFrames: 0,
-    dead: false,
-    deathT: 0,
-    glow: 1
-  };
+const clamp = (n,a,b)=> Math.max(a, Math.min(b,n));
+const lerp  = (a,b,t)=> a + (b-a)*t;
 
-  function addXP(n){
-    if(p.dead) return;
-    p.xp += n;
-    while(p.xp >= p.xpNeed){
-      p.xp -= p.xpNeed;
-      p.lvl++;
-      p.xpNeed = Math.floor(p.xpNeed*1.35 + 4);
-      // level ups: health/atk/speed/glow
-      p.hpMax += 3;
-      p.hp = p.hpMax;
-      p.atk += 1;
-      p.speed += 0.06;
-      p.glow += 0.08;
-      window.UI?.toast(`LEVEL UP → ${p.lvl}`, "You feel the violet hum inside you.");
-      window.Effects?.addFlash(1.2);
-      window.Effects?.addShake(5);
-    }
+function norm(dx,dy){
+  const m = Math.hypot(dx,dy) || 1;
+  return {x:dx/m, y:dy/m};
+}
+
+export class Player{
+  constructor(x,y){
+    // position
+    this.x=x; this.y=y;
+
+    // hitbox (kept tight)
+    this.width=14;
+    this.height=18;
+
+    // direction (for sword hitbox)
+    this.dirX=1;
+    this.dirY=0;
+
+    // movement
+    this.speedBase=62;     // px/sec
+    this.speedBonus=0;
+    this.vx=0; this.vy=0;
+
+    // combat stats
+    this.level=1;
+    this.xp=0;
+    this.xpToNext=60;
+
+    this.maxHpBase=100;
+    this.maxHp=this.maxHpBase;
+    this.hp=this.maxHp;
+
+    this.attackBase=10;
+    this.attackPower=this.attackBase;
+
+    this.attackRange=22;
+    this.attackWidth=14;
+
+    // state
+    this.dead=false;
+    this.respawnTimer=0;
+
+    // damage / invuln
+    this.invuln=0;
+    this.hitFlash=0;
+    this.knockX=0; this.knockY=0;
+    this.knockTime=0;
+
+    // attack timing
+    this.isAttacking=false;
+    this.attackTimer=0;
+    this.attackCd=0;
+
+    // dash
+    this.dashing=false;
+    this.dashTimer=0;
+    this.dashCd=0;
+
+    // dash tuning
+    this.dashDuration=0.12;
+    this.dashCooldown=0.42;
+    this.dashSpeed=220; // additional burst
+
+    // “feel”
+    this.hitStop=0;       // tiny pause for impact
+    this.t=0;
+
+    // inventory (8 slots)
+    this.inventory = new Array(8).fill(null);
+    this.selectedSlot = 0;
+
+    // hallucination XP bonus
+    this.hallucinationBonus = 0; // controlled elsewhere
   }
 
-  function pickup(type){
-    // add to inventory and count
-    p.invCount[type] = (p.invCount[type]||0)+1;
-
-    // place into first empty slot with icon
-    const icon = type==="mushroom" ? "🍄" : type==="crystal" ? "✦" : "✚";
-    for(let i=0;i<p.inv.length;i++){
-      if(!p.inv[i]){
-        p.inv[i] = {type, icon};
-        break;
-      }
-    }
-
-    window.UI?.syncInventory(p.inv);
+  get speed(){
+    return (this.speedBase + this.speedBonus);
   }
 
-  function consume(type){
-    // remove one from inventory slots
-    for(let i=0;i<p.inv.length;i++){
-      if(p.inv[i]?.type === type){
-        p.inv[i]=null;
-        break;
-      }
-    }
-    p.invCount[type] = Math.max(0, (p.invCount[type]||0)-1);
-    window.UI?.syncInventory(p.inv);
-
-    // effects
-    if(type==="potion"){
-      p.hp = Math.min(p.hpMax, p.hp + 8);
-      window.UI?.toast("POTION", "Warm static stitches you together.");
-    }else{
-      // hallucination trigger
-      const dur = type==="mushroom" ? 9 : 12;
-      const intensity = type==="mushroom" ? 1.0 : 1.25;
-      window.Effects?.startHallucination(dur, intensity);
-      window.UI?.toast("HALLUCINATION MODE", "Reality pixelates. Enemies morph.");
-      addXP(2); // reward for entering mode
-    }
-    window.Effects?.burst(p.x,p.y,12,"rgba(138,46,255,.9)");
-    window.Effects?.addFlash(0.8);
-    window.Audio?.sfx.pickup();
+  get hpPct(){
+    return this.maxHp>0 ? this.hp/this.maxHp : 0;
   }
 
-  function hurt(dmg, knockX, knockY){
-    if(p.dead) return;
-    if(p.iFrames > 0) return;
-
-    p.hp -= dmg;
-    p.iFrames = 0.55;
-    p.vx += knockX;
-    p.vy += knockY;
-    window.Effects?.addFlash(0.9);
-    window.Effects?.addShake(6);
-    window.Effects?.burst(p.x,p.y,10,"rgba(255,74,122,.9)");
-    window.Audio?.sfx.hit();
-
-    if(p.hp <= 0){
-      p.hp = 0;
-      p.dead = true;
-      p.deathT = 0;
-      window.UI?.toast("YOU DIED", "Press R or tap RESTART.");
-      window.Effects?.addShake(10);
-      window.Effects?.addFlash(1.4);
-    }
-  }
-
-  function update(dt, input, world){
-    if(p.dead){
-      p.deathT += dt;
+  /* ===========================
+     INPUT API EXPECTED
+     input = {
+       up,down,left,right,
+       attack, dash,
+       use, nextSlot, prevSlot
+     }
+     =========================== */
+  update(dt, input, world, fx){
+    if(this.dead){
+      this.respawnTimer = Math.max(0, this.respawnTimer - dt);
       return;
     }
 
-    p.iFrames = Math.max(0, p.iFrames - dt);
-    p.dashCD = Math.max(0, p.dashCD - dt);
-    p.atkCD  = Math.max(0, p.atkCD - dt);
-    p.atkT   = Math.max(0, p.atkT - dt);
-    p.dashT  = Math.max(0, p.dashT - dt);
+    this.t += dt;
 
-    // consume quick keys (1-3)
-    if(input.consumeMushroom){ if(p.invCount.mushroom>0) consume("mushroom"); }
-    if(input.consumeCrystal){ if(p.invCount.crystal>0) consume("crystal"); }
-    if(input.consumePotion){ if(p.invCount.potion>0) consume("potion"); }
-
-    // attack
-    if(input.attack && p.atkCD<=0){
-      p.atkCD = 0.22;
-      p.atkT  = 0.14;
-      // set arc orientation by facing dir
-      p.atkArc = Math.atan2(p.dir.y, p.dir.x);
-      window.Effects?.addShake(2);
-      window.Audio?.sfx.slash();
+    // hit stop
+    if(this.hitStop>0){
+      this.hitStop = Math.max(0, this.hitStop - dt);
+      return; // freeze player updates briefly (impact feel)
     }
 
-    // dash
-    if(input.dash && p.dashCD<=0){
-      p.dashCD = 0.75;
-      p.dashT  = 0.12;
-      // burst speed
-      p.vx += p.dir.x * 6.0;
-      p.vy += p.dir.y * 6.0;
-      window.Effects?.burst(p.x,p.y,10,"rgba(138,46,255,.75)");
-      window.Effects?.addShake(4);
+    // timers
+    this.invuln = Math.max(0, this.invuln - dt);
+    this.hitFlash = Math.max(0, this.hitFlash - dt);
+    this.attackCd = Math.max(0, this.attackCd - dt);
+    this.dashCd = Math.max(0, this.dashCd - dt);
+
+    // knockback overrides motion
+    if(this.knockTime>0){
+      this.knockTime -= dt;
+      this.x += this.knockX * dt;
+      this.y += this.knockY * dt;
+      this._clampToWorld(world);
+      return;
     }
 
-    // movement intent
-    let mx=input.mx, my=input.my;
-    const mag = Math.hypot(mx,my);
-    if(mag>0.01){ mx/=mag; my/=mag; }
+    // choose direction based on input
+    let mx=0, my=0;
+    if(input.left) mx -= 1;
+    if(input.right) mx += 1;
+    if(input.up) my -= 1;
+    if(input.down) my += 1;
 
-    // update facing
-    if(Math.abs(mx)+Math.abs(my) > 0.01){
-      p.dir.x = mx; p.dir.y = my;
-    }
+    if(mx!==0 || my!==0){
+      const n = norm(mx,my);
+      mx=n.x; my=n.y;
 
-    // acceleration
-    const sp = p.speed * (p.dashT>0 ? 1.35 : 1.0);
-    p.vx += mx * sp;
-    p.vy += my * sp;
-
-    // friction
-    p.vx *= 0.78;
-    p.vy *= 0.78;
-
-    // move with collision (simple)
-    moveWithCollision(world, p.vx, 0);
-    moveWithCollision(world, 0, p.vy);
-
-    // pick up items
-    for(const it of world.items){
-      if(!it.alive) continue;
-      const d = Math.hypot(it.x - p.x, it.y - p.y);
-      if(d < 10){
-        it.alive=false;
-        pickup(it.type);
-        addXP(1);
-        window.Audio?.sfx.pickup();
-        window.Effects?.burst(p.x,p.y,10,"rgba(138,46,255,.85)");
+      // store facing for sword
+      // choose dominant axis to keep 4-direction “RPG” feeling
+      if(Math.abs(mx) > Math.abs(my)){
+        this.dirX = mx>0 ? 1 : -1; this.dirY = 0;
+      }else{
+        this.dirX = 0; this.dirY = my>0 ? 1 : -1;
       }
     }
 
-    world.clampToWorld(p);
-  }
+    // dash
+    if(input.dash && !this.dashing && this.dashCd<=0){
+      this._startDash(fx);
+    }
 
-  function moveWithCollision(world, dx, dy){
-    if(dx===0 && dy===0) return;
+    // attack
+    if(input.attack && !this.isAttacking && this.attackCd<=0){
+      this._startAttack(fx);
+    }
 
-    const nx = p.x + dx;
-    const ny = p.y + dy;
+    // inventory cycling (optional)
+    if(input.nextSlot){
+      this.selectedSlot = (this.selectedSlot+1) % this.inventory.length;
+    }
+    if(input.prevSlot){
+      this.selectedSlot = (this.selectedSlot-1+this.inventory.length) % this.inventory.length;
+    }
 
-    // 8px radius
-    const r = 6;
+    // update attack frames
+    if(this.isAttacking){
+      this.attackTimer -= dt;
+      if(this.attackTimer<=0){
+        this.isAttacking=false;
+      }
+    }
 
-    // check corners
-    const collide =
-      world.isSolidAt(nx-r, ny-r) ||
-      world.isSolidAt(nx+r, ny-r) ||
-      world.isSolidAt(nx-r, ny+r) ||
-      world.isSolidAt(nx+r, ny+r);
+    // update dash frames
+    if(this.dashing){
+      this.dashTimer -= dt;
+      if(this.dashTimer<=0){
+        this.dashing=false;
+      }
+    }
 
-    if(!collide){
-      p.x = nx;
-      p.y = ny;
-    }else{
-      // soften by partial move
-      p.vx *= 0.35;
-      p.vy *= 0.35;
+    // movement
+    const slowWhileAttacking = this.isAttacking ? 0.78 : 1.0;
+    const dashBoost = this.dashing ? this.dashSpeed : 0;
+
+    const targetVX = mx * (this.speed*slowWhileAttacking + dashBoost);
+    const targetVY = my * (this.speed*slowWhileAttacking + dashBoost);
+
+    // snappy but smooth acceleration
+    const accel = this.dashing ? 0.55 : 0.22;
+    this.vx = lerp(this.vx, targetVX, accel);
+    this.vy = lerp(this.vy, targetVY, accel);
+
+    // collide against world
+    this._moveAndCollide(dt, world);
+
+    // spawn subtle trail while dashing
+    if(this.dashing && fx?.trail){
+      fx.trail(this.x+this.width/2, this.y+this.height/2, this.dirX, this.dirY, "violet");
     }
   }
 
-  function swordHitbox(){
-    if(p.atkT<=0) return null;
-    // sword reach
-    const reach = 14;
-    const x = p.x + Math.cos(p.atkArc)*reach;
-    const y = p.y + Math.sin(p.atkArc)*reach;
-    return {x,y,r:10};
+  _startDash(fx){
+    this.dashing = true;
+    this.dashTimer = this.dashDuration;
+    this.dashCd = this.dashCooldown;
+
+    // dash i-frames
+    this.invuln = Math.max(this.invuln, 0.12);
+
+    if(fx?.shake) fx.shake(3, 0.08);
+    if(fx?.spark) fx.spark(this.x+this.width/2, this.y+this.height/2, "violet", 8);
+    if(fx?.sfxDash) fx.sfxDash();
   }
 
-  function draw(ctx, cam, t, halluAmt){
-    const x = Math.floor(p.x - cam.x);
-    const y = Math.floor(p.y - cam.y);
+  _startAttack(fx){
+    this.isAttacking = true;
+    this.attackTimer = 0.14; // active window
+    this.attackCd = 0.22;    // cooldown
 
-    // aura glow (grows with level)
-    const glow = (0.10 + 0.04*p.glow) * (1 + halluAmt*0.6);
+    if(fx?.slash){
+      fx.slash(this.x+this.width/2, this.y+this.height/2, this.dirX, this.dirY);
+    }
+    if(fx?.sfxSlash) fx.sfxSlash();
+  }
+
+  takeDamage(amount, knockX=0, knockY=0){
+    if(this.dead) return false;
+    if(this.invuln>0) return false;
+
+    this.hp = Math.max(0, this.hp - amount);
+    this.invuln = 0.50;       // classic RPG i-frames
+    this.hitFlash = 0.16;
+    this.hitStop = 0.04;
+
+    this.knockX = knockX;
+    this.knockY = knockY;
+    this.knockTime = 0.10;
+
+    if(this.hp<=0){
+      this.dead = true;
+      this.respawnTimer = 1.2;
+    }
+    return true;
+  }
+
+  heal(amount){
+    if(this.dead) return;
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+  }
+
+  addXP(amount){
+    if(this.dead) return;
+    // hallucination bonus
+    const bonus = 1 + (this.hallucinationBonus || 0);
+    this.xp += Math.floor(amount * bonus);
+
+    while(this.xp >= this.xpToNext){
+      this.xp -= this.xpToNext;
+      this._levelUp();
+    }
+  }
+
+  _levelUp(){
+    this.level += 1;
+
+    // scale stats
+    this.maxHp = Math.floor(this.maxHpBase + (this.level-1)*14);
+    this.attackPower = Math.floor(this.attackBase + (this.level-1)*2.2);
+    this.speedBonus = Math.min(28, (this.level-1)*2);
+
+    // restore some HP on level
+    this.hp = Math.min(this.maxHp, this.hp + Math.floor(this.maxHp*0.35));
+
+    // next xp curve
+    this.xpToNext = Math.floor(60 + (this.level-1)*22 + Math.pow(this.level,1.15)*8);
+  }
+
+  _moveAndCollide(dt, world){
+    // X move
+    const nx = this.x + this.vx*dt;
+    if(!this._blockedRect(world, nx, this.y, this.width, this.height)){
+      this.x = nx;
+    }else{
+      this.vx = 0;
+    }
+
+    // Y move
+    const ny = this.y + this.vy*dt;
+    if(!this._blockedRect(world, this.x, ny, this.width, this.height)){
+      this.y = ny;
+    }else{
+      this.vy = 0;
+    }
+
+    this._clampToWorld(world);
+  }
+
+  _blockedRect(world, x,y,w,h){
+    // sample corners (pixel world should provide isBlockedPx)
+    return (
+      world.isBlockedPx(x,y) ||
+      world.isBlockedPx(x+w,y) ||
+      world.isBlockedPx(x,y+h) ||
+      world.isBlockedPx(x+w,y+h)
+    );
+  }
+
+  _clampToWorld(world){
+    this.x = clamp(this.x, 2, world.widthPx - this.width - 2);
+    this.y = clamp(this.y, 2, world.heightPx - this.height - 2);
+  }
+
+  // simple pixel sprite (placeholder) until you add true sprite sheet
+  draw(ctx, camX, camY, hallucinating=false){
+    const x = Math.floor(this.x - camX);
+    const y = Math.floor(this.y - camY);
+
     ctx.save();
-    ctx.globalAlpha = 0.22 + glow;
-    ctx.fillStyle = "rgba(138,46,255,1)";
-    ctx.fillRect(x-10, y-10, 20, 20);
-    ctx.restore();
 
-    // body sprite pixel art (simple but distinct)
-    // idle animation: hair sway + violet pulse
-    const bob = Math.sin(t*5)*0.6;
-    const pulse = 0.6 + 0.4*Math.sin(t*3);
+    // violet aura (scales with level)
+    const glow = clamp(0.12 + this.level*0.01, 0.12, 0.28);
+    const pulse = 0.55 + 0.45*Math.sin(performance.now()*0.006 + this.t);
 
-    // shadow
-    ctx.globalAlpha = 0.30;
-    ctx.fillStyle = "#000";
-    ctx.fillRect(x-5, y+5, 10, 3);
+    ctx.globalAlpha = hallucinating ? (glow + 0.10*pulse) : (glow*0.8 + 0.08*pulse);
+    ctx.fillStyle = "#8a2eff";
+    ctx.fillRect(x-4, y-4, this.width+8, this.height+8);
+
+    // body (black outfit)
     ctx.globalAlpha = 1;
+    ctx.fillStyle = (this.hitFlash>0) ? "#ffffff" : "#07040a";
+    ctx.fillRect(x, y+4, this.width, this.height-4);
 
-    // legs (black)
-    ctx.fillStyle = "rgba(10,10,14,1)";
-    ctx.fillRect(x-3, y+1, 2, 6);
-    ctx.fillRect(x+1, y+1, 2, 6);
-
-    // torso (black + violet trim)
-    ctx.fillStyle = "rgba(12,12,18,1)";
-    ctx.fillRect(x-4, y-6, 8, 8);
-
-    ctx.fillStyle = `rgba(138,46,255,${0.55+0.25*pulse})`;
-    ctx.fillRect(x-4, y-2, 8, 1);
-
-    // head (pale)
-    ctx.fillStyle = "rgba(235,235,240,1)";
-    ctx.fillRect(x-3, y-12, 6, 6);
+    // head (pale skin)
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = (this.hitFlash>0) ? "#ffffff" : "#e8e2ef";
+    ctx.fillRect(x+3, y, 8, 6);
 
     // hair (blonde)
-    ctx.fillStyle = "rgba(245,220,120,1)";
-    ctx.fillRect(x-4, y-13 + bob, 8, 3);
-    ctx.fillRect(x-3, y-10 + bob, 6, 1);
+    const sway = Math.sin(performance.now()*0.006)*1;
+    ctx.fillStyle = "#e7d06a";
+    ctx.fillRect(x+2, y-1 + sway, 10, 3);
 
-    // violet accents (glow)
-    ctx.fillStyle = `rgba(138,46,255,${0.35+0.25*pulse})`;
-    ctx.fillRect(x-5, y-6, 1, 8);
-    ctx.fillRect(x+4, y-6, 1, 8);
+    // violet accents
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = "#8a2eff";
+    ctx.fillRect(x+2, y+11, 10, 2);
 
-    // damage flicker
-    if(p.iFrames>0){
+    // dash outline
+    if(this.dashing){
       ctx.globalAlpha = 0.55;
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(x-5,y-14,10,16);
-      ctx.globalAlpha = 1;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(x-1, y-1, this.width+2, this.height+2);
     }
 
-    // sword swing visual
-    const hb = swordHitbox();
-    if(hb){
-      const sx = Math.floor(hb.x - cam.x);
-      const sy = Math.floor(hb.y - cam.y);
-      ctx.globalAlpha = 0.55;
-      ctx.fillStyle = "rgba(255,255,255,.9)";
-      ctx.fillRect(sx-1, sy-6, 2, 12);
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = "rgba(138,46,255,.65)";
-      ctx.fillRect(sx-2, sy-2, 4, 4);
+    // invuln blink
+    if(this.invuln>0){
+      ctx.globalAlpha = 0.45 + 0.35*Math.sin(performance.now()*0.03);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(x, y, this.width, this.height);
     }
+
+    ctx.restore();
   }
-
-  return { p, update, draw, hurt, addXP, swordHitbox, consume };
-})();
-
+}
