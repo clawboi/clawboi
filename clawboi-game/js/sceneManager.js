@@ -1,19 +1,33 @@
-export class Scenes{
+// sceneManager.js
+export class Scenes {
+
   constructor(){
     this.stack = [];
   }
-  push(s){ this.stack.push(s); }
-  pop(){ return this.stack.pop(); }
-  clear(){ this.stack.length = 0; }
-  top(){ return this.stack[this.stack.length - 1] || null; }
+
+  push(scene){
+    this.stack.push(scene);
+  }
+
+  pop(){
+    this.stack.pop();
+  }
+
+  clear(){
+    this.stack.length = 0;
+  }
 
   update(dt){
-    const s = this.top();
-    if (s && typeof s.update === "function") s.update(dt);
+    if(this.stack.length){
+      const top = this.stack[this.stack.length-1];
+      if(top.update) top.update(dt);
+    }
   }
+
   draw(ctx){
-    const s = this.top();
-    if (s && typeof s.draw === "function") s.draw(ctx);
+    if(this.stack.length){
+      const top = this.stack[this.stack.length-1];
+      if(top.draw) top.draw(ctx);
+    }
   }
 }
-
