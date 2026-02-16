@@ -1,116 +1,73 @@
-/* style.css - canvas layering + perfect centering, no surprises */
-
 :root{
-  --bg:#05060a;
-  --panel: rgba(12, 12, 18, 0.72);
-  --stroke: rgba(179, 136, 255, 0.22);
-  --violet:#b388ff;
+  --bg:#07070c;
+  --panel:rgba(0,0,0,.45);
+  --vio:#b388ff;
 }
 
 *{ box-sizing:border-box; }
+html,body{ height:100%; margin:0; background:var(--bg); color:#fff; }
 
-html,body{
-  width:100%;
-  height:100%;
-  margin:0;
-  padding:0;
-  background: var(--bg);
-  color:#fff;
+body{
+  display:flex;
+  align-items:center;
+  justify-content:center;
   overflow:hidden;
   font-family: ui-monospace, Menlo, Consolas, monospace;
 }
 
+/* Game stage */
 #engineRoot{
-  position:fixed;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background: radial-gradient(circle at 50% 45%, rgba(179,136,255,0.08), rgba(0,0,0,0) 55%),
-              linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.75));
-}
-
-/* The canvas stack container */
-#stack{
   position:relative;
-  width: min(96vw, 980px);
-  height: min(86vh, 620px);
-  border: 1px solid var(--stroke);
+  width: min(96vw, 1100px);
+  height: min(86vh, 720px);
+  background: radial-gradient(120% 140% at 50% 20%, rgba(179,136,255,.10), transparent 60%);
+  border: 1px solid rgba(179,136,255,.25);
   border-radius: 14px;
-  background: rgba(0,0,0,0.22);
-  box-shadow: 0 12px 90px rgba(0,0,0,0.7);
+  box-shadow: 0 20px 60px rgba(0,0,0,.55);
   overflow:hidden;
 }
 
-/* ALL canvases share same sizing and stack */
+/* Canvas stack */
 canvas{
   position:absolute;
   inset:0;
   width:100%;
   height:100%;
-  display:block;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
 
-/* z-order */
-#world{ z-index: 1; background: transparent; }
-#fx{    z-index: 2; background: transparent; }
-#ui{    z-index: 3; background: transparent; }
+/* keep ui on top */
+#ui{ pointer-events:none; }
+#fx{ pointer-events:none; }
 
-/* Mobile buttons (if present) */
+/* mobile buttons */
 #mobile{
   position:absolute;
-  z-index:10;
   left:14px;
   top:14px;
   display:flex;
   flex-direction:column;
   gap:10px;
-  pointer-events:auto;
+  z-index:50;
 }
 
 #mobile button{
-  width:62px;
-  height:62px;
-  border-radius:999px;
-  border:1px solid rgba(179,136,255,0.35);
-  background: rgba(120,60,255,0.22);
-  color: rgba(255,255,255,0.9);
-  font-size:18px;
+  width:58px;
+  height:58px;
+  border-radius:50%;
+  border:1px solid rgba(179,136,255,.45);
+  background: rgba(82,35,160,.25);
+  color: white;
+  font-size: 22px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.55), 0 0 22px rgba(179,136,255,.25);
   cursor:pointer;
-  box-shadow: 0 8px 28px rgba(100,30,255,0.22);
 }
-
 #mobile button:active{
-  transform: translateY(1px) scale(0.98);
-  background: rgba(120,60,255,0.35);
+  transform: translateY(1px) scale(.98);
 }
 
-/* Debug element if you have it */
-#debug{
-  position:absolute;
-  z-index:20;
-  right:12px;
-  top:10px;
-  padding:8px 10px;
-  border-radius:10px;
-  background: rgba(0,0,0,0.55);
-  border: 1px solid rgba(255,255,255,0.10);
-  font-size:12px;
-  white-space:pre;
-  display:none;
-  pointer-events:none;
-}
-
-/* Small footer note if you have it */
-#footerNote{
-  position:fixed;
-  left:0;
-  right:0;
-  bottom:10px;
-  text-align:center;
-  opacity:0.55;
-  font-size:11px;
-  pointer-events:none;
+/* hide mobile buttons on desktop if you want */
+@media (pointer:fine){
+  #mobile{ opacity:.55; }
 }
