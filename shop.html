@@ -1063,10 +1063,11 @@
         const thumb = card.querySelector('.thumb');
 
         thumb.addEventListener('pointerdown', (e)=>{
-          down=true;
-          sx=e.clientX; sy=e.clientY;
-          thumb.setPointerCapture(e.pointerId);
-        });
+  if (e.target.closest('.arrowBtn')) return; // ✅ don't hijack arrow clicks
+  down=true;
+  sx=e.clientX; sy=e.clientY;
+  thumb.setPointerCapture(e.pointerId);
+});
         thumb.addEventListener('pointerup', (e)=>{
           if(!down) return;
           down=false;
