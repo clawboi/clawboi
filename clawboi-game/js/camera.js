@@ -1,48 +1,43 @@
-import {M} from "./math.js";
-import {CONFIG} from "./config.js";
+import { clamp } from "./utils.js";
 
 export class Camera{
+  constructor(viewW, viewH){
+    this.viewW = viewW;
+    this.viewH = viewH;
+    this.x = 0;
+    this.y = 0;
+    this.worldW = viewW;
+    this.worldH = viewH;
 
-constructor(w,h){
-this.x=0;
-this.y=0;
-this.w=w;
-this.h=h;
-this.worldW=w;
-this.worldH=h;
-this.shake=0;
-this.t=0;
-}
+    this.shakeT = 0;
+    this.shakeS = 0;
+  }
 
-setWorld(w,h){
-this.worldW=w;
-this.worldH=h;
-}
+  setWorld(w, h){
+    this.worldW = w;
+    this.worldH = h;
+  }
 
-follow(dt,x,y){
+  kick(str=2, time=0.08){
+    this.shakeS = Math.max(this.shakeS, str);
+    this.shakeT = Math.max(this.shakeT, time);
+  }
 
-this.x=M.lerp(this.x,x-this.w/2,CONFIG.CAM_LERP*dt);
-this.y=M.lerp(this.y,y-this.h/2,CONFIG.CAM_LERP*dt);
+  getShake(){
+    if (this.shakeT <= 0) return { sx:0, sy:0 };
+    const a = (Math.random()*2 - 1) * this.shakeS;
+    const b = (Math.random()*2 - 1) * this.shakeS;
+    return { sx:a|0, sy:b|0 };
+  }
 
-this.x=M.clamp(this.x,0,this.worldW-this.w);
-this.y=M.clamp(this.y,0,this.worldH-this.h);
+  update(dt, targetX, targetY){
+    this.shakeT = Math.max(0, this.shakeT - dt);
+    if (this.shakeT === 0) this.shakeS = 0;
 
-if(this.t>0){
-this.t-=dt;
-this.shake*=1-dt*CONFIG.SHAKE_DECAY;
-}else this.shake=0;
-}
+    const tx = targetX - this.viewW/2;
+    const ty = targetY - this.viewH/2;
 
-kick(p,t){
-this.shake=p;
-this.t=t;
-}
-
-offset(){
-return{
-x:this.x+(Math.random()-.5)*this.shake,
-y:this.y+(Math.random()-.5)*this.shake
-};
-}
-
+    this.x = clamp(tx, 0, Math.max(0, this.worldW - this.viewW));
+    this.y = clamp(ty, 0, Math.max(0, this.worldH - this.viewH));
+  }
 }
