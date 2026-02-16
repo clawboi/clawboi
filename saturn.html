@@ -24,18 +24,25 @@ a{color:#fff;text-decoration:none}
   mix-blend-mode:screen;filter:blur(16px) saturate(1.1);
 }
 
-.planetWrap{position:relative;width:220px;height:220px;margin:12px auto 0;animation:float 9.4s ease-in-out infinite}
+/* starfield canvas */
+.fx{position:fixed;inset:0;z-index:1;pointer-events:none}
+.scan{position:fixed;inset:0;pointer-events:none;z-index:2;opacity:.06;mix-blend-mode:overlay;
+  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
+}
+
+.planetWrap{position:relative;width:260px;height:260px;margin:12px auto 0;animation:float 9.4s ease-in-out infinite}
 @keyframes float{50%{transform:translateY(-12px)}}
 
 .planet{
   position:absolute;left:50%;top:50%;
   transform:translate(-50%,-50%);
-  width:170px;height:170px;border-radius:50%;
+  width:178px;height:178px;border-radius:50%;
   background:
     radial-gradient(circle at 30% 30%, rgba(255,255,255,.14), transparent 35%),
     radial-gradient(circle at 50% 55%, rgba(235,210,150,.44), rgba(120,90,40,.18) 55%, transparent 78%),
     radial-gradient(circle at 65% 75%, rgba(0,0,0,.36), transparent 60%);
   box-shadow:0 0 26px rgba(235,210,150,.14),0 0 110px rgba(138,46,255,.10);
+  will-change:transform,filter,box-shadow;
 }
 
 /* ring */
@@ -43,10 +50,23 @@ a{color:#fff;text-decoration:none}
   position:absolute;
   left:50%;top:52%;
   transform:translate(-50%,-50%) rotate(-14deg);
-  width:240px;height:56px;border-radius:999px;
+  width:260px;height:60px;border-radius:999px;
   background:linear-gradient(90deg, transparent, rgba(255,255,255,.18), rgba(138,46,255,.12), transparent);
   opacity:.85;
   filter:blur(.2px);
+  will-change:transform,opacity;
+}
+
+/* waveform halo (canvas) */
+.halo{
+  position:absolute;
+  left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:260px;height:260px;
+  border-radius:50%;
+  pointer-events:none;
+  opacity:.9;
+  filter:drop-shadow(0 0 18px rgba(235,210,150,.14)) drop-shadow(0 0 38px rgba(138,46,255,.12));
 }
 
 h1{margin:22px 0 0;letter-spacing:.34em;text-transform:uppercase;font-size:clamp(22px,5vw,52px);
@@ -64,11 +84,16 @@ h1{margin:22px 0 0;letter-spacing:.34em;text-transform:uppercase;font-size:clamp
 .hint.rainbow{animation:rainbow 4s linear infinite;}
 @keyframes rainbow{0%{color:#ff2a2a}25%{color:#ffe600}50%{color:#00ff9c}75%{color:#4aa3ff}100%{color:#ff2aff}}
 .note{margin-top:14px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;opacity:.55}
-@media (prefers-reduced-motion: reduce){.planetWrap,.player::before{animation:none!important}}
+
+@media (prefers-reduced-motion: reduce){
+  .planetWrap,.player::before{animation:none!important}
+}
 </style>
 </head>
 <body>
 <div class="bg"></div>
+<canvas class="fx" id="fx"></canvas>
+<div class="scan"></div>
 
 <div class="top">
   <div class="brand"><a href="index.html">CLAWBOI</a></div>
@@ -79,8 +104,9 @@ h1{margin:22px 0 0;letter-spacing:.34em;text-transform:uppercase;font-size:clamp
 
 <div class="wrap">
   <div class="planetWrap" aria-hidden="true">
-    <div class="ring"></div>
-    <div class="planet"></div>
+    <canvas class="halo" id="halo" width="520" height="520"></canvas>
+    <div class="ring" id="ring"></div>
+    <div class="planet" id="planet"></div>
   </div>
 
   <h1>SATURN</h1>
@@ -99,15 +125,183 @@ h1{margin:22px 0 0;letter-spacing:.34em;text-transform:uppercase;font-size:clamp
 const player=document.getElementById("player");
 const audio=document.getElementById("audio");
 const hint=document.getElementById("hint");
+const planet=document.getElementById("planet");
+const ring=document.getElementById("ring");
+
 function setHint(on){hint.textContent=on?"PLAYING":"TAP TO PLAY";hint.classList.toggle("rainbow",on);}
+
+/* --- Audio reactive setup --- */
+let aCtx, analyser, srcNode, data, playing=false, amp=0;
+
+function setupAudio(){
+  if(aCtx) return;
+  aCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = aCtx.createAnalyser();
+  analyser.fftSize = 1024;
+  data = new Uint8Array(analyser.frequencyBinCount);
+  srcNode = aCtx.createMediaElementSource(audio);
+  const gain = aCtx.createGain();
+  gain.gain.value = 0.95;
+  srcNode.connect(analyser);
+  analyser.connect(gain);
+  gain.connect(aCtx.destination);
+}
+function getAmp(){
+  if(!analyser || !playing) return amp*0.92;
+  analyser.getByteFrequencyData(data);
+  let sum=0;
+  const start=2, end=Math.min(80, data.length);
+  for(let i=start;i<end;i++) sum += data[i];
+  const avg = (sum/(end-start))/255;
+  amp = amp*0.82 + avg*0.18;
+  return amp;
+}
+
+/* --- Halo waveform --- */
+const halo=document.getElementById("halo");
+const hctx=halo.getContext("2d");
+function drawHalo(){
+  const level=getAmp();
+  const W=halo.width, H=halo.height;
+  hctx.clearRect(0,0,W,H);
+
+  const cx=W/2, cy=H/2;
+  const baseR=180;
+  const bars=96;
+
+  for(let i=0;i<bars;i++){
+    const t=i/bars*Math.PI*2;
+    const idx = data ? Math.min(data.length-1, Math.floor(i*(data.length/bars))) : i;
+    const raw = (analyser && data && playing) ? data[idx]/255 : 0;
+
+    const r1 = baseR + raw*22 + level*36;
+    const r2 = baseR + raw*46 + level*64;
+
+    const x1 = cx + Math.cos(t)*r1;
+    const y1 = cy + Math.sin(t)*r1;
+    const x2 = cx + Math.cos(t)*r2;
+    const y2 = cy + Math.sin(t)*r2;
+
+    hctx.lineWidth = 2;
+    hctx.strokeStyle = `rgba(235,210,150,${0.06 + raw*0.18 + level*0.10})`;
+    hctx.beginPath(); hctx.moveTo(x1,y1); hctx.lineTo(x2,y2); hctx.stroke();
+
+    hctx.lineWidth = 1;
+    hctx.strokeStyle = `rgba(138,46,255,${0.05 + raw*0.16 + level*0.10})`;
+    hctx.beginPath(); hctx.moveTo(x1,y1); hctx.lineTo(x2,y2); hctx.stroke();
+  }
+
+  // subtle ring glow
+  hctx.beginPath();
+  hctx.arc(cx,cy, baseR-18, 0, Math.PI*2);
+  hctx.strokeStyle = `rgba(255,255,255,${0.03 + level*0.08})`;
+  hctx.lineWidth = 2;
+  hctx.stroke();
+
+  requestAnimationFrame(drawHalo);
+}
+drawHalo();
+
+/* --- Planet + ring react --- */
+function tick(){
+  const level=getAmp();
+  const s = 1 + level*0.08;
+  planet.style.transform = `translate(-50%,-50%) scale(${s})`;
+  planet.style.filter = `saturate(${1.05 + level*0.45}) contrast(${1.0 + level*0.18})`;
+  planet.style.boxShadow = `0 0 ${26+level*26}px rgba(235,210,150,${0.14+level*0.18}),
+                            0 0 ${110+level*120}px rgba(138,46,255,${0.10+level*0.16})`;
+  ring.style.opacity = `${0.70 + level*0.45}`;
+  ring.style.transform = `translate(-50%,-50%) rotate(${-14 + level*6}deg) scale(${1 + level*0.08})`;
+  requestAnimationFrame(tick);
+}
+tick();
+
+/* --- Flying stars canvas --- */
+const fx=document.getElementById("fx");
+const fctx=fx.getContext("2d");
+let stars=[];
+function resizeFX(){
+  const dpr = Math.max(1, devicePixelRatio||1);
+  fx.width = Math.floor(innerWidth*dpr);
+  fx.height = Math.floor(innerHeight*dpr);
+  fctx.setTransform(1,0,0,1,0,0);
+  fctx.scale(dpr,dpr);
+}
+addEventListener("resize", resizeFX);
+resizeFX();
+
+function spawnStar(){
+  const y = Math.random()*innerHeight*0.8;
+  const x = innerWidth + 40;
+  const sp = 2 + Math.random()*4;
+  stars.push({
+    x,y,
+    vx: -sp,
+    vy: (Math.random()-.5)*0.6,
+    len: 24+Math.random()*70,
+    a: 0.20+Math.random()*0.35,
+    w: 1+Math.random()*1.6,
+    violet: Math.random()<0.35
+  });
+}
+function drawFX(){
+  const level=getAmp();
+  fctx.clearRect(0,0,innerWidth,innerHeight);
+
+  if(Math.random() < (0.08 + level*0.18)) spawnStar();
+
+  for(let i=stars.length-1;i>=0;i--){
+    const s=stars[i];
+    const speed = (1 + level*1.9);
+    s.x += s.vx*speed;
+    s.y += s.vy*speed;
+
+    const grad = fctx.createLinearGradient(s.x, s.y, s.x+s.len, s.y);
+    if(s.violet){
+      grad.addColorStop(0, `rgba(138,46,255,0)`);
+      grad.addColorStop(1, `rgba(138,46,255,${s.a + level*0.12})`);
+    }else{
+      grad.addColorStop(0, `rgba(255,255,255,0)`);
+      grad.addColorStop(1, `rgba(255,255,255,${s.a + level*0.10})`);
+    }
+    fctx.strokeStyle = grad;
+    fctx.lineWidth = s.w;
+    fctx.beginPath();
+    fctx.moveTo(s.x, s.y);
+    fctx.lineTo(s.x+s.len, s.y);
+    fctx.stroke();
+
+    if(s.x < -s.len-60 || s.y < -80 || s.y > innerHeight+80) stars.splice(i,1);
+  }
+
+  requestAnimationFrame(drawFX);
+}
+drawFX();
+
+/* --- click to play/stop --- */
 player.onclick=async()=>{
-  try{ if(audio.paused){setHint(true);await audio.play();}
-  else{audio.pause();audio.currentTime=0;setHint(false);} }
-  catch(e){setHint(false);alert("Check /audio/mansion.mp3");}
+  try{
+    setupAudio();
+    if(aCtx.state==="suspended") await aCtx.resume();
+    if(audio.paused){setHint(true);await audio.play(); playing=true;}
+    else{audio.pause();audio.currentTime=0;setHint(false); playing=false;}
+  }catch(e){setHint(false); alert("Check /audio/mansion.mp3");}
 };
-audio.addEventListener("pause",()=>setHint(false));
-audio.addEventListener("play",()=>setHint(true));
+audio.addEventListener("pause",()=>{setHint(false); playing=false;});
+audio.addEventListener("play",()=>{setHint(true); playing=true;});
+
+/* iOS unlock */
+function unlockOnce(){
+  try{ setupAudio(); aCtx.resume?.(); }catch(e){}
+  removeEventListener("pointerdown", unlockOnce);
+  removeEventListener("touchstart", unlockOnce);
+  removeEventListener("keydown", unlockOnce);
+}
+addEventListener("pointerdown", unlockOnce, {passive:true});
+addEventListener("touchstart", unlockOnce, {passive:true});
+addEventListener("keydown", unlockOnce);
 </script>
 </body>
 </html>
+
 
