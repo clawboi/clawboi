@@ -14,7 +14,7 @@
     --muted:rgba(255,255,255,.72);
   }
   html,body{height:100%; margin:0; background:var(--bg); overflow:hidden; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; color:var(--fg);}
-  canvas{position:fixed; inset:0; image-rendering:pixelated; image-rendering:crisp-edges; background:#000; z-index:0;}
+  canvas{position:fixed; inset:0; width:100vw; height:100vh; image-rendering:pixelated; image-rendering:crisp-edges; background:#000; z-index:0;}
   .nav{
     position:fixed; top:12px; left:14px; z-index:20;
     font-size:12px; letter-spacing:.25em; text-transform:uppercase;
@@ -126,6 +126,19 @@
   const rand=(a,b)=>a+Math.random()*(b-a);
   const randi=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
   const lerp=(a,b,t)=>a+(b-a)*t;
+
+  // ========= FULLSCREEN FIT (no layout changes, just scale to screen) =========
+  function fitCanvas(){
+    // match backing store to CSS pixels so it truly fills the viewport
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    canvas.style.width = "100vw";
+    canvas.style.height = "100vh";
+    canvas.width = Math.floor(window.innerWidth * dpr);
+    canvas.height = Math.floor(window.innerHeight * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  fitCanvas();
+  window.addEventListener("resize", fitCanvas);
 
   // ========= Save helpers =========
   const SAVE_KEY = "AOC_SAVE";
@@ -387,9 +400,15 @@
 
     drawObservatory();
 
-    // upscale
+    // upscale (now fills full screen)
     ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(world,0,0,W,H,0,0,canvas.width,canvas.height);
+    ctx.drawImage(
+      world,
+      0,0,W,H,
+      0,0,
+      canvas.width / (window.devicePixelRatio||1),
+      canvas.height / (window.devicePixelRatio||1)
+    );
 
     requestAnimationFrame(loop);
   }
