@@ -1,4 +1,3 @@
-<!-- mystery.html (LEGENDARY UPGRADE: more events, starfield, collectibles, doors, audio-reactive visuals) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -21,20 +20,20 @@ body{
   overflow:hidden;
 }
 
-/* violet fog */
+/* soft violet fog */
 body:before{
   content:"";
   position:fixed;
-  inset:-25%;
+  inset:-30%;
   pointer-events:none;
   z-index:0;
   background:
-    radial-gradient(circle at 20% 20%, rgba(138,46,255,.24), transparent 60%),
-    radial-gradient(circle at 80% 30%, rgba(138,46,255,.14), transparent 70%),
-    radial-gradient(circle at 48% 88%, rgba(138,46,255,.12), transparent 72%),
-    radial-gradient(circle at 60% 60%, rgba(255,255,255,.04), transparent 72%);
+    radial-gradient(circle at 20% 20%, rgba(138,46,255,.22), transparent 60%),
+    radial-gradient(circle at 80% 30%, rgba(138,46,255,.12), transparent 70%),
+    radial-gradient(circle at 48% 88%, rgba(138,46,255,.10), transparent 72%),
+    radial-gradient(circle at 60% 60%, rgba(255,255,255,.03), transparent 72%);
   mix-blend-mode:screen;
-  filter:blur(40px) saturate(1.2);
+  filter:blur(44px) saturate(1.2);
   animation:fog 18s ease-in-out infinite;
 }
 @keyframes fog{
@@ -46,25 +45,24 @@ body:before{
 .scan{
   position:fixed; inset:0;
   pointer-events:none;
-  z-index:8;
+  z-index:6;
   opacity:.08;
   mix-blend-mode:overlay;
   background:repeating-linear-gradient(to bottom,
     rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
 }
 
-/* canvas layers */
-#space, #fx{
+/* full canvas */
+#c{
   position:fixed;
   inset:0;
   width:100%;
   height:100%;
   z-index:1;
-  pointer-events:none;
+  image-rendering:pixelated;
 }
-#fx{z-index:7; mix-blend-mode:screen; opacity:.9}
 
-/* brand */
+/* brand + back */
 .brand{
   position:fixed; top:14px; left:14px;
   z-index:12;
@@ -76,95 +74,94 @@ body:before{
 }
 .brand a{color:#fff;text-decoration:none}
 
-/* bottom back */
 .back{
   position:fixed;
   right:16px;
-  bottom:16px;
+  top:16px;
   z-index:12;
   font-size:10px;
   letter-spacing:.32em;
   text-transform:uppercase;
-  opacity:.7;
+  opacity:.65;
 }
 .back a{color:#fff;text-decoration:none}
 .back a:hover{opacity:1}
 
-/* center */
-.wrap{
-  position:relative;
-  z-index:3;
-  height:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:24px;
-  text-align:center;
-}
-
-.title{
-  font-size:clamp(16px,4vw,40px);
-  letter-spacing:.46em;
-  text-transform:uppercase;
-  text-shadow:0 0 18px rgba(138,46,255,.45), 0 0 60px rgba(138,46,255,.18);
-  user-select:none;
-}
-.sub{
-  margin-top:12px;
-  font-size:11px;
-  letter-spacing:.30em;
-  text-transform:uppercase;
-  opacity:.62;
-  line-height:1.7;
-}
-
-/* HUD */
+/* realm HUD */
 .hud{
   position:fixed;
   left:50%;
-  bottom:18px;
+  top:54px;
   transform:translateX(-50%);
-  z-index:11;
+  z-index:12;
+  text-align:center;
+  pointer-events:none;
+}
+.realm{
+  font-size:12px;
+  letter-spacing:.46em;
+  text-transform:uppercase;
+  text-shadow:0 0 18px rgba(138,46,255,.45), 0 0 60px rgba(138,46,255,.18);
+  opacity:.92;
+}
+.tip{
+  margin-top:8px;
   font-size:10px;
   letter-spacing:.28em;
   text-transform:uppercase;
-  opacity:.0;
-  transition:opacity .2s;
-  pointer-events:none;
+  opacity:.55;
 }
-.hud.on{opacity:.62}
 
-/* secret mark */
-.mark{
+/* controls bottom right */
+.controls{
   position:fixed;
-  left:12px;
-  bottom:12px;
-  z-index:8;
-  font-size:9px;
-  letter-spacing:.44em;
+  right:14px;
+  bottom:14px;
+  z-index:12;
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+.btn{
+  border:0;
+  cursor:pointer;
+  padding:10px 12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.06);
+  color:#fff;
+  letter-spacing:.26em;
+  font-size:10px;
   text-transform:uppercase;
-  opacity:.12;
-  text-shadow:0 0 22px rgba(138,46,255,.45);
-  user-select:none;
-  pointer-events:none;
+  backdrop-filter:blur(10px);
+}
+.btn:hover{background:rgba(138,46,255,.14)}
+.btn:active{transform:translateY(1px)}
+.pill{
+  padding:10px 12px;
+  border-radius:999px;
+  background:rgba(138,46,255,.10);
+  letter-spacing:.26em;
+  font-size:10px;
+  text-transform:uppercase;
+  opacity:.75;
 }
 
-/* overlay phrases */
+/* whisper */
 .whisper{
   position:fixed;
-  inset:auto 0 0 0;
-  z-index:10;
-  padding:18px 16px 26px;
-  text-align:center;
-  font-size:11px;
-  letter-spacing:.30em;
+  left:50%;
+  bottom:70px;
+  transform:translateX(-50%);
+  z-index:12;
+  font-size:10px;
+  letter-spacing:.32em;
   text-transform:uppercase;
   opacity:0;
   pointer-events:none;
-  transition:opacity .12s linear;
+  transition:opacity .12s linear, transform .12s linear;
   text-shadow:0 0 18px rgba(138,46,255,.30);
 }
-.whisper.on{opacity:.80}
+.whisper.on{opacity:.78; transform:translateX(-50%) translateY(-2px)}
 
 /* flash */
 .flash{
@@ -172,131 +169,13 @@ body:before{
   background:#fff;
   opacity:0;
   pointer-events:none;
-  z-index:10;
+  z-index:11;
 }
 .flash.active{animation:flash .14s}
 @keyframes flash{
   0%{opacity:0}
-  50%{opacity:.35}
+  50%{opacity:.28}
   100%{opacity:0}
-}
-
-/* terminal */
-.term{
-  margin:18px auto 0;
-  width:min(880px, 100%);
-  text-align:left;
-  background:rgba(0,0,0,.55);
-  border:1px solid rgba(255,255,255,.06);
-  border-radius:16px;
-  padding:14px;
-  height:250px;
-  overflow:auto;
-  backdrop-filter: blur(10px);
-  box-shadow:0 0 60px rgba(138,46,255,.10);
-}
-.line{opacity:.86; font-size:12px; letter-spacing:.08em; line-height:1.65; white-space:pre-wrap}
-.sys{color:#9d6cff}
-.err{color:#ff4a7a}
-.dim{opacity:.55}
-.good{color:#7dffb1}
-
-/* floating “sigil” glyphs */
-.sigil{
-  position:fixed;
-  left:0; top:0;
-  transform:translate(-50%,-50%);
-  z-index:7;
-  font-size:14px;
-  letter-spacing:.22em;
-  opacity:.0;
-  color:#fff;
-  text-shadow:0 0 18px rgba(138,46,255,.55);
-  pointer-events:none;
-  user-select:none;
-  mix-blend-mode:screen;
-}
-
-/* interactable relics (draggable) */
-.relic{
-  position:fixed;
-  left:50%; top:50%;
-  width:64px; height:64px;
-  transform:translate(-50%,-50%);
-  border-radius:50%;
-  z-index:9;
-  cursor:grab;
-  background:
-    radial-gradient(circle at 30% 30%, rgba(255,255,255,.20), transparent 40%),
-    radial-gradient(circle at 55% 60%, rgba(138,46,255,.48), rgba(20,0,35,.22) 55%, transparent 78%),
-    radial-gradient(circle at 65% 75%, rgba(0,0,0,.40), transparent 60%);
-  box-shadow:0 0 26px rgba(138,46,255,.22), 0 0 110px rgba(138,46,255,.12);
-  opacity:.0;
-  pointer-events:none;
-}
-.relic.on{opacity:.95; pointer-events:auto}
-.relic:active{cursor:grabbing}
-
-/* big event overlay */
-.event{
-  position:fixed; inset:0;
-  z-index:10;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  padding:22px;
-  background:rgba(0,0,0,.55);
-  backdrop-filter: blur(10px);
-}
-.event.on{display:flex}
-.eventCard{
-  width:min(860px,100%);
-  border-radius:18px;
-  border:1px solid rgba(255,255,255,.08);
-  background:rgba(0,0,0,.55);
-  padding:18px 16px;
-  box-shadow:0 0 90px rgba(138,46,255,.16);
-}
-.eventTitle{
-  font-size:12px;
-  letter-spacing:.40em;
-  text-transform:uppercase;
-  opacity:.88;
-  text-shadow:0 0 18px rgba(138,46,255,.35);
-}
-.eventBody{
-  margin-top:12px;
-  font-size:12px;
-  letter-spacing:.10em;
-  line-height:1.65;
-  opacity:.82;
-}
-.eventRow{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  margin-top:14px;
-}
-.chip{
-  border:0;
-  background:rgba(255,255,255,.06);
-  color:#fff;
-  padding:10px 12px;
-  border-radius:999px;
-  font-size:10px;
-  letter-spacing:.26em;
-  text-transform:uppercase;
-  cursor:pointer;
-}
-.chip:hover{background:rgba(138,46,255,.16)}
-.chip.danger:hover{background:rgba(255,74,122,.16)}
-.chip.good:hover{background:rgba(125,255,177,.12)}
-.small{
-  margin-top:10px;
-  font-size:10px;
-  letter-spacing:.28em;
-  text-transform:uppercase;
-  opacity:.58;
 }
 
 @media (prefers-reduced-motion: reduce){
@@ -306,876 +185,818 @@ body:before{
 </head>
 
 <body>
-<canvas id="space"></canvas>
-<canvas id="fx"></canvas>
+<canvas id="c"></canvas>
 
 <div class="scan"></div>
 <div class="flash" id="flash"></div>
-<div class="whisper" id="whisper">THE PAGE IS LISTENING</div>
-<div class="hud" id="hud">TAP · DRAG · SWIPE · HOLD · KEYS · SHAKE (MOBILE)</div>
-<div class="mark" id="mark">MYSTERY</div>
+<div class="whisper" id="whisper">TOUCH THE VOID</div>
 
 <div class="brand"><a href="index.html">CLAWBOI</a></div>
 <div class="back"><a href="secret.html">RETURN TO TRANSMISSION</a></div>
 
-<div class="wrap">
-  <div style="width:min(980px,100%)">
-    <div class="title" id="title">MYSTERY NODE</div>
-    <div class="sub" id="sub">
-      THIS IS NOT A TYPE SCREEN ANYMORE.
-      <br>
-      TOUCH THE VOID. PULL OBJECTS OUT OF IT. OPEN DOORS. COLLECT FRAGMENTS.
-      <span style="opacity:.65">▮</span>
-    </div>
-
-    <div class="term" id="term">
-      <div class="line sys">NODE: MYSTERY.html</div>
-      <div class="line">STATUS: UNSTABLE</div>
-      <div class="line dim">TIP: TAP THE BACKGROUND TO SPAWN EVENTS.</div>
-      <div class="line dim">TIP: DRAG RELICS. HOLD TO CHARGE. SWIPE TO SLICE THE SKY.</div>
-      <div class="line dim">TIP: KEYBOARD STILL WORKS, BUT IT’S NOT THE MAIN THING.</div>
-      <div class="line dim">RARE: “DOORS” APPEAR. THEY ARE REAL INSIDE THIS FILE.</div>
-      <div class="line dim">…</div>
-    </div>
-  </div>
+<div class="hud">
+  <div class="realm" id="realmName">GRAVITY DROP</div>
+  <div class="tip" id="realmTip">TAP / SPACE = SPAWN • HOLD = CHARGE • NEXT = NEW REALM</div>
 </div>
 
-<div class="relic" id="relic" aria-label="Relic"></div>
-
-<div class="event" id="event">
-  <div class="eventCard">
-    <div class="eventTitle" id="eventTitle">EVENT</div>
-    <div class="eventBody" id="eventBody">…</div>
-    <div class="eventRow" id="eventRow"></div>
-    <div class="small" id="eventSmall">TIP: EVERYTHING YOU DO CHANGES THE SKY.</div>
-  </div>
+<div class="controls">
+  <span class="pill" id="realmIdx">01/05</span>
+  <button class="btn" id="prevBtn">◀ PREV</button>
+  <button class="btn" id="nextBtn">NEXT ▶</button>
 </div>
 
 <script>
-/* ========= UTIL ========= */
-const rand = (a,b)=> a + Math.random()*(b-a);
-const rint = (a,b)=> Math.floor(rand(a,b+1));
-const pick = (arr)=> arr[Math.floor(Math.random()*arr.length)];
-const clamp = (n,a,b)=> Math.max(a, Math.min(b,n));
-const pad2 = (n)=> String(n).padStart(2,"0");
-const nowStamp = ()=>{
-  const d=new Date();
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
-};
+/* =======================
+   MYSTERY: REALM HOPPER
+   - no typing
+   - blank world
+   - inputs trigger different toys
+   - next switches realms
+======================= */
 
-/* ========= DOM ========= */
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d", { alpha: true });
+
 const flash = document.getElementById("flash");
 const whisper = document.getElementById("whisper");
-const hud = document.getElementById("hud");
-const term = document.getElementById("term");
-const title = document.getElementById("title");
-const sub = document.getElementById("sub");
 
-const relic = document.getElementById("relic");
-const eventWrap = document.getElementById("event");
-const eventTitle = document.getElementById("eventTitle");
-const eventBody = document.getElementById("eventBody");
-const eventRow = document.getElementById("eventRow");
-const eventSmall = document.getElementById("eventSmall");
+const realmNameEl = document.getElementById("realmName");
+const realmTipEl  = document.getElementById("realmTip");
+const realmIdxEl  = document.getElementById("realmIdx");
 
-/* ========= TERMINAL ========= */
-function log(text, cls="line"){
-  const d=document.createElement("div");
-  d.className = cls;
-  d.textContent = text;
-  term.appendChild(d);
-  term.scrollTop = term.scrollHeight;
-}
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
 
-/* ========= AUDIO (no files needed) ========= */
-let ctx=null, master=null, analyser=null, freq=null, time=null, audioOn=false;
-function ensureAudio(){
-  if(ctx) return;
-  ctx = new (window.AudioContext || window.webkitAudioContext)();
-  master = ctx.createGain();
-  master.gain.value = 0.12;
-  analyser = ctx.createAnalyser();
-  analyser.fftSize = 1024;
-  freq = new Uint8Array(analyser.frequencyBinCount);
-  time = new Uint8Array(analyser.frequencyBinCount);
-  master.connect(analyser);
-  analyser.connect(ctx.destination);
-}
-async function unlockAudio(){
-  try{
-    ensureAudio();
-    await ctx.resume?.();
-    audioOn=true;
-  }catch(e){}
-}
-window.addEventListener("pointerdown", unlockAudio, {passive:true});
-window.addEventListener("keydown", unlockAudio);
+const clamp = (n,a,b)=> Math.max(a, Math.min(b,n));
+const rand  = (a,b)=> a + Math.random()*(b-a);
+const rint  = (a,b)=> Math.floor(rand(a,b+1));
+const pick  = (arr)=> arr[Math.floor(Math.random()*arr.length)];
 
-function blip(type="square", base=140, dur=0.09, gain=0.18){
-  if(!audioOn || !ctx) return;
-  const o = ctx.createOscillator();
-  const g = ctx.createGain();
-  o.type = type;
-  o.frequency.value = base;
-  g.gain.value = 0.0001;
-  o.connect(g);
-  g.connect(master);
-  const t = ctx.currentTime;
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(gain, t + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.start(t);
-  o.stop(t + dur + 0.02);
-}
-function sweep(){
-  if(!audioOn || !ctx) return;
-  const o = ctx.createOscillator();
-  const g = ctx.createGain();
-  o.type="sawtooth";
-  o.frequency.setValueAtTime(280, ctx.currentTime);
-  o.frequency.exponentialRampToValueAtTime(44, ctx.currentTime+0.18);
-  g.gain.value=0.10;
-  o.connect(g); g.connect(master);
-  o.start();
-  setTimeout(()=>o.stop(), 190);
-}
-
-/* ========= GLITCH / WHISPERS ========= */
-function hitGlitch(power=1){
-  flash.classList.add("active");
-  setTimeout(()=>flash.classList.remove("active"),120);
-  // make the title “stutter”
-  title.style.transform = `translate(${rand(-2,2)*power}px, ${rand(-2,2)*power}px)`;
-  setTimeout(()=>title.style.transform="", 120);
-}
-function pulseWhisper(txt, ms=280){
-  whisper.textContent = txt;
-  whisper.classList.add("on");
-  clearTimeout(pulseWhisper._t);
-  pulseWhisper._t = setTimeout(()=>whisper.classList.remove("on"), ms);
-}
-function hudFlash(){
-  hud.classList.add("on");
-  clearTimeout(hudFlash._t);
-  hudFlash._t = setTimeout(()=>hud.classList.remove("on"), 240);
-}
-
-/* ========= RNG (repeatable “feels-designed” randomness) ========= */
-let seed = Math.floor(Math.random()*1e9);
-function rng(){
-  seed ^= seed << 13; seed |= 0;
-  seed ^= seed >>> 17; seed |= 0;
-  seed ^= seed << 5; seed |= 0;
-  return (seed >>> 0) / 4294967296;
-}
-function prand(a,b){ return a + rng()*(b-a); }
-function print(a,b){ return Math.floor(prand(a,b+1)); }
-function ppick(arr){ return arr[Math.floor(rng()*arr.length)]; }
-
-/* ========= WORLD STATE ========= */
-const SIGILS = ["⟡","⌁","⟢","⧖","⦿","⍟","⟁","⟐","⟠","⟣","⟜","⟓","⌘","⌬","⍜","⎈","⎊","⎋","⎍","⎔","⏣","⏥","⏧"];
-const DOORS  = ["DOOR A","DOOR B","DOOR C","ELEVATOR","VENT","MIRROR","STAIRWELL","FIRE EXIT","CEILING PANEL","FLOOR HATCH"];
-const MOODS  = ["CALM","GLITCHY","HOLLOW","LOUD","SOFT","PARANOID","LUCID","STATIC","NEON","BURIED","FERAL","FLOATING","VIOLET"];
-const LIES   = ["TRUST ME.","DON’T TRUST ME.","I’M NOT HERE.","YOU WERE HERE FIRST.","I CAN’T SEE YOU.","I SEE EVERYTHING."];
-const MICRO  = ["OK.","SURE.","…","YEAH.","NAH.","BET.","COPY.","HEARD.","SILENCE.","AGAIN.","WHY?","GOOD.","BAD.","CLOSE."];
-
-let hue=0, blur=0, zoom=1, invert=0, shake=0;
-let fragments = 0;
-let doorsOpened = 0;
-let lastX = innerWidth/2, lastY = innerHeight/2;
-let holding=false, holdStart=0;
-let draggingRelic=false, relicOffX=0, relicOffY=0;
-let relicOn=false;
-
-/* ========= STYLE WARPS ========= */
-function applyWarp(){
-  document.body.style.filter =
-    `hue-rotate(${hue}deg) blur(${blur}px) invert(${invert}) contrast(${1.06+shake*0.03}) saturate(${1.06+shake*0.04})`;
-  document.body.style.transform = `scale(${zoom})`;
-  document.body.style.transformOrigin="50% 50%";
-}
-
-/* ========= SIGIL FLOATERS ========= */
-function spawnSigil(x,y){
-  const el=document.createElement("div");
-  el.className="sigil";
-  el.textContent = ppick(SIGILS) + " " + ppick(SIGILS);
-  el.style.left=x+"px";
-  el.style.top=y+"px";
-  el.style.opacity=(0.22+prand(0,0.55)).toFixed(2);
-  el.style.fontSize=print(12,28)+"px";
-  el.style.transform=`translate(-50%,-50%) rotate(${print(-25,25)}deg)`;
-  document.body.appendChild(el);
-
-  const dx=prand(-140,140), dy=prand(-140,140);
-  const t0=performance.now(), life=print(700,1500);
-  function anim(t){
-    const k=(t-t0)/life;
-    if(k>=1){ el.remove(); return; }
-    const ease=1-Math.pow(1-k,2);
-    el.style.transform=`translate(${dx*ease}px,${dy*ease}px) rotate(${print(-25,25)}deg)`;
-    el.style.opacity=(1-k)*0.65;
-    requestAnimationFrame(anim);
-  }
-  requestAnimationFrame(anim);
-}
-
-/* ========= CANVAS SKY ========= */
-const space = document.getElementById("space");
-const fx = document.getElementById("fx");
-const sctx = space.getContext("2d");
-const fctx = fx.getContext("2d");
+let W=innerWidth, H=innerHeight, dpr=1;
 function resize(){
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  space.width = Math.floor(innerWidth * dpr);
-  space.height = Math.floor(innerHeight * dpr);
-  fx.width = Math.floor(innerWidth * dpr);
-  fx.height = Math.floor(innerHeight * dpr);
-  sctx.setTransform(dpr,0,0,dpr,0,0);
-  fctx.setTransform(dpr,0,0,dpr,0,0);
+  dpr = Math.min(2, window.devicePixelRatio||1);
+  W = innerWidth; H = innerHeight;
+  canvas.width = Math.floor(W*dpr);
+  canvas.height= Math.floor(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
 }
 addEventListener("resize", resize);
 resize();
 
-/* stars, comets, dust */
+/* ====== tiny audio (optional, no files) ====== */
+let audioOn=false, ac=null, master=null;
+function ensureAudio(){
+  if(ac) return;
+  ac = new (window.AudioContext||window.webkitAudioContext)();
+  master = ac.createGain();
+  master.gain.value = 0.10;
+  master.connect(ac.destination);
+}
+async function unlockAudio(){
+  try{
+    ensureAudio();
+    await ac.resume?.();
+    audioOn=true;
+  }catch(e){}
+}
+addEventListener("pointerdown", unlockAudio, {passive:true});
+addEventListener("keydown", unlockAudio);
+
+function blip(type="triangle", f=220, dur=0.06, g=0.16){
+  if(!audioOn || !ac) return;
+  const o=ac.createOscillator();
+  const gn=ac.createGain();
+  o.type=type; o.frequency.value=f;
+  gn.gain.value=0.0001;
+  o.connect(gn); gn.connect(master);
+  const t=ac.currentTime;
+  gn.gain.setValueAtTime(0.0001,t);
+  gn.gain.exponentialRampToValueAtTime(g,t+0.01);
+  gn.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.start(t); o.stop(t+dur+0.02);
+}
+function boom(){
+  if(!audioOn || !ac) return;
+  const o=ac.createOscillator();
+  const gn=ac.createGain();
+  o.type="sawtooth";
+  o.frequency.setValueAtTime(140, ac.currentTime);
+  o.frequency.exponentialRampToValueAtTime(40, ac.currentTime+0.14);
+  gn.gain.value=0.14;
+  o.connect(gn); gn.connect(master);
+  o.start();
+  setTimeout(()=>o.stop(), 160);
+}
+
+/* ====== UI effects ====== */
+function doFlash(){
+  flash.classList.add("active");
+  setTimeout(()=>flash.classList.remove("active"),120);
+}
+function say(msg, ms=320){
+  whisper.textContent = msg;
+  whisper.classList.add("on");
+  clearTimeout(say._t);
+  say._t = setTimeout(()=>whisper.classList.remove("on"), ms);
+}
+
+/* ====== shared particles ====== */
 const stars = [];
-const comets = [];
-const dust = [];
-const ripples = [];
-
-function initSky(){
-  stars.length=0; comets.length=0; dust.length=0;
-  const n = Math.floor((innerWidth*innerHeight)/14000);
+function initStars(){
+  stars.length=0;
+  const n = Math.floor((W*H)/12000);
   for(let i=0;i<n;i++){
-    stars.push({
-      x: Math.random()*innerWidth,
-      y: Math.random()*innerHeight,
-      r: Math.random()*1.6 + 0.2,
-      a: Math.random()*0.55 + 0.10,
-      tw: Math.random()*0.9 + 0.1,
-      sp: Math.random()*0.12 + 0.02
+    stars.push({x:Math.random()*W, y:Math.random()*H, r:Math.random()*1.6+0.2, a:Math.random()*0.6+0.08, s:Math.random()*0.18+0.02});
+  }
+}
+initStars();
+
+function drawStars(speed=1){
+  for(const s of stars){
+    s.y += s.s*speed;
+    if(s.y>H+4){ s.y=-4; s.x=Math.random()*W; }
+    ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+    ctx.fillRect(s.x, s.y, s.r, s.r);
+  }
+}
+
+/* =======================
+   REALMS
+======================= */
+let realmIndex = 0;
+
+const realms = [
+  {
+    name:"GRAVITY DROP",
+    tip:"TAP / SPACE = SPAWN • HOLD = HEAVY DROP • DRAG = PUSH",
+    init(){
+      balls.length=0;
+      wind = 0;
+      say("DROP SOMETHING");
+    },
+    action(x,y,charged){
+      spawnBall(x,y, charged ? 22 : 12, charged ? 1.35 : 1.0);
+      blip("square", rint(90,260), charged?0.10:0.06, charged?0.22:0.16);
+    },
+    update(dt){
+      // subtle violet gradient wash
+      ctx.fillStyle = "rgba(0,0,0,0.24)";
+      ctx.fillRect(0,0,W,H);
+
+      drawStars(1.2);
+
+      // ground glow
+      ctx.fillStyle = "rgba(138,46,255,0.10)";
+      ctx.fillRect(0, H-60, W, 60);
+
+      stepBalls(dt);
+      drawBalls();
+    }
+  },
+  {
+    name:"RAIN ROOM",
+    tip:"TAP = THUNDER • HOLD = FLOOD • SPACE = SPLASH",
+    init(){
+      drops.length=0; ripples.length=0;
+      rainRate = 520;
+      flood = 0;
+      say("LET IT POUR");
+    },
+    action(x,y,charged){
+      if(charged){
+        flood = clamp(flood + 0.35, 0, 1.0);
+        say("FLOOD RISING", 260);
+        boom();
+      }else{
+        thunder(x,y);
+      }
+    },
+    update(dt){
+      ctx.fillStyle = "rgba(0,0,0,0.26)";
+      ctx.fillRect(0,0,W,H);
+
+      drawStars(0.9);
+
+      // rain spawn
+      const count = Math.floor((rainRate * (1+flood*0.8)) * dt);
+      for(let i=0;i<count;i++){
+        drops.push({
+          x: Math.random()*W,
+          y: -20,
+          vx: rand(-30,30),
+          vy: rand(680,980) * (1+flood*0.35),
+          len: rand(10,22),
+          a: rand(0.10,0.26)
+        });
+      }
+
+      // puddle
+      const waterH = 70 + flood*120;
+      ctx.fillStyle = "rgba(138,46,255,0.08)";
+      ctx.fillRect(0, H-waterH, W, waterH);
+
+      // drops update
+      for(let i=drops.length-1;i>=0;i--){
+        const d = drops[i];
+        d.x += d.vx*dt;
+        d.y += d.vy*dt;
+        ctx.strokeStyle = `rgba(255,255,255,${d.a})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(d.x, d.y);
+        ctx.lineTo(d.x - d.vx*0.02, d.y - d.len);
+        ctx.stroke();
+
+        if(d.y > H-waterH){
+          // ripple
+          ripples.push({x:d.x, y:H-waterH, r:1, a:0.45});
+          drops.splice(i,1);
+          if(ripples.length>160) ripples.splice(0, ripples.length-160);
+        }
+      }
+
+      // ripples draw
+      for(let i=ripples.length-1;i>=0;i--){
+        const r = ripples[i];
+        r.r += (90 + flood*80) * dt;
+        r.a *= 0.965;
+        if(r.a < 0.02){ ripples.splice(i,1); continue; }
+        ctx.strokeStyle = `rgba(138,46,255,${r.a})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, r.r, 0, Math.PI*2);
+        ctx.stroke();
+      }
+    }
+  },
+  {
+    name:"FIREWORK TEMPLE",
+    tip:"TAP = FIREWORK • HOLD = MEGA BLAST • SPACE = SPARK SHOWER",
+    init(){
+      sparks.length=0; rockets.length=0;
+      say("LIGHT THE SKY");
+    },
+    action(x,y,charged){
+      if(charged){
+        megaFirework(x,y);
+        boom();
+        doFlash();
+      }else{
+        launchRocket(x,y);
+        blip("triangle", rint(180,520), 0.07, 0.16);
+      }
+    },
+    update(dt){
+      ctx.fillStyle = "rgba(0,0,0,0.24)";
+      ctx.fillRect(0,0,W,H);
+
+      drawStars(1.4);
+
+      // faint floor haze
+      ctx.fillStyle = "rgba(138,46,255,0.05)";
+      ctx.fillRect(0,H-110,W,110);
+
+      stepFireworks(dt);
+      drawFireworks();
+    }
+  },
+  {
+    name:"ORBIT CHAMBER",
+    tip:"TAP = SPAWN ORBITER • HOLD = GRAVITY WELL • DRAG = SLINGSHOT",
+    init(){
+      orbs.length=0;
+      wells.length=0;
+      say("MAKE A SYSTEM");
+    },
+    action(x,y,charged){
+      if(charged){
+        wells.push({x,y, r: 10, a: 0.9, p: 1.0});
+        say("GRAVITY WELL", 220);
+        boom();
+      }else{
+        orbs.push(makeOrb(x,y));
+        blip("sine", rint(120,420), 0.07, 0.12);
+      }
+    },
+    update(dt){
+      ctx.fillStyle = "rgba(0,0,0,0.22)";
+      ctx.fillRect(0,0,W,H);
+
+      drawStars(0.8);
+
+      // wells
+      for(let i=wells.length-1;i>=0;i--){
+        const w = wells[i];
+        w.r += 220*dt;
+        w.a *= 0.975;
+        w.p *= 0.985;
+        if(w.a < 0.03){ wells.splice(i,1); continue; }
+        ctx.strokeStyle = `rgba(138,46,255,${w.a})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(w.x, w.y, w.r, 0, Math.PI*2);
+        ctx.stroke();
+      }
+
+      // orbs physics with gentle orbit + well pull
+      for(const o of orbs){
+        // base drift
+        o.vx *= 0.998; o.vy *= 0.998;
+
+        for(const w of wells){
+          const dx = w.x - o.x;
+          const dy = w.y - o.y;
+          const d2 = dx*dx + dy*dy + 40;
+          const f = (5200 * w.p) / d2;
+          o.vx += dx * f * dt;
+          o.vy += dy * f * dt;
+        }
+
+        o.x += o.vx*dt;
+        o.y += o.vy*dt;
+
+        // wrap
+        if(o.x < -40) o.x=W+40;
+        if(o.x > W+40) o.x=-40;
+        if(o.y < -40) o.y=H+40;
+        if(o.y > H+40) o.y=-40;
+
+        o.phase += dt*(0.8+o.s*0.8);
+      }
+
+      // draw orbs
+      for(const o of orbs){
+        const pulse = 0.6 + 0.4*Math.sin(o.phase*3.2);
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(138,46,255,${0.22 + pulse*0.22})`;
+        ctx.arc(o.x, o.y, o.r*2.6, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255,255,255,${0.45 + pulse*0.30})`;
+        ctx.arc(o.x, o.y, o.r, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+  },
+  {
+    name:"SHARD GARDEN",
+    tip:"TAP = GROW CRYSTALS • HOLD = SHOCKWAVE • SPACE = BLOOM BURST",
+    init(){
+      shards.length=0; waves.length=0;
+      say("PLANT LIGHT");
+    },
+    action(x,y,charged){
+      if(charged){
+        waves.push({x,y, r: 1, a: 0.55});
+        boom();
+        say("SHOCKWAVE", 220);
+      }else{
+        growShard(x,y);
+        blip("triangle", rint(220,760), 0.06, 0.14);
+      }
+    },
+    update(dt){
+      ctx.fillStyle = "rgba(0,0,0,0.26)";
+      ctx.fillRect(0,0,W,H);
+
+      drawStars(1.0);
+
+      // waves
+      for(let i=waves.length-1;i>=0;i--){
+        const w = waves[i];
+        w.r += 520*dt;
+        w.a *= 0.965;
+        if(w.a < 0.02){ waves.splice(i,1); continue; }
+        ctx.strokeStyle = `rgba(138,46,255,${w.a})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(w.x,w.y,w.r,0,Math.PI*2);
+        ctx.stroke();
+      }
+
+      // shards
+      for(const s of shards){
+        s.t += dt;
+        s.wob = Math.sin(s.t*2.4 + s.seed)*0.6;
+      }
+
+      drawShards();
+    }
+  }
+];
+
+function setRealm(idx){
+  realmIndex = (idx + realms.length) % realms.length;
+  realmNameEl.textContent = realms[realmIndex].name;
+  realmTipEl.textContent  = realms[realmIndex].tip;
+  realmIdxEl.textContent  = String(realmIndex+1).padStart(2,"0") + "/0" + realms.length;
+  initStars();
+  realms[realmIndex].init();
+}
+
+/* =======================
+   REALM 1: Physics balls
+======================= */
+const balls = [];
+let wind = 0;
+
+function spawnBall(x,y, r=12, mass=1){
+  balls.push({
+    x, y,
+    vx: rand(-180,180),
+    vy: rand(-120,60),
+    r,
+    m: mass,
+    spin: rand(-2,2),
+    hue: rint(260,310),
+    life: 0
+  });
+  if(balls.length > 90) balls.splice(0, balls.length-90);
+}
+
+function stepBalls(dt){
+  // gentle wind drift
+  wind = wind*0.97 + rand(-12,12)*0.02;
+
+  for(const b of balls){
+    b.life += dt;
+
+    b.vx += wind*dt;
+    b.vy += 980*dt; // gravity
+
+    // integrate
+    b.x += b.vx*dt;
+    b.y += b.vy*dt;
+
+    // walls
+    if(b.x < b.r){ b.x=b.r; b.vx*=-0.82; blip("sine", 180, 0.04, 0.06); }
+    if(b.x > W-b.r){ b.x=W-b.r; b.vx*=-0.82; blip("sine", 180, 0.04, 0.06); }
+
+    // floor
+    const floor = H - 20;
+    if(b.y > floor-b.r){
+      b.y = floor-b.r;
+      b.vy *= -0.78;
+      b.vx *= 0.96;
+      if(Math.abs(b.vy) > 220) blip("square", rint(90,220), 0.05, 0.08);
+    }
+
+    // ceiling
+    if(b.y < b.r){ b.y=b.r; b.vy*=-0.7; }
+  }
+
+  // simple ball-ball repel
+  for(let i=0;i<balls.length;i++){
+    for(let j=i+1;j<balls.length;j++){
+      const a=balls[i], b=balls[j];
+      const dx=b.x-a.x, dy=b.y-a.y;
+      const d=Math.hypot(dx,dy);
+      const min=a.r+b.r;
+      if(d>0 && d<min){
+        const nx=dx/d, ny=dy/d;
+        const push=(min-d)*0.55;
+        a.x -= nx*push; a.y -= ny*push;
+        b.x += nx*push; b.y += ny*push;
+        const k = 240; // impulse
+        a.vx -= nx*k*0.5; a.vy -= ny*k*0.5;
+        b.vx += nx*k*0.5; b.vy += ny*k*0.5;
+      }
+    }
+  }
+}
+
+function drawBalls(){
+  for(const b of balls){
+    // glow
+    ctx.beginPath();
+    ctx.fillStyle = `hsla(${b.hue}, 100%, 60%, 0.14)`;
+    ctx.arc(b.x, b.y, b.r*2.8, 0, Math.PI*2);
+    ctx.fill();
+
+    // core
+    ctx.beginPath();
+    ctx.fillStyle = `hsla(${b.hue}, 100%, 72%, 0.75)`;
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+    ctx.fill();
+
+    // highlight
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(255,255,255,0.40)`;
+    ctx.arc(b.x - b.r*0.25, b.y - b.r*0.25, b.r*0.28, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+/* =======================
+   REALM 2: Rain
+======================= */
+const drops = [];
+const ripples = [];
+let rainRate = 520;
+let flood = 0;
+
+function thunder(x,y){
+  doFlash();
+  say("THUNDER", 180);
+  blip("square", rint(40,120), 0.09, 0.20);
+  // jag lightning
+  ctx.save();
+  ctx.globalAlpha = 0.45;
+  ctx.strokeStyle = "rgba(255,255,255,0.9)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  let lx = x, ly = 0;
+  ctx.moveTo(lx, ly);
+  const steps = 10;
+  for(let i=0;i<steps;i++){
+    lx += rand(-30,30);
+    ly += H/(steps+2);
+    ctx.lineTo(lx, ly);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  // ripple burst
+  for(let i=0;i<8;i++){
+    ripples.push({x:x+rand(-40,40), y:H-(70+flood*120), r:1, a:0.55});
+  }
+  if(ripples.length>160) ripples.splice(0, ripples.length-160);
+}
+
+/* =======================
+   REALM 3: Fireworks
+======================= */
+const rockets = [];
+const sparks = [];
+
+function launchRocket(x,y){
+  rockets.push({
+    x, y: H + 30,
+    vx: rand(-40,40),
+    vy: -rand(820,1060),
+    targetX: x,
+    targetY: clamp(y, 90, H*0.72),
+    hue: rint(260,315),
+    life: 0
+  });
+  if(rockets.length>14) rockets.splice(0, rockets.length-14);
+}
+
+function explode(x,y,hue, power=1){
+  const count = Math.floor(70*power);
+  for(let i=0;i<count;i++){
+    const a = Math.random()*Math.PI*2;
+    const sp = rand(120, 520)*power;
+    sparks.push({
+      x,y,
+      vx: Math.cos(a)*sp,
+      vy: Math.sin(a)*sp,
+      r: rand(1.2,2.6)*power,
+      hue,
+      a: rand(0.40,0.95),
+      life: 0
     });
   }
-  for(let i=0;i<80;i++){
-    dust.push({
-      x: Math.random()*innerWidth,
-      y: Math.random()*innerHeight,
-      vx: (Math.random()*0.12+0.02) * (Math.random()<0.5?-1:1),
-      vy: (Math.random()*0.12+0.02) * (Math.random()<0.5?-1:1),
-      a: Math.random()*0.08 + 0.02
-    });
+  if(sparks.length>1400) sparks.splice(0, sparks.length-1400);
+}
+
+function megaFirework(x,y){
+  const hue = rint(260,320);
+  for(let i=0;i<4;i++){
+    explode(x+rand(-40,40), y+rand(-40,40), hue + rint(-10,10), 1.25);
   }
 }
-initSky();
 
-function spawnComet(power=1){
-  comets.push({
-    x: Math.random()*innerWidth,
-    y: Math.random()*innerHeight*0.55,
-    vx: (Math.random()*7+10)*power,
-    vy: (Math.random()*2+4)*power,
-    life: 0,
-    max: Math.random()*18+18,
-    a: 0.8
+function stepFireworks(dt){
+  // rockets
+  for(let i=rockets.length-1;i>=0;i--){
+    const r = rockets[i];
+    r.life += dt;
+    r.x += r.vx*dt;
+    r.y += r.vy*dt;
+    r.vy += 280*dt; // gravity
+    // trail
+    if(Math.random()<0.65){
+      sparks.push({
+        x:r.x, y:r.y,
+        vx: rand(-40,40),
+        vy: rand(40,160),
+        r: rand(0.8,1.6),
+        hue:r.hue,
+        a: rand(0.08,0.22),
+        life: 0,
+        trail:true
+      });
+    }
+    if(r.y <= r.targetY || r.vy > -40){
+      explode(r.x, r.y, r.hue, 1.0);
+      blip("triangle", rint(180,520), 0.08, 0.18);
+      rockets.splice(i,1);
+    }
+  }
+
+  // sparks
+  for(let i=sparks.length-1;i>=0;i--){
+    const s = sparks[i];
+    s.life += dt;
+    s.x += s.vx*dt;
+    s.y += s.vy*dt;
+    s.vx *= 0.992;
+    s.vy *= 0.992;
+    s.vy += (s.trail?220:520)*dt;
+    s.a *= s.trail ? 0.965 : 0.985;
+
+    if(s.y > H+60 || s.a < 0.03){
+      sparks.splice(i,1);
+    }
+  }
+}
+
+function drawFireworks(){
+  // rockets
+  for(const r of rockets){
+    ctx.beginPath();
+    ctx.fillStyle = `hsla(${r.hue},100%,70%,0.85)`;
+    ctx.arc(r.x,r.y,3,0,Math.PI*2);
+    ctx.fill();
+  }
+  // sparks
+  for(const s of sparks){
+    ctx.beginPath();
+    ctx.fillStyle = `hsla(${s.hue},100%,70%,${s.a})`;
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fill();
+
+    // glow
+    if(!s.trail){
+      ctx.beginPath();
+      ctx.fillStyle = `hsla(${s.hue},100%,60%,${s.a*0.10})`;
+      ctx.arc(s.x,s.y,s.r*6,0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+}
+
+/* =======================
+   REALM 4: Orbit
+======================= */
+const orbs = [];
+const wells = [];
+function makeOrb(x,y){
+  const s = rand(0.4,1.2);
+  return {
+    x,y,
+    vx: rand(-90,90),
+    vy: rand(-90,90),
+    r: rand(2.2,4.2),
+    s,
+    phase: rand(0,10)
+  };
+}
+
+/* =======================
+   REALM 5: Shards
+======================= */
+const shards = [];
+const waves = [];
+
+function growShard(x,y){
+  const h = rint(260,320);
+  const height = rand(18, 90);
+  const w = rand(4, 14);
+  shards.push({
+    x,y,
+    h,
+    height,
+    w,
+    t: 0,
+    seed: rand(0,999),
+    tilt: rand(-0.5,0.5)
   });
+  if(shards.length>120) shards.splice(0, shards.length-120);
 }
 
-function ripple(x,y,amp=1){
-  ripples.push({x,y,r:0,a:0.55*amp,amp});
-}
+function drawShards(){
+  for(const s of shards){
+    const sway = s.wob || 0;
+    const tilt = s.tilt + sway*0.06;
+    const topX = s.x + tilt*s.height;
+    const topY = s.y - s.height;
 
-/* ========= AUDIO REACTIVE RING + WAVE ========= */
-function getEnergy(){
-  if(!audioOn || !analyser) return {bass:0, mid:0, tre:0, rms:0};
-  analyser.getByteFrequencyData(freq);
-  analyser.getByteTimeDomainData(time);
+    // glow
+    ctx.strokeStyle = `hsla(${s.h}, 100%, 60%, 0.20)`;
+    ctx.lineWidth = s.w*2.4;
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(topX, topY);
+    ctx.stroke();
 
-  // buckets
-  let bass=0, mid=0, tre=0;
-  const n=freq.length;
-  const bEnd=Math.floor(n*0.10);
-  const mEnd=Math.floor(n*0.35);
-  for(let i=0;i<bEnd;i++) bass += freq[i];
-  for(let i=bEnd;i<mEnd;i++) mid += freq[i];
-  for(let i=mEnd;i<n;i++) tre += freq[i];
+    // core
+    ctx.strokeStyle = `hsla(${s.h}, 100%, 74%, 0.85)`;
+    ctx.lineWidth = s.w;
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(topX, topY);
+    ctx.stroke();
 
-  bass /= (bEnd*255);
-  mid  /= ((mEnd-bEnd)*255);
-  tre  /= ((n-mEnd)*255);
-
-  // rms from time domain
-  let rms=0;
-  for(let i=0;i<time.length;i++){
-    const v=(time[i]-128)/128;
-    rms += v*v;
-  }
-  rms = Math.sqrt(rms/time.length);
-  return {bass, mid, tre, rms};
-}
-
-/* ========= EVENT SYSTEM (NOT JUST TYPING) ========= */
-function showEvent(t, body, chips){
-  eventTitle.textContent = t;
-  eventBody.textContent = body;
-  eventRow.innerHTML = "";
-  chips.forEach(c=>{
-    const b=document.createElement("button");
-    b.className = "chip" + (c.kind?(" "+c.kind):"");
-    b.textContent = c.label;
-    b.onclick = ()=>{
-      try{ c.onClick?.(); } finally { hideEvent(); }
-    };
-    eventRow.appendChild(b);
-  });
-  eventSmall.textContent = `FRAGMENTS: ${fragments} · DOORS: ${doorsOpened} · MOOD: ${ppick(MOODS)}`;
-  eventWrap.classList.add("on");
-  hitGlitch(1.6);
-  sweep();
-}
-function hideEvent(){ eventWrap.classList.remove("on"); }
-
-/* “doors” are interactive decision moments */
-function doorEvent(){
-  const door = ppick(DOORS);
-  showEvent(
-    "A DOOR APPEARED",
-    `FOUND: ${door}\nIT HUMS LIKE A SPEAKER CONE.\nCHOOSE FAST OR IT DISAPPEARS.`,
-    [
-      {label:"OPEN", kind:"good", onClick:()=>{
-        doorsOpened++;
-        fragments += print(1,2);
-        pulseWhisper("ACCESS GRANTED");
-        blip("triangle", print(180,520), 0.10, 0.22);
-        log(`[${nowStamp()}] DOOR OPENED: ${door}`, "line sys");
-        log(ppick(["YOU TOOK SOMETHING.","IT TOOK SOMETHING.","FAIR TRADE.","DON’T LOOK BACK."]), "line");
-        warpHard(1.2);
-        ripple(lastX,lastY,1.4);
-        maybeRelic(true);
-      }},
-      {label:"LISTEN", onClick:()=>{
-        pulseWhisper("THE DOOR SPEAKS");
-        blip("sine", print(90,260), 0.14, 0.16);
-        log(`[${nowStamp()}] LISTENING AT ${door}`, "line dim");
-        log(ppick(LIES), "line sys");
-        ripple(lastX,lastY,1.1);
-      }},
-      {label:"RUN", kind:"danger", onClick:()=>{
-        pulseWhisper("YOU RAN");
-        blip("square", print(60,140), 0.06, 0.20);
-        log(`[${nowStamp()}] ABORTED: ${door}`, "line err");
-        warpHard(0.8);
-      }},
-    ]
-  );
-}
-
-/* cipher mini: pick the right shard */
-let cipherTarget = "";
-function cipherEvent(){
-  cipherTarget = ppick(["REMEMBER","FORGET","BREATHE","HIDE","LISTEN","RUN","STAY","RETURN","VAULT","NODE","SIGNAL"]);
-  const a = scramble(cipherTarget, 0.45);
-  const b = scramble(cipherTarget, 0.65);
-  const c = scramble(cipherTarget, 0.80);
-
-  showEvent(
-    "CIPHER LOCK",
-    `THE LOCK WANTS ONE WORD.\nCHOOSE THE MOST “TRUE” SHARD.\n\nA: ${a}\nB: ${b}\nC: ${c}`,
-    [
-      {label:"A", onClick:()=>cipherPick(a)},
-      {label:"B", onClick:()=>cipherPick(b)},
-      {label:"C", onClick:()=>cipherPick(c)},
-      {label:"CANCEL", kind:"danger", onClick:()=>{
-        log(`[${nowStamp()}] CIPHER REFUSED`, "line dim");
-        pulseWhisper("IT WILL REMEMBER THAT");
-      }},
-    ]
-  );
-}
-function cipherPick(choice){
-  // score: how close to target (same letters in same spots)
-  const t = cipherTarget;
-  let score=0;
-  for(let i=0;i<Math.min(t.length, choice.length);i++){
-    if(t[i] === choice[i]) score++;
-  }
-  const good = score >= Math.floor(t.length*0.35);
-  if(good){
-    fragments += 2;
-    pulseWhisper("LOCK YIELDED");
-    log(`[${nowStamp()}] CIPHER ACCEPTED: ${t}`, "line good");
-    blip("triangle", print(220,720), 0.10, 0.24);
-    warpHard(1.4);
-    maybeRelic(true);
-  }else{
-    pulseWhisper("WRONG SHARD");
-    log(`[${nowStamp()}] CIPHER FAILED`, "line err");
-    hitGlitch(2.0);
-    blip("square", print(60,180), 0.08, 0.22);
-    warpHard(0.9);
+    // tip highlight
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.arc(topX, topY, 2.2, 0, Math.PI*2);
+    ctx.fill();
   }
 }
 
-/* meteor storm event */
-function meteorEvent(){
-  showEvent(
-    "METEOR STORM",
-    "THE SKY IS ABOUT TO BREAK.\nHOLD YOUR FINGER ON THE SCREEN TO “SHIELD”.\nOR TAP TO LET IT HIT.",
-    [
-      {label:"SHIELD", kind:"good", onClick:()=>{
-        pulseWhisper("SHIELD ONLINE");
-        log(`[${nowStamp()}] SHIELD DEPLOYED`, "line sys");
-        for(let i=0;i<10;i++) spawnComet(0.9);
-        fragments += 1;
-        warpHard(1.1);
-      }},
-      {label:"LET IT HIT", kind:"danger", onClick:()=>{
-        pulseWhisper("IMPACT");
-        log(`[${nowStamp()}] IMPACT EVENT`, "line err");
-        for(let i=0;i<18;i++) spawnComet(1.2);
-        hitGlitch(2.6);
-        warpHard(1.6);
-      }},
-      {label:"CLOSE", onClick:()=>{}},
-    ]
-  );
+/* =======================
+   INPUT: click / tap / hold / drag / keys
+======================= */
+let pointerDown=false, downT=0, downX=0, downY=0;
+let lastX=W/2, lastY=H/2;
+
+function realmAction(x,y,charged){
+  realms[realmIndex].action(x,y,charged);
 }
 
-/* blackout event */
-function blackoutEvent(){
-  showEvent(
-    "SIGNAL DROP",
-    "BRIGHTNESS COLLAPSES.\nIF YOU MOVE, IT NOTICES.\nIF YOU STAY STILL, IT FORGETS.",
-    [
-      {label:"MOVE", kind:"danger", onClick:()=>{
-        pulseWhisper("NOTICED");
-        log(`[${nowStamp()}] BLACKOUT: MOVED`, "line err");
-        hitGlitch(2.4);
-        sweep();
-        warpHard(1.8);
-      }},
-      {label:"STILL", kind:"good", onClick:()=>{
-        pulseWhisper("FORGOTTEN");
-        log(`[${nowStamp()}] BLACKOUT: STILL`, "line good");
-        fragments += 1;
-        warpHard(0.85);
-      }},
-      {label:"LISTEN", onClick:()=>{
-        log(`[${nowStamp()}] …`, "line dim");
-        log(ppick(LIES), "line sys");
-      }},
-    ]
-  );
-}
-
-/* choose what “crazy” happens */
-function randomMajor(){
-  const roll = rng();
-  if(roll < 0.28) doorEvent();
-  else if(roll < 0.55) cipherEvent();
-  else if(roll < 0.78) meteorEvent();
-  else blackoutEvent();
-}
-
-/* ========= SCRAMBLE ========= */
-const CHARS="░▒▓█@#%&*+=-?/\\<>[]{}01ZXCVBNM";
-function scramble(s, intensity=0.45){
-  let out="";
-  for(let i=0;i<s.length;i++){
-    const ch=s[i];
-    if(ch===" "){ out+=" "; continue; }
-    out += (rng() < intensity) ? CHARS[Math.floor(rng()*CHARS.length)] : ch;
+addEventListener("pointermove", (e)=>{
+  lastX=e.clientX; lastY=e.clientY;
+  // Drag pushes in physics realm
+  if(pointerDown && realms[realmIndex].name==="GRAVITY DROP"){
+    const dx = e.clientX - downX;
+    const dy = e.clientY - downY;
+    if(Math.abs(dx)+Math.abs(dy) > 14){
+      for(const b of balls){
+        const d = Math.hypot(b.x-e.clientX, b.y-e.clientY);
+        if(d < 120){
+          b.vx += dx*0.22;
+          b.vy += dy*0.12;
+        }
+      }
+      downX = e.clientX; downY = e.clientY;
+    }
   }
-  return out;
-}
-
-/* ========= WARP HELPERS ========= */
-function warpSoft(){
-  hue = (hue + prand(-16,16)) % 360;
-  blur = clamp(blur + prand(-0.25,0.35), 0, 1.4);
-  zoom = clamp(zoom + prand(-0.006,0.012), 0.985, 1.04);
-  invert = clamp(invert + prand(-0.02,0.02), 0, 0.14);
-  shake = clamp(shake + prand(-0.2,0.6), 0, 4);
-  applyWarp();
-}
-function warpHard(mult=1){
-  hue = (hue + prand(-42,42)) % 360;
-  blur = clamp(blur + prand(0.1,0.9)*mult, 0, 2.0);
-  zoom = clamp(zoom + prand(0.01,0.035)*mult, 0.98, 1.06);
-  invert = clamp(invert + prand(-0.02,0.06)*mult, 0, 0.22);
-  shake = clamp(shake + prand(0.8,2.6)*mult, 0, 6);
-  applyWarp();
-  hitGlitch(1.4*mult);
-}
-
-/* ========= RELIC (draggable object that “does things”) ========= */
-function maybeRelic(force=false){
-  if(relicOn) return;
-  if(!force && rng() > 0.16) return;
-  relicOn=true;
-  relic.classList.add("on");
-  const x = clamp(lastX + prand(-120,120), 80, innerWidth-80);
-  const y = clamp(lastY + prand(-120,120), 120, innerHeight-120);
-  relic.style.left = x+"px";
-  relic.style.top  = y+"px";
-  pulseWhisper("A RELIC FELL OUT");
-  log(`[${nowStamp()}] RELIC SPAWNED`, "line sys");
-}
-
-function relicConsume(){
-  relicOn=false;
-  relic.classList.remove("on");
-  pulseWhisper("RELIC ABSORBED");
-  fragments += 1;
-  doorsOpened += (rng()<0.25?1:0);
-  log(`[${nowStamp()}] RELIC ABSORBED · FRAGMENTS +1`, "line good");
-  blip("triangle", print(200,680), 0.12, 0.24);
-  warpHard(1.15);
-  ripple(lastX,lastY,1.6);
-}
-
-/* ========= INPUT: BIGGER THAN TYPING ========= */
-function doAction(kind, payload={}){
-  warpSoft();
-
-  if(rng() < 0.20) spawnSigil(lastX,lastY);
-  if(rng() < 0.14) pulseWhisper(ppick(["DON’T BLINK","SIGNAL CUT","SOFT RESET","KEEP GOING","YOU’RE CLOSE","OPEN SOMETHING","TOUCH THE VOID"]), 240);
-  if(rng() < 0.12) blip(ppick(["square","triangle","sine"]), print(70,720), 0.06, 0.18);
-
-  // occasional comet
-  if(rng() < 0.10) spawnComet(0.7 + rng()*0.6);
-
-  // rare major event (tap background / hold / random)
-  if(kind==="bgTap" && rng()<0.22) randomMajor();
-  if(kind==="holdDone" && payload.ms>680 && rng()<0.55) randomMajor();
-  if(kind==="swipe" && rng()<0.25) doorEvent();
-
-  // terminal
-  const t=nowStamp();
-  if(kind==="bgTap"){
-    log(`[${t}] TAP VOID: ${Math.floor(payload.x)},${Math.floor(payload.y)}`, "line dim");
-    log(ppick(["THE SKY ANSWERED.","OK.","AGAIN.","YOU TOUCHED A WIRE.","THE NODE TWITCHED."]), "line sys");
-  }
-  if(kind==="holdStart"){
-    log(`[${t}] HOLD: charging…`, "line dim");
-  }
-  if(kind==="holdDone"){
-    log(`[${t}] HOLD: ${payload.ms}ms`, "line dim");
-    log(payload.ms>680 ? "CHARGED." : "NOT ENOUGH.", payload.ms>680 ? "line sys" : "line dim");
-    if(payload.ms>680){ sweep(); maybeRelic(true); }
-  }
-  if(kind==="swipe"){
-    log(`[${t}] SWIPE: Δ${payload.dx},Δ${payload.dy}`, "line dim");
-    log(ppick(["YOU SLICED THE SKY.","A THREAD SNAPPED.","IT NOTICED THAT."]), "line sys");
-    spawnComet(1.0);
-  }
-  if(kind==="key"){
-    log(`[${t}] KEY: ${payload.raw} · MOOD: ${ppick(MOODS)}`, "line dim");
-    // keys can still spawn madness
-    if(rng()<0.10) randomMajor();
-  }
-}
-
-/* keyboard */
-addEventListener("keydown",(e)=>{
-  if(["Shift","Alt","Control","Meta"].includes(e.key)) return;
-  const raw = (e.key || "").toString();
-  const text = (raw.length===1) ? raw : `[${raw}]`;
-  hudFlash();
-  spawnSigil(lastX,lastY);
-  ripple(lastX,lastY,1.1);
-  doAction("key", {raw:text});
 }, {passive:true});
 
-/* pointer move */
-addEventListener("pointermove",(e)=>{
-  lastX=e.clientX; lastY=e.clientY;
-}, {passive:true});
-
-/* background tap / hold / swipe */
-let downX=0, downY=0, downT=0, swiped=false;
-addEventListener("pointerdown",(e)=>{
-  lastX=e.clientX; lastY=e.clientY;
-  downX=lastX; downY=lastY;
+addEventListener("pointerdown", (e)=>{
+  pointerDown=true;
   downT=performance.now();
-  swiped=false;
-
-  // relic dragging
-  if(relicOn){
-    const r = relic.getBoundingClientRect();
-    const inside = (e.clientX>=r.left && e.clientX<=r.right && e.clientY>=r.top && e.clientY<=r.bottom);
-    if(inside){
-      draggingRelic=true;
-      relicOffX = e.clientX - (r.left + r.width/2);
-      relicOffY = e.clientY - (r.top + r.height/2);
-      hudFlash();
-      blip("sine", print(140,360), 0.06, 0.16);
-      return;
-    }
-  }
-
-  holding=true;
-  holdStart=downT;
-  hudFlash();
-  ripple(lastX,lastY,1.2);
-  spawnSigil(lastX,lastY);
-  doAction("holdStart", {x:lastX,y:lastY});
-
+  downX=e.clientX; downY=e.clientY;
+  lastX=downX; lastY=downY;
+  say(pick(["TOUCH RECEIVED","SIGNAL FOUND","A NEW MOVE","DO IT AGAIN"]), 200);
 }, {passive:true});
 
-addEventListener("pointermove",(e)=>{
-  lastX=e.clientX; lastY=e.clientY;
+addEventListener("pointerup", (e)=>{
+  if(!pointerDown) return;
+  pointerDown=false;
 
-  if(draggingRelic){
-    relic.style.left = lastX - relicOffX + "px";
-    relic.style.top  = lastY - relicOffY + "px";
-    // relic “charges” the sky while dragged
-    if(rng()<0.22){
-      ripple(lastX,lastY,0.65);
-      blip("triangle", print(220,560), 0.04, 0.08);
-    }
-  }
+  const ms = performance.now()-downT;
+  const charged = ms > 520;
+
+  realmAction(e.clientX, e.clientY, charged);
 }, {passive:true});
 
-addEventListener("pointerup",(e)=>{
-  const upX=e.clientX, upY=e.clientY;
-  const ms=Math.floor(performance.now() - downT);
-  const dx=Math.floor(upX - downX);
-  const dy=Math.floor(upY - downY);
-  const dist=Math.abs(dx)+Math.abs(dy);
+// keys
+addEventListener("keydown", (e)=>{
+  const k = e.key;
+  if(k === "ArrowRight"){ setRealm(realmIndex+1); blip("sine", 420, 0.06, 0.10); return; }
+  if(k === "ArrowLeft"){ setRealm(realmIndex-1); blip("sine", 340, 0.06, 0.10); return; }
 
-  if(draggingRelic){
-    draggingRelic=false;
-    // drop relic near center to “consume”
-    const cx=innerWidth/2, cy=innerHeight/2;
-    const d = Math.hypot((upX-cx),(upY-cy));
-    if(d < Math.min(innerWidth, innerHeight)*0.18){
-      relicConsume();
-    }else{
-      pulseWhisper("DRAG TO CENTER TO ABSORB", 260);
-      log(`[${nowStamp()}] RELIC: not absorbed`, "line dim");
-    }
+  if(k === " " || k === "Enter"){
+    e.preventDefault();
+    realmAction(lastX, lastY, false);
     return;
   }
 
-  holding=false;
-
-  // swipe
-  if(dist > 90){
-    swiped=true;
-    ripple(upX,upY,1.0);
-    doAction("swipe", {dx,dy});
-    return;
+  // extra: “B” triggers big version
+  if(k.toLowerCase() === "b"){
+    realmAction(lastX, lastY, true);
   }
+}, {passive:false});
 
-  // tap background
-  if(ms < 260){
-    ripple(upX,upY,1.0);
-    doAction("bgTap", {x:upX, y:upY});
-    // chance to spawn relic on taps
-    if(rng()<0.10) maybeRelic(false);
-    return;
-  }
+// buttons
+prevBtn.onclick = ()=>{ setRealm(realmIndex-1); blip("sine", 320, 0.06, 0.10); };
+nextBtn.onclick = ()=>{ setRealm(realmIndex+1); blip("sine", 420, 0.06, 0.10); };
 
-  // hold done
-  doAction("holdDone", {ms});
+/* =======================
+   LOOP
+======================= */
+let lastT = performance.now();
+function loop(t){
+  const dt = clamp((t-lastT)/1000, 0, 0.033);
+  lastT = t;
 
-}, {passive:true});
+  // realm updates draw their own “fade”
+  realms[realmIndex].update(dt);
 
-/* mobile: shake triggers a rare event (if motion permission available) */
-let lastAccel=0, lastShakeT=0;
-function onMotion(e){
-  const a=e.accelerationIncludingGravity;
-  if(!a) return;
-  const mag = Math.abs(a.x||0)+Math.abs(a.y||0)+Math.abs(a.z||0);
-  const now=performance.now();
-  if(mag - lastAccel > 22 && now - lastShakeT > 1200){
-    lastShakeT=now;
-    pulseWhisper("SHAKE DETECTED");
-    log(`[${nowStamp()}] SHAKE: EVENT PING`, "line sys");
-    randomMajor();
-    warpHard(1.1);
-  }
-  lastAccel=mag;
+  requestAnimationFrame(loop);
 }
-window.addEventListener("devicemotion", onMotion);
+requestAnimationFrame(loop);
 
-/* ========= RENDER LOOP ========= */
-let t0=performance.now();
-function draw(){
-  const t=performance.now();
-  const dt=Math.min(32, t-t0);
-  t0=t;
-
-  const E = getEnergy();
-  // make the world respond even when silent
-  const drive = (E.rms*1.2) + (holding?0.22:0) + (draggingRelic?0.18:0);
-
-  // decay shake
-  shake = clamp(shake*0.92, 0, 8);
-  applyWarp();
-
-  // SPACE LAYER
-  sctx.clearRect(0,0,innerWidth,innerHeight);
-
-  // dust drift
-  sctx.globalAlpha=1;
-  for(const d of dust){
-    d.x += d.vx*(1+drive*2);
-    d.y += d.vy*(1+drive*2);
-    if(d.x< -40) d.x=innerWidth+40;
-    if(d.x> innerWidth+40) d.x=-40;
-    if(d.y< -40) d.y=innerHeight+40;
-    if(d.y> innerHeight+40) d.y=-40;
-    sctx.fillStyle=`rgba(255,255,255,${d.a})`;
-    sctx.fillRect(d.x,d.y,1,1);
-  }
-
-  // stars twinkle
-  for(const st of stars){
-    st.y += st.sp*(1+drive*2);
-    if(st.y>innerHeight+6){ st.y=-6; st.x=Math.random()*innerWidth; }
-    const tw = 0.35 + 0.65*Math.sin((t*0.001)*st.tw + st.x*0.01);
-    const a = st.a * (0.65 + tw*0.55);
-    sctx.fillStyle=`rgba(255,255,255,${a})`;
-    sctx.fillRect(st.x, st.y, st.r, st.r);
-  }
-
-  // comets
-  for(let i=comets.length-1;i>=0;i--){
-    const c=comets[i];
-    c.life += dt*0.016;
-    c.x += c.vx*0.016*(1+drive*2);
-    c.y += c.vy*0.016*(1+drive*2);
-    c.a *= 0.988;
-    if(c.life>c.max || c.x>innerWidth+200 || c.y>innerHeight+200 || c.a<0.02){
-      comets.splice(i,1); continue;
-    }
-    sctx.save();
-    sctx.globalAlpha = c.a;
-    sctx.strokeStyle = `rgba(138,46,255,${0.25 + drive*0.35})`;
-    sctx.lineWidth = 2;
-    sctx.beginPath();
-    sctx.moveTo(c.x, c.y);
-    sctx.lineTo(c.x - c.vx*0.9, c.y - c.vy*0.9);
-    sctx.stroke();
-    sctx.restore();
-  }
-
-  // FX LAYER
-  fctx.clearRect(0,0,innerWidth,innerHeight);
-
-  // ripples
-  for(let i=ripples.length-1;i>=0;i--){
-    const r=ripples[i];
-    r.r += (3.2 + drive*10) * (dt*0.06);
-    r.a *= 0.965;
-    if(r.a < 0.02){ ripples.splice(i,1); continue; }
-    fctx.save();
-    fctx.globalAlpha = r.a;
-    fctx.strokeStyle = `rgba(138,46,255,${0.55})`;
-    fctx.lineWidth = 2;
-    fctx.beginPath();
-    fctx.arc(r.x,r.y,r.r,0,Math.PI*2);
-    fctx.stroke();
-    fctx.restore();
-  }
-
-  // audio ring around title area
-  const cx=innerWidth/2, cy=innerHeight/2 - 120;
-  const baseR = 74 + drive*34 + E.bass*28;
-  const points = 96;
-
-  fctx.save();
-  fctx.translate(cx,cy);
-  fctx.globalAlpha = 0.34 + drive*0.22;
-  fctx.strokeStyle = "rgba(138,46,255,0.9)";
-  fctx.lineWidth = 2;
-
-  fctx.beginPath();
-  for(let i=0;i<=points;i++){
-    const a = (i/points)*Math.PI*2;
-    const wob = Math.sin(a*3 + t*0.002)* (6 + E.mid*18) + Math.sin(a*7 - t*0.0016)* (4 + E.tre*14);
-    const rr = baseR + wob;
-    const x = Math.cos(a)*rr;
-    const y = Math.sin(a)*rr;
-    if(i===0) fctx.moveTo(x,y);
-    else fctx.lineTo(x,y);
-  }
-  fctx.stroke();
-
-  // waveform “slash”
-  if(audioOn && analyser){
-    analyser.getByteTimeDomainData(time);
-    fctx.globalAlpha = 0.18 + drive*0.25;
-    fctx.strokeStyle = "rgba(255,255,255,0.9)";
-    fctx.lineWidth = 1;
-    fctx.beginPath();
-    const w = Math.min(720, innerWidth*0.86);
-    const startX = -w/2;
-    for(let i=0;i<time.length;i+=6){
-      const k=i/(time.length-1);
-      const v=(time[i]-128)/128;
-      const x = startX + k*w;
-      const y = 120 + v*(24 + E.bass*60);
-      if(i===0) fctx.moveTo(x,y);
-      else fctx.lineTo(x,y);
-    }
-    fctx.stroke();
-  }
-  fctx.restore();
-
-  requestAnimationFrame(draw);
-}
-requestAnimationFrame(draw);
-
-/* ========= IDLE “ALIVE” ========= */
-setInterval(()=>{
-  // subtle breathing
-  hue = (hue + prand(-2,2)) % 360;
-  blur = clamp(blur + prand(-0.05,0.08), 0, 1.3);
-  zoom = clamp(zoom + prand(-0.001,0.002), 0.99, 1.03);
-  invert = clamp(invert + prand(-0.01,0.01), 0, 0.14);
-  shake = clamp(shake * 0.86, 0, 8);
-  applyWarp();
-
-  // gentle random comet
-  if(rng() < 0.08) spawnComet(0.7);
-
-  // occasional whisper
-  if(rng() < 0.08){
-    pulseWhisper(ppick([
-      "TOUCH THE VOID",
-      "DRAG THE RELIC",
-      "OPEN A DOOR",
-      "YOU’RE CLOSE",
-      "THE NODE IS ALIVE",
-      "SOMETHING IS COMING",
-      "DON’T LEAVE YET"
-    ]), 280);
-  }
-
-  // occasionally spawn relic even if you do nothing
-  if(!relicOn && rng()<0.03){
-    lastX = innerWidth*rand(0.2,0.8);
-    lastY = innerHeight*rand(0.25,0.75);
-    maybeRelic(true);
-  }
-
-  // very rare major event by itself
-  if(rng() < 0.02){
-    log(`[${nowStamp()}] …`, "line dim");
-    randomMajor();
-  }
-}, 780);
-
-/* ========= INTRO ========= */
-setTimeout(()=>{ pulseWhisper("TOUCH THE VOID"); }, 260);
-setTimeout(()=>{ log("…", "line dim"); log("THE NODE IS A SLOT MACHINE FOR REALITY.", "line sys"); }, 540);
-setTimeout(()=>{ spawnComet(1.0); }, 900);
-
-/* ========= NICE: keep sky density based on resize ========= */
-addEventListener("resize", ()=>{ initSky(); });
-
+/* =======================
+   START
+======================= */
+setRealm(0);
+say("TAP OR PRESS SPACE", 520);
 </script>
 </body>
 </html>
