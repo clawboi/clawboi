@@ -132,7 +132,6 @@ export class EnemyManager {
   }
 
   /* ✅ the method your main.js calls */
-  resolvePlayerAttack(player){
     resolvePlayerAttack(player, hbOverride){
   const hb = hbOverride || player?.getAttackHitbox?.();
   if(!hb) return { count:0, kills:0 };
