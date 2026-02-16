@@ -23,6 +23,7 @@ body{
   font-family:var(--sans);
   overflow-x:hidden;
   position:relative;
+  isolation:isolate; /* keeps the glow layers from blending over UI/text */
 }
 
 /* FULL PAGE VIOLET ATMOSPHERE */
@@ -31,7 +32,7 @@ body::before{
   position:fixed;
   inset:-20%;
   pointer-events:none;
-  z-index:0;
+  z-index:-2; /* behind everything */
   background:
     radial-gradient(circle at 20% 20%, rgba(138,46,255,.22), transparent 60%),
     radial-gradient(circle at 80% 30%, rgba(138,46,255,.18), transparent 65%),
@@ -46,7 +47,7 @@ body::after{
   position:fixed;
   inset:0;
   pointer-events:none;
-  z-index:0;
+  z-index:-2; /* behind everything */
   background:
     radial-gradient(1200px 900px at 50% 45%, rgba(0,0,0,0) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.60) 100%),
     repeating-radial-gradient(circle at 18% 24%,
@@ -105,20 +106,24 @@ header a:hover{opacity:1}
   margin-right:calc(50% - 50vw);
 }
 
+/* FULL PAGE moving spotlight, but kept BEHIND content */
 .hero::before{
   content:"";
-  position:absolute;
+  position:fixed;
   inset:0;
   pointer-events:none;
+  z-index:-1; /* behind content so it won’t wash over labels */
   background:radial-gradient(circle at var(--x,50%) var(--y,50%), rgba(138,46,255,.08), transparent 60%);
   mix-blend-mode:screen;
 }
 
+/* FULL PAGE storm layer, also BEHIND content */
 .hero:after{
   content:"";
-  position:absolute;
+  position:fixed;
   inset:0;
   pointer-events:none;
+  z-index:-1; /* behind content so it won’t wash over labels */
   background:
     radial-gradient(circle at 30% 30%,rgba(138,46,255,.14),transparent 65%),
     radial-gradient(circle at 70% 40%,rgba(138,46,255,.09),transparent 68%);
@@ -653,5 +658,3 @@ if(treePortal){
 
 </body>
 </html>
-
-
