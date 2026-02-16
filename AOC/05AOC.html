@@ -1,1 +1,493 @@
+<!-- AOC/05AOC.html -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>AOC05 · Gate Run</title>
+<style>
+  :root{
+    --bg:#05030a;
+    --ui:#e8e8ff;
+    --muted:rgba(232,232,255,0.72);
+    --violet:#8a2eff;
+    --accent:#b300ff;
+    --cyan:#00ffd5;
+    --danger:#ff3b6b;
+    --ok:#7CFF6B;
+  }
+  html,body{
+    height:100%; margin:0; overflow:hidden;
+    background:radial-gradient(1100px 740px at 50% 40%, #140a2a 0%, #05030a 60%, #02010a 100%);
+    color:var(--ui);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  }
+  #wrap{height:100%; display:grid; place-items:center;}
+  canvas{
+    image-rendering:pixelated; image-rendering:crisp-edges;
+    border:1px solid rgba(255,255,255,0.14);
+    border-radius:14px;
+    background:#03020a;
+    box-shadow:0 18px 60px rgba(0,0,0,0.62), 0 0 0 1px rgba(179,0,255,0.10) inset;
+  }
+  .nav{
+    position:fixed; top:12px; left:14px; z-index:50;
+    font-size:12px; letter-spacing:.25em; text-transform:uppercase;
+    display:flex; gap:18px; align-items:center; user-select:none;
+  }
+  .nav a{color:#fff; text-decoration:none; opacity:.75; transition:.2s; text-shadow:0 0 18px rgba(138,46,255,.22);}
+  .nav a:hover{opacity:1}
+  .hint{
+    position:fixed; left:14px; bottom:12px; z-index:50;
+    font-size:12px; color:var(--muted);
+    user-select:none; opacity:0.98;
+    background:rgba(0,0,0,0.35);
+    border:1px solid rgba(255,255,255,0.10);
+    border-radius:12px;
+    padding:10px 12px;
+    max-width:min(760px,calc(100vw - 28px));
+    line-height:1.45;
+  }
+  .topright{
+    position:fixed; right:14px; top:12px; z-index:50;
+    font-size:12px; color:rgba(232,232,255,0.70);
+    user-select:none; opacity:0.95; text-align:right;
+    background:rgba(0,0,0,0.28);
+    border:1px solid rgba(255,255,255,0.10);
+    border-radius:12px;
+    padding:10px 12px;
+  }
+</style>
+</head>
+<body>
+  <div class="nav">
+    <a href="../index.html">CLAWBOI</a>
+    <a href="../games.html">BACK TO GAMES</a>
+  </div>
+
+  <div id="wrap">
+    <canvas id="c" width="960" height="540"></canvas>
+  </div>
+
+  <div class="topright">
+    AOC05 · GATE RUN<br/>
+    <span style="opacity:.7">break the observatory gate.</span>
+  </div>
+
+  <div class="hint" id="hint">
+    <b>Drive</b> W Accelerate · S Brake/Reverse · A/D Steer · <b>Boost</b> Shift · <b>Restart</b> R
+    <br><span id="msg" style="opacity:.8"></span>
+  </div>
+
+<script>
+(() => {
+  const canvas=document.getElementById("c");
+  const ctx=canvas.getContext("2d",{alpha:false});
+
+  const W=320,H=180;
+  const world=document.createElement("canvas");
+  world.width=W; world.height=H;
+  const g=world.getContext("2d",{alpha:false});
+
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const randi=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  const dist2=(ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by;return dx*dx+dy*dy;};
+
+  const PROG_KEY="AOC_PROGRESS";
+  localStorage.setItem(PROG_KEY,"AOC05");
+
+  let last=performance.now(), acc=0;
+  const DT=1/60;
+
+  const keys=new Set();
+  const pressed=new Set();
+  window.addEventListener("keydown",(e)=>{
+    const k=e.key.toLowerCase();
+    keys.add(k); pressed.add(k);
+    if([" ","arrowup","arrowdown","arrowleft","arrowright"].includes(e.key)) e.preventDefault();
+  },{passive:false});
+  window.addEventListener("keyup",(e)=>keys.delete(e.key.toLowerCase()));
+
+  // FX
+  let shake=0, hitstop=0;
+  const sparks=[];
+  const msgEl=document.getElementById("msg");
+
+  function particles(x,y,count,spread,speed,life,colA,colB){
+    for(let i=0;i<count;i++){
+      const a=rand(0,Math.PI*2);
+      const s=rand(speed*0.35,speed);
+      sparks.push({
+        x,y,
+        vx:Math.cos(a)*s+rand(-spread,spread),
+        vy:Math.sin(a)*s+rand(-spread,spread),
+        life:rand(life*0.6,life),
+        col:(Math.random()<0.5?colA:colB)
+      });
+    }
+  }
+
+  // Scene layout: long run to the right
+  const road={x0:10,y0:26,x1:W-10,y1:H-18};
+  const gate={x:W-18, y:H/2-22, w:8, h:44, hp:220, broken:false};
+
+  // Car
+  const car={
+    x:28, y:H/2,
+    vx:0, vy:0,
+    ang:0,
+    speed:0,
+    hp:120,
+    boost:0,
+    score:0
+  };
+
+  // Enemies on foot
+  const guards=[]; // {x,y,vx,vy,spd,elite,hp,t}
+  let spawnT=0.2;
+  let spawnRate=0.42;
+
+  function spawnGuard(){
+    const elite=Math.random()<0.18;
+    const x=rand(W*0.38, W-30);
+    const y=rand(road.y0+10, road.y1-10);
+    const spd=elite?rand(18,28):rand(14,22);
+    const hp=elite?70:44;
+    guards.push({x,y,vx:0,vy:0,spd,elite,hp,t:rand(0,999)});
+  }
+
+  function reset(){
+    sparks.length=0; guards.length=0;
+    car.x=28; car.y=H/2;
+    car.vx=0; car.vy=0; car.ang=0; car.speed=0;
+    car.hp=120; car.score=0;
+    gate.hp=220; gate.broken=false;
+    spawnRate=0.42; spawnT=0.2;
+    for(let i=0;i<10;i++) spawnGuard();
+    msgEl.textContent="YOU STOLE THE ONLY CAR THAT REMEMBERS YOU. HIT THE GATE HARD.";
+  }
+
+  function drawBackdrop(tt){
+    g.fillStyle="#070517";
+    g.fillRect(0,0,W,H);
+
+    // horizon fog
+    for(let i=0;i<5;i++){
+      const fx=(W*(0.12+i*0.2)+Math.sin(tt*0.7+i)*12);
+      const fy=(H*(0.14+i*0.13)+Math.cos(tt*0.55+i)*10);
+      g.fillStyle=`rgba(138,46,255,${0.04+i*0.014})`;
+      g.fillRect(fx-34,fy-22,68,44);
+    }
+
+    // road slab
+    g.fillStyle="rgba(0,0,0,0.42)";
+    g.fillRect(road.x0, road.y0, road.x1-road.x0, road.y1-road.y0);
+
+    // lane specks
+    g.strokeStyle="rgba(255,255,255,0.06)";
+    for(let x=road.x0+10;x<road.x1;x+=16){
+      g.beginPath(); g.moveTo(x, H/2); g.lineTo(x+6, H/2); g.stroke();
+    }
+
+    // boundaries
+    g.strokeStyle="rgba(255,255,255,0.12)";
+    g.strokeRect(road.x0, road.y0, road.x1-road.x0, road.y1-road.y0);
+
+    // gate
+    if(!gate.broken){
+      g.fillStyle="rgba(255,255,255,0.10)";
+      g.fillRect(gate.x, gate.y, gate.w, gate.h);
+      g.strokeStyle="rgba(0,255,213,0.35)";
+      g.strokeRect(gate.x, gate.y, gate.w, gate.h);
+      // hp bar
+      const p=clamp(gate.hp/220,0,1);
+      g.fillStyle="rgba(0,0,0,0.35)";
+      g.fillRect(gate.x-26, gate.y-10, 60, 6);
+      g.fillStyle=p>0.35?"rgba(0,255,213,0.85)":"rgba(255,59,107,0.85)";
+      g.fillRect(gate.x-26, gate.y-10, 60*p, 6);
+      g.strokeStyle="rgba(255,255,255,0.12)";
+      g.strokeRect(gate.x-26, gate.y-10, 60, 6);
+    }else{
+      // busted gate glow
+      g.fillStyle="rgba(0,255,213,0.12)";
+      g.fillRect(gate.x-10, gate.y-6, gate.w+20, gate.h+12);
+      g.fillStyle="rgba(255,255,255,0.08)";
+      g.fillRect(gate.x, gate.y, gate.w, gate.h);
+    }
+
+    // top ui strip
+    g.fillStyle="rgba(0,0,0,0.35)";
+    g.fillRect(0,0,W,18);
+    g.fillStyle="rgba(232,232,255,0.85)";
+    g.font="10px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+    g.fillText("AOC05 // GATE RUN", 8, 13);
+
+    // car hp
+    const hp=clamp(car.hp/120,0,1);
+    g.fillStyle="rgba(255,255,255,0.08)";
+    g.fillRect(8,22,140,8);
+    g.fillStyle = hp>0.4 ? "#7CFF6B" : "#ff3b6b";
+    g.fillRect(8,22,140*hp,8);
+    g.strokeStyle="rgba(255,255,255,0.14)";
+    g.strokeRect(8,22,140,8);
+
+    // score
+    g.fillStyle="rgba(232,232,255,0.65)";
+    g.fillText("HITS " + car.score, 168, 29);
+  }
+
+  function drawCar(){
+    const x=car.x|0, y=car.y|0;
+
+    g.save();
+    g.translate(x,y);
+    g.rotate(car.ang);
+
+    // shadow
+    g.fillStyle="rgba(0,0,0,0.35)";
+    g.fillRect(-10,7,20,4);
+
+    // body
+    g.fillStyle="rgba(0,255,213,0.16)";
+    g.fillRect(-12,-6,24,12);
+    g.strokeStyle="rgba(0,255,213,0.55)";
+    g.strokeRect(-12,-6,24,12);
+
+    // hood / windshield
+    g.fillStyle="rgba(0,0,0,0.45)";
+    g.fillRect(-6,-5,12,4);
+
+    // lights
+    g.fillStyle="rgba(255,255,255,0.55)";
+    g.fillRect(10,-2,2,4);
+    g.fillStyle="rgba(255,59,107,0.55)";
+    g.fillRect(-12,-2,2,4);
+
+    // exhaust pixels
+    if(Math.abs(car.speed)>20){
+      g.fillStyle="rgba(255,255,255,0.15)";
+      g.fillRect(-15, -1, 2, 2);
+      g.fillRect(-17,  1, 1, 1);
+    }
+
+    g.restore();
+  }
+
+  function drawGuard(e){
+    const x=e.x|0,y=e.y|0;
+    const bob=(Math.sin(e.t*0.18)*1)|0;
+
+    g.fillStyle="rgba(0,0,0,0.35)";
+    g.fillRect(x-5,y+7,10,3);
+
+    g.fillStyle=e.elite?"#ff3b6b":"#58b0ff";
+    g.fillRect(x-4,y-5+bob,8,10);
+
+    g.fillStyle=e.elite?"#b300ff":"#2b6bd6";
+    g.fillRect(x-5,y-14+bob,10,9);
+
+    g.fillStyle="rgba(0,0,0,0.55)";
+    g.fillRect(x-3,y-11+bob,6,2);
+  }
+
+  function fadeTo(url){
+    const d=document.createElement("div");
+    d.style.position="fixed";
+    d.style.inset="0";
+    d.style.background="#000";
+    d.style.opacity="0";
+    d.style.transition="900ms";
+    d.style.zIndex="999";
+    document.body.appendChild(d);
+    requestAnimationFrame(()=>d.style.opacity="1");
+    setTimeout(()=>location.href=url, 940);
+  }
+
+  function update(dt){
+    if(hitstop>0){ hitstop-=dt; return; }
+
+    if(pressed.has("r")){
+      reset();
+      pressed.clear();
+      return;
+    }
+
+    // driving physics
+    const accel = keys.has("w") ? 80 : 0;
+    const brake = keys.has("s") ? 95 : 0;
+
+    // boost
+    const boosting = keys.has("shift") && car.hp>5;
+    const boostMul = boosting ? 1.45 : 1.0;
+    if(boosting){
+      car.hp -= 9*dt; // boost costs car integrity
+      particles(car.x-10*Math.cos(car.ang), car.y-10*Math.sin(car.ang), 3, 0.6, 40, 0.18, "#b300ff", "#00ffd5");
+      shake=Math.max(shake,2);
+    }
+
+    // steering depends on speed
+    const steer = (keys.has("a")?-1:0) + (keys.has("d")?1:0);
+    const steerPower = clamp(Math.abs(car.speed)/70, 0.2, 1.0);
+    car.ang += steer * (2.3*dt) * steerPower * (car.speed>=0 ? 1 : -1);
+
+    // speed integrate
+    car.speed += (accel*dt) * boostMul;
+    car.speed -= (brake*dt) * Math.sign(car.speed||1);
+    car.speed *= (1 - 0.8*dt); // friction
+
+    car.speed = clamp(car.speed, -55, 120);
+
+    car.vx = Math.cos(car.ang) * car.speed;
+    car.vy = Math.sin(car.ang) * car.speed;
+
+    car.x += car.vx*dt;
+    car.y += car.vy*dt;
+
+    // keep on road
+    if(car.x<road.x0+10){ car.x=road.x0+10; car.speed*=0.6; }
+    if(car.x>road.x1-10){ car.x=road.x1-10; car.speed*=0.6; }
+    if(car.y<road.y0+10){ car.y=road.y0+10; car.speed*=0.7; }
+    if(car.y>road.y1-10){ car.y=road.y1-10; car.speed*=0.7; }
+
+    // enemy spawn ramps
+    spawnT -= dt;
+    if(spawnT<=0){
+      spawnT = spawnRate;
+      spawnGuard();
+      spawnRate = Math.max(0.22, spawnRate - 0.002);
+    }
+
+    // guards chase car (on foot)
+    for(let i=guards.length-1;i>=0;i--){
+      const e=guards[i];
+      e.t += 1;
+      const a=Math.atan2(car.y-e.y, car.x-e.x);
+      e.vx=Math.cos(a)*e.spd;
+      e.vy=Math.sin(a)*e.spd;
+      e.x += e.vx*dt;
+      e.y += e.vy*dt;
+
+      // if too far left, respawn to the right to keep pressure
+      if(e.x < road.x0-20){
+        e.x = rand(W*0.45, W-24);
+        e.y = rand(road.y0+10, road.y1-10);
+      }
+
+      // run-over collision
+      const rr = 11*11;
+      if(dist2(e.x,e.y,car.x,car.y) < rr){
+        // splat
+        particles(e.x,e.y,22,1.6,110,0.5,"#ff3b6b","#00ffd5");
+        shake=Math.max(shake,6);
+        hitstop=0.012;
+        car.score += e.elite ? 3 : 1;
+        // small car damage if slow impact (like they slam into you)
+        if(Math.abs(car.speed) < 35){
+          car.hp -= e.elite ? 8 : 5;
+        }
+        guards.splice(i,1);
+      }
+    }
+
+    // gate collision
+    if(!gate.broken){
+      const inGateX = (car.x > gate.x-8 && car.x < gate.x+gate.w+8);
+      const inGateY = (car.y > gate.y-10 && car.y < gate.y+gate.h+10);
+      if(inGateX && inGateY){
+        const impact = Math.max(0, Math.abs(car.speed) - 25);
+        if(impact>0){
+          const dmg = impact * 0.9;
+          gate.hp -= dmg;
+          car.hp -= impact * 0.18; // ramming costs you
+          particles(gate.x, car.y, 30, 2.2, 140, 0.55, "#00ffd5", "#b300ff");
+          shake=Math.max(shake,10);
+          hitstop=0.016;
+          car.speed *= -0.35; // bounce back
+          msgEl.textContent="RAM IT AGAIN. HARDER.";
+          if(gate.hp<=0){
+            gate.broken=true;
+            gate.hp=0;
+            particles(gate.x+4, gate.y+gate.h/2, 120, 3.0, 180, 1.0, "#00ffd5","#ff3b6b");
+            shake=Math.max(shake,14);
+            msgEl.textContent="GATE BROKE. GO.";
+          }
+        }else{
+          // too slow, you just bump it
+          car.speed *= 0.35;
+        }
+      }else{
+        msgEl.textContent="RUN THEM OVER. BUILD SPEED. BREAK THE GATE.";
+      }
+    }else{
+      msgEl.textContent="ESCAPE LINE OPEN. DRIVE THROUGH.";
+      // escape condition: cross beyond right boundary
+      if(car.x > W-6){
+        localStorage.setItem(PROG_KEY,"AOC05_COMPLETE");
+        fadeTo("06AOC.html");
+      }
+    }
+
+    // death
+    if(car.hp<=0){
+      reset();
+    }
+
+    pressed.clear();
+  }
+
+  function draw(){
+    const sx=shake>0?randi(-shake,shake):0;
+    const sy=shake>0?randi(-shake,shake):0;
+    shake=Math.max(0,shake-0.35);
+
+    const tt=performance.now()/1000;
+    drawBackdrop(tt);
+
+    g.save();
+    g.translate(sx,sy);
+
+    // guards
+    for(const e of guards) drawGuard(e);
+
+    // car
+    drawCar();
+
+    // particles
+    for(let i=sparks.length-1;i>=0;i--){
+      const p=sparks[i];
+      p.life-=DT;
+      p.x += p.vx*DT;
+      p.y += p.vy*DT;
+      p.vx*=0.90; p.vy*=0.90;
+      g.fillStyle=p.col;
+      g.fillRect(p.x|0,p.y|0,1,1);
+      if(p.life<=0) sparks.splice(i,1);
+    }
+
+    g.restore();
+
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(world,0,0,W,H,0,0,canvas.width,canvas.height);
+  }
+
+  function loop(now){
+    const dt=Math.min(0.05,(now-last)/1000);
+    last=now;
+    acc += dt;
+    while(acc>=DT){
+      update(DT);
+      acc -= DT;
+    }
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  reset();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
 
