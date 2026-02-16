@@ -21,7 +21,7 @@ export class PickupManager{
     return this.collected >= this.target;
   }
 
-  update(dt){ (void)dt; }
+  update(dt){ }
 
   collect(player){
     for (const s of this.shards){
