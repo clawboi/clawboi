@@ -1,138 +1,404 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<title>Hammock</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia's Audition — Hammock</title>
 <style>
-body{margin:0;background:#000;overflow:hidden;color:#fff;font-family:monospace}
-canvas{display:block;margin:auto;image-rendering:pixelated}
-.exit{
-position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-padding:10px 18px;border:1px solid #fff;background:#000;color:#fff;
-cursor:pointer;letter-spacing:.2em;
-}
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff; --aqua:#00ffd5; --hot:#ff63ff; --sun:#ffd24d;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%; display:grid; place-items:center;}
+  canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+  body::before{
+    content:""; position:fixed; inset:-20%; pointer-events:none;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(138,46,255,.20), transparent 62%),
+      radial-gradient(circle at 78% 20%, rgba(0,255,213,.12), transparent 62%),
+      radial-gradient(circle at 50% 92%, rgba(255,99,255,.10), transparent 72%);
+    filter:blur(44px) saturate(1.25);
+    animation:drift 12s ease-in-out infinite;
+  }
+  body::after{
+    content:""; position:fixed; inset:0; pointer-events:none;
+    background:
+      radial-gradient(1200px 900px at 50% 45%, rgba(0,0,0,0) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.62) 100%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 4px);
+    mix-blend-mode:overlay; opacity:.55;
+  }
+  @keyframes drift{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(1.6%,-1.2%,0)}}
+
+  .hud{
+    position:fixed; left:12px; right:12px; top:12px; z-index:5;
+    display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;
+  }
+  .pill{
+    pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.35);
+    backdrop-filter: blur(8px);
+    border-radius:999px; padding:10px 12px;
+    font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+    display:flex; gap:10px; align-items:center;
+  }
+  .toast{
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+    border-radius:14px; padding:10px 12px;
+    font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
+    max-width:min(820px, calc(100vw - 24px)); text-align:center;
+    z-index:6;
+  }
+  .toast.on{opacity:1}
 </style>
 </head>
 <body>
-
-<canvas id="c" width="320" height="180"></canvas>
-<div class="exit" onclick="location.href='Sophie02.html'">EXIT COSMOS</div>
+<div class="hud">
+  <div class="pill"><b>SOPHIA</b> <span id="status">HAMMOCK</span></div>
+  <div class="pill">SWING: <span id="swing">0%</span></div>
+  <div class="pill">COSMOS: <span id="cosmos">CALM</span></div>
+  <div class="pill">MILO: <span id="miloMood">orbiting</span></div>
+  <div class="pill">TRIP: <span id="trip">OFF</span></div>
+  <div class="pill">E → BACKYARD</div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
 
 <script>
-const c=document.getElementById("c");
-const x=c.getContext("2d");
-let t=0;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { alpha:false });
+ctx.imageSmoothingEnabled = false;
 
-/* ---------- STAR LAYERS ---------- */
-function starLayer(count,speed,size,alpha){
-for(let i=0;i<count;i++){
-let px=(Math.sin(i*99+t*speed)*.5+.5)*320;
-let py=(Math.cos(i*77+t*speed)*.5+.5)*180;
-x.fillStyle=`rgba(255,255,255,${alpha})`;
-x.fillRect(px,py,size,size);
-}
-}
+const UI = {
+  swing: document.getElementById('swing'),
+  cosmos: document.getElementById('cosmos'),
+  miloMood: document.getElementById('miloMood'),
+  trip: document.getElementById('trip'),
+  toast: document.getElementById('toast'),
+};
 
-/* ---------- COLOR STARS ---------- */
-function colorStars(){
-for(let i=0;i<70;i++){
-let px=(Math.sin(i*77+t*.02)*.5+.5)*320;
-let py=(Math.cos(i*55+t*.02)*.5+.5)*180;
-x.fillStyle=`hsl(${(i*9+t)%360} 80% 60%)`;
-x.fillRect(px,py,1,1);
+const STORE_KEY = "SOPHIA_AUDITION_SAVE_V1";
+function loadState(){
+  const raw = localStorage.getItem(STORE_KEY);
+  if(raw){ try{return JSON.parse(raw);}catch(e){} }
+  return { trip:false, dressColor:"#a64dff", shoeColor:"#ffffff", inv:{shrooms:0, grapes:0}, sophia:{x:160,y:120}, milo:{x:148,y:132} };
 }
-}
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+let state = loadState();
+state.inv = state.inv || {shrooms:0, grapes:0};
 
-/* ---------- GALAXY ---------- */
-function galaxy(){
-for(let i=0;i<260;i++){
-let a=i*.11+t*.002;
-let r=i*.38;
-let px=160+Math.cos(a)*r;
-let py=90+Math.sin(a)*r;
-x.fillStyle=`hsla(${(i*2+t)%360},80%,60%,.18)`;
-x.fillRect(px,py,1,1);
-}
+function toast(msg, ms=1500){
+  UI.toast.textContent = msg;
+  UI.toast.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>UI.toast.classList.remove('on'), ms);
 }
 
-/* ---------- NEBULA CLOUD ---------- */
-function nebula(){
-let g=x.createRadialGradient(160,90,10,160,90,120);
-g.addColorStop(0,"rgba(138,46,255,.25)");
-g.addColorStop(.5,"rgba(0,255,200,.12)");
-g.addColorStop(1,"transparent");
-x.fillStyle=g;
-x.fillRect(0,0,320,180);
-}
-
-/* ---------- PULSAR CORE ---------- */
-function pulsar(){
-let r=10+Math.sin(t*.08)*3;
-let g=x.createRadialGradient(160,90,0,160,90,r);
-g.addColorStop(0,"#fff");
-g.addColorStop(.4,"#8a2eff");
-g.addColorStop(1,"transparent");
-x.fillStyle=g;
-x.fillRect(160-r,90-r,r*2,r*2);
-}
-
-/* ---------- SHOOTING STARS ---------- */
-let shoots=[];
-function spawnShoot(){
-shoots.push({x:Math.random()*320,y:-5,v:2+Math.random()*2});
-}
-function drawShoots(){
-if(Math.random()<.02) spawnShoot();
-shoots.forEach(s=>{
-s.y+=s.v;
-x.fillStyle="#fff";
-x.fillRect(s.x,s.y,2,1);
+const keysDown = new Set();
+addEventListener('keydown',(e)=>{
+  const k = e.key.toLowerCase();
+  if(["arrowup","arrowdown","arrowleft","arrowright"," ","shift","w","a","s","d","e","c","t","enter"].includes(k)) e.preventDefault();
+  keysDown.add(k);
 });
-shoots=shoots.filter(s=>s.y<190);
+addEventListener('keyup',(e)=>keysDown.delete(e.key.toLowerCase()));
+
+// Touch: swipe left/right to swing, tap to "wish"
+let touch = {active:false, x:0, dx:0, tapTime:0};
+canvas.addEventListener('pointerdown',(e)=>{
+  canvas.setPointerCapture(e.pointerId);
+  touch.active=true; touch.x=e.clientX; touch.dx=0; touch.tapTime=performance.now();
+});
+canvas.addEventListener('pointermove',(e)=>{
+  if(!touch.active) return;
+  touch.dx = (e.clientX - touch.x);
+});
+canvas.addEventListener('pointerup',(e)=>{
+  if(!touch.active) return;
+  const dt = performance.now() - touch.tapTime;
+  const moved = Math.abs(touch.dx);
+  touch.active=false;
+
+  if(dt < 220 && moved < 10){
+    // tap: wish
+    spawnWishSpark();
+    if(!state.trip && Math.random()<0.25){
+      state.trip = true; saveState();
+      toast("You wished too hard. Trip toggled ON.", 1700);
+    }else{
+      toast("A tiny wish evaporates into starlight.", 1500);
+    }
+  }
+  touch.dx = 0;
+});
+
+const W=canvas.width, H=canvas.height;
+
+// Scene: a hammock floating in space, Sophia chilling, Milo orbiting
+let t=0;
+let swing=0;      // -1..1
+let swingV=0;
+let calm=1;       // 0..1
+let nebPulse=0;
+
+// Stars and “universe” objects
+const stars = [];
+function seedStars(){
+  stars.length=0;
+  for(let i=0;i<160;i++){
+    stars.push({
+      x: Math.random()*W,
+      y: Math.random()*H,
+      z: Math.random()*1,
+      tw: Math.random()*Math.PI*2,
+      sp: 0.15 + Math.random()*0.55
+    });
+  }
+}
+seedStars();
+
+let sparks=[];
+function spawnWishSpark(){
+  const cx = W*0.5 + swing*10;
+  const cy = H*0.50;
+  for(let i=0;i<18;i++){
+    const a = Math.random()*Math.PI*2;
+    const r = 0.5 + Math.random()*2.0;
+    sparks.push({
+      x:cx, y:cy,
+      vx:Math.cos(a)*r, vy:Math.sin(a)*r - 0.4,
+      life:30 + Math.random()*25
+    });
+  }
+}
+function updateSparks(){
+  for(const p of sparks){
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.98; p.vy = p.vy*0.98 + 0.02;
+    p.life -= 1;
+  }
+  sparks = sparks.filter(p=>p.life>0);
+}
+function drawSparks(){
+  for(const p of sparks){
+    const a = Math.max(0, Math.min(0.22, p.life/120));
+    ctx.fillStyle = `rgba(255,255,255,${a})`;
+    ctx.fillRect(p.x|0, p.y|0, 1, 1);
+  }
 }
 
-/* ---------- MILO TRIP SPEECH ---------- */
-const lines=[
-"milo: the stars smell purple",
-"milo: gravity is optional",
-"milo: i am the moon now",
-"milo: reality is crunchy",
-"milo: the void pets me back",
-"milo: do not trust rectangles"
-];
-
-function miloSpeak(){
-if(Math.random()<.01){
-let msg=lines[Math.floor(Math.random()*lines.length)];
-x.fillStyle="rgba(0,0,0,.6)";
-x.fillRect(40,140,240,18);
-x.strokeStyle="rgba(255,255,255,.2)";
-x.strokeRect(40.5,140.5,239,17);
-x.fillStyle="#fff";
-x.font="10px monospace";
-x.fillText(msg,46,152);
+function syncHUD(){
+  UI.swing.textContent = `${Math.round(Math.abs(swing)*100)}%`;
+  UI.trip.textContent = state.trip ? "ON" : "OFF";
+  UI.miloMood.textContent = state.trip ? "zooming" : "orbiting";
+  UI.cosmos.textContent = calm > 0.7 ? "CALM" : (calm > 0.35 ? "WAVY" : "WILD");
 }
+syncHUD();
+
+function goBack(){
+  saveState();
+  location.href="Sophie02.html";
 }
 
-/* ---------- LOOP ---------- */
+// Drawing helpers: same sprite vibe as Backyard
+function drawSophiaRelaxed(x,y){
+  // lounging pose in hammock: rotated vibe via pixels
+  const dress = state.dressColor || "#a64dff";
+  const shoes = state.shoeColor || "#ffffff";
+
+  // hair/head
+  ctx.fillStyle="#f2d27a"; ctx.fillRect(x+3,y+2,8,3); ctx.fillRect(x+2,y+4,10,3);
+  // face
+  ctx.fillStyle="#ffd9c9"; ctx.fillRect(x+4,y+6,6,4);
+  // sleepy eyes
+  ctx.fillStyle="rgba(103,183,255,.55)"; ctx.fillRect(x+5,y+7,1,1); ctx.fillRect(x+8,y+7,1,1);
+
+  // torso/dress, lying sideways
+  ctx.fillStyle=dress; ctx.fillRect(x+6,y+10,7,3); ctx.fillRect(x+9,y+9,4,2);
+
+  // legs
+  ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(x+12,y+11,5,2);
+  // shoes
+  ctx.fillStyle=shoes; ctx.fillRect(x+16,y+11,2,1);
+}
+
+function drawMilo(x,y,phase){
+  // floating cat orb
+  ctx.fillStyle="rgba(0,0,0,.40)"; ctx.fillRect(x-1,y+7,10,2);
+  ctx.fillStyle="#d8d8d8"; ctx.fillRect(x+1,y+2,6,5);
+  ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+1,y+1,2,2); ctx.fillRect(x+5,y+1,2,2);
+
+  const eye = state.trip ? "rgba(255,99,255,.9)" : "rgba(26,255,211,.9)";
+  ctx.fillStyle=eye; ctx.fillRect(x+2,y+4,1,1); ctx.fillRect(x+5,y+4,1,1);
+
+  // tail flick
+  ctx.fillStyle="#cfcfcf";
+  const wig = state.trip ? ((Math.sin(phase)*1.2)|0) : ((Math.sin(phase*0.6)*0.6)|0);
+  ctx.fillRect(x+7, y+3+wig, 1, 3);
+}
+
+function drawHammock(cx,cy,amp){
+  // anchor posts
+  ctx.fillStyle="rgba(255,255,255,.10)";
+  ctx.fillRect((cx-72)|0, (cy-28)|0, 3, 58);
+  ctx.fillRect((cx+69)|0, (cy-28)|0, 3, 58);
+
+  // ropes
+  ctx.fillStyle="rgba(255,255,255,.08)";
+  ctx.fillRect((cx-69)|0, (cy-22)|0, 18, 1);
+  ctx.fillRect((cx+51)|0, (cy-22)|0, 18, 1);
+
+  // hammock bed (curved)
+  const w=120;
+  for(let i=0;i<w;i++){
+    const u = i/(w-1);
+    const curve = Math.sin(u*Math.PI) * (10 + amp*8);
+    const y = (cy + 8 + curve)|0;
+    const x = (cx - 60 + i)|0;
+    ctx.fillStyle = state.trip ? "rgba(255,99,255,.14)" : "rgba(138,46,255,.10)";
+    ctx.fillRect(x,y,1,2);
+    if(i%10===0){
+      ctx.fillStyle="rgba(255,255,255,.06)";
+      ctx.fillRect(x,y-1,1,1);
+    }
+  }
+
+  // tiny glow under hammock
+  ctx.fillStyle="rgba(0,0,0,.35)";
+  ctx.fillRect((cx-60)|0, (cy+22)|0, 120, 5);
+}
+
+function drawStarfield(){
+  ctx.fillStyle="#05050a";
+  ctx.fillRect(0,0,W,H);
+
+  // Nebula wash
+  const pulse = 0.10 + 0.06*Math.sin(nebPulse);
+  ctx.fillStyle = `rgba(138,46,255,${pulse})`;
+  ctx.fillRect(0,0,W,H);
+
+  // Stars parallax + twinkle
+  for(const s of stars){
+    const tw = 0.12 + 0.10*Math.sin(s.tw + t*0.06*s.sp);
+    const a = state.trip ? (tw + 0.05*Math.sin(t*0.12 + s.x)) : tw;
+
+    // slight drift based on swing and calm
+    let x = s.x + swing*8*(0.2+s.z);
+    let y = s.y + (1-calm)*4*(0.2+s.z)*Math.sin(t*0.02 + s.x);
+
+    // wrap
+    x = (x+W)%W;
+    y = (y+H)%H;
+
+    ctx.fillStyle = `rgba(255,255,255,${Math.max(0,Math.min(0.22,a))})`;
+    ctx.fillRect(x|0, y|0, 1, 1);
+
+    if(state.trip && Math.random()<0.015){
+      ctx.fillStyle="rgba(0,255,213,.10)";
+      ctx.fillRect((x+1)|0, (y)|0, 1, 1);
+    }
+  }
+
+  // Subtle vignette
+  ctx.fillStyle="rgba(0,0,0,.18)";
+  ctx.fillRect(0,0,W,12); ctx.fillRect(0,H-12,W,12); ctx.fillRect(0,0,12,H); ctx.fillRect(W-12,0,12,H);
+}
+
 function loop(){
-t++;
+  t++;
 
-x.fillStyle="rgba(0,0,0,.28)";
-x.fillRect(0,0,320,180);
+  // Controls
+  // A/D swing
+  let push=0;
+  if(keysDown.has("a") || keysDown.has("arrowleft")) push -= 1;
+  if(keysDown.has("d") || keysDown.has("arrowright")) push += 1;
+  if(touch.active) push += Math.max(-1, Math.min(1, touch.dx / 120));
 
-starLayer(40,.002,1,.3);
-starLayer(30,.004,1,.6);
-starLayer(20,.007,2,.9);
+  // space: little “kick”
+  if((keysDown.has(" ")||keysDown.has("space")) && !loop._sp){
+    swingV += (swing>=0 ? 0.18 : -0.18);
+    spawnWishSpark();
+    toast("Kick the hammock. The cosmos nods.", 1200);
+    loop._sp=1;
+  }
+  if(!(keysDown.has(" ")||keysDown.has("space"))) loop._sp=0;
 
-colorStars();
-galaxy();
-nebula();
-pulsar();
-drawShoots();
-miloSpeak();
+  // T: toggle trip
+  if(keysDown.has("t") && !loop._t){
+    state.trip = !state.trip;
+    saveState();
+    toast(state.trip ? "Trip ON. Stars start gossiping." : "Trip OFF. Quiet returns.", 1600);
+    loop._t=1;
+  }
+  if(!keysDown.has("t")) loop._t=0;
 
-requestAnimationFrame(loop);
+  // E: exit
+  if(keysDown.has("e") && !loop._e){
+    goBack();
+    loop._e=1;
+  }
+  if(!keysDown.has("e")) loop._e=0;
+
+  // Physics
+  swingV += push * 0.014;
+  swingV *= 0.985;
+  swing += swingV;
+
+  // clamp but with soft edges
+  if(swing > 1){ swing=1; swingV*=-0.6; }
+  if(swing < -1){ swing=-1; swingV*=-0.6; }
+
+  // Calm meter: faster swing = less calm
+  calm += (1 - Math.min(1, Math.abs(swingV)*8) - calm) * 0.05;
+  calm = Math.max(0.05, Math.min(1, calm));
+
+  // Nebula pulse
+  nebPulse += state.trip ? 0.06 : 0.03;
+
+  updateSparks();
+  syncHUD();
+
+  // Draw
+  drawStarfield();
+
+  const cx = (W*0.5 + swing*14)|0;
+  const cy = (H*0.52 + Math.sin(t*0.03)*1)|0;
+
+  // Cosmic “planets” drifting by
+  if(state.trip){
+    const px = (W*0.18 + Math.sin(t*0.01)*18)|0;
+    const py = (H*0.22 + Math.cos(t*0.012)*10)|0;
+    ctx.fillStyle="rgba(0,255,213,.08)";
+    ctx.fillRect(px-10, py-6, 20, 12);
+  }
+  const qx = (W*0.82 + Math.sin(t*0.008+2)*12)|0;
+  const qy = (H*0.75 + Math.cos(t*0.009+1)*10)|0;
+  ctx.fillStyle="rgba(255,210,77,.06)";
+  ctx.fillRect(qx-14, qy-10, 28, 20);
+
+  drawHammock(cx,cy, Math.abs(swing));
+
+  // Sophia lounging on the hammock bed
+  const sx = (cx - 10 + swing*6)|0;
+  const sy = (cy + 2 + Math.sin(t*0.06)*1)|0;
+  drawSophiaRelaxed(sx, sy);
+
+  // Milo orbiting in the cosmos
+  const orbR = state.trip ? 26 : 18;
+  const ang = t*(state.trip ? 0.08 : 0.05) + swing*0.5;
+  const mx = (cx + Math.cos(ang)*orbR)|0;
+  const my = (cy - 26 + Math.sin(ang*1.2)*10)|0;
+  drawMilo(mx, my, ang);
+
+  drawSparks();
+
+  // Subtle trip scanlines
+  if(state.trip){
+    ctx.fillStyle = `rgba(255,99,255,${0.08 + 0.05*Math.sin(t*0.07)})`;
+    ctx.fillRect(0,0,W,H);
+    for(let y=0;y<H;y+=3){
+      ctx.fillStyle = `rgba(0,255,213,${0.02 + 0.02*Math.sin(t*0.12 + y*0.2)})`;
+      ctx.fillRect(0,y,W,1);
+    }
+  }
+
+  requestAnimationFrame(loop);
 }
 loop();
 </script>
