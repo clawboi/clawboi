@@ -1,142 +1,373 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<title>Pingpong</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia's Audition — Ping Pong</title>
 <style>
-body{margin:0;background:#000;overflow:hidden;color:#fff;font-family:monospace}
-canvas{display:block;margin:auto;image-rendering:pixelated}
-.exit{
-position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-padding:10px 18px;border:1px solid #fff;background:#000;color:#fff;
-cursor:pointer;letter-spacing:.2em;
-}
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff; --aqua:#00ffd5; --hot:#ff63ff; --sun:#ffd24d;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%; display:grid; place-items:center;}
+  canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+
+  body::before{
+    content:""; position:fixed; inset:-20%; pointer-events:none;
+    background:
+      radial-gradient(circle at 16% 10%, rgba(138,46,255,.20), transparent 62%),
+      radial-gradient(circle at 88% 24%, rgba(0,255,213,.12), transparent 64%),
+      radial-gradient(circle at 52% 92%, rgba(0,0,0,.55), transparent 72%);
+    filter:blur(42px) saturate(1.22);
+    animation:drift 10s ease-in-out infinite;
+  }
+  body::after{
+    content:""; position:fixed; inset:0; pointer-events:none;
+    background:
+      radial-gradient(1200px 900px at 50% 45%, rgba(0,0,0,0) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.62) 100%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 4px);
+    mix-blend-mode:overlay; opacity:.55;
+  }
+  @keyframes drift{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(1.2%,-1.0%,0)}}
+
+  .hud{
+    position:fixed; left:12px; right:12px; top:12px; z-index:5;
+    display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;
+  }
+  .pill{
+    pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.35);
+    backdrop-filter: blur(8px);
+    border-radius:999px; padding:10px 12px;
+    font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+    display:flex; gap:10px; align-items:center;
+  }
+  .toast{
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+    border-radius:14px; padding:10px 12px;
+    font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
+    max-width:min(820px, calc(100vw - 24px)); text-align:center;
+    z-index:6;
+  }
+  .toast.on{opacity:1}
 </style>
 </head>
 <body>
-
-<canvas id="c" width="320" height="180"></canvas>
-<div class="exit" onclick="location.href='Sophie02.html'">EXIT GAME</div>
+<div class="hud">
+  <div class="pill"><b>SOPHIA</b> <span id="status">PING PONG</span></div>
+  <div class="pill">SCORE: <span id="score">0</span> - <span id="score2">0</span></div>
+  <div class="pill">SPEED: <span id="spd">1.0x</span></div>
+  <div class="pill">MODE: <span id="mode">CHILL</span></div>
+  <div class="pill">W/S or Drag → Paddle</div>
+  <div class="pill">E → BACKYARD</div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
 
 <script>
-const c=document.getElementById("c");
-const x=c.getContext("2d");
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { alpha:false });
+ctx.imageSmoothingEnabled = false;
 
-let ball={x:160,y:90,vx:2,vy:1};
-let p1=80,p2=80;
-let s1=0,s2=0;
-let shake=0;
-let t=0;
+const UI = {
+  score: document.getElementById('score'),
+  score2: document.getElementById('score2'),
+  spd: document.getElementById('spd'),
+  mode: document.getElementById('mode'),
+  toast: document.getElementById('toast'),
+};
 
-const miloTalk=[
-"milo: pathetic.",
-"milo: your reflexes are theoretical",
-"milo: i trained in space",
-"milo: paws > hands",
-"milo: this is my sport now"
-];
-
-function taunt(){
-if(Math.random()<.02){
-x.fillStyle="rgba(0,0,0,.6)";
-x.fillRect(60,150,200,16);
-x.fillStyle="#fff";
-x.fillText(miloTalk[Math.floor(Math.random()*miloTalk.length)],70,162);
+const STORE_KEY = "SOPHIA_AUDITION_SAVE_V1";
+function loadState(){
+  const raw = localStorage.getItem(STORE_KEY);
+  if(raw){ try{return JSON.parse(raw);}catch(e){} }
+  return { trip:false, dressColor:"#a64dff", shoeColor:"#ffffff", inv:{shrooms:0, grapes:0}, sophia:{x:160,y:120}, milo:{x:148,y:132} };
 }
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+let state = loadState();
+state.inv = state.inv || {shrooms:0, grapes:0};
+
+function toast(msg, ms=1500){
+  UI.toast.textContent = msg;
+  UI.toast.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>UI.toast.classList.remove('on'), ms);
 }
 
-addEventListener("mousemove",e=>{
-let rect=c.getBoundingClientRect();
-p1=(e.clientY-rect.top)/rect.height*180;
+const keysDown = new Set();
+addEventListener('keydown',(e)=>{
+  const k = e.key.toLowerCase();
+  if(["arrowup","arrowdown","arrowleft","arrowright"," ","shift","w","a","s","d","e","c","enter"].includes(k)) e.preventDefault();
+  keysDown.add(k);
 });
+addEventListener('keyup',(e)=>keysDown.delete(e.key.toLowerCase()));
 
-/* AI */
-function ai(){
-p2+=((ball.y)-p2)*.1;
+let dragging=false;
+canvas.addEventListener('pointerdown',(e)=>{ dragging=true; canvas.setPointerCapture(e.pointerId); setPaddleFromPointer(e); });
+canvas.addEventListener('pointermove',(e)=>{ if(!dragging) return; setPaddleFromPointer(e); });
+canvas.addEventListener('pointerup',()=>dragging=false);
+
+function setPaddleFromPointer(e){
+  const rect = canvas.getBoundingClientRect();
+  const ny = (e.clientY - rect.top) / rect.height;
+  player.y = clamp(ny*H - player.h/2, tableY+4, tableY+tableH-player.h-4);
 }
 
-/* ball physics */
-function physics(){
-ball.x+=ball.vx;
-ball.y+=ball.vy;
+const W=canvas.width, H=canvas.height;
 
-if(ball.y<0||ball.y>180) ball.vy*=-1;
+// Close-up table layout
+const tableY = 44;
+const tableH = 92;
+const tableX = 20;
+const tableW = 280;
 
-if(ball.x<20 && Math.abs(ball.y-p1)<14){
-ball.vx*=-1.1;
-shake=6;
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function rnd(a,b){ return a + Math.random()*(b-a); }
+
+// Paddles (Sophia left, Milo right)
+const player = { x: tableX+10, y: tableY+tableH/2-14, w: 4, h: 28, vy:0 };
+const enemy  = { x: tableX+tableW-14, y: tableY+tableH/2-14, w: 4, h: 28, vy:0 };
+
+// Ball
+const ball = { x: W/2, y: H/2, vx: 1.35, vy: 0.65, r: 2 };
+
+// Score + difficulty
+let p1=0, p2=0;
+let speedMul=1;
+let rally=0;
+let mode="CHILL"; // CHILL -> HEAT -> COSMIC
+
+function resetBall(towardEnemy=true){
+  ball.x = W/2; ball.y = tableY + tableH/2 + rnd(-10,10);
+  const dir = towardEnemy ? 1 : -1;
+  ball.vx = dir * (1.25 + rnd(0,0.35)) * speedMul;
+  ball.vy = (rnd(-0.9,0.9)) * speedMul;
+  rally=0;
 }
 
-if(ball.x>300 && Math.abs(ball.y-p2)<14){
-ball.vx*=-1.1;
-shake=6;
+function updateHUD(){
+  UI.score.textContent = String(p1);
+  UI.score2.textContent = String(p2);
+  UI.spd.textContent = `${speedMul.toFixed(1)}x`;
+  UI.mode.textContent = mode;
+}
+updateHUD();
+
+function drawSophiaPortrait(x,y){
+  // Sophia near left, holding paddle
+  const dress = state.dressColor || "#a64dff";
+  const shoes = state.shoeColor || "#ffffff";
+
+  // shadow
+  ctx.fillStyle="rgba(0,0,0,.35)";
+  ctx.fillRect(x-2,y+28,16,3);
+
+  // hair
+  ctx.fillStyle="#f2d27a"; ctx.fillRect(x+3,y+0,8,4); ctx.fillRect(x+2,y+3,10,3);
+  // face
+  ctx.fillStyle="#ffd9c9"; ctx.fillRect(x+4,y+6,6,5);
+  // eyes
+  ctx.fillStyle="#67b7ff"; ctx.fillRect(x+5,y+8,1,1); ctx.fillRect(x+8,y+8,1,1);
+
+  // dress
+  ctx.fillStyle=dress; ctx.fillRect(x+4,y+12,7,9);
+  // arm + paddle grip
+  ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(x+11,y+14,2,4);
+
+  // shoes
+  ctx.fillStyle=shoes; ctx.fillRect(x+4,y+22,2,1); ctx.fillRect(x+9,y+22,2,1);
 }
 
-if(ball.x<0){s2++; reset();}
-if(ball.x>320){s1++; reset();}
+function drawMiloPortrait(x,y,blink){
+  // Milo close-up right side
+  ctx.fillStyle="rgba(0,0,0,.35)";
+  ctx.fillRect(x-2,y+26,16,3);
+
+  // head/body chunk
+  ctx.fillStyle="#d8d8d8"; ctx.fillRect(x+3,y+6,10,10);
+  ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+3,y+4,3,3); ctx.fillRect(x+10,y+4,3,3);
+
+  const eye = (mode==="COSMIC") ? "rgba(255,99,255,.95)" : "rgba(26,255,211,.95)";
+  ctx.fillStyle = blink ? "rgba(255,255,255,.25)" : eye;
+  ctx.fillRect(x+5,y+9,1,1);
+  ctx.fillRect(x+10,y+9,1,1);
+
+  // lil mouth
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(x+8,y+12,2,1);
+
+  // tail flick
+  ctx.fillStyle="#cfcfcf";
+  ctx.fillRect(x+13, y+8 + ((Math.sin(performance.now()/220)*1)|0), 1, 6);
 }
 
-function reset(){
-ball.x=160; ball.y=90;
-ball.vx=(Math.random()<.5?-2:2);
-ball.vy=Math.random()*2-1;
+function drawTable(){
+  // back plate
+  ctx.fillStyle="#05050a"; ctx.fillRect(0,0,W,H);
+
+  // table felt
+  ctx.fillStyle="rgba(255,255,255,.06)";
+  ctx.fillRect(tableX, tableY, tableW, tableH);
+
+  // inner felt
+  ctx.fillStyle="rgba(0,0,0,.55)";
+  ctx.fillRect(tableX+4, tableY+4, tableW-8, tableH-8);
+
+  // net
+  ctx.fillStyle="rgba(255,255,255,.14)";
+  ctx.fillRect((tableX+tableW/2)|0, tableY+6, 1, tableH-12);
+
+  // net dots
+  for(let y=tableY+8; y<tableY+tableH-8; y+=5){
+    ctx.fillStyle="rgba(255,255,255,.08)";
+    ctx.fillRect((tableX+tableW/2+2)|0, y, 1, 1);
+    ctx.fillRect((tableX+tableW/2-3)|0, y+2, 1, 1);
+  }
+
+  // glow edge by mode
+  const glow = (mode==="CHILL") ? "rgba(138,46,255,.12)" : (mode==="HEAT" ? "rgba(0,255,213,.12)" : "rgba(255,99,255,.12)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(tableX-2, tableY-2, tableW+4, 2);
+  ctx.fillRect(tableX-2, tableY+tableH, tableW+4, 2);
+
+  // vignette
+  ctx.fillStyle="rgba(0,0,0,.18)";
+  ctx.fillRect(0,0,W,12); ctx.fillRect(0,H-12,W,12); ctx.fillRect(0,0,12,H); ctx.fillRect(W-12,0,12,H);
 }
 
-/* render */
-function draw(){
-t++;
-
-x.save();
-if(shake){
-x.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
-shake*=.85;
-}
-x.fillStyle="#05050a";
-x.fillRect(0,0,320,180);
-
-/* court glow */
-let g=x.createRadialGradient(160,90,20,160,90,140);
-g.addColorStop(0,"rgba(138,46,255,.25)");
-g.addColorStop(1,"transparent");
-x.fillStyle=g;
-x.fillRect(0,0,320,180);
-
-/* net */
-x.fillStyle="#fff3";
-for(let y=0;y<180;y+=6)x.fillRect(160,y,1,4);
-
-/* paddles */
-x.fillStyle="#8a2eff";
-x.fillRect(12,p1-12,4,24);
-
-x.fillStyle="#00ffd5";
-x.fillRect(304,p2-12,4,24);
-
-/* ball trail */
-for(let i=0;i<6;i++){
-x.fillStyle=`rgba(255,255,255,${.2-i*.03})`;
-x.fillRect(ball.x-ball.vx*i,ball.y-ball.vy*i,2,2);
+function drawPaddle(p, color){
+  ctx.fillStyle=color;
+  ctx.fillRect(p.x|0, p.y|0, p.w, p.h);
+  ctx.fillStyle="rgba(255,255,255,.08)";
+  ctx.fillRect(p.x|0, p.y|0, p.w, 1);
 }
 
-/* ball */
-x.fillStyle="#fff";
-x.fillRect(ball.x,ball.y,2,2);
+function drawBall(){
+  // tiny glowing ball
+  const a = (mode==="COSMIC") ? 0.18 : 0.12;
+  ctx.fillStyle = `rgba(255,255,255,${a})`;
+  ctx.fillRect((ball.x-2)|0, (ball.y-2)|0, 4, 4);
 
-/* score */
-x.fillStyle="#fff";
-x.fillText(`${s1}  -  ${s2}`,150,14);
+  ctx.fillStyle = "rgba(255,255,255,.80)";
+  ctx.fillRect((ball.x)|0, (ball.y)|0, 2, 2);
 
-x.restore();
-
-taunt();
+  if(mode!=="CHILL"){
+    ctx.fillStyle = (mode==="HEAT") ? "rgba(0,255,213,.10)" : "rgba(255,99,255,.10)";
+    ctx.fillRect((ball.x-4)|0, (ball.y)|0, 2, 2);
+  }
 }
 
-/* loop */
+function collidePaddle(p){
+  // AABB collision
+  if(ball.x+ball.r < p.x || ball.x-ball.r > p.x+p.w) return false;
+  if(ball.y+ball.r < p.y || ball.y-ball.r > p.y+p.h) return false;
+
+  // reflect with “english”
+  const hit = (ball.y - (p.y+p.h/2)) / (p.h/2);
+  ball.vy += hit * 0.55 * speedMul;
+  ball.vy = clamp(ball.vy, -2.2*speedMul, 2.2*speedMul);
+  return true;
+}
+
+function stepDifficulty(){
+  // ramp by rally, plus score pressure
+  const total = p1+p2;
+  speedMul = 1 + Math.min(1.2, total*0.07 + rally*0.012);
+
+  if(speedMul < 1.25) mode="CHILL";
+  else if(speedMul < 1.75) mode="HEAT";
+  else mode="COSMIC";
+}
+
+function goBack(){
+  saveState();
+  location.href="Sophie02.html";
+}
+
+let t=0;
+resetBall(true);
+toast("First serve. Sophia vs Milo.", 1600);
+
 function loop(){
-physics();
-ai();
-draw();
-requestAnimationFrame(loop);
+  t++;
+
+  // Exit
+  if(keysDown.has("e") && !loop._e){
+    goBack();
+    loop._e=1;
+  }
+  if(!keysDown.has("e")) loop._e=0;
+
+  // Player paddle control
+  let py=0;
+  if(keysDown.has("w") || keysDown.has("arrowup")) py -= 1;
+  if(keysDown.has("s") || keysDown.has("arrowdown")) py += 1;
+  player.y = clamp(player.y + py*1.8, tableY+4, tableY+tableH-player.h-4);
+
+  // Enemy AI: tracks ball but with personality
+  const target = ball.y - enemy.h/2;
+  const aiSkill = (mode==="CHILL") ? 0.06 : (mode==="HEAT" ? 0.085 : 0.11);
+  enemy.y += (target - enemy.y) * aiSkill;
+  enemy.y = clamp(enemy.y, tableY+4, tableY+tableH-enemy.h-4);
+
+  // Ball physics
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+
+  // Walls (top/bottom inside table)
+  const top = tableY+6, bot = tableY+tableH-6;
+  if(ball.y < top){ ball.y=top; ball.vy *= -1; }
+  if(ball.y > bot){ ball.y=bot; ball.vy *= -1; }
+
+  // Paddle collisions
+  if(ball.vx < 0 && collidePaddle(player)){
+    ball.x = player.x + player.w + ball.r;
+    ball.vx *= -1;
+    rally++;
+  }
+  if(ball.vx > 0 && collidePaddle(enemy)){
+    ball.x = enemy.x - ball.r;
+    ball.vx *= -1;
+    rally++;
+  }
+
+  // Scoring
+  if(ball.x < tableX-6){
+    p2++; toast("Milo scores. Tiny smug tail flick.", 1300);
+    resetBall(true);
+  } else if(ball.x > tableX+tableW+6){
+    p1++; toast("Sophia scores. Calm violence.", 1300);
+    resetBall(false);
+  }
+
+  stepDifficulty();
+  updateHUD();
+
+  // Draw scene
+  drawTable();
+
+  // Portraits and paddles in same world
+  drawSophiaPortrait(8, 54);
+  drawMiloPortrait(298, 56, (t%70<6));
+
+  // Paddles on table
+  drawPaddle(player, "rgba(138,46,255,.60)");
+  drawPaddle(enemy, mode==="COSMIC" ? "rgba(255,99,255,.55)" : "rgba(0,255,213,.55)");
+
+  // Ball
+  drawBall();
+
+  // Mode effects
+  if(mode==="HEAT"){
+    ctx.fillStyle=`rgba(0,255,213,${0.06 + 0.04*Math.sin(t*0.08)})`;
+    ctx.fillRect(0,0,W,H);
+  } else if(mode==="COSMIC"){
+    ctx.fillStyle=`rgba(255,99,255,${0.08 + 0.06*Math.sin(t*0.07)})`;
+    ctx.fillRect(0,0,W,H);
+    for(let y=0;y<H;y+=3){
+      ctx.fillStyle=`rgba(0,255,213,${0.02 + 0.02*Math.sin(t*0.12 + y*0.2)})`;
+      ctx.fillRect(0,y,W,1);
+    }
+  }
+
+  requestAnimationFrame(loop);
 }
 loop();
 </script>
