@@ -1,418 +1,383 @@
-<!-- Sophie03.html (LIVING ROOM / LUCAS + FRONT DOOR LOCKED UNTIL KEY) -->
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SOPHIE / AUDITION — Living Room (Sophie03)</title>
-  <meta name="theme-color" content="#07060a" />
-  <style>
-    :root{
-      --ink:#f2f2ff;
-      --muted:rgba(242,242,255,.72);
-      --hair:rgba(255,255,255,.10);
-      --violet:#8A2EFF;
-      --danger:#ff3b6b;
-      --ok:#7CFF6B;
-    }
-    html,body{height:100%;margin:0;background:radial-gradient(900px 650px at 55% 35%, #1c1328 0%, #07060a 55%, #05040a 100%);overflow:hidden;font-family:ui-monospace, Menlo, Consolas, monospace;color:var(--ink)}
-    canvas{position:fixed;inset:0;display:block}
-    .hud{position:fixed;left:14px;top:12px;z-index:10;display:flex;gap:10px;flex-wrap:wrap;user-select:none}
-    .pill{border:1px solid var(--hair);background:rgba(0,0,0,.35);backdrop-filter: blur(8px);border-radius:999px;padding:8px 10px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;display:flex;gap:10px;align-items:center;box-shadow:0 0 20px rgba(138,46,255,.14)}
-    .dot{width:8px;height:8px;border-radius:50%;background:var(--violet);box-shadow:0 0 14px rgba(138,46,255,.9)}
-    .tip{position:fixed;right:14px;top:12px;z-index:10;width:min(460px, calc(100vw - 28px));border:1px solid var(--hair);background:rgba(0,0,0,.35);backdrop-filter: blur(8px);border-radius:16px;padding:10px 12px;font-size:12px;color:var(--muted)}
-    .centerToast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;pointer-events:none;opacity:0;transition:.25s;border:1px solid var(--hair);background:rgba(0,0,0,.45);backdrop-filter: blur(10px);border-radius:18px;padding:12px 14px;max-width:min(560px, calc(100vw - 36px));text-align:center;line-height:1.35;box-shadow:0 0 36px rgba(138,46,255,.12)}
-    .centerToast.show{opacity:1}
-    .kbd{display:inline-block;padding:2px 6px;border-radius:8px;border:1px solid var(--hair);background:rgba(255,255,255,.06);color:var(--ink);font-size:11px}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia's Audition 03+ — Living Room (Search + Outfit + Exit)</title>
+<style>
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14);}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%; display:grid; place-items:center;}
+  canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+  .hud{
+    position:fixed; left:12px; right:12px; top:12px; z-index:5;
+    display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;
+  }
+  .pill{
+    pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.35);
+    backdrop-filter: blur(8px);
+    border-radius:999px; padding:10px 12px;
+    font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+    display:flex; gap:10px; align-items:center;
+  }
+  .toast{
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+    border-radius:14px; padding:10px 12px;
+    font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
+    max-width:min(720px, calc(100vw - 24px)); text-align:center;
+  }
+  .toast.on{opacity:1}
+</style>
 </head>
 <body>
-<canvas id="c"></canvas>
-
 <div class="hud">
-  <div class="pill"><span class="dot"></span><b>SOPHIE03</b><span>LIVING ROOM</span></div>
-  <div class="pill">Key: <span id="keyState">NO</span></div>
+  <div class="pill"><b>SOPHIA</b> <span>LIVING ROOM</span></div>
+  <div class="pill">TIME: <span id="time">10:00</span></div>
+  <div class="pill">KEYS: <span id="keys">NO</span></div>
+  <div class="pill">HAT: <span id="hat">OFF</span></div>
+  <div class="pill">Door → Bedroom (left) · Door → Kitchen (right)</div>
 </div>
-
-<div class="tip" id="tip">
-  <b>Living Room</b> is soft neon and controller-clicks. Lucas plays games like he’s keeping the world stitched together.
-  <div style="margin-top:6px">
-    Interact <span class="kbd">E</span> · Back to Bedroom door · Kitchen door · Front Door → <span class="kbd">street.html</span> (needs key)
-    <br/>Hide tips <span class="kbd">H</span>
-  </div>
-</div>
-
-<div class="centerToast" id="toast"></div>
+<div class="toast" id="toast"></div>
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
 
 <script>
-(() => {
-  const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
-  const defaultSave={ outfit:"violet", hasFrontDoorKey:false, lastRoom:"Sophie03.html" };
-  const loadSave=()=>{ try{ const raw=localStorage.getItem(STORE_KEY); return raw?{...defaultSave,...JSON.parse(raw)}:{...defaultSave}; }catch(e){ return {...defaultSave}; } };
-  const save=loadSave();
-  const keyState=document.getElementById("keyState");
-  const tip=document.getElementById("tip");
-  const toast=document.getElementById("toast");
-  function commitSave(){ save.lastRoom="Sophie03.html"; localStorage.setItem(STORE_KEY, JSON.stringify(save)); keyState.textContent=save.hasFrontDoorKey?"YES":"NO"; }
-  function showToast(html, ms=1400){ toast.innerHTML=html; toast.classList.add("show"); clearTimeout(showToast._t); showToast._t=setTimeout(()=>toast.classList.remove("show"), ms); }
-  function go(href){ commitSave(); location.href=href; }
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d',{alpha:false});
+ctx.imageSmoothingEnabled=false;
 
-  const canvas=document.getElementById("c");
-  const ctx=canvas.getContext("2d");
-  const DPR=Math.min(2, devicePixelRatio||1);
-  function resize(){ canvas.width=Math.floor(innerWidth*DPR); canvas.height=Math.floor(innerHeight*DPR); canvas.style.width=innerWidth+"px"; canvas.style.height=innerHeight+"px"; ctx.setTransform(DPR,0,0,DPR,0,0); }
-  addEventListener("resize", resize, {passive:true}); resize();
+const UI={
+  keys:document.getElementById('keys'),
+  hat:document.getElementById('hat'),
+  time:document.getElementById('time'),
+  toast:document.getElementById('toast')
+};
 
-  const keys=new Set();
-  addEventListener("keydown",(e)=>{
-    const k=e.key.toLowerCase(); keys.add(k);
-    if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key)) e.preventDefault();
-    if(k==="h") tip.style.display=(tip.style.display==="none")?"":"none";
-    if(k==="z") player.dancing=!player.dancing;
-    if(k==="x") player.splitsT=0.6;
-    if(e.key===" ") player.jumpT=Math.max(player.jumpT,0.35);
-    if(k==="e") tryInteract();
-  },{passive:false});
-  addEventListener("keyup",(e)=>keys.delete(e.key.toLowerCase()),{passive:true});
-  const down=(k)=>keys.has(k);
-  const axis=()=>{
-    const left=down("a")||down("arrowleft");
-    const right=down("d")||down("arrowright");
-    const up=down("w")||down("arrowup");
-    const dn=down("s")||down("arrowdown");
-    return {x:(right?1:0)-(left?1:0), y:(dn?1:0)-(up?1:0)};
-  };
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+const RUN_KEY="SOPHIA_AUDITION_RUN_V1";
+const DURATION_MS=10*60*1000;
 
-  const world={
-    w: 1300,
-    h: 820,
-    solids:[
-      {x: 170, y: 160, w: 260, h: 150, label:"TV", action: ()=>go("tv.html")},
-      {x: 520, y: 500, w: 220, h: 140, label:"Workout Station", action: ()=>go("workout.html")},
-      {x: 900, y: 160, w: 250, h: 180, label:"Lucas", action: ()=>go("lucas.html")},
-      {x: 950, y: 520, w: 230, h: 130, label:"Train Milo", action: ()=>go("trainmilo.html")},
-      // couch block
-      {x: 420, y: 250, w: 320, h: 160},
-    ],
-    doors:[
-      {x: 40, y: 350, w: 120, h: 140, label:"To Bedroom", hint:"Sophie01.html", action: ()=>go("Sophie01.html")},
-      {x: 570, y: 40, w: 160, h: 90, label:"To Kitchen", hint:"Sophie04.html", action: ()=>go("Sophie04.html")},
-      {x: 1160, y: 350, w: 110, h: 160, label:"Front Door", hint:"street.html", action: frontDoorAttempt},
-    ],
-    decor:[
-      {type:"rug", x: 380, y: 360, w: 420, h: 260},
-      {type:"neon", x: 120, y: 70, w: 280, h: 44, text:"SOFT STATIC"},
-    ]
-  };
+function loadState(){ const r=localStorage.getItem(STORE_KEY); if(r){try{return JSON.parse(r);}catch(e){}}
+  return {hasKeys:false, slept:false, trip:false, puke:false, poemLines:0, guitarPlayed:0, lastRoom:"LIVING", hat:false, found:{couch:false, cabinet:false, table:false}, sophia:{x:160,y:120}, milo:{x:148,y:132}};
+}
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
-  const player={ x: 520, y: 420, r: 18, vx:0, vy:0, facing:{x:1,y:0}, dancing:false, jumpT:0, splitsT:0 };
-  const milo={ x: player.x-40, y: player.y+30, r: 14, purr:0 };
+function loadRun(){ const r=localStorage.getItem(RUN_KEY); if(r){try{return JSON.parse(r);}catch(e){}}
+  return { startTime:0, durationMs:DURATION_MS, active:false, ended:false };
+}
+function saveRun(run){ localStorage.setItem(RUN_KEY, JSON.stringify(run)); }
 
-  const cam={x:0,y:0};
-  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  function collideCircleRect(cx,cy,cr, rx,ry,rw,rh){
-    const px=clamp(cx,rx,rx+rw), py=clamp(cy,ry,ry+rh);
-    const dx=cx-px, dy=cy-py;
-    return (dx*dx+dy*dy) < cr*cr;
+let state=loadState();
+state.lastRoom="LIVING";
+state.found = state.found || {couch:false, cabinet:false, table:false};
+if(typeof state.hat!=="boolean") state.hat=false;
+saveState();
+
+function toast(msg,ms=1500){
+  UI.toast.textContent=msg;
+  UI.toast.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>UI.toast.classList.remove('on'),ms);
+}
+
+UI.keys.textContent = state.hasKeys ? "YES" : "NO";
+UI.hat.textContent = state.hat ? "ON" : "OFF";
+
+/* ---------- TIMER GUARD (real countdown, 10 mins) ---------- */
+function fmt(ms){
+  ms=Math.max(0, ms|0);
+  const s=Math.ceil(ms/1000);
+  const m=(s/60)|0;
+  const ss=String(s%60).padStart(2,"0");
+  return `${m}:${ss}`;
+}
+function timeLeftMs(){
+  const run=loadRun();
+  if(!run.active || run.ended) return run.durationMs;
+  return (run.startTime + run.durationMs - Date.now());
+}
+function tickTimer(){
+  const left=timeLeftMs();
+  UI.time.textContent = fmt(left);
+  if(left<=0){
+    // end run
+    const run=loadRun();
+    run.ended=true; run.active=false;
+    saveRun(run);
+    toast("TIME UP. Audition missed.", 1800);
+    setTimeout(()=>location.href="Sophie00.html", 900);
   }
-  function resolveSolids(ent){
-    ent.x=clamp(ent.x, ent.r, world.w-ent.r);
-    ent.y=clamp(ent.y, ent.r, world.h-ent.r);
-    for(const s of world.solids){
-      if(collideCircleRect(ent.x,ent.y,ent.r, s.x,s.y,s.w,s.h)){
-        const left=ent.x-s.x, right=(s.x+s.w)-ent.x, top=ent.y-s.y, bottom=(s.y+s.h)-ent.y;
-        const minX=Math.min(left,right), minY=Math.min(top,bottom);
-        if(minX<minY) ent.x += (left<right)?-(ent.r):(ent.r);
-        else ent.y += (top<bottom)?-(ent.r):(ent.r);
-        ent.x=clamp(ent.x, ent.r, world.w-ent.r);
-        ent.y=clamp(ent.y, ent.r, world.h-ent.r);
-      }
-    }
+}
+setInterval(tickTimer, 250);
+tickTimer();
+
+/* input */
+const keysDown=new Set();
+addEventListener('keydown',(e)=>{
+  const k=e.key.toLowerCase();
+  if(["arrowup","arrowdown","arrowleft","arrowright"," ","shift","w","a","s","d","e"].includes(k)) e.preventDefault();
+  keysDown.add(k);
+});
+addEventListener('keyup',(e)=>keysDown.delete(e.key.toLowerCase()));
+
+/* world */
+const W=canvas.width,H=canvas.height;
+const solids=[
+  [0,0,W,10],[0,0,10,H],[0,H-10,W,10],[W-10,0,10,H],
+  // couch
+  [58,82,88,26],
+  // coffee table
+  [118,114,42,14],
+  // TV stand
+  [216,62,66,20],
+  // cabinet block (new)
+  [34,50,36,22],
+];
+
+const zones=[
+  // search spots
+  {name:"SEARCH COUCH", rect:[64,86,76,18], action: searchCouch},
+  {name:"SEARCH CABINET", rect:[36,52,32,18], action: searchCabinet},
+  {name:"SEARCH TABLE", rect:[120,116,38,10], action: searchTable},
+
+  // clothing pickup
+  {name:"HAT", rect:[176,126,18,10], action: toggleHat},
+
+  // doors
+  {name:"DOOR_BEDROOM", rect:[10,78,10,28], action: ()=>go("Sophie01.html")},
+  {name:"DOOR_KITCHEN", rect:[W-20,78,10,28], action: ()=>go("Sophie04.html")},
+
+  // front door: only usable after keys
+  {name:"FRONT DOOR", rect:[148,10,24,10], action: exitToStreet},
+];
+
+const sophia={x:state.sophia.x,y:state.sophia.y,w:10,h:12,speed:0.85,run:1.35};
+const milo={x:state.milo.x,y:state.milo.y,w:8,h:8};
+
+function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
+  return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
+}
+function collides(x,y,w,h){
+  for(const s of solids){
+    if(rectsOverlap(x,y,w,h,s[0],s[1],s[2],s[3])) return true;
   }
-  function updateCam(){
-    const tx=player.x-innerWidth/2, ty=player.y-innerHeight/2;
-    cam.x += (tx-cam.x)*0.08; cam.y += (ty-cam.y)*0.08;
-    cam.x=clamp(cam.x,0,world.w-innerWidth);
-    cam.y=clamp(cam.y,0,world.h-innerHeight);
+  return false;
+}
+function tryMove(ent,dx,dy){
+  const nx=ent.x+dx, ny=ent.y+dy;
+  if(!collides(nx,ent.y,ent.w,ent.h)) ent.x=nx;
+  if(!collides(ent.x,ny,ent.w,ent.h)) ent.y=ny;
+}
+function nearestZone(){
+  const px=sophia.x+sophia.w/2, py=sophia.y+sophia.h/2;
+  let best=null, bd=9999;
+  for(const z of zones){
+    const [x,y,w,h]=z.rect; const cx=x+w/2, cy=y+h/2;
+    const d=(cx-px)*(cx-px)+(cy-py)*(cy-py);
+    if(d<bd && d<1500){ bd=d; best=z; }
   }
+  return best;
+}
+function interact(){ const z=nearestZone(); if(z) z.action(); }
 
-  function nearestInteract(){
-    let best=null;
-    const consider=(label,action,hint,cx,cy)=>{
-      const d=Math.hypot(player.x-cx, player.y-cy);
-      if(d<92 && (!best||d<best.d)) best={d,label,action,hint,cx,cy};
-    };
-    for(const d of world.doors) consider(d.label,d.action,d.hint, d.x+d.w/2, d.y+d.h/2);
-    for(const s of world.solids) if(s.label && s.action) consider(s.label,s.action,null, s.x+s.w/2, s.y+s.h/2);
-    return best;
+/* ---------- KEY SEARCH LOGIC ---------- */
+function maybeRevealKeys(){
+  if(state.hasKeys) return;
+  // keys appear only after you've searched 2 of 3 spots (couch/cabinet/table)
+  const count = (state.found.couch?1:0) + (state.found.cabinet?1:0) + (state.found.table?1:0);
+  if(count>=2){
+    state.hasKeys=true;
+    saveState();
+    UI.keys.textContent="YES";
+    toast("KEYS FOUND. Front door is live.", 1800);
   }
-  function tryInteract(){
-    const n=nearestInteract();
-    if(!n){ showToast("Nothing to interact with.", 800); return; }
-    if(n.hint) showToast(`<b>${n.label}</b><br><span style="opacity:.8">Entering: ${n.hint}</span>`, 700);
-    else showToast(`<b>${n.label}</b>`, 520);
-    setTimeout(()=>n.action(),120);
-  }
+}
+function searchCouch(){
+  if(state.found.couch) return toast("Couch already searched.", 1300);
+  state.found.couch=true; saveState();
+  toast("You dig through cushions. Receipts. A pen. No keys.", 1700);
+  maybeRevealKeys();
+}
+function searchCabinet(){
+  if(state.found.cabinet) return toast("Cabinet already searched.", 1300);
+  state.found.cabinet=true; saveState();
+  toast("Cabinet: old candles, tape, a weird button. No keys.", 1700);
+  maybeRevealKeys();
+}
+function searchTable(){
+  if(state.found.table) return toast("Table already searched.", 1300);
+  state.found.table=true; saveState();
+  toast("Table: crumbs, hair ties, a note: 'MOVE FASTER'.", 1700);
+  maybeRevealKeys();
+}
 
-  function frontDoorAttempt(){
-    if(!save.hasFrontDoorKey){
-      showToast(`<b>Locked.</b><br><span style="opacity:.85">A gnome in the garden is hiding the key.</span>`, 1600);
-      return;
-    }
-    showToast(`<b>Unlocked.</b> The street is waiting.`, 900);
-    setTimeout(()=>go("street.html"), 240);
-  }
+/* ---------- CLOTHING PICKUP ---------- */
+function toggleHat(){
+  state.hat = !state.hat;
+  saveState();
+  UI.hat.textContent = state.hat ? "ON" : "OFF";
+  toast(state.hat ? "Hat on. Confidence +1." : "Hat off.", 1400);
+}
 
-  function outfitColor(name){
-    switch(name){
-      case "blue": return "#4aa6ff";
-      case "red": return "#ff4a6b";
-      case "green": return "#53ff86";
-      case "black": return "#1a1a22";
-      default: return "#8A2EFF";
-    }
-  }
+/* ---------- EXIT ---------- */
+function exitToStreet(){
+  if(!state.hasKeys) return toast("Front door won’t budge. Keys first.", 1500);
+  toast("Front door opens. Night air. Milo’s tail goes vertical.", 1700);
+  // keep state + timer running, go to street
+  setTimeout(()=>go("street.html"), 600);
+}
 
-  function drawFloor(){
-    ctx.fillStyle="#0b0710";
-    ctx.fillRect(0,0,world.w,world.h);
+/* navigation */
+function go(file){
+  state.sophia.x=sophia.x; state.sophia.y=sophia.y;
+  state.milo.x=milo.x; state.milo.y=milo.y;
+  saveState();
+  location.href=file;
+}
 
-    // soft carpet lines
-    for(let y=0;y<world.h;y+=38){
-      ctx.fillStyle=`rgba(255,255,255,${(y/38)%2===0?0.05:0.035})`;
-      ctx.fillRect(0,y,world.w,28);
-    }
+/* render */
+function drawRectBevel(x,y,w,h,fill){
+  ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(x,y,w,1);
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(x,y+h-1,w,1);
+  ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(x,y,1,h);
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(x+w-1,y,1,h);
+}
+function drawHintBubble(text,x,y){
+  const pad=3;
+  ctx.font="8px ui-monospace, monospace";
+  const m=ctx.measureText(text);
+  const w=Math.ceil(m.width)+pad*2, h=12;
+  ctx.fillStyle="rgba(0,0,0,.65)"; ctx.fillRect(x-w/2,y-h,w,h);
+  ctx.strokeStyle="rgba(255,255,255,.12)"; ctx.strokeRect(x-w/2+0.5,y-h+0.5,w-1,h-1);
+  ctx.fillStyle="rgba(255,255,255,.9)"; ctx.fillText(text,x-w/2+pad,y-4);
+}
+function drawSophia(){
+  const x=Math.round(sophia.x), y=Math.round(sophia.y);
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(x-1,y+11,12,2);
 
-    const g=ctx.createRadialGradient(world.w/2,world.h/2,140, world.w/2,world.h/2, 920);
-    g.addColorStop(0,"rgba(0,0,0,0)");
-    g.addColorStop(1,"rgba(0,0,0,.62)");
-    ctx.fillStyle=g;
-    ctx.fillRect(0,0,world.w,world.h);
-  }
-
-  function drawRug(r){
-    const g=ctx.createRadialGradient(r.x+r.w/2,r.y+r.h/2,20, r.x+r.w/2,r.y+r.h/2, Math.max(r.w,r.h)*0.65);
-    g.addColorStop(0,"rgba(138,46,255,.18)");
-    g.addColorStop(1,"rgba(0,0,0,0)");
-    ctx.fillStyle=g; ctx.fillRect(r.x,r.y,r.w,r.h);
-    ctx.strokeStyle="rgba(255,255,255,.10)";
-    ctx.lineWidth=2;
-    ctx.strokeRect(r.x+10,r.y+10,r.w-20,r.h-20);
-  }
-
-  function drawNeon(n){
-    ctx.fillStyle="rgba(138,46,255,.14)";
-    ctx.fillRect(n.x,n.y,n.w,n.h);
-    ctx.strokeStyle="rgba(255,255,255,.16)";
-    ctx.lineWidth=2;
-    ctx.strokeRect(n.x,n.y,n.w,n.h);
-    ctx.fillStyle="rgba(255,255,255,.55)";
-    ctx.font="12px ui-monospace, Menlo, monospace";
-    ctx.fillText(n.text, n.x+12, n.y+28);
-  }
-
-  function drawFurniture(x,y,w,h,tint){
-    ctx.fillStyle="rgba(0,0,0,.35)";
-    ctx.fillRect(x+10,y+10,w,h);
-    ctx.fillStyle=tint;
-    ctx.fillRect(x,y,w,h);
-    ctx.fillStyle="rgba(255,255,255,.06)";
-    ctx.fillRect(x,y,w,10);
-    ctx.strokeStyle="rgba(255,255,255,.14)";
-    ctx.lineWidth=2;
-    ctx.strokeRect(x,y,w,h);
-  }
-
-  function drawDoor(d){
-    ctx.fillStyle = (d.label==="Front Door")
-      ? (save.hasFrontDoorKey ? "rgba(124,255,107,.10)" : "rgba(255,59,107,.08)")
-      : "rgba(138,46,255,.10)";
-    ctx.fillRect(d.x,d.y,d.w,d.h);
-    ctx.strokeStyle="rgba(255,255,255,.18)";
-    ctx.lineWidth=2;
-    ctx.strokeRect(d.x,d.y,d.w,d.h);
-
-    const g=ctx.createRadialGradient(d.x+d.w/2,d.y+d.h/2,10, d.x+d.w/2,d.y+d.h/2,120);
-    g.addColorStop(0, d.label==="Front Door"
-      ? (save.hasFrontDoorKey ? "rgba(124,255,107,.18)" : "rgba(255,59,107,.16)")
-      : "rgba(138,46,255,.20)");
-    g.addColorStop(1,"rgba(0,0,0,0)");
-    ctx.fillStyle=g;
-    ctx.fillRect(d.x-80,d.y-80,d.w+160,d.h+160);
-  }
-
-  function drawCharacter(){
-    const col=outfitColor(save.outfit);
-    const bob=player.dancing?Math.sin(tt*10)*3:0;
-    const jump=player.jumpT>0?Math.sin((1-player.jumpT)*Math.PI)*12:0;
-    const splits=player.splitsT>0?(1-player.splitsT/0.6):0;
-    const x=player.x, y=player.y - jump + bob;
-
-    ctx.fillStyle="rgba(0,0,0,.35)";
-    ctx.beginPath(); ctx.ellipse(x, player.y+10, 18, 9, 0, 0, Math.PI*2); ctx.fill();
-
-    const aura=ctx.createRadialGradient(x,y-22,6, x,y-22, 40);
-    aura.addColorStop(0,"rgba(180,140,255,.20)");
-    aura.addColorStop(1,"rgba(0,0,0,0)");
-    ctx.fillStyle=aura; ctx.beginPath(); ctx.arc(x,y-18,40,0,Math.PI*2); ctx.fill();
-
-    ctx.fillStyle="rgba(255,245,235,.95)";
-    ctx.beginPath(); ctx.arc(x,y-18,12,0,Math.PI*2); ctx.fill();
-
-    ctx.fillStyle="rgba(20,20,30,.85)";
-    ctx.beginPath(); ctx.arc(x,y-22,14,0,Math.PI*2); ctx.fill();
-
-    ctx.fillStyle=col;
-    ctx.beginPath(); ctx.moveTo(x,y-6); ctx.lineTo(x-14,y+16); ctx.lineTo(x+14,y+16); ctx.closePath(); ctx.fill();
-
-    ctx.strokeStyle="rgba(255,245,235,.85)";
-    ctx.lineWidth=4; ctx.lineCap="round";
-    ctx.beginPath();
-    if(splits>0){
-      ctx.moveTo(x,y+16); ctx.lineTo(x-18-10*splits,y+24);
-      ctx.moveTo(x,y+16); ctx.lineTo(x+18+10*splits,y+24);
-    }else{
-      ctx.moveTo(x-4,y+16); ctx.lineTo(x-6,y+26);
-      ctx.moveTo(x+4,y+16); ctx.lineTo(x+6,y+26);
-    }
-    ctx.stroke();
+  // hat (if on)
+  if(state.hat){
+    ctx.fillStyle="rgba(0,0,0,.65)";
+    ctx.fillRect(x+1,y+0,8,2);
+    ctx.fillStyle="rgba(255,255,255,.10)";
+    ctx.fillRect(x+2,y+1,6,1);
   }
 
-  function drawMilo(){
-    milo.purr += 0.02;
-    const tail=Math.sin(milo.purr*4)*6;
+  // hair
+  ctx.fillStyle="#f2d27a"; ctx.fillRect(x+1,y+0+(state.hat?2:0),8,4); ctx.fillRect(x+0,y+3+(state.hat?2:0),10,3);
+  // face
+  ctx.fillStyle="#ffd9c9"; ctx.fillRect(x+2,y+5+(state.hat?2:0),6,4);
+  // eyes
+  ctx.fillStyle="#67b7ff"; ctx.fillRect(x+3,y+6+(state.hat?2:0),1,1); ctx.fillRect(x+6,y+6+(state.hat?2:0),1,1);
+  // dress
+  ctx.fillStyle="rgba(138,46,255,.55)"; ctx.fillRect(x+2,y+9+(state.hat?1:0),6,3);
+  ctx.fillStyle="rgba(255,255,255,.14)"; ctx.fillRect(x+3,y+10+(state.hat?1:0),4,1);
+}
+function drawMilo(t){
+  const x=Math.round(milo.x), y=Math.round(milo.y);
+  ctx.fillStyle="rgba(0,0,0,.40)"; ctx.fillRect(x-1,y+7,10,2);
+  ctx.fillStyle="#d8d8d8"; ctx.fillRect(x+1,y+2,6,5);
+  ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+1,y+1,2,2); ctx.fillRect(x+5,y+1,2,2);
+  ctx.fillStyle="#1affd3"; ctx.fillRect(x+2,y+4,1,1); ctx.fillRect(x+5,y+4,1,1);
+  ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+7,y+3,1,3);
+}
+function drawWorld(){
+  ctx.fillStyle="#05050a"; ctx.fillRect(0,0,W,H);
 
-    ctx.fillStyle="rgba(0,0,0,.28)";
-    ctx.beginPath(); ctx.ellipse(milo.x,milo.y+8,14,7,0,0,Math.PI*2); ctx.fill();
+  const g=ctx.createRadialGradient(160,70,10,160,70,170);
+  g.addColorStop(0,"rgba(255,255,255,.08)");
+  g.addColorStop(0.4,"rgba(138,46,255,.10)");
+  g.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
-    ctx.fillStyle="rgba(255,255,255,.90)";
-    ctx.beginPath(); ctx.ellipse(milo.x,milo.y,12,9,0,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(milo.x+10,milo.y-6,7,0,Math.PI*2); ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(milo.x+6,milo.y-11); ctx.lineTo(milo.x+10,milo.y-18); ctx.lineTo(milo.x+14,milo.y-11);
-    ctx.closePath(); ctx.fill();
-
-    ctx.strokeStyle="rgba(255,255,255,.85)";
-    ctx.lineWidth=4; ctx.lineCap="round";
-    ctx.beginPath();
-    ctx.moveTo(milo.x-10,milo.y+2);
-    ctx.quadraticCurveTo(milo.x-24,milo.y-6, milo.x-16,milo.y-16+tail);
-    ctx.stroke();
-
-    ctx.fillStyle="rgba(30,30,40,.55)";
-    ctx.fillRect(milo.x+12,milo.y-8,2,2);
+  ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(10,10,W-20,78);
+  for(let y=92;y<H-10;y++){
+    ctx.fillStyle=`rgba(255,255,255,${(y%6===0)?0.10:0.05})`;
+    ctx.fillRect(10,y,W-20,1);
   }
 
-  function roundRect(x,y,w,h,r){
-    const rr=Math.min(r,w/2,h/2);
-    ctx.moveTo(x+rr,y);
-    ctx.arcTo(x+w,y,x+w,y+h,rr);
-    ctx.arcTo(x+w,y+h,x,y+h,rr);
-    ctx.arcTo(x,y+h,x,y,rr);
-    ctx.arcTo(x,y,x+w,y,rr);
-    ctx.closePath();
+  // cabinet (left)
+  drawRectBevel(34,50,36,22,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(38,54,28,14);
+
+  // couch
+  drawRectBevel(58,82,88,26,"rgba(255,255,255,.06)");
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(62,86,80,10);
+
+  // table
+  drawRectBevel(118,114,42,14,"rgba(255,255,255,.05)");
+
+  // TV
+  drawRectBevel(216,62,66,20,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,0,0,.55)"; ctx.fillRect(220,64,58,12);
+
+  // clothes on floor (hat pickup)
+  ctx.fillStyle="rgba(255,255,255,.08)";
+  ctx.fillRect(176,126,18,10);
+  ctx.fillStyle="rgba(0,0,0,.55)";
+  ctx.fillRect(179,129,12,4);
+
+  // doors
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(10,78,10,28);
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(W-20,78,10,28);
+
+  // front door (top center)
+  ctx.fillStyle = state.hasKeys ? "rgba(0,255,213,.16)" : "rgba(255,255,255,.10)";
+  ctx.fillRect(148,10,24,10);
+  ctx.fillStyle="rgba(0,0,0,.55)"; ctx.fillRect(150,12,20,6);
+
+  // tiny “exit icon” appears only when keys acquired
+  if(state.hasKeys){
+    ctx.fillStyle="rgba(0,255,213,.85)";
+    ctx.fillRect(156,12,4,4);
+    ctx.fillRect(161,13,6,2);
   }
 
-  function render(){
-    ctx.clearRect(0,0,innerWidth,innerHeight);
-    ctx.save();
-    ctx.translate(-cam.x,-cam.y);
+  const z=nearestZone();
+  if(z) drawHintBubble(z.name, sophia.x+6, sophia.y-10);
+}
 
-    drawFloor();
+/* loop */
+let t=0;
+function loop(){
+  t++;
 
-    for(const d of world.decor){
-      if(d.type==="rug") drawRug(d);
-      if(d.type==="neon") drawNeon(d);
-    }
+  // movement
+  const run=keysDown.has("shift");
+  const sp=sophia.speed*(run?sophia.run:1);
 
-    for(const s of world.solids){
-      let tint="rgba(255,255,255,.06)";
-      if(s.label==="TV") tint="rgba(160,210,255,.06)";
-      if(s.label==="Lucas") tint="rgba(255,255,255,.05)";
-      if(s.label==="Workout Station") tint="rgba(255,230,180,.05)";
-      if(s.label==="Train Milo") tint="rgba(138,46,255,.06)";
-      drawFurniture(s.x,s.y,s.w,s.h,tint);
-      if(s.label){
-        ctx.fillStyle="rgba(255,255,255,.22)";
-        ctx.font="11px ui-monospace, Menlo, monospace";
-        ctx.fillText(s.label, s.x+10, s.y+18);
-      }
-    }
+  let dx=0,dy=0;
+  if(keysDown.has("w")||keysDown.has("arrowup")) dy-=sp;
+  if(keysDown.has("s")||keysDown.has("arrowdown")) dy+=sp;
+  if(keysDown.has("a")||keysDown.has("arrowleft")) dx-=sp;
+  if(keysDown.has("d")||keysDown.has("arrowright")) dx+=sp;
+  if(dx&&dy){dx*=0.72; dy*=0.72;}
+  if(dx||dy) tryMove(sophia,dx,dy);
 
-    for(const d of world.doors){
-      drawDoor(d);
-      ctx.fillStyle="rgba(255,255,255,.22)";
-      ctx.font="11px ui-monospace, Menlo, monospace";
-      ctx.fillText(d.label==="Front Door" ? "EXIT" : "DOOR", d.x+10, d.y+18);
-    }
+  // Milo follow
+  const tx=sophia.x-10, ty=sophia.y+6;
+  milo.x += (tx-milo.x)*0.06;
+  milo.y += (ty-milo.y)*0.06;
 
-    drawMilo();
-    drawCharacter();
+  // interact
+  if(keysDown.has("e")){
+    if(!loop._eWasDown) interact();
+    loop._eWasDown=true;
+  } else loop._eWasDown=false;
 
-    const n=nearestInteract();
-    if(n){
-      ctx.strokeStyle="rgba(138,46,255,.45)";
-      ctx.lineWidth=2;
-      ctx.beginPath(); ctx.ellipse(player.x,player.y+8,28,14,0,0,Math.PI*2); ctx.stroke();
-
-      const text=`E · ${n.label}`;
-      ctx.font="12px ui-monospace, Menlo, monospace";
-      const m=ctx.measureText(text);
-      const px=player.x - m.width/2 - 10;
-      const py=player.y - 44;
-      ctx.fillStyle="rgba(0,0,0,.45)";
-      ctx.strokeStyle="rgba(255,255,255,.14)";
-      ctx.lineWidth=1;
-      ctx.beginPath(); roundRect(px,py,m.width+20,22,10); ctx.fill(); ctx.stroke();
-      ctx.fillStyle="rgba(255,255,255,.88)";
-      ctx.fillText(text, player.x - m.width/2, py+15);
-    }
-
-    ctx.restore();
+  if(t%60===0){
+    state.sophia.x=sophia.x; state.sophia.y=sophia.y;
+    state.milo.x=milo.x; state.milo.y=milo.y;
+    saveState();
   }
 
-  // ========= Loop =========
-  let last=performance.now();
-  let tt=0;
-  function step(now){
-    const dt=Math.min(0.033,(now-last)/1000);
-    last=now; tt+=dt;
-
-    const a=axis();
-    let sp=(down("shift")?220:150);
-    if(player.dancing) sp*=0.65;
-
-    const mag=Math.hypot(a.x,a.y)||1;
-    const ax=a.x/mag, ay=a.y/mag;
-
-    player.vx += (ax*sp - player.vx)*0.18;
-    player.vy += (ay*sp - player.vy)*0.18;
-    player.x += player.vx*dt; player.y += player.vy*dt;
-
-    if(Math.abs(ax)+Math.abs(ay)>0.01){ player.facing.x=ax; player.facing.y=ay; }
-
-    resolveSolids(player);
-
-    const followDist=46;
-    const tx=player.x - player.facing.x*followDist - 18;
-    const ty=player.y - player.facing.y*followDist + 14;
-    milo.x += (tx-milo.x)*0.08;
-    milo.y += (ty-milo.y)*0.08;
-    resolveSolids(milo);
-
-    player.jumpT=Math.max(0,player.jumpT-dt);
-    player.splitsT=Math.max(0,player.splitsT-dt);
-
-    updateCam();
-    render();
-    requestAnimationFrame(step);
-  }
-
-  commitSave();
-  showToast(save.hasFrontDoorKey ? `The exit hums quietly.` : `Find the key. Backyard. Gnome.`, 1500);
-  requestAnimationFrame(step);
-})();
+  drawWorld();
+  drawMilo(t);
+  drawSophia();
+  requestAnimationFrame(loop);
+}
+loop();
 </script>
 </body>
 </html>
