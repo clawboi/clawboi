@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -10,6 +9,36 @@
   html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
   .wrap{height:100%; display:grid; place-items:center;}
   canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+
+  /* same vibe as Bedroom: soft atmosphere + subtle texture */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:-20%;
+    background:
+      radial-gradient(circle at 18% 10%, rgba(138,46,255,.18), transparent 60%),
+      radial-gradient(circle at 86% 42%, rgba(0,255,213,.12), transparent 65%),
+      radial-gradient(circle at 50% 90%, rgba(138,46,255,.10), transparent 70%);
+    filter:blur(40px) saturate(1.2);
+    animation:drift 12s ease-in-out infinite;
+    pointer-events:none;
+  }
+  body::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background:
+      radial-gradient(1200px 900px at 50% 45%, rgba(0,0,0,0) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.60) 100%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 4px);
+    mix-blend-mode:overlay;
+    opacity:.55;
+  }
+  @keyframes drift{
+    0%,100%{transform:translate3d(0,0,0)}
+    50%{transform:translate3d(1.5%, -1.5%,0)}
+  }
+
   .hud{
     position:fixed; left:12px; right:12px; top:12px; z-index:5;
     display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;
@@ -27,6 +56,7 @@
     border-radius:14px; padding:10px 12px;
     font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
     max-width:min(720px, calc(100vw - 24px)); text-align:center;
+    z-index:6;
   }
   .toast.on{opacity:1}
 </style>
@@ -37,6 +67,8 @@
   <div class="pill">TRIP: <span id="trip">OFF</span></div>
   <div class="pill">MILO: <span id="miloMood">following</span></div>
   <div class="pill">KEYS: <span id="keys">NO</span></div>
+  <div class="pill">SHROOMS: <span id="shrooms">0</span></div>
+  <div class="pill">GRAPES: <span id="grapes">0</span></div>
   <div class="pill">Door → Bedroom (bottom)</div>
 </div>
 <div class="toast" id="toast"></div>
@@ -50,23 +82,38 @@ ctx.imageSmoothingEnabled = false;
 const UI = {
   trip: document.getElementById('trip'),
   keys: document.getElementById('keys'),
+  shrooms: document.getElementById('shrooms'),
+  grapes: document.getElementById('grapes'),
   miloMood: document.getElementById('miloMood'),
   toast: document.getElementById('toast'),
 };
+
 const STORE_KEY = "SOPHIA_AUDITION_SAVE_V1";
 function loadState(){
   const raw = localStorage.getItem(STORE_KEY);
   if(raw){ try{return JSON.parse(raw);}catch(e){} }
-  return {hasKeys:false, slept:false, trip:false, puke:false, poemLines:0, guitarPlayed:0, lastRoom:"BACKYARD", sophia:{x:160,y:120}, milo:{x:148,y:132}};
+  return {
+    hasKeys:false, slept:false, trip:false, puke:false,
+    poemLines:0, guitarPlayed:0, lastRoom:"BACKYARD",
+    dressColor:"#a64dff", shoeColor:"#ffffff",
+    inv:{shrooms:0, grapes:0},
+    sophia:{x:160,y:120}, milo:{x:148,y:132}
+  };
 }
 function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 let state = loadState();
 state.lastRoom = "BACKYARD";
+state.inv = state.inv || {shrooms:0, grapes:0};
 saveState();
 
-UI.keys.textContent = state.hasKeys ? "YES" : "NO";
-UI.trip.textContent = state.trip ? "ON" : "OFF";
-UI.miloMood.textContent = state.trip ? "playing" : "following";
+function syncHUD(){
+  UI.keys.textContent = state.hasKeys ? "YES" : "NO";
+  UI.trip.textContent = state.trip ? "ON" : "OFF";
+  UI.miloMood.textContent = state.trip ? "playing" : "following";
+  UI.shrooms.textContent = String(state.inv.shrooms||0);
+  UI.grapes.textContent = String(state.inv.grapes||0);
+}
+syncHUD();
 
 function toast(msg, ms=1400){
   UI.toast.textContent = msg;
@@ -79,38 +126,73 @@ function toast(msg, ms=1400){
 const keysDown = new Set();
 addEventListener('keydown',(e)=>{
   const k = e.key.toLowerCase();
-  if(["arrowup","arrowdown","arrowleft","arrowright"," ","shift","w","a","s","d","e"].includes(k)) e.preventDefault();
+  if(["arrowup","arrowdown","arrowleft","arrowright"," ","shift","w","a","s","d","e","c"].includes(k)) e.preventDefault();
   keysDown.add(k);
 });
 addEventListener('keyup',(e)=>keysDown.delete(e.key.toLowerCase()));
 
 /* World */
 const W=canvas.width,H=canvas.height;
+
+/* solids (kept same idea, just consistent) */
 const solids = [
   [0,0,W,10],[0,0,10,H],[0,H-10,W,10],[W-10,0,10,H],
-  // fence top
   [10,10,W-20,18],
-  // shrubs blocks
   [30,56,60,18],
   [230,62,62,18],
-  // pingpong table (solid)
   [88,118,78,22],
-  // hammock posts (solid-ish frame)
   [196,92,64,28],
-  // mushroom patch block (still passable but used for zone)
 ];
 
-const zones = [
-  {name:"MUSHROOMS", rect:[120,72,76,40], action: eatMushroom},
-  {name:"DOOR_BEDROOM", rect:[148,H-20,34,10], action: ()=>go("Sophie01.html")},
-  // NEW: hammock
-  {name:"HAMMOCK", rect:[196,92,64,28], action: enterHammock},
-  // NEW: pingpong vs milo
-  {name:"PINGPONG", rect:[88,118,78,22], action: startPingpong},
-];
-
+/* Entities */
 const sophia = {x: state.sophia.x, y: state.sophia.y, w:10,h:12, speed:0.85, run:1.35};
 const milo = {x: state.milo.x, y: state.milo.y, w:8,h:8};
+
+/* jump + dance (visual only, same feel as Bedroom) */
+let jumpV=0, jumpZ=0, onGround=true;
+let danceT=0;
+let dust=[];
+
+/* Gnome chase */
+const gnome = {
+  x: 40, y: 100, w:10, h:10,
+  vx: 1.2, vy: 0.9,
+  stun: 0,
+  gotKey: false
+};
+
+/* Pickups (mushrooms to collect, grapes to eat) */
+let pickups = [];
+function spawnPickups(){
+  // scatter: keep away from walls a bit
+  const list = [];
+  const shroomSpots = [
+    [118,78],[140,86],[168,92],
+    [112,98],[178,78],
+    [70,86],[250,96]
+  ];
+  const grapeSpots = [
+    [46,132],[60,140],[268,130],[240,138]
+  ];
+
+  for(const [x,y] of shroomSpots){
+    list.push({type:"SHROOM", x, y, r:6, taken:false});
+  }
+  for(const [x,y] of grapeSpots){
+    list.push({type:"GRAPES", x, y, r:6, taken:false});
+  }
+  return list;
+}
+pickups = spawnPickups();
+
+/* Zones (existing + new routes) */
+const zones = [
+  {name:"MUSHROOM_PATCH", rect:[120,72,76,40], action: toggleTrip},
+  {name:"DOOR_BEDROOM", rect:[148,H-20,34,10], action: ()=>go("Sophie01.html")},
+  {name:"HAMMOCK", rect:[196,92,64,28], action: ()=>go("hammock.html")},
+  {name:"PINGPONG", rect:[88,118,78,22], action: ()=>go("pingpong.html")},
+  // gnome interaction is handled as "nearest target" too (shows GNOME hint)
+];
 
 function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
   return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
@@ -126,120 +208,108 @@ function tryMove(ent,dx,dy){
   if(!collides(nx,ent.y,ent.w,ent.h)) ent.x=nx;
   if(!collides(ent.x,ny,ent.w,ent.h)) ent.y=ny;
 }
-function nearestZone(){
+
+function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
+
+function nearestInteractable(){
   const px=sophia.x+sophia.w/2, py=sophia.y+sophia.h/2;
   let best=null, bd=9999;
+
+  // zones
   for(const z of zones){
     const [x,y,w,h]=z.rect; const cx=x+w/2, cy=y+h/2;
-    const d=(cx-px)*(cx-px)+(cy-py)*(cy-py);
-    if(d<bd && d<1300){bd=d; best=z;}
+    const d=dist2(cx,cy,px,py);
+    if(d<bd && d<1300){ bd=d; best={kind:"ZONE", name:z.name, action:z.action, hint:labelFor(z.name)}; }
   }
+
+  // pickup near
+  for(const p of pickups){
+    if(p.taken) continue;
+    const d=dist2(p.x,p.y,px,py);
+    if(d<bd && d<900){
+      bd=d;
+      best={kind:"PICKUP", name:p.type, pickup:p, hint:(p.type==="SHROOM"?"MUSHROOM":"GRAPES"), action:()=>takePickup(p)};
+    }
+  }
+
+  // gnome
+  if(!state.hasKeys){
+    const gx=gnome.x+gnome.w/2, gy=gnome.y+gnome.h/2;
+    const d=dist2(gx,gy,px,py);
+    if(d<bd && d<1400){
+      bd=d;
+      best={kind:"GNOME", name:"GNOME", hint:(gnome.stun>0?"GNOME (STUNNED)":"GNOME"), action:interactGnome};
+    }
+  }
+
   return best;
 }
-function interact(){
-  const z=nearestZone();
-  if(z) z.action();
+function labelFor(n){
+  if(n==="MUSHROOM_PATCH") return "MUSHROOM PATCH";
+  if(n==="DOOR_BEDROOM") return "DOOR";
+  return n;
 }
 
-function eatMushroom(){
+/* Actions */
+function toggleTrip(){
   state.trip = !state.trip;
   saveState();
-  UI.trip.textContent = state.trip ? "ON" : "OFF";
-  UI.miloMood.textContent = state.trip ? "playing" : "following";
-  toast(state.trip ? "Mushroom eaten. Reality gets… soft." : "Trip fades. Backyard returns.", 1700);
+  syncHUD();
+  toast(state.trip ? "Mushroom patch touched. Reality gets… soft." : "Trip fades. Backyard returns.", 1700);
 }
 
-/* NEW: hammock travel */
-function enterHammock(){
-  toast(state.trip ? "She melts into the hammock. The sky opens." : "She sits on the hammock. The night feels huge.", 1700);
-  // preserve exact engine/state, just jump to a new html
-  go("hammock.html");
-}
-
-/* NEW: pingpong mini */
-let pingpongActive=false;
-let pp={ sx:0, sy:0, mx:0, my:0, bx:0, by:0, vx:0, vy:0, s:0, m:0, over:0, hit:0 };
-
-function startPingpong(){
-  if(pingpongActive) return toast("Pingpong already in session.", 1200);
-  pingpongActive=true;
-  pp={
-    sx:sophia.x, sy:sophia.y,
-    mx:milo.x, my:milo.y,
-    bx:127, by:129, vx:(Math.random()<0.5?-1:1)*1.2, vy:-0.7,
-    s:0, m:0, over:0, hit:0
-  };
-  toast("PINGPONG vs MILO. Press E to return. (Try not to lose to a cat.)", 2200);
-}
-
-/* pingpong update */
-function updatePingpong(t){
-  // field over the pingpong table
-  // paddles move with sophia/milo positions mapped to table edges
-  const table={x:88,y:118,w:78,h:22};
-  const left=table.x+4, right=table.x+table.w-6;
-  const top=table.y+4, bottom=table.y+table.h-4;
-
-  // Sophia paddle: follow Sophia's y position but clamp
-  let py = sophia.y + 6;
-  py = Math.max(top, Math.min(bottom, py));
-  // Milo paddle: follow ball slightly delayed + jitter when tripping
-  let my = pp.by + (state.trip ? Math.sin(t*0.12)*3 : 0);
-  my = Math.max(top, Math.min(bottom, my));
-
-  // Move ball
-  pp.bx += pp.vx;
-  pp.by += pp.vy;
-
-  // Bounce top/bottom
-  if(pp.by<top){pp.by=top; pp.vy*=-1;}
-  if(pp.by>bottom){pp.by=bottom; pp.vy*=-1;}
-
-  // Paddle collision
-  // Sophia side (left)
-  if(pp.bx<=left+1){
-    const d = Math.abs(pp.by - py);
-    if(d<=5){
-      pp.bx=left+1;
-      pp.vx = Math.abs(pp.vx) + 0.08;
-      pp.vy += (pp.by - py)*0.06;
-      pp.hit++;
-      if(pp.hit%4===0) toast("Sophia: *tap* (Milo narrows his eyes)", 900);
-    }else{
-      pp.m++;
-      serveBall(1);
-      toast("Milo scores. (meow of victory)", 1200);
-    }
+function takePickup(p){
+  if(p.taken) return;
+  p.taken=true;
+  if(p.type==="SHROOM"){
+    state.inv.shrooms = (state.inv.shrooms||0) + 1;
+    toast("Picked up a mushroom. (Use it on the gnome.)", 1600);
+  }else{
+    state.inv.grapes = (state.inv.grapes||0) + 1;
+    toast("Ate grapes. Cold sweet little reset.", 1400);
   }
-  // Milo side (right)
-  if(pp.bx>=right-1){
-    const d = Math.abs(pp.by - my);
-    if(d<=5){
-      pp.bx=right-1;
-      pp.vx = -Math.abs(pp.vx) - 0.06;
-      pp.vy += (pp.by - my)*0.06;
-      pp.hit++;
-      if(pp.hit%4===0) toast("Milo returns it with a paw. disrespectful.", 900);
+  saveState();
+  syncHUD();
+}
+
+/* Gnome mechanic:
+   - you must have at least 1 collected mushroom to stun him
+   - stunned gnome stops briefly
+   - while stunned and close, interact again to grab key
+*/
+function interactGnome(){
+  if(state.hasKeys){
+    toast("You already got the key.", 1200);
+    return;
+  }
+
+  const px=sophia.x+sophia.w/2, py=sophia.y+sophia.h/2;
+  const gx=gnome.x+gnome.w/2, gy=gnome.y+gnome.h/2;
+  const close = dist2(px,py,gx,gy) < 520;
+
+  if(gnome.stun>0){
+    if(close){
+      state.hasKeys=true;
+      saveState(); syncHUD();
+      toast("Got the KEY. The gnome is defeated (politely).", 2200);
+      return;
     }else{
-      pp.s++;
-      serveBall(-1);
-      toast("Sophia scores. Milo pretends he let it happen.", 1200);
+      toast("He’s stunned… get closer!", 1200);
+      return;
     }
   }
 
-  // End condition
-  if(pp.s>=5 || pp.m>=5){
-    pp.over=1;
-    pingpongActive=false;
-    toast(pp.s>pp.m ? "WIN: Sophia defeats Milo at pingpong. Milo demands a rematch." : "LOSS: Milo wins. He is now the athlete of the house.", 2400);
+  const sh = state.inv.shrooms||0;
+  if(sh<=0){
+    toast("You need a mushroom to stop the gnome.", 1500);
+    return;
   }
-}
-function serveBall(dir){
-  const table={x:88,y:118,w:78,h:22};
-  pp.bx=table.x+table.w/2;
-  pp.by=table.y+table.h/2;
-  pp.vx=dir*(1.2+Math.random()*0.2);
-  pp.vy=(Math.random()*1.2-0.6);
+
+  // spend 1 shroom to stun
+  state.inv.shrooms = sh-1;
+  gnome.stun = 220; // frames
+  saveState(); syncHUD();
+  toast("Spore bomb. The gnome freezes mid-scamper.", 1700);
 }
 
 function go(file){
@@ -249,18 +319,18 @@ function go(file){
   location.href=file;
 }
 
-/* Render */
+/* Drawing helpers */
 function drawHintBubble(text,x,y){
   const pad=3;
   ctx.font="8px ui-monospace, monospace";
   const m=ctx.measureText(text);
   const w=Math.ceil(m.width)+pad*2, h=12;
   ctx.fillStyle="rgba(0,0,0,.65)";
-  ctx.fillRect(x-w/2,y-h,w,h);
+  ctx.fillRect((x-w/2)|0,(y-h)|0,w,h);
   ctx.strokeStyle="rgba(255,255,255,.12)";
-  ctx.strokeRect(x-w/2+0.5,y-h+0.5,w-1,h-1);
+  ctx.strokeRect((x-w/2+0.5)|0,(y-h+0.5)|0,w-1,h-1);
   ctx.fillStyle="rgba(255,255,255,.9)";
-  ctx.fillText(text,x-w/2+pad,y-4);
+  ctx.fillText(text,(x-w/2+pad)|0,(y-4)|0);
 }
 function drawRectBevel(x,y,w,h,fill){
   ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
@@ -269,17 +339,61 @@ function drawRectBevel(x,y,w,h,fill){
   ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(x,y,1,h);
   ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(x+w-1,y,1,h);
 }
+function vignette(){
+  ctx.fillStyle="rgba(0,0,0,.22)";
+  ctx.fillRect(0,0,W,12);
+  ctx.fillRect(0,H-12,W,12);
+  ctx.fillRect(0,0,12,H);
+  ctx.fillRect(W-12,0,12,H);
+}
+
+/* Dust fx (jump + steps) */
+function updateDust(){
+  for(const p of dust){
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.08; p.life-=1;
+  }
+  dust = dust.filter(p=>p.life>0);
+}
+function drawDust(){
+  for(const p of dust){
+    ctx.fillStyle=`rgba(255,255,255,${Math.max(0,Math.min(.12,p.life/80))})`;
+    ctx.fillRect(p.x|0,p.y|0,1,1);
+  }
+}
+
+/* Draw sprites */
 function drawSophia(){
-  const x=Math.round(sophia.x), y=Math.round(sophia.y);
-  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(x-1,y+11,12,2);
+  let x=(sophia.x|0), y=(sophia.y|0);
+  y = (y + (jumpZ|0))|0;
+
+  // shadow
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(x-1,(sophia.y|0)+11,12,2);
+
+  // hair/head
   ctx.fillStyle="#f2d27a"; ctx.fillRect(x+1,y+0,8,4); ctx.fillRect(x+0,y+3,10,3);
+  // face
   ctx.fillStyle="#ffd9c9"; ctx.fillRect(x+2,y+5,6,4);
+  // eyes
   ctx.fillStyle="#67b7ff"; ctx.fillRect(x+3,y+6,1,1); ctx.fillRect(x+6,y+6,1,1);
-  ctx.fillStyle="rgba(138,46,255,.55)"; ctx.fillRect(x+2,y+9,6,3);
-  ctx.fillStyle="rgba(255,255,255,.14)"; ctx.fillRect(x+3,y+10,4,1);
+
+  const dress = state.dressColor || "#a64dff";
+  const shoes = state.shoeColor || "#ffffff";
+  const dancing = danceT>0;
+  const wob = dancing ? ((danceT%8<4)?1:0) : 0;
+
+  // torso
+  ctx.fillStyle=dress; ctx.fillRect(x+2+wob,y+9,6,3);
+  // shoes
+  ctx.fillStyle=shoes; ctx.fillRect(x+2-wob,y+12,2,1); ctx.fillRect(x+6+wob,y+12,2,1);
+
+  // aura while dancing
+  if(dancing){
+    ctx.fillStyle="rgba(138,46,255,.08)";
+    ctx.fillRect(x-1,y+8,12,6);
+  }
 }
 function drawMilo(t){
-  const x=Math.round(milo.x), y=Math.round(milo.y);
+  const x=(milo.x|0), y=(milo.y|0);
   ctx.fillStyle="rgba(0,0,0,.40)"; ctx.fillRect(x-1,y+7,10,2);
   ctx.fillStyle="#d8d8d8"; ctx.fillRect(x+1,y+2,6,5);
   ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+1,y+1,2,2); ctx.fillRect(x+5,y+1,2,2);
@@ -287,23 +401,61 @@ function drawMilo(t){
   ctx.fillRect(x+2,y+4,1,1); ctx.fillRect(x+5,y+4,1,1);
   // tail wiggle when tripping
   ctx.fillStyle="#cfcfcf";
-  const wig = state.trip ? Math.round(Math.sin(t*0.2)*1) : 0;
+  const wig = state.trip ? (Math.sin(t*0.2)*1)|0 : 0;
   ctx.fillRect(x+7,y+3+wig,1,3);
 }
+function drawGnome(t){
+  const x=(gnome.x|0), y=(gnome.y|0);
+  // shadow
+  ctx.fillStyle="rgba(0,0,0,.42)"; ctx.fillRect(x-1,y+10,12,2);
+
+  // hat
+  const hatGlow = gnome.stun>0 ? "rgba(255,99,255,.22)" : "rgba(138,46,255,.18)";
+  ctx.fillStyle=hatGlow; ctx.fillRect(x+2,y+0,6,3);
+  ctx.fillStyle="rgba(138,46,255,.55)"; ctx.fillRect(x+3,y+1,4,2);
+
+  // beard/body
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(x+2,y+3,6,3);
+  ctx.fillStyle="rgba(255,210,77,.18)"; ctx.fillRect(x+2,y+6,6,4);
+
+  // eyes (mean little dots)
+  ctx.fillStyle="rgba(255,255,255,.65)";
+  ctx.fillRect(x+3,y+4,1,1);
+  ctx.fillRect(x+6,y+4,1,1);
+
+  // stun sparkle
+  if(gnome.stun>0 && (t%6===0)){
+    ctx.fillStyle="rgba(255,255,255,.14)";
+    ctx.fillRect(x-2 + (Math.random()*14|0), y-3 + (Math.random()*6|0), 1, 1);
+  }
+}
+
+/* Render world with Bedroom-style polish */
 function drawWorld(t){
-  // base
   ctx.fillStyle="#05050a"; ctx.fillRect(0,0,W,H);
 
-  // night sky gradient
-  const g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,"rgba(138,46,255,.18)");
-  g.addColorStop(0.4,"rgba(0,0,0,0)");
-  g.addColorStop(1,"rgba(0,0,0,.35)");
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  // sky haze
+  let g1=ctx.createRadialGradient(82,22,10,82,22,160);
+  g1.addColorStop(0,"rgba(138,46,255,.22)");
+  g1.addColorStop(1,"transparent");
+  ctx.fillStyle=g1; ctx.fillRect(0,0,W,H);
 
-  // grass
+  let g2=ctx.createRadialGradient(250,40,10,250,40,170);
+  g2.addColorStop(0,"rgba(0,255,213,.10)");
+  g2.addColorStop(1,"transparent");
+  ctx.fillStyle=g2; ctx.fillRect(0,0,W,H);
+
+  // grass bed
   ctx.fillStyle="rgba(0,255,170,.06)";
   ctx.fillRect(10,28,W-20,H-38);
+
+  // subtle sparkle noise
+  if(Math.random()<.25){
+    const sx=12+Math.random()*(W-24);
+    const sy=14+Math.random()*72;
+    ctx.fillStyle="rgba(255,255,255,.08)";
+    ctx.fillRect(sx,sy,1,1);
+  }
 
   // fence
   drawRectBevel(10,10,W-20,18,"rgba(255,255,255,.06)");
@@ -316,7 +468,7 @@ function drawWorld(t){
   drawRectBevel(30,56,60,18,"rgba(255,255,255,.05)");
   drawRectBevel(230,62,62,18,"rgba(255,255,255,.05)");
 
-  // mushroom patch
+  // mushroom patch (trip toggle area)
   drawRectBevel(120,72,76,40,"rgba(255,255,255,.04)");
   for(let i=0;i<9;i++){
     const mx = 128 + (i%3)*22 + (i===8?8:0);
@@ -326,84 +478,142 @@ function drawWorld(t){
     ctx.fillRect(mx+1,my-2,4,2);
   }
 
-  // NEW: pingpong table
+  // pingpong table
   drawRectBevel(88,118,78,22,"rgba(255,255,255,.05)");
   ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(92,122,70,14);
-  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(127,122,1,14); // net line illusion
-  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(92,129,70,1); // center court
-  // tiny net
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(127,122,1,14);
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(92,129,70,1);
   ctx.fillStyle="rgba(255,255,255,.12)"; ctx.fillRect(126,126,3,5);
 
-  // NEW: hammock area
+  // hammock
   drawRectBevel(196,92,64,28,"rgba(255,255,255,.04)");
-  // posts
   ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(198,94,3,24);
   ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(255,94,3,24);
-  // hammock curve
   for(let i=0;i<46;i++){
     const x=203+i;
-    const y=105 + Math.round(Math.sin((i/46)*Math.PI)*5);
+    const y=105 + ((Math.sin((i/46)*Math.PI)*5)|0);
     ctx.fillStyle="rgba(138,46,255,.10)";
     ctx.fillRect(x,y,1,2);
   }
 
-  // door back to bedroom
+  // door to bedroom
   ctx.fillStyle="rgba(255,255,255,.10)";
   ctx.fillRect(148,H-20,34,10);
   ctx.fillStyle="rgba(0,0,0,.55)";
   ctx.fillRect(150,H-18,30,6);
 
-  // pingpong overlay (draw ball + scores) if active
-  if(pingpongActive){
-    // subtle focus wash
-    ctx.fillStyle="rgba(0,0,0,.20)";
-    ctx.fillRect(0,0,W,H);
-
-    // redraw table on top (keeps it crisp)
-    drawRectBevel(88,118,78,22,"rgba(255,255,255,.06)");
-    ctx.fillStyle="rgba(0,0,0,.50)"; ctx.fillRect(92,122,70,14);
-    ctx.fillStyle="rgba(255,255,255,.11)"; ctx.fillRect(127,122,1,14);
-    ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(92,129,70,1);
-    ctx.fillStyle="rgba(255,255,255,.14)"; ctx.fillRect(126,126,3,5);
-
-    // paddles
-    const table={x:88,y:118,w:78,h:22};
-    const top=table.y+4, bottom=table.y+table.h-4;
-    let py = Math.max(top, Math.min(bottom, sophia.y+6));
-    let my = Math.max(top, Math.min(bottom, pp.by + (state.trip ? Math.sin(t*0.12)*3 : 0)));
-
-    ctx.fillStyle="rgba(138,46,255,.55)";
-    ctx.fillRect(table.x+4, py-4, 2, 8);
-
-    ctx.fillStyle="rgba(0,255,213,.55)";
-    ctx.fillRect(table.x+table.w-6, my-4, 2, 8);
-
-    // ball
-    ctx.fillStyle="rgba(255,255,255,.85)";
-    ctx.fillRect(Math.round(pp.bx), Math.round(pp.by), 2, 2);
-
-    // score text
-    ctx.font="8px ui-monospace, monospace";
-    ctx.fillStyle="rgba(255,255,255,.9)";
-    ctx.fillText(`SOPHIA ${pp.s}  -  ${pp.m} MILO`, 94, 116);
-    ctx.fillStyle="rgba(255,255,255,.55)";
-    ctx.fillText(`(E to quit)`, 232, 116);
+  // pickups (visible)
+  for(const p of pickups){
+    if(p.taken) continue;
+    if(p.type==="SHROOM"){
+      // tiny mushroom sprite
+      ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect((p.x|0)-2,(p.y|0)+1,5,2);
+      ctx.fillStyle="rgba(138,46,255,.40)"; ctx.fillRect((p.x|0)-1,(p.y|0)-1,3,2);
+      ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect((p.x|0),(p.y|0)+1,1,2);
+    }else{
+      // grapes cluster
+      ctx.fillStyle="rgba(0,255,213,.10)";
+      ctx.fillRect((p.x|0)-2,(p.y|0)-1,2,2);
+      ctx.fillRect((p.x|0)+1,(p.y|0)-1,2,2);
+      ctx.fillRect((p.x|0)-1,(p.y|0)+1,2,2);
+      ctx.fillStyle="rgba(255,255,255,.06)";
+      ctx.fillRect((p.x|0),(p.y|0)-2,1,1);
+    }
   }
 
   // hint
-  const z=nearestZone();
-  if(z) drawHintBubble(z.name, sophia.x+6, sophia.y-10);
+  const it = nearestInteractable();
+  if(it) drawHintBubble(it.hint, sophia.x+6, (sophia.y-10) + (jumpZ|0));
 
-  // trip post effect (simple “shader” look)
+  // trip post effect
   if(state.trip){
     ctx.fillStyle=`rgba(255,99,255,${0.10 + 0.06*Math.sin(t*0.07)})`;
     ctx.fillRect(0,0,W,H);
-    // scanlines + wobble tint
     for(let y=0;y<H;y+=3){
       ctx.fillStyle=`rgba(0,255,213,${0.02 + 0.02*Math.sin(t*0.12 + y*0.2)})`;
       ctx.fillRect(0,y,W,1);
     }
   }
+
+  vignette();
+}
+
+/* Updates */
+function stepJumpAndDance(){
+  // jump
+  if(!onGround){
+    jumpV += 0.14;
+    jumpZ += jumpV;
+    if(jumpZ >= 0){
+      jumpZ=0; jumpV=0; onGround=true;
+    }
+  }
+  // dance timer
+  if(danceT>0) danceT--;
+}
+
+function doJump(){
+  if(!onGround) return;
+  onGround=false;
+  jumpV=-2.8;
+  toast("Jump!", 900);
+  for(let i=0;i<6;i++){
+    dust.push({x:sophia.x+2+Math.random()*6,y:sophia.y+12, vx:(Math.random()*1.4-0.7), vy:(Math.random()*-1.1), life:18+Math.random()*10});
+  }
+}
+function doDance(){
+  danceT=58;
+  toast("Dance!", 900);
+}
+
+/* Gnome AI: runs away from Sophia, bounces off walls/solids, slowed by trip, stopped by stun */
+function updateGnome(){
+  if(state.hasKeys) return;
+
+  if(gnome.stun>0){
+    gnome.stun--;
+    return;
+  }
+
+  const sx=sophia.x, sy=sophia.y;
+  const gx=gnome.x, gy=gnome.y;
+
+  // flee vector
+  let fx = gx - sx;
+  let fy = gy - sy;
+  const len = Math.hypot(fx,fy) || 1;
+  fx/=len; fy/=len;
+
+  // add jitter if trip is on (gnome becomes weirder)
+  if(state.trip){
+    fx += Math.sin((performance.now()/1000)*4)*0.12;
+    fy += Math.cos((performance.now()/1000)*3.4)*0.10;
+  }
+
+  // speed: slightly faster than Sophia walk, but mushrooms make him stoppable
+  let sp = state.trip ? 1.15 : 1.25;
+
+  // nudge target movement
+  let dx = fx * sp;
+  let dy = fy * sp;
+
+  // clamp / normalize diagonal a bit
+  if(dx && dy){ dx*=0.78; dy*=0.78; }
+
+  // try move, bounce if blocked
+  const oldx=gnome.x, oldy=gnome.y;
+  const nx=gnome.x+dx, ny=gnome.y+dy;
+
+  // treat gnome as collidable using same solids
+  if(!collides(nx,gnome.y,gnome.w,gnome.h)) gnome.x=nx;
+  else gnome.x = oldx + (Math.random()<0.5?-1:1)*0.6;
+
+  if(!collides(gnome.x,ny,gnome.w,gnome.h)) gnome.y=ny;
+  else gnome.y = oldy + (Math.random()<0.5?-1:1)*0.6;
+
+  // keep within inner bounds a bit
+  gnome.x = Math.max(12, Math.min(W-22, gnome.x));
+  gnome.y = Math.max(22, Math.min(H-22, gnome.y));
 }
 
 /* Loop */
@@ -411,23 +621,39 @@ let t=0;
 function loop(){
   t++;
 
-  // pingpong gets priority and runs as a “mini overlay”
-  if(pingpongActive){
-    updatePingpong(t);
-  }
+  stepJumpAndDance();
+  updateDust();
 
+  // movement
   const run = keysDown.has("shift");
   const sp = sophia.speed*(run?sophia.run:1);
-
   let dx=0,dy=0;
   if(keysDown.has("w")||keysDown.has("arrowup")) dy-=sp;
   if(keysDown.has("s")||keysDown.has("arrowdown")) dy+=sp;
   if(keysDown.has("a")||keysDown.has("arrowleft")) dx-=sp;
   if(keysDown.has("d")||keysDown.has("arrowright")) dx+=sp;
   if(dx && dy){dx*=0.72; dy*=0.72;}
-  if(dx||dy) tryMove(sophia,dx,dy);
 
-  // Milo follow or “play” orbit if tripping
+  if(dx||dy){
+    tryMove(sophia,dx,dy);
+    if(Math.random()<0.18){
+      dust.push({x:sophia.x+3+Math.random()*4,y:sophia.y+12, vx:(Math.random()*0.4-0.2), vy:(Math.random()*-0.2), life:10+Math.random()*8});
+    }
+  }
+
+  // jump: SPACE
+  if((keysDown.has(" ")||keysDown.has("space")) && !loop._sp){
+    doJump(); loop._sp=1;
+  }
+  if(!(keysDown.has(" ")||keysDown.has("space"))) loop._sp=0;
+
+  // dance: C
+  if(keysDown.has("c") && !loop._c){
+    doDance(); loop._c=1;
+  }
+  if(!keysDown.has("c")) loop._c=0;
+
+  // Milo follow/orbit
   if(state.trip){
     const ox = sophia.x + 12 + Math.sin(t*0.06)*10;
     const oy = sophia.y + 6 + Math.cos(t*0.07)*6;
@@ -439,26 +665,29 @@ function loop(){
     milo.y += (ty - milo.y)*0.06;
   }
 
-  if(keysDown.has("e")){
-    if(!loop._eWasDown){
-      // if pingpong active, E quits mini-game first (as requested “exit whenever”)
-      if(pingpongActive){
-        pingpongActive=false;
-        toast("Pingpong paused. Milo licks his paw like he won anyway.", 1600);
-      }else{
-        interact();
-      }
-    }
-    loop._eWasDown=true;
-  } else loop._eWasDown=false;
+  // Gnome update
+  updateGnome();
 
-  if(t%60===0){
+  // interact (E)
+  if(keysDown.has("e")){
+    if(!loop._e){
+      const it = nearestInteractable();
+      if(it) it.action();
+    }
+    loop._e=1;
+  }else loop._e=0;
+
+  // autosave occasionally
+  if(t%45===0){
     state.sophia.x=sophia.x; state.sophia.y=sophia.y;
     state.milo.x=milo.x; state.milo.y=milo.y;
     saveState();
   }
 
+  // draw
   drawWorld(t);
+  drawDust();
+  drawGnome(t);
   drawMilo(t);
   drawSophia();
 
