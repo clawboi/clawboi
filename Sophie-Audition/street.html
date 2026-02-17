@@ -75,7 +75,7 @@
   .panel .v{opacity:.95}
   .panel .tiny{font-size:11px; opacity:.72; letter-spacing:.06em}
 
-  /* NEW: choice dialog (same style language) */
+  /* choice dialog */
   .dialog{
     position:fixed; left:12px; bottom:12px; z-index:9;
     width:min(520px, calc(100vw - 24px));
@@ -127,7 +127,7 @@
     <div class="pill">KEYS: <span id="keys">NO</span></div>
     <div class="pill">CASH: $<span id="cash">0</span></div>
     <div class="pill">QUEST: <span id="questShort">NONE</span></div>
-    <div class="pill">Move: WASD · Run/Boost: SHIFT · Interact: E · Throw: SPACE · Map: M · Journal: Q · Trip: T</div>
+    <div class="pill">Move: WASD · Run/Boost: SHIFT · Interact: E · Throw: SPACE · Jump: F · Map: M · Journal: Q · Trip: T</div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -146,7 +146,6 @@
     <div class="row"><div class="k">Lucas</div><div class="v" id="lucasText">Not called</div></div>
   </div>
 
-  <!-- NEW: dialog choice box -->
   <div class="dialog" id="dialog">
     <h3 id="dlgTitle">Conversation</h3>
     <div class="say" id="dlgSay">…</div>
@@ -154,18 +153,20 @@
     <div class="hint" id="dlgHint">Press 1/2/3 to choose. ESC to close.</div>
   </div>
 
-  <div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+  <div class="wrap"><canvas id="c" width="360" height="202"></canvas></div>
 
 <script>
 /* ==========================================================
-   STREET.HTML (DAY CITY) — EVEN MORE UPGRADED, SAME VIBE
-   - No breaking changes. Only additions.
-   - NEW: Payphone (payphone.html) + Lucas follower
-   - NEW: More city layers: restaurant/yoga/sophieshop doors
-   - NEW: Robber purse quest, catcallers choice bubble
-   - NEW: Performers (dancers/clowns/statues/guitar)
-   - NEW: Talk choices + wrong answer -> arcade scuffle
-   - NEW: Duck pond
+   STREET.HTML (DAY CITY) — UPGRADED STRUCTURE (NO VIBE LOSS)
+   KEY UPGRADES YOU ASKED FOR:
+   - Car spawns + snaps to HOME driveway when you’re near HOME / leaving HOME zone
+   - Stronger, smoother car boost controls (all directions)
+   - Buildings are more human-scaled + roofs added (smaller footprint)
+   - Roads more “formed” (more connective strips + sidewalks)
+   - Talk works on everybody more reliably (priority + range + lower cooldown)
+   - More pedestrians + more “alive” crowd
+   - Map labels: HOME / shops / pond / STARR / CAR, plus clickable waypoint
+   - Jump (F) as a quick hop (visual + tiny burst) without changing throw (SPACE)
    ========================================================== */
 
 const canvas=document.getElementById('c');
@@ -218,7 +219,8 @@ function loadState(){
       car:{x:420,y:940,vx:0,vy:0},
       lastThrow:0,
       tripUntil:0,
-      lastTalk:0
+      lastTalk:0,
+      lastJump:0
     },
     events:{
       purse:{ stage:"idle", rewardGiven:false, robberDown:false },
@@ -237,7 +239,7 @@ function saveRun(run){ localStorage.setItem(RUN_KEY, JSON.stringify(run)); }
 
 let state=loadState();
 state.lastRoom="STREET";
-state.street = state.street || { mush:0, wanted:0, inCar:false, hidden:false, seen:0, car:{x:420,y:940,vx:0,vy:0}, lastThrow:0, tripUntil:0, lastTalk:0 };
+state.street = state.street || { mush:0, wanted:0, inCar:false, hidden:false, seen:0, car:{x:420,y:940,vx:0,vy:0}, lastThrow:0, tripUntil:0, lastTalk:0, lastJump:0 };
 if(!state.street.car) state.street.car={x:420,y:940,vx:0,vy:0};
 if(typeof state.cash!=="number") state.cash=0;
 state.quests = state.quests || {activeId:null, completed:{}, data:{}};
@@ -294,7 +296,6 @@ tickTimer();
 const keysDown=new Set();
 addEventListener('keydown',(e)=>{
   const k=e.key.toLowerCase();
-  // keep your originals + add 1/2/3 + escape
   if(["arrowup","arrowdown","arrowleft","arrowright"," ","shift","w","a","s","d","e","m","q","t","f","h","1","2","3","escape"].includes(k)) e.preventDefault();
   keysDown.add(k);
 });
@@ -313,24 +314,29 @@ function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
    WORLD
    ========================================================== */
 const VW=canvas.width, VH=canvas.height;
-const WORLD={ w: 3200, h: 2300 }; // slightly bigger, still tight
+const WORLD={ w: 3200, h: 2300 };
 
 // Camera
 const cam={x:0,y:0, shake:0};
 
-// Road network (kept + nudged expansions)
+// Road network (more connective structure)
 const roads = [
   {x:0,y:1100,w:WORLD.w,h:160, name:"MAIN"},
   {x:1960,y:0,w:190,h:WORLD.h, name:"BOULEVARD"},
-  {x:380,y:1400,w:980,h:130, name:"NEIGHBOR"},
-  {x:1400,y:1320,w:980,h:130, name:"MARKET"},
-  {x:560,y:680,w:1200,h:120, name:"NORTH"},
-  {x:1160,y:860,w:900,h:120, name:"MID"},
-  {x:2520,y:720,w:520,h:120, name:"EAST"},
-  {x:240,y:960,w:720,h:110, name:"HOMEWAY"},
-  {x:940,y:1010,w:860,h:110, name:"CUT"},
-  // NEW: canyon route hint (Topanga-ish)
-  {x:40,y:340,w:520,h:110, name:"CANYON RD"},
+  {x:340,y:1400,w:1060,h:130, name:"NEIGHBOR"},
+  {x:1400,y:1320,w:1040,h:130, name:"MARKET"},
+  {x:520,y:680,w:1280,h:120, name:"NORTH"},
+  {x:1140,y:860,w:980,h:120, name:"MID"},
+  {x:2520,y:720,w:560,h:120, name:"EAST"},
+  {x:220,y:960,w:820,h:110, name:"HOMEWAY"},
+  {x:920,y:1010,w:920,h:110, name:"CUT"},
+  {x:40,y:340,w:560,h:110, name:"CANYON RD"},
+  // NEW connective strips so streets feel “formed”
+  {x:520,y:800,w:120,h:300, name:"LINK"},
+  {x:860,y:800,w:120,h:300, name:"LINK"},
+  {x:1400,y:860,w:120,h:460, name:"LINK"},
+  {x:1700,y:860,w:120,h:460, name:"LINK"},
+  {x:2520,y:840,w:560,h:120, name:"EAST 2"},
 ];
 
 function isOnRoad(x,y){
@@ -350,40 +356,47 @@ addSolid(-120,WORLD.h,WORLD.w+240,120);
 addSolid(-120,-120,120,WORLD.h+240);
 addSolid(WORLD.w,-120,120,WORLD.h+240);
 
-// Buildings / Doors (kept + NEW)
+/* ==========================================================
+   BUILDINGS (smaller, more human-sized)
+   ========================================================== */
+const BUILD_SCALE = 0.72;
+function B(name,x,y,w,h,link,tag){
+  return {name, x, y, w:Math.round(w*BUILD_SCALE), h:Math.round(h*BUILD_SCALE), link, tag};
+}
+
 const buildings=[
-  {name:"HOME", x:180, y:1660, w:260, h:220, link:"Sophie03.html", tag:"HOME"},
-  {name:"GROCERY", x:620, y:1480, w:300, h:230, link:"grocery-store.html", tag:"GROC"},
-  {name:"BLOCKBUSTER", x:980, y:1500, w:330, h:250, link:"blockbuster.html", tag:"BLCK"},
-  {name:"CAT STORE", x:1380, y:1480, w:290, h:230, link:"catstore.html", tag:"CAT"},
-  {name:"WEED SHOP", x:1700, y:1480, w:290, h:230, link:"weedshop.html", tag:"WEED"},
-  {name:"STARR", x:2320, y:180, w:460, h:340, link:"audition.html", tag:"STAR"},
+  B("HOME",        210, 1680, 260, 220, "Sophie03.html",      "HOME"),
+  B("GROCERY",     640, 1490, 300, 230, "grocery-store.html", "GROC"),
+  B("BLOCKBUSTER", 1020,1508, 330, 250, "blockbuster.html",   "BLCK"),
+  B("CAT STORE",   1408,1490, 290, 230, "catstore.html",      "CAT"),
+  B("WEED SHOP",   1724,1490, 290, 230, "weedshop.html",      "WEED"),
+  B("STARR",       2380, 220, 460, 340, "audition.html",      "STAR"),
 
   // flavor interact buildings
-  {name:"COFFEE", x:420, y:560, w:240, h:190, link:null, tag:"CAF"},
-  {name:"ARCADE", x:780, y:560, w:240, h:190, link:null, tag:"ARC"},
-  {name:"GAS", x:2640, y:1020, w:280, h:220, link:null, tag:"GAS"},
+  B("COFFEE",      460,  590, 240, 190, null, "CAF"),
+  B("ARCADE",      820,  590, 240, 190, null, "ARC"),
+  B("GAS",         2680, 1026, 280, 220, null, "GAS"),
 
-  // NEW pages you asked
-  {name:"FOLLOW YOUR HEART", x:1120, y:540, w:300, h:210, link:"followyourheart.html", tag:"REST"},
-  {name:"YOGA", x:420, y:220, w:230, h:170, link:"yoga.html", tag:"YOGA"},
-  {name:"SOPHIE SHOP", x:1560, y:560, w:280, h:210, link:"sophieshop.html", tag:"SHOP"},
+  // pages
+  B("FOLLOW YOUR HEART", 1140, 580, 300, 210, "followyourheart.html", "REST"),
+  B("YOGA",        460,  240, 230, 170, "yoga.html",          "YOGA"),
+  B("SOPHIE SHOP", 1580, 590, 280, 210, "sophieshop.html",    "SHOP"),
 
-  // beach later (placeholder sign-only, no link yet)
-  {name:"BEACH (LATER)", x:60, y:180, w:220, h:150, link:null, tag:"BEACH"},
+  // placeholder
+  B("BEACH (LATER)", 60, 180, 220, 150, null, "BEACH"),
 ];
 
 // Solids for buildings
 for(const b of buildings) addSolid(b.x,b.y,b.w,b.h);
 
-// Park (kept, larger)
+// Park
 const park={x:320,y:220,w:700,h:430};
 addSolid(park.x,park.y,park.w,18);
 addSolid(park.x,park.y+park.h-18,park.w,18);
 addSolid(park.x,park.y,18,park.h);
 addSolid(park.x+park.w-18,park.y,18,park.h);
 
-// NEW: duck pond area (no solids, just feature)
+// Duck pond
 const pond={x:1040,y:300,w:220,h:160};
 
 // Signs
@@ -411,13 +424,13 @@ const dumpsters=[
   {x:560,y:1560,w:36,h:20},
 ];
 
-// Benches, mailboxes, vending, photo spots (kept + extra)
+// Props
 const benches=[
   {x:520,y:340,w:26,h:10},
   {x:860,y:360,w:26,h:10},
   {x:2580,y:1100,w:26,h:10},
   {x:1160,y:1600,w:26,h:10},
-  {x:1060,y:480,w:26,h:10}, // near pond
+  {x:1060,y:480,w:26,h:10},
 ];
 const mailboxes=[
   {x:520,y:1560,w:10,h:10, id:"MB_HOME"},
@@ -497,10 +510,10 @@ for(let i=0;i<140;i++){
 /* ==========================================================
    ENTITIES
    ========================================================== */
-const sophia={x:state.sophia.x, y:state.sophia.y, w:10,h:12, speed:70, run:110};
+const sophia={x:state.sophia.x, y:state.sophia.y, w:10,h:12, speed:70, run:110, hop:0};
 const milo={x:state.milo.x, y:state.milo.y, w:8,h:8};
 
-// NEW: Lucas follower (looser roam)
+// Lucas
 const lucas={
   active: !!state.lucas.active,
   called: !!state.lucas.called,
@@ -520,12 +533,50 @@ const car={
   vx: state.street.car.vx||0, vy: state.street.car.vy||0,
   fuel: 100
 };
-if(!localStorage.getItem(STORE_KEY)){
-  car.x = 360; car.y = 1240;
-  state.street.car.x = car.x; state.street.car.y = car.y;
+
+// HOME driveway snap (your “car by the house” requirement)
+function getHome(){
+  return buildings.find(b=>b.tag==="HOME") || buildings[0];
+}
+function drivewaySpot(){
+  const h=getHome();
+  const dx = Math.round(h.x + h.w/2 - car.w/2);
+  const dy = Math.round(h.y + h.h + 22);
+  // keep it from clipping into solids: nudge down to the nearest road-ish space
+  const y = clamp(dy, 0, WORLD.h-car.h);
+  const x = clamp(dx, 0, WORLD.w-car.w);
+  return {x,y};
+}
+function snapCarToDriveway(reason=""){
+  const d=drivewaySpot();
+  // only snap if not currently driving
+  if(state.street.inCar) return;
+  // avoid snapping if you clearly “parked elsewhere” very close by
+  const dd = dist2(car.x,car.y,d.x,d.y);
+  if(dd < 90*90) return;
+  car.x=d.x; car.y=d.y; car.vx=0; car.vy=0;
+  state.street.car.x=car.x; state.street.car.y=car.y; state.street.car.vx=0; state.street.car.vy=0;
+  saveState();
+  if(reason) toast(reason, 1200);
 }
 
-/* Pedestrians + Roles (expanded: performers + catcallers + old lady + robber) */
+// First-time default: driveway
+if(!localStorage.getItem(STORE_KEY)){
+  const d=drivewaySpot();
+  car.x=d.x; car.y=d.y;
+  state.street.car.x = car.x; state.street.car.y = car.y;
+  state.street.car.vx = 0; state.street.car.vy = 0;
+  saveState();
+}
+
+// If Sophia is near HOME, always keep car near driveway (feels like you exited home)
+(function ensureDrivewayOnLoad(){
+  const h=getHome();
+  const nearHome = dist2(sophia.x,sophia.y, h.x+h.w/2, h.y+h.h) < 320*320;
+  if(nearHome) snapCarToDriveway("");
+})();
+
+/* Pedestrians + Roles */
 const peds=[];
 const PED_LINES=[
   "Good luck at STARR. Your outfit says ‘main character.’",
@@ -556,25 +607,25 @@ function makePed(x,y,opts={}){
     line: opts.line ?? PED_LINES[(Math.random()*PED_LINES.length)|0],
     id: opts.id ?? ("PED_"+((Math.random()*1e9)|0)),
     angry:0,
-    performer: opts.performer ?? null, // dancer/clown/statue/guitar
+    performer: opts.performer ?? null,
     fight: { hp: opts.hp ?? 0, active:false, who:null, cooldown:0 },
   };
 }
 
-// populate normal crowd
-for(let i=0;i<34;i++){
+// More crowd (you wanted “way more people”)
+for(let i=0;i<62;i++){
   let x=rand(140,WORLD.w-140), y=rand(180,WORLD.h-180);
   if(isOnRoad(x,y)) y += (Math.random()<0.5?-90:90);
   peds.push(makePed(x,y));
 }
 
-// street performers
+// Performers
 peds.push(makePed(700,980,{role:"NORM",type:"performer",performer:"guitar",line:"(guitar) Want a song? Press E, tip $1."}));
 peds.push(makePed(980,980,{role:"NORM",type:"performer",performer:"dancer",line:"(dance) Pick a vibe: 1) hype 2) smooth 3) weird."}));
 peds.push(makePed(1220,980,{role:"NORM",type:"performer",performer:"clown",line:"(clown) I can juggle feelings. Want chaos?"}));
 peds.push(makePed(520,360,{role:"NORM",type:"performer",performer:"statue",line:"(statue) ... (they blink)"}));
 
-// catcall construction duo (choice bubble)
+// Catcall duo
 const catcallers=[
   makePed(2140,1180,{type:"catcaller",role:"NORM",line:"Construction Worker: “Hey Sophia! You look like a movie scene.”", shirt:"sun"}),
   makePed(2170,1180,{type:"catcaller",role:"NORM",line:"Other Worker: “For real, you’re glowing.”", shirt:"sun"}),
@@ -583,7 +634,7 @@ catcallers[0].id="CATCALL_A";
 catcallers[1].id="CATCALL_B";
 peds.push(...catcallers);
 
-// old lady + robber event
+// Old lady + robber
 const oldLady = makePed(860,860,{type:"oldlady",role:"NORM",line:"Old Lady: “My purse… I just bought oranges…”", hair:"white", shirt:"aqua"});
 oldLady.id="OLD_LADY";
 peds.push(oldLady);
@@ -593,10 +644,10 @@ robber.id="ROBBER";
 robber.fight.hp=6;
 peds.push(robber);
 
-// Duck (simple critter)
+// Duck
 const duck={x: pond.x+80, y: pond.y+92, vx:0.28, vy:0.12, t:0};
 
-// Traffic cars (kept)
+// Traffic cars
 const traffic=[];
 for(let i=0;i<20;i++){
   const r=roads[(Math.random()*roads.length)|0];
@@ -613,7 +664,7 @@ for(let i=0;i<20;i++){
   });
 }
 
-// Projectiles (mush)
+// Projectiles
 const shots=[];
 
 // Cops
@@ -646,7 +697,7 @@ function tryMoveCar(dx,dy){
 /* ==========================================================
    ZONES / INTERACTIONS
    ========================================================== */
-function buildingDoorRect(b){ return [b.x + b.w/2 - 22, b.y + b.h - 10, 44, 10]; }
+function buildingDoorRect(b){ return [b.x + b.w/2 - 18, b.y + b.h - 10, 36, 10]; }
 const near=(px,py, x,y,r)=>dist2(px,py,x,y)<r*r;
 
 function go(file){
@@ -668,12 +719,32 @@ function go(file){
 const payphone={x:520,y:1120,w:16,h:18};
 function payphoneRect(){ return [payphone.x,payphone.y,payphone.w,payphone.h]; }
 
-/* Determine nearest zone */
+/* Determine nearest zone (talk gets priority now) */
 function nearestZone(){
   const px = state.street.inCar ? car.x+car.w/2 : sophia.x+sophia.w/2;
   const py = state.street.inCar ? car.y+car.h/2 : sophia.y+sophia.h/2;
 
   let best=null, bd=1e12;
+
+  // TALK PEDS FIRST (fixes “can’t talk to everybody”)
+  if(!state.street.inCar && !state.street.hidden){
+    for(const p of peds){
+      const d=dist2(px,py,p.x+5,p.y+6);
+      if(d<bd && d<2200){
+        best={name:(p.type==="robber"?"CONFRONT ROBBER":"TALK"), rect:[p.x,p.y,p.w,p.h], action:()=>talkPed(p)};
+        bd=d;
+      }
+    }
+  }
+
+  // Lucas talk
+  if(!state.street.inCar && lucas.active && !state.street.hidden){
+    const d=dist2(px,py,lucas.x+5,lucas.y+6);
+    if(d<bd && d<2200){
+      best={name:"LUCAS", rect:[lucas.x,lucas.y,lucas.w,lucas.h], action:()=>talkLucas()};
+      bd=d;
+    }
+  }
 
   // buildings
   for(const b of buildings){
@@ -707,7 +778,7 @@ function nearestZone(){
   {
     const cx=carRect[0]+carRect[2]/2, cy=carRect[1]+carRect[3]/2;
     const d=dist2(px,py,cx,cy);
-    if(d<bd && d<2200){
+    if(d<bd && d<2600){
       best={name: state.street.inCar ? "EXIT CAR" : "ENTER CAR", rect:carRect, action:toggleCar};
       bd=d;
     }
@@ -766,26 +837,6 @@ function nearestZone(){
         best={name:"PHOTO SPOT", rect:[ps.x,ps.y,ps.w,ps.h], action:()=>photoInteract(ps)};
         bd=d;
       }
-    }
-  }
-
-  // talk peds
-  if(!state.street.inCar && !state.street.hidden){
-    for(const p of peds){
-      const d=dist2(px,py,p.x+5,p.y+6);
-      if(d<bd && d<1700){
-        best={name:(p.type==="robber"?"CONFRONT ROBBER":(p.type==="oldlady"?"TALK":"TALK")), rect:[p.x,p.y,p.w,p.h], action:()=>talkPed(p)};
-        bd=d;
-      }
-    }
-  }
-
-  // Lucas toggle talk
-  if(!state.street.inCar && lucas.active && !state.street.hidden){
-    const d=dist2(px,py,lucas.x+5,lucas.y+6);
-    if(d<bd && d<1700){
-      best={name:"LUCAS", rect:[lucas.x,lucas.y,lucas.w,lucas.h], action:()=>talkLucas()};
-      bd=d;
     }
   }
 
@@ -892,8 +943,6 @@ function syncJournal(){
    ========================================================== */
 const dialog={
   on:false,
-  targetId:null,
-  kind:null,
   say:"",
   opts:[],
   onPick:null,
@@ -943,7 +992,7 @@ function toggleCar(){
 
   if(!state.street.inCar){
     const d=dist2(sophia.x,sophia.y,car.x,car.y);
-    if(d>1400) return toast("Get closer to the car.", 1100);
+    if(d>2600) return toast("Get closer to the car.", 1100);
     state.street.inCar=true;
     UI.mode.textContent="IN CAR";
     toast("She hops in. Mirrors? checked. Destiny? pending.", 1600);
@@ -952,7 +1001,7 @@ function toggleCar(){
     if(lucas.active){ lucas.x=car.x-18; lucas.y=car.y+6; }
   }else{
     const sp=Math.hypot(car.vx,car.vy);
-    if(sp>120) return toast("Too fast to jump out.", 1200);
+    if(sp>150) return toast("Too fast to jump out.", 1200);
     state.street.inCar=false;
     UI.mode.textContent="ON FOOT";
     toast("Back on foot.", 1200);
@@ -1027,7 +1076,7 @@ function interactBuilding(b){
   toast("Locked.", 1000);
 }
 
-/* Mailbox / vending / photo (kept) */
+/* Mailbox / vending / photo */
 function mailboxInteract(mb){
   if(dialog.on) return;
   const q=activeQuest();
@@ -1128,6 +1177,29 @@ function throwMushroom(now){
   ax/=mag; ay/=mag;
 
   shots.push({x:sophia.x+5,y:sophia.y+6,vx:ax*220,vy:ay*220,life:0.55, kind:"mush"});
+  saveState();
+}
+
+/* Jump (F) */
+function jumpHop(now){
+  if(dialog.on) return;
+  if(state.street.inCar) return toast("Jumping in a car feels… illegal.", 1000);
+  if(state.street.hidden) return;
+  if(now - (state.street.lastJump||0) < 700) return;
+  state.street.lastJump=now;
+  sophia.hop = 1.0;
+  cam.shake = Math.max(cam.shake, 4);
+  // tiny burst in movement direction (doesn’t break collisions)
+  let ax=0, ay=0;
+  if(keysDown.has("w")||keysDown.has("arrowup")) ay-=1;
+  if(keysDown.has("s")||keysDown.has("arrowdown")) ay+=1;
+  if(keysDown.has("a")||keysDown.has("arrowleft")) ax-=1;
+  if(keysDown.has("d")||keysDown.has("arrowright")) ax+=1;
+  if(ax||ay){
+    const mag=Math.hypot(ax,ay)||1;
+    ax/=mag; ay/=mag;
+    tryMove(sophia, ax*14, ay*14);
+  }
   saveState();
 }
 
@@ -1302,7 +1374,7 @@ function updateTraffic(t,dt){
    Peds update + special event logic
    ========================================================== */
 function updatePeds(t,dt){
-  // purse snatch event bootstrap (only once)
+  // purse snatch bootstrap (only once)
   if(state.events.purse.stage==="idle"){
     state.events.purse.stage="snatched";
     setActiveQuest("Purse_Snatch");
@@ -1322,11 +1394,9 @@ function updatePeds(t,dt){
       const dx=(sophia.x - p.x), dy=(sophia.y - p.y);
       const d=Math.hypot(dx,dy)||1;
       if(d<140){
-        // run away from Sophia
         p.vx = clamp((-dx/d)*0.95, -1.2, 1.2);
         p.vy = clamp((-dy/d)*0.95, -1.2, 1.2);
       }else{
-        // wander
         if(Math.random()<0.02){ p.vx += rand(-0.10,0.10); p.vy += rand(-0.10,0.10); }
         p.vx=clamp(p.vx,-0.40,0.40);
         p.vy=clamp(p.vy,-0.40,0.40);
@@ -1340,7 +1410,6 @@ function updatePeds(t,dt){
       p.vy=clamp(p.vy,-0.40,0.40);
     }
 
-    // statue barely moves
     if(p.performer==="statue"){ p.vx*=0.2; p.vy*=0.2; }
 
     let nx=p.x+p.vx*(dt*60), ny=p.y+p.vy*(dt*60);
@@ -1356,14 +1425,12 @@ function updatePeds(t,dt){
     p.x=clamp(p.x,0,WORLD.w-p.w);
     p.y=clamp(p.y,0,WORLD.h-p.h);
 
-    // wave
     if(state.street.wanted===0 && !state.street.inCar && dist2(p.x,p.y,sophia.x,sophia.y)<95*95){
       p.wave = Math.min(60, p.wave+2);
     }else{
       p.wave = Math.max(0, p.wave-1);
     }
 
-    // dog follow
     if(p.hasDog && p.dog){
       const dx=(p.x-12)-p.dog.x;
       const dy=(p.y+6)-p.dog.y;
@@ -1381,7 +1448,7 @@ function updatePeds(t,dt){
 }
 
 /* ==========================================================
-   Talk system + choices + fights (arcade)
+   Talk system + choices + fights
    ========================================================== */
 function talkLucas(){
   if(dialog.on) return;
@@ -1402,7 +1469,6 @@ function talkLucas(){
 }
 
 function startArcadeFight(p){
-  // simple scuffle: Sophia “bumps” them, they bump back, lose a tiny bit of cash if you get caught
   p.fight.active=true;
   p.fight.hp = p.fight.hp || 5;
   p.angry=240;
@@ -1418,14 +1484,12 @@ function resolveFightHit(p){
     p.angry=0;
     p.stunned=1.3;
     toast("Fight over. They back off.", 1200);
-    // tiny wanted chance
     if(Math.random()<0.12) bumpWanted(1);
   }else{
     toast("Hit! (spam E near them)", 700);
   }
 }
 
-// catcaller bubble
 function catcallDialog(){
   if(dialog.on) return;
   openDialog(
@@ -1436,7 +1500,6 @@ function catcallDialog(){
       state.events.catcall.done=true;
       if(pick===0){
         toast("Sophia: “Relax.” They get salty.", 1400);
-        // chance of scuffle (very light)
         if(Math.random()<0.5){
           startArcadeFight(catcallers[0]);
           startArcadeFight(catcallers[1]);
@@ -1454,15 +1517,14 @@ function catcallDialog(){
 
 function talkPed(p){
   const now=performance.now();
-  if(now - state.street.lastTalk < 450) return;
+  // lower cooldown so it feels responsive
+  if(now - state.street.lastTalk < 260) return;
   state.street.lastTalk=now;
 
-  // catcallers trigger once
   if(p.type==="catcaller" && !state.events.catcall.done){
     return catcallDialog();
   }
 
-  // robber quest flow
   const q=activeQuest();
   if(p.type==="oldlady"){
     if(q && q.id==="Purse_Snatch"){
@@ -1484,14 +1546,12 @@ function talkPed(p){
 
   if(p.type==="robber"){
     if(q && q.id==="Purse_Snatch" && !q.data.gotPurse){
-      // confront: choice to chase/fight
       openDialog(
         "Robber",
         "Robber: “Don’t be a hero.”",
         ["Give it back", "Try to grab it", "Let him go"],
         (pick)=>{
           if(pick===0){
-            // small chance he tosses purse
             if(Math.random()<0.55){
               q.data.gotPurse=true;
               toast("He drops the purse and bolts.", 1500);
@@ -1515,7 +1575,6 @@ function talkPed(p){
     return toast("Robber: “…”", 900);
   }
 
-  // performers
   if(p.type==="performer"){
     if(p.performer==="guitar"){
       if(state.cash<=0) return toast("Guitar Player: “Tip $1 and I’ll play.”", 1400);
@@ -1523,7 +1582,6 @@ function talkPed(p){
         state.cash -= 1; UI.cash.textContent=state.cash|0;
         const lines=["A soft riff drips into the street.","A fast riff sparks the crosswalk.","A dreamy riff makes the air shimmer."];
         toast(lines[pick], 1600);
-        // small bond with Lucas if present
         if(lucas.active){ lucas.bond += 1; }
         saveState();
       });
@@ -1549,12 +1607,11 @@ function talkPed(p){
       return;
     }
     if(p.performer==="statue"){
-      toast("The statue doesn’t move… then blinks. ($1 tip? nah.)", 1500);
+      toast("The statue doesn’t move… then blinks.", 1500);
       return;
     }
   }
 
-  // generic NPC: sometimes choice leads to hug or fight
   if(Math.random()<0.18){
     openDialog(
       "Stranger",
@@ -1562,7 +1619,7 @@ function talkPed(p){
       ["Compliment them", "Be rude", "Ask for directions"],
       (pick)=>{
         if(pick===0){
-          toast("They smile. “Thanks.” (hug energy)", 1400);
+          toast("They smile. “Thanks.”", 1400);
           state.cash += 1; UI.cash.textContent=state.cash|0;
         }else if(pick===1){
           toast("They get mad.", 1200);
@@ -1600,7 +1657,6 @@ function updateShots(dt){
 
     if(collides(s.x,s.y,2,2)){ shots.splice(i,1); continue; }
 
-    // hit ped
     for(const p of peds){
       if(p.stunned>0) continue;
       if(rectsOverlap(s.x,s.y,2,2, p.x,p.y,p.w,p.h)){
@@ -1614,7 +1670,6 @@ function updateShots(dt){
     }
     if(i>=shots.length) continue;
 
-    // hit cop
     for(const c of cops){
       if(c.stunned>0) continue;
       if(rectsOverlap(s.x,s.y,2,2, c.x,c.y,c.w,c.h)){
@@ -1650,29 +1705,27 @@ function checkCarHits(){
 }
 
 /* ==========================================================
-   Lucas follow AI (looser roam)
+   Lucas follow
    ========================================================== */
 function updateLucas(t,dt){
   if(!lucas.called) return;
   if(!lucas.active) return;
-  if(state.street.inCar){ // jog near car
+  if(state.street.inCar){
     const tx=car.x-18, ty=car.y+6;
     lucas.x += (tx-lucas.x)*0.10*(dt*60);
     lucas.y += (ty-lucas.y)*0.10*(dt*60);
     return;
   }
-  if(state.street.hidden){ // wait nearby
+  if(state.street.hidden){
     const tx=sophia.x-14, ty=sophia.y+10;
     lucas.x += (tx-lucas.x)*0.06*(dt*60);
     lucas.y += (ty-lucas.y)*0.06*(dt*60);
     return;
   }
 
-  // roam radius depends on mood
   const mood = lucas.mood || "roam";
   const radius = (mood==="close") ? 36 : 92;
 
-  // desired anchor orbit around Sophia, with mild noise
   const ang = (t*0.03) + (lucas.roamSeed*0.001);
   const ox = Math.cos(ang)*radius;
   const oy = Math.sin(ang*0.9)*radius*0.7;
@@ -1680,26 +1733,21 @@ function updateLucas(t,dt){
   const ax = sophia.x + ox;
   const ay = sophia.y + oy;
 
-  // steer
   const dx=ax - lucas.x;
   const dy=ay - lucas.y;
   const d=Math.hypot(dx,dy)||1;
 
-  // if far, sprint in; if close, drift
   const sp = d>120 ? 110 : (d>60?85:55);
   lucas.vx += (dx/d)*sp*dt;
   lucas.vy += (dy/d)*sp*dt;
 
-  // friction
   lucas.vx *= Math.pow(0.86, dt*60);
   lucas.vy *= Math.pow(0.86, dt*60);
 
-  // cap
   const maxSp=140;
   const s=Math.hypot(lucas.vx,lucas.vy);
   if(s>maxSp){ lucas.vx=(lucas.vx/s)*maxSp; lucas.vy=(lucas.vy/s)*maxSp; }
 
-  // move with collision
   const nx=lucas.x+lucas.vx*dt, ny=lucas.y+lucas.vy*dt;
   if(!collides(nx,lucas.y,lucas.w,lucas.h)) lucas.x=nx; else lucas.vx*=-0.3;
   if(!collides(lucas.x,ny,lucas.w,lucas.h)) lucas.y=ny; else lucas.vy*=-0.3;
@@ -1707,7 +1755,6 @@ function updateLucas(t,dt){
   lucas.x=clamp(lucas.x,0,WORLD.w-lucas.w);
   lucas.y=clamp(lucas.y,0,WORLD.h-lucas.h);
 
-  // bond ticks for hanging out
   if(dist2(lucas.x,lucas.y,sophia.x,sophia.y)<70*70 && (t%120|0)===0){
     lucas.bond = Math.min(999, lucas.bond+1);
   }
@@ -1717,10 +1764,7 @@ function updateLucas(t,dt){
    Movement + camera
    ========================================================== */
 function updatePlayer(t,dt){
-  if(dialog.on){
-    // freeze input movement lightly (still camera updates)
-    return;
-  }
+  if(dialog.on) return;
 
   if(state.street.hidden){
     if(!keysDown.has("e")) exitHidden();
@@ -1730,8 +1774,16 @@ function updatePlayer(t,dt){
   const coffeeOn = performance.now() < buffs.coffeeUntil;
   const speedMul = coffeeOn ? 1.12 : 1.0;
 
+  // keep car near home when you’re in home neighborhood (feels like driveway consistency)
+  const h=getHome();
+  const nearHome = dist2(sophia.x,sophia.y, h.x+h.w/2, h.y+h.h) < 260*260;
+  if(!state.street.inCar && nearHome && dist2(car.x,car.y, h.x+h.w/2, h.y+h.h) > 650*650){
+    snapCarToDriveway("");
+  }
+
   if(state.street.inCar){
-    const boost = keysDown.has("shift") ? 1.18 : 1.0;
+    const boostHeld = keysDown.has("shift");
+    const boost = boostHeld ? 1.34 : 1.0;
 
     let ax=0, ay=0;
     if(keysDown.has("w")||keysDown.has("arrowup")) ay-=1;
@@ -1740,21 +1792,23 @@ function updatePlayer(t,dt){
     if(keysDown.has("d")||keysDown.has("arrowright")) ax+=1;
     if(ax && ay){ ax*=0.72; ay*=0.72; }
 
-    const accel=260*boost;
+    // smoother, stronger car feel
+    const accel=320*boost;
     car.vx += ax*accel*dt;
     car.vy += ay*accel*dt;
 
-    car.vx *= Math.pow(0.92, dt*60);
-    car.vy *= Math.pow(0.92, dt*60);
+    const drag = boostHeld ? 0.935 : 0.915;
+    car.vx *= Math.pow(drag, dt*60);
+    car.vy *= Math.pow(drag, dt*60);
 
-    const maxSp=220*boost;
+    const maxSp=280*boost;
     const sp=Math.hypot(car.vx,car.vy);
     if(sp>maxSp){
       car.vx=(car.vx/sp)*maxSp;
       car.vy=(car.vy/sp)*maxSp;
     }
 
-    if(sp>40) car.fuel = Math.max(0, car.fuel - dt*3.5);
+    if(sp>40) car.fuel = Math.max(0, car.fuel - dt*(boostHeld?4.2:3.5));
     if(car.fuel<=0){
       car.vx *= 0.90;
       car.vy *= 0.90;
@@ -1791,6 +1845,9 @@ function updatePlayer(t,dt){
     if(!keysDown.has("e")) hideHold=0;
   }
 
+  // hop decay
+  if(sophia.hop>0) sophia.hop = Math.max(0, sophia.hop - dt*2.8);
+
   collectPickups();
   checkCarHits();
 }
@@ -1813,7 +1870,7 @@ function updateCamera(dt){
 /* ==========================================================
    Controls
    ========================================================== */
-let eWas=false, spWas=false, qWas=false, mWas=false, tWas=false;
+let eWas=false, spWas=false, qWas=false, mWas=false, tWas=false, fWas=false;
 let mapOpen=false, journalOpen=false;
 
 function toggleJournal(){
@@ -1829,7 +1886,6 @@ function toggleMap(){
 
 function handleButtons(now){
   if(dialog.on){
-    // no E/space actions during dialog
     const q=keysDown.has("q");
     if(q && !qWas) toggleJournal();
     qWas=q;
@@ -1840,32 +1896,28 @@ function handleButtons(now){
     tWas=tt;
     eWas=keysDown.has("e");
     spWas=keysDown.has(" ");
+    fWas=keysDown.has("f");
     return;
   }
 
   const e=keysDown.has("e");
   if(e && !eWas){
-    // if near a fighting ped, E is "hit"
     const z=nearestZone();
-    if(z && z.name==="CONFRONT ROBBER"){
-      // also allow grab/attack via dialog, handled in talkPed
-      z.action();
-    }else{
-      // check if any active fight ped within range
-      const px=sophia.x+5, py=sophia.y+6;
-      let fought=false;
-      for(const p of peds){
-        if(!p.fight.active) continue;
-        if(near(px,py,p.x+5,p.y+6,18)){
-          resolveFightHit(p);
-          fought=true;
-          break;
-        }
+    const px=sophia.x+5, py=sophia.y+6;
+
+    // if any fight ped within range, E hits
+    let fought=false;
+    for(const p of peds){
+      if(!p.fight.active) continue;
+      if(near(px,py,p.x+5,p.y+6,18)){
+        resolveFightHit(p);
+        fought=true;
+        break;
       }
-      if(!fought){
-        if(z && z.name.startsWith("DUMPSTER") && state.street.wanted>0) startHide();
-        else interact();
-      }
+    }
+    if(!fought){
+      if(z && z.name.startsWith("DUMPSTER") && state.street.wanted>0) startHide();
+      else if(z) z.action();
     }
   }
   eWas=e;
@@ -1873,6 +1925,10 @@ function handleButtons(now){
   const sp=keysDown.has(" ");
   if(sp && !spWas) throwMushroom(now);
   spWas=sp;
+
+  const f=keysDown.has("f");
+  if(f && !fWas) jumpHop(now);
+  fWas=f;
 
   const q=keysDown.has("q");
   if(q && !qWas) toggleJournal();
@@ -1970,6 +2026,21 @@ function drawHintBubble(text,x,y){
   ctx.strokeRect(x-w/2+0.5,y-h+0.5,w-1,h-1);
   ctx.fillStyle="rgba(255,255,255,.92)";
   ctx.fillText(text,x-w/2+pad,y-4);
+}
+function tagLabel(b){
+  if(b.tag==="HOME") return "HOME";
+  if(b.tag==="GROC") return "GROCERY";
+  if(b.tag==="BLCK") return "BLOCKBUSTER";
+  if(b.tag==="CAT") return "CAT STORE";
+  if(b.tag==="WEED") return "WEED SHOP";
+  if(b.tag==="STAR") return "STARR";
+  if(b.tag==="CAF") return "COFFEE";
+  if(b.tag==="ARC") return "ARCADE";
+  if(b.tag==="GAS") return "GAS";
+  if(b.tag==="REST") return "FOLLOW HEART";
+  if(b.tag==="YOGA") return "YOGA";
+  if(b.tag==="SHOP") return "SOPHIE SHOP";
+  return b.name;
 }
 
 /* ==========================================================
@@ -2139,9 +2210,16 @@ function drawBuildings(){
     if(b.x+b.w<cam.x-20||b.x>cam.x+VW+20||b.y+b.h<cam.y-20||b.y>cam.y+VH+20) continue;
     const v=worldToView(b.x,b.y);
 
+    // base
     drawRectBevel(v.x,v.y,b.w,b.h,"rgba(255,255,255,.20)");
     ctx.fillStyle="rgba(0,0,0,.35)";
     ctx.fillRect(v.x+3,v.y+3,b.w-6,b.h-6);
+
+    // roof (adds that “actual building” feeling)
+    ctx.fillStyle="rgba(0,0,0,.18)";
+    ctx.fillRect(v.x+2, v.y-6, b.w-4, 6);
+    ctx.fillStyle="rgba(255,255,255,.10)";
+    ctx.fillRect(v.x+3, v.y-5, b.w-6, 2);
 
     let glow="rgba(138,46,255,.22)";
     if(b.tag==="GROC") glow="rgba(255,210,77,.22)";
@@ -2157,21 +2235,22 @@ function drawBuildings(){
     if(b.tag==="BEACH") glow="rgba(90,180,255,.12)";
 
     ctx.fillStyle=glow;
-    ctx.fillRect(v.x+6,v.y+6,b.w-12,18);
+    ctx.fillRect(v.x+6,v.y+6,b.w-12,16);
 
     ctx.font="8px ui-monospace, monospace";
     ctx.fillStyle="rgba(255,255,255,.95)";
-    const label=(b.name==="STARR")?"STARR BUILDING":b.name;
-    ctx.fillText(label, v.x+10, v.y+18);
+    const label = (b.name==="STARR") ? "STARR" : b.name;
+    ctx.fillText(label, v.x+8, v.y+16);
 
-    // windows
-    for(let i=0;i<Math.max(2,(b.w/50|0));i++){
-      const wx=v.x+12+i*46;
-      const wy=v.y+34;
+    // windows (scaled a bit tighter for smaller buildings)
+    const winCount=Math.max(2,(b.w/60|0));
+    for(let i=0;i<winCount;i++){
+      const wx=v.x+8+i*38;
+      const wy=v.y+28;
       ctx.fillStyle="rgba(90,180,255,.18)";
-      ctx.fillRect(wx,wy,26,12);
+      ctx.fillRect(wx,wy,22,10);
       ctx.fillStyle="rgba(255,255,255,.10)";
-      ctx.fillRect(wx+1,wy+1,24,10);
+      ctx.fillRect(wx+1,wy+1,20,8);
     }
 
     const dr=buildingDoorRect(b);
@@ -2200,7 +2279,6 @@ function drawDumpsters(){
   }
 }
 function drawProps(t){
-  // benches
   for(const b of benches){
     if(b.x<cam.x-30||b.x>cam.x+VW+30||b.y<cam.y-30||b.y>cam.y+VH+30) continue;
     const v=worldToView(b.x,b.y);
@@ -2210,7 +2288,6 @@ function drawProps(t){
     ctx.fillStyle="rgba(255,210,77,.18)";
     ctx.fillRect(v.x+2,v.y+1,b.w-4,1);
   }
-  // mailboxes
   for(const mb of mailboxes){
     if(mb.x<cam.x-30||mb.x>cam.x+VW+30||mb.y<cam.y-30||mb.y>cam.y+VH+30) continue;
     const v=worldToView(mb.x,mb.y);
@@ -2220,7 +2297,6 @@ function drawProps(t){
     ctx.fillStyle="rgba(0,255,213,.18)";
     ctx.fillRect(v.x+2,v.y+2,mb.w-4,2);
   }
-  // vending
   for(const vd of vending){
     if(vd.x<cam.x-40||vd.x>cam.x+VW+40||vd.y<cam.y-40||vd.y>cam.y+VH+40) continue;
     const v=worldToView(vd.x,vd.y);
@@ -2232,7 +2308,6 @@ function drawProps(t){
     ctx.fillStyle="rgba(255,255,255,.10)";
     ctx.fillRect(v.x+3,v.y+8,vd.w-6,2);
   }
-  // photo spots
   for(const ps of photoSpots){
     if(ps.x<cam.x-40||ps.x>cam.x+VW+40||ps.y<cam.y-40||ps.y>cam.y+VH+40) continue;
     const v=worldToView(ps.x,ps.y);
@@ -2243,7 +2318,6 @@ function drawProps(t){
     ctx.fillStyle="rgba(255,210,77,.35)";
     ctx.fillRect(v.x+6,v.y+6,6,6);
   }
-  // payphone
   if(payphone.x<cam.x-40||payphone.x>cam.x+VW+40||payphone.y<cam.y-40||payphone.y>cam.y+VH+40) return;
   const pv=worldToView(payphone.x,payphone.y);
   drawRectBevel(pv.x,pv.y,payphone.w,payphone.h,"rgba(255,255,255,.20)");
@@ -2309,7 +2383,11 @@ function drawDuck(t){
 function drawSophia(){
   if(state.street.inCar || state.street.hidden) return;
   const v=worldToView(sophia.x,sophia.y);
-  const x=v.x,y=v.y;
+  let x=v.x,y=v.y;
+  // hop visual (tiny lift)
+  const lift = Math.round(Math.sin((1-sophia.hop)*Math.PI) * 3 * sophia.hop);
+  y -= lift;
+
   ctx.fillStyle="rgba(0,0,0,.22)"; ctx.fillRect(x-1,y+11,12,2);
   ctx.fillStyle="#f2d27a"; ctx.fillRect(x+1,y+0,8,4); ctx.fillRect(x+0,y+3,10,3);
   ctx.fillStyle="#ffd9c9"; ctx.fillRect(x+2,y+5,6,4);
@@ -2343,8 +2421,6 @@ function drawLucas(t){
   ctx.fillStyle="#67b7ff"; ctx.fillRect(x+3,y+6,1,1); ctx.fillRect(x+6,y+6,1,1);
   ctx.fillStyle="rgba(0,255,213,.55)"; ctx.fillRect(x+2,y+9,6,3);
   ctx.fillStyle="rgba(255,255,255,.18)"; ctx.fillRect(x+3,y+10,4,1);
-
-  // tiny “freeroam aura”
   ctx.fillStyle="rgba(255,99,255,.10)";
   ctx.fillRect(x-2,y-2,14,16);
 }
@@ -2429,7 +2505,6 @@ function drawPeds(t){
     ctx.fillStyle=shirt;
     ctx.fillRect(x+2,y+9,6,3);
 
-    // role badge / type
     if(p.type==="robber"){
       ctx.fillStyle="rgba(255,99,255,.55)";
       ctx.fillRect(x-2,y+2,2,2);
@@ -2449,7 +2524,6 @@ function drawPeds(t){
       ctx.fillRect(x+10, y+6+arm, 1, 2);
     }
 
-    // angry aura
     if(p.angry>0){
       p.angry--;
       ctx.fillStyle="rgba(255,99,255,.12)";
@@ -2546,7 +2620,7 @@ function drawTripOverlay(t){
   for(let y=0;y<VH;y+=3) ctx.fillRect(0,y,VW,1);
 }
 
-/* MINIMAP + BIG MAP */
+/* MINIMAP + BIG MAP (with labels + CAR marker) */
 function drawMinimap(t){
   const mw=92, mh=68;
   const x=VW-mw-6, y=6;
@@ -2568,7 +2642,6 @@ function drawMinimap(t){
     ctx.fillStyle = (b.tag==="STAR") ? "rgba(255,210,77,.80)" : "rgba(255,255,255,.20)";
     ctx.fillRect(bx,by, Math.max(2,b.w*sx), Math.max(2,b.h*sy));
   }
-  // pond
   ctx.fillStyle="rgba(90,180,255,.28)";
   ctx.fillRect(x+4 + pond.x*sx, y+4 + pond.y*sy, pond.w*sx, pond.h*sy);
 
@@ -2577,21 +2650,30 @@ function drawMinimap(t){
     ctx.fillRect(x+4 + state.waypoint.x*sx, y+4 + state.waypoint.y*sy, 2, 2);
   }
 
+  // cops
   ctx.fillStyle="rgba(255,99,255,.70)";
   for(const c of cops){
     ctx.fillRect(x+4 + c.x*sx, y+4 + c.y*sy, 1, 1);
   }
 
+  // player
   const pxW = state.street.inCar ? car.x : sophia.x;
   const pyW = state.street.inCar ? car.y : sophia.y;
   ctx.fillStyle="rgba(0,255,213,1)";
   ctx.fillRect(x+4 + pxW*sx, y+4 + pyW*sy, 2, 2);
+
+  // car marker (helps “know where my car is”)
+  if(!state.street.inCar){
+    ctx.fillStyle="rgba(255,210,77,.95)";
+    ctx.fillRect(x+4 + car.x*sx, y+4 + car.y*sy, 2, 2);
+  }
 
   if(lucas.called && lucas.active){
     ctx.fillStyle="rgba(255,99,255,.75)";
     ctx.fillRect(x+4 + lucas.x*sx, y+4 + lucas.y*sy, 2, 2);
   }
 }
+
 function drawBigMap(t){
   if(!mapOpen) return;
 
@@ -2622,6 +2704,23 @@ function drawBigMap(t){
   ctx.fillStyle="rgba(90,180,255,.25)";
   ctx.fillRect(pad+6 + pond.x*sx, pad+6 + pond.y*sy, pond.w*sx, pond.h*sy);
 
+  // labels
+  ctx.font="8px ui-monospace, monospace";
+  ctx.fillStyle="rgba(255,255,255,.88)";
+  for(const b of buildings){
+    const lx = pad+6 + (b.x + b.w/2)*sx;
+    const ly = pad+6 + (b.y + b.h/2)*sy;
+    const txt = tagLabel(b);
+    ctx.fillText(txt, lx - Math.min(22, txt.length*2), ly-2);
+  }
+  // pond label
+  ctx.fillStyle="rgba(255,255,255,.82)";
+  ctx.fillText("DUCK POND", pad+6 + (pond.x+pond.w/2)*sx - 18, pad+6 + (pond.y+pond.h/2)*sy);
+
+  // car label
+  ctx.fillStyle="rgba(255,210,77,.92)";
+  ctx.fillText("CAR", pad+6 + (car.x+car.w/2)*sx - 6, pad+6 + (car.y+car.h/2)*sy - 2);
+
   if(state.waypoint){
     ctx.fillStyle="rgba(255,99,255,.90)";
     ctx.fillRect(pad+6 + state.waypoint.x*sx, pad+6 + state.waypoint.y*sy, 3, 3);
@@ -2639,7 +2738,7 @@ function drawBigMap(t){
 
   ctx.font="9px ui-monospace, monospace";
   ctx.fillStyle="rgba(255,255,255,.90)";
-  ctx.fillText("MAP (press M)", pad+12, pad+18);
+  ctx.fillText("MAP (press M) • click to set waypoint", pad+12, pad+18);
 }
 
 /* ==========================================================
