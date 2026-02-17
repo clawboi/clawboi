@@ -1,374 +1,770 @@
-<!-- games.html -->
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>GAMES</title>
-
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia's Audition — Bedroom</title>
 <style>
 :root{
-  --violet:#8a2eff;
-  --bg:#000;
-  --fg:#fff;
+  --bg:#07070b; --fg:#fff;
+  --ui:rgba(255,255,255,.10); --ui2:rgba(255,255,255,.18);
+  --vio:#8a2eff;
 }
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--fg);
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  overflow-x:hidden;
-  position:relative;
+html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+.wrap{height:100%; display:grid; place-items:center;}
+canvas{
+  width:min(1150px, 100vw);
+  height:auto;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  touch-action:none;
+  outline:none;
 }
 
-/* violet fog */
+/* cozy paper + forest-moon haze (ghibli-ish), less “modern blur” */
 body::before{
   content:"";
   position:fixed;
-  inset:-25%;
-  pointer-events:none;
-  z-index:0;
+  inset:-20%;
   background:
-    radial-gradient(circle at 18% 20%, rgba(138,46,255,.26), transparent 58%),
-    radial-gradient(circle at 78% 32%, rgba(138,46,255,.18), transparent 64%),
-    radial-gradient(circle at 48% 88%, rgba(138,46,255,.14), transparent 70%),
-    radial-gradient(circle at 60% 60%, rgba(255,255,255,.04), transparent 72%);
-  mix-blend-mode:screen;
-  filter:blur(38px) saturate(1.25);
-  animation:fog 18s ease-in-out infinite;
-}
-@keyframes fog{
-  0%,100%{transform:translate(0,0) scale(1)}
-  50%{transform:translate(-2.5%,3.5%) scale(1.02)}
-}
-
-/* scanlines */
-.scan{
-  position:fixed;
-  inset:0;
+    radial-gradient(circle at 18% 18%, rgba(255,240,210,.08), transparent 62%),
+    radial-gradient(circle at 82% 32%, rgba(120,220,190,.06), transparent 62%),
+    radial-gradient(circle at 52% 88%, rgba(138,46,255,.06), transparent 60%),
+    radial-gradient(circle at 24% 78%, rgba(120,200,140,.05), transparent 58%);
+  filter:blur(28px);
+  animation:drift 18s ease-in-out infinite;
   pointer-events:none;
-  z-index:6;
-  opacity:.08;
-  mix-blend-mode:overlay;
-  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 3px, transparent 6px);
 }
+@keyframes drift{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(.8%,-.6%,0)}}
 
-/* top brand */
-.brand{
-  position:fixed;
-  top:14px;
-  left:14px;
-  z-index:9;
-  font-size:11px;
-  letter-spacing:.34em;
-  text-transform:uppercase;
-  color:#fff;
-  text-decoration:none; /* no underline */
-  opacity:.72;
-  text-shadow:0 0 18px rgba(138,46,255,.25);
+.hud{
+  position:fixed; left:12px; right:12px; top:12px; z-index:5;
+  display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;
+  pointer-events:none;
 }
-.brand:hover{opacity:1}
-
-/* layout */
-.wrap{
-  position:relative;
-  z-index:2;
-  padding:90px 18px 60px;
-  max-width:980px;
-  margin:0 auto;
-}
-.h1{
-  font-size:clamp(18px,4vw,42px);
-  letter-spacing:.46em;
-  text-transform:uppercase;
-  text-shadow:0 0 18px rgba(138,46,255,.35);
-}
-.sub{
-  margin-top:10px;
-  font-size:11px;
-  letter-spacing:.30em;
-  text-transform:uppercase;
-  opacity:.62;
-  line-height:1.7;
-}
-
-/* grid */
-.grid{
-  margin-top:26px;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:14px;
-}
-@media(max-width:860px){.grid{grid-template-columns:1fr}}
-
-/* NO underlines anywhere */
-a, a:visited, a:hover, a:active{
-  color:#fff;
-  text-decoration:none;
-}
-
-.card{
-  background:rgba(255,255,255,.03);
-  border-radius:18px;
-  padding:16px;
-  position:relative;
-  overflow:hidden;
-}
-.card:before{
-  content:"";
-  position:absolute;
-  left:-20%;
-  top:0;
-  width:140%;
-  height:1px;
-  background:linear-gradient(90deg, transparent, rgba(138,46,255,.55), transparent);
-  opacity:.35;
-}
-
-.label{
-  font-size:10px;
-  letter-spacing:.34em;
-  text-transform:uppercase;
-  opacity:.7;
-}
-
-.preview{
-  margin-top:12px;
+.titleCard,.pill,.hint{
+  pointer-events:auto;
+  border:1px solid var(--ui2);
+  background:rgba(0,0,0,.42);
+  backdrop-filter: blur(6px);
   border-radius:16px;
-  overflow:hidden;
-  border:1px solid rgba(255,255,255,.06);
-  background:rgba(0,0,0,.55);
-  position:relative;
-  aspect-ratio: 16 / 9;
 }
-.preview img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-  filter:contrast(1.02) saturate(1.05);
-  opacity:.95;
-}
-.preview .noise{
-  position:absolute; inset:0;
-  pointer-events:none;
-  background:
-    radial-gradient(circle at 30% 30%, rgba(138,46,255,.14), transparent 55%),
-    radial-gradient(circle at 70% 60%, rgba(255,255,255,.06), transparent 60%);
-  mix-blend-mode:screen;
-}
-.preview .badge{
-  position:absolute;
-  left:12px; top:12px;
-  padding:8px 10px;
+.titleCard{padding:10px 14px; min-width:260px;}
+.titleCard .t{font-weight:900; letter-spacing:.18em; text-transform:uppercase; font-size:12px;}
+.titleCard .s{margin-top:4px; font-size:12px; letter-spacing:.08em; opacity:.86;}
+.pill{
   border-radius:999px;
-  font-size:10px;
-  letter-spacing:.22em;
-  text-transform:uppercase;
-  background:rgba(0,0,0,.55);
-  border:1px solid rgba(255,255,255,.10);
-  opacity:.9;
-}
-.preview .badge.v{ border-color:rgba(138,46,255,.30); box-shadow:0 0 18px rgba(138,46,255,.10) }
-.preview .cta{
-  position:absolute;
-  right:12px; bottom:12px;
-  padding:10px 12px;
-  border-radius:999px;
-  font-size:10px;
-  letter-spacing:.22em;
-  text-transform:uppercase;
-  background:rgba(138,46,255,.16);
-  border:1px solid rgba(255,255,255,.10);
-  color:#fff;
-  opacity:.92;
-}
-
-.desc{
-  margin-top:12px;
-  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  padding:9px 12px;
   font-size:12px;
-  letter-spacing:.08em;
-  opacity:.74;
-  line-height:1.6;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  display:flex; gap:10px; align-items:center;
+  white-space:nowrap;
+}
+.hint{
+  flex:1 1 440px;
+  padding:10px 12px;
+  font-size:12px;
+  letter-spacing:.06em;
+  line-height:1.35;
+}
+.hint .k{
+  display:inline-block;
+  padding:2px 7px;
+  border-radius:8px;
+  border:1px solid var(--ui2);
+  background:rgba(255,255,255,.06);
+  font-weight:900;
 }
 
-.btnRow{margin-top:14px; display:flex; gap:10px; flex-wrap:wrap}
-.btn{
-  appearance:none;
-  border:0;
-  cursor:pointer;
-  padding:12px 14px;
-  border-radius:999px;
-  background:rgba(138,46,255,.16);
-  color:#fff;
-  letter-spacing:.22em;
-  font-size:11px;
-  text-transform:uppercase;
+.toast{
+  position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+  border:1px solid var(--ui2);
+  background:rgba(0,0,0,.65);
+  border-radius:14px;
+  padding:10px 12px;
+  font-size:12px;
+  letter-spacing:.06em;
+  opacity:0;
+  transition:.2s;
+  max-width:min(860px, calc(100vw - 24px));
+  text-align:center;
 }
-.btn:hover{filter:brightness(1.06)}
-.btn.alt{background:rgba(255,255,255,.06)}
+.toast.on{opacity:1}
+
+/* poem modal (kept) */
+#poemBox{position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.65); z-index:9;}
+#poemBox textarea{
+  width:360px;height:210px;
+  background:#0b0b12;
+  color:#fff;
+  border:1px solid var(--ui2);
+  padding:12px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+  border-radius:14px;
+}
+#poemBox button{margin-top:10px;background:var(--vio);border:none;color:white;padding:10px 18px;cursor:pointer;border-radius:12px;}
 </style>
 </head>
-
 <body>
-<a class="brand" href="index.html">CLAWBOI</a>
-<div class="scan"></div>
 
-<div class="wrap">
-  <div class="h1">GAMES</div>
-  <div class="sub">PLAYABLE SIGNALS · CLICK A NODE TO ENTER</div>
-
-  <div class="grid">
-
-    <!-- SPACE CHIMP -->
-    <div class="card">
-      <div class="label">SPACE CHIMP</div>
-
-      <a href="dream.html" aria-label="Open Space Chimp">
-        <div class="preview">
-          <img src="images/space-chimp.png" alt="Space Chimp cover art">
-          <div class="noise"></div>
-          <div class="cta">ENTER</div>
-        </div>
-      </a>
-
-      <div class="desc">
-        LOW-GRAVITY RUN. PILL DODGE. STARSTATIC AUDIO.
-        <br>ONE WRONG MOVE = LAUGH / SCREAM / RELOAD.
-      </div>
-
-      <div class="btnRow">
-        <a class="btn" href="dream.html">PLAY</a>
-      </div>
-    </div>
-
-    <!-- PSYCHWARD ESCAPE -->
-    <div class="card">
-      <div class="label">ESCAPE PSYCHWARD</div>
-
-      <a href="escape.html" aria-label="Open Escape Psychward">
-        <div class="preview">
-          <img src="images/escape-psychward.png" alt="Escape Psychward cover art">
-          <div class="noise"></div>
-          <div class="badge"></div>
-          <div class="cta">ENTER</div>
-        </div>
-      </a>
-
-      <div class="desc">
-        CHOOSE DOOR A / B / C. PILLS OR NO PILLS.
-        <br>LOW SURVIVAL RATE. FULL DEATH LOG.
-      </div>
-
-      <div class="btnRow">
-        <a class="btn" href="escape.html">PLAY</a>
-      </div>
-    </div>
-
-    <!-- ADVENTURES OF CLAWBOI -->
-    <div class="card">
-      <div class="label">ADVENTURES OF CLAWBOI</div>
-
-      <a href="AOC/01startup.html" aria-label="Open Adventures of Clawboi">
-        <div class="preview">
-          <img src="images/adventuresofclawboi.png" alt="Adventures of Clawboi cover art">
-          <div class="noise"></div>
-          <div class="badge v">BETA</div>
-          <div class="cta">ENTER</div>
-        </div>
-      </a>
-
-      <div class="desc">
-        MAIN RPG NODE.
-        <br>FOREST · QUESTS · SURVIVE THE WAVES.
-      </div>
-
-      <div class="btnRow">
-        <a class="btn" href="clawboi/AOC/01startup/">PLAY</a>
-      </div>
-    </div>
-
-    <!-- NEW SLOT 1 -->
-    <div class="card">
-      <div class="label">CLUB ZOMBIE CHIMP</div>
-
-      <a href="club-zombie-chimp.html" aria-label="Open Club Zombie Chimp">
-        <div class="preview">
-          <!-- swap this image later if you want -->
-          <img src="images/club-zombie-chimp.png" alt="Club Zombie Chimp cover art">
-          <div class="noise"></div>
-          <div class="badge v">NEW</div>
-          <div class="cta">ENTER</div>
-        </div>
-      </a>
-
-      <div class="desc">
-        CLUB LIGHTS. UNDEAD ENERGY. CHIMP CHAOS.
-        <br>DROP THE FILE IN ROOT AND THIS IS LIVE.
-      </div>
-
-      <div class="btnRow">
-        <a class="btn" href="club-zombie-chimp.html">PLAY</a>
-      </div>
-    </div>
-
-    <!-- NEW SLOT 2 -->
-    <div class="card">
-      <div class="label">SOPHIA WRLD</div>
-
-      <a href="Sophie-Audition/Sophie00.html" aria-label="Sophia Audition">
-        <div class="preview">
-          <img src="images/SOPHIAWRLD.jpg" alt="Game Slot 5 cover art">
-          <div class="noise"></div>
-          <div class="badge">COMING SOON</div>
-          <div class="cta">ENTER</div>
-        </div>
-      </a>
-
-      <div class="desc">
-        SOPHIA & MILO's AUDITION.
-        <br>RENAME game-5.html + /images/game-5.png WHEN READY.
-      </div>
-
-      <div class="btnRow">
-        <a class="btn" href="Sophie-Audition/Sophie00.html">PLAY</a>
-      </div>
-    </div>
-
-    <!-- NEW SLOT 3 -->
-    <div class="card">
-      <div class="label">GAME SLOT 6</div>
-
-      <a href="game-6.html" aria-label="Open Game Slot 6">
-        <div class="preview">
-          <img src="images/game-6.png" alt="Game Slot 6 cover art">
-          <div class="noise"></div>
-          <div class="badge">RESERVED</div>
-          <div class="cta">ENTER</div>
-        </div>
-      </a>
-
-      <div class="desc">
-        RESERVED NODE.
-        <br>RENAME game-6.html + /images/game-6.png WHEN READY.
-      </div>
-
-      <div class="btnRow">
-        <a class="btn" href="game-6.html">PLAY</a>
-      </div>
-    </div>
-
+<div class="hud">
+  <div class="titleCard">
+    <div class="t">Sophia’s Audition</div>
+    <div class="s"><span id="status">Bedroom</span> · Spirited room, Zelda calm</div>
   </div>
 
-  <div class="btnRow" style="margin-top:22px">
-    <a class="btn alt" href="secret.html">RETURN TO TRANSMISSION</a>
-    <a class="btn alt" href="listen.html">LISTEN</a>
-    <a class="btn alt" href="shop.html">SHOP</a>
+  <div class="pill">Milo: <span id="miloMood">following</span></div>
+  <div class="pill">Keys: <span id="keys">NO</span></div>
+
+  <div class="hint">
+    Move: <span class="k">WASD</span> · Interact: <span class="k">E</span> · Run: <span class="k">SHIFT</span> · Jump: <span class="k">SPACE</span> · Dance: <span class="k">C</span><br>
+    Desk = poetry · Guitar = play · Clothes = outfit · Bed = sleep · Doors lead out
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
+<div id="poemBox">
+  <div>
+    <textarea id="poemInput" placeholder="Write poetry..."></textarea><br>
+    <button id="poemSaveBtn">Save Line</button>
+  </div>
+</div>
+
+<div class="wrap"><canvas id="c" width="768" height="432" tabindex="0"></canvas></div>
+
+<script>
+(() => {
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d", { alpha:false });
+  ctx.imageSmoothingEnabled = false;
+
+  const statusEl = document.getElementById("status");
+  const keysEl = document.getElementById("keys");
+  const miloMoodEl = document.getElementById("miloMood");
+  const toastEl = document.getElementById("toast");
+  const poemBoxEl = document.getElementById("poemBox");
+  const poemInputEl = document.getElementById("poemInput");
+  const poemSaveBtn = document.getElementById("poemSaveBtn");
+
+  const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+
+  // robust load
+  let state;
+  try{ state = JSON.parse(localStorage.getItem(STORE_KEY) || "null") || null; }
+  catch(e){ state = null; }
+  if(!state || typeof state !== "object") state = {};
+  state = Object.assign({
+    hasKeys:false, slept:false, trip:false, puke:false,
+    poemLines:0, poems:[], guitarPlayed:0,
+    outfit:0,
+    lastRoom:"BEDROOM",
+    sophia:{x:170,y:210},
+    milo:{x:150,y:226}
+  }, state);
+
+  if(!state.sophia || typeof state.sophia.x!=="number" || typeof state.sophia.y!=="number") state.sophia={x:170,y:210};
+  if(!state.milo   || typeof state.milo.x!=="number"   || typeof state.milo.y!=="number")   state.milo={x:150,y:226};
+
+  function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+
+  statusEl.textContent = "Bedroom";
+  keysEl.textContent = state.hasKeys ? "YES" : "NO";
+  miloMoodEl.textContent = "following";
+
+  /* ---------- controls ---------- */
+  const keysDown = new Set();
+  const held = { e:false, space:false, c:false };
+  const heldPtr = { down:false };
+
+  function keyName(e){ return (e.key || "").toLowerCase(); }
+
+  window.addEventListener("keydown", (e) => {
+    const k = keyName(e);
+    if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k)) e.preventDefault();
+    keysDown.add(k);
+  }, { passive:false });
+
+  window.addEventListener("keyup", (e) => keysDown.delete(keyName(e)));
+  window.addEventListener("pointerdown", () => canvas.focus(), { passive:true });
+
+  /* ---------- world + camera ---------- */
+  // Zelda-ish tight framing = smaller view window.
+  // “More space” comes from collision insets (walkability), not a giant map.
+  const VIEW_W = 272, VIEW_H = 154;
+
+  // modest world size: room reads small, still enough lanes
+  const WORLD_W = 500, WORLD_H = 300;
+
+  const cam = { x:0, y:0 };
+
+  const SX = canvas.width / VIEW_W;
+  const SY = canvas.height / VIEW_H;
+
+  const X = (x)=>Math.round((x - cam.x) * SX);
+  const Y = (y)=>Math.round((y - cam.y) * SY);
+  const Wp = (w)=>Math.round(w * SX);
+  const Hp = (h)=>Math.round(h * SY);
+
+  function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
+
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("on");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=>toastEl.classList.remove("on"), 1600);
+  }
+
+  /* ---------- poem modal ---------- */
+  function savePoem(){
+    const t = poemInputEl.value.trim();
+    if(!t) return;
+    state.poems.push(t);
+    state.poemLines++;
+    poemInputEl.value="";
+    save();
+    poemBoxEl.style.display="none";
+    toast("Poetry saved.");
+  }
+  poemSaveBtn.addEventListener("click", savePoem);
+
+  /* ---------- geometry ---------- */
+  const WALL = 10;
+
+  // visual sizes kept (your “good sizing”), arranged to open lanes
+  const furn = {
+    window:  { x:116, y:18,  w:78, h:34 },
+
+    bed:     { x:326, y:54,  w:120, h:52, d:10 },
+    desk:    { x:64,  y:74,  w:86,  h:28, d:8  },
+    dresser: { x:210, y:116, w:62,  h:22, d:8  },
+
+    guitar:  { x:92,  y:206, w:22,  h:40, d:6  },
+    clothes: { x:168, y:232, w:52,  h:24, d:6  },
+
+    table:   { x:300, y:156, w:32,  h:22, d:7  },
+    altar:   { x:242, y:56,  w:42,  h:14, d:6  },
+
+    // extra cozy prop (no collision, purely visual density)
+    plant:   { x:440, y:210, w:18,  h:18 }
+  };
+
+  // KEY FIX: collision boxes are inset smaller than furniture visuals
+  // so you stop snagging and the room feels more “spacious” while staying dense.
+  function insetRect(x,y,w,h, pad){
+    return [x+pad, y+pad, Math.max(1,w-pad*2), Math.max(1,h-pad*2)];
+  }
+  const COLLIDE_PAD = 4;
+
+  const solids = [
+    [0,0,WORLD_W,WALL],[0,0,WALL,WORLD_H],[0,WORLD_H-WALL,WORLD_W,WALL],[WORLD_W-WALL,0,WALL,WORLD_H],
+
+    insetRect(furn.desk.x, furn.desk.y, furn.desk.w, furn.desk.h, COLLIDE_PAD),
+    insetRect(furn.bed.x, furn.bed.y, furn.bed.w, furn.bed.h, COLLIDE_PAD),
+    insetRect(furn.dresser.x, furn.dresser.y, furn.dresser.w, furn.dresser.h, COLLIDE_PAD),
+    insetRect(furn.guitar.x, furn.guitar.y, furn.guitar.w, furn.guitar.h, COLLIDE_PAD),
+    insetRect(furn.clothes.x, furn.clothes.y, furn.clothes.w, furn.clothes.h, COLLIDE_PAD),
+    insetRect(furn.table.x, furn.table.y, furn.table.w, furn.table.h, COLLIDE_PAD),
+    insetRect(furn.altar.x, furn.altar.y, furn.altar.w, furn.altar.h, COLLIDE_PAD),
+  ];
+
+  const zones = [
+    {name:"DESK", rect:[furn.desk.x+10,furn.desk.y+6, 48, 16], action:()=>location.href="poetry.html"},
+    {name:"BED", rect:[furn.bed.x+10,furn.bed.y+8, 76, 30], action:()=>{ state.slept=true; requestSave(); toast("She sleeps… the room listens."); }},
+    {name:"GUITAR", rect:[furn.guitar.x-6,furn.guitar.y+8, 36, 24], action:()=>location.href="guitar.html"},
+    {name:"CLOTHES", rect:[furn.clothes.x,furn.clothes.y, furn.clothes.w, furn.clothes.h], action:changeOutfit},
+    {name:"DOOR_LIVING", rect:[WORLD_W-20, 114, 12, 36], action:()=>go("Sophie03.html")},
+    {name:"DOOR_YARD", rect:[236, WORLD_H-18, 58, 10], action:()=>go("Sophie02.html")}
+  ];
+
+  function changeOutfit(){
+    state.outfit=(state.outfit+1)%4;
+    requestSave();
+    toast("Outfit changed.");
+  }
+
+  function insideSolid(px,py,pw,ph){
+    for(const s of solids){
+      if(px < s[0]+s[2] && px+pw > s[0] && py < s[1]+s[3] && py+ph > s[1]) return true;
+    }
+    return false;
+  }
+
+  /* ---------- entities ---------- */
+  const sophia = { x: state.sophia.x, y: state.sophia.y, w:16, h:20, bob:0, z:0, vz:0 };
+  const milo   = { x: state.milo.x,   y: state.milo.y,   bob:0, z:0 };
+  const dance = { on:false, t:0 };
+
+  // spawn safety
+  if(insideSolid(sophia.x,sophia.y,sophia.w,sophia.h)){
+    sophia.x = 150; sophia.y = 190;
+  }
+
+  // smoother collision: more substeps + tiny skin helps corners feel less “sticky”
+  const SKIN = 0.0001;
+  function moveWithSlide(dx,dy){
+    const steps = 5;
+    dx/=steps; dy/=steps;
+    for(let i=0;i<steps;i++){
+      if(!insideSolid(sophia.x+dx, sophia.y, sophia.w-SKIN, sophia.h-SKIN)) sophia.x += dx;
+      if(!insideSolid(sophia.x, sophia.y+dy, sophia.w-SKIN, sophia.h-SKIN)) sophia.y += dy;
+    }
+  }
+
+  /* ---------- interact ---------- */
+  function nearest(){
+    let best=null, bd=1e18;
+    const px = sophia.x + sophia.w/2;
+    const py = sophia.y + sophia.h/2;
+    const MAX = 74*74;
+    for(const z of zones){
+      const cx=z.rect[0]+z.rect[2]/2;
+      const cy=z.rect[1]+z.rect[3]/2;
+      const d=(cx-px)**2+(cy-py)**2;
+      if(d<bd && d<MAX){ bd=d; best=z; }
+    }
+    return best;
+  }
+
+  function interact(){
+    const z=nearest();
+    if(z) z.action();
+    else toast("Nothing here…");
+  }
+
+  canvas.addEventListener("pointerdown", (e)=>{
+    e.preventDefault();
+    canvas.focus();
+    if(!heldPtr.down){ interact(); heldPtr.down=true; }
+  }, { passive:false });
+  window.addEventListener("pointerup", ()=>heldPtr.down=false, { passive:true });
+
+  /* ---------- draw helpers ---------- */
+  function rrect(px,py,pw,ph,r,fill,stroke){
+    const x=px, y=py, w=pw, h=ph;
+    r=Math.max(0,Math.min(r,Math.min(w,h)/2));
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+    if(fill){ ctx.fillStyle=fill; ctx.fill(); }
+    if(stroke){ ctx.strokeStyle=stroke; ctx.stroke(); }
+  }
+
+  function ditherRect(px,py,pw,ph,a){
+    ctx.fillStyle = `rgba(0,0,0,${a})`;
+    for(let y=py; y<py+ph; y+=2){
+      for(let x=px + ((y/2|0)%2); x<px+pw; x+=2){
+        ctx.fillRect(x,y,1,1);
+      }
+    }
+  }
+
+  function texture(px,py,pw,ph, step, a1, a2){
+    for(let y=0;y<ph;y+=step){
+      for(let x=0;x<pw;x+=step){
+        const on = ((x/step|0)+(y/step|0))%2===0;
+        ctx.fillStyle = on ? a1 : a2;
+        ctx.fillRect(px+x, py+y, step, step);
+      }
+    }
+  }
+
+  function outlineRect(px,py,pw,ph,col){
+    ctx.strokeStyle = col;
+    ctx.strokeRect(px+.5, py+.5, pw, ph);
+    ctx.strokeRect(px+1.5, py+1.5, pw-2, ph-2);
+  }
+
+  function box3D(wx,wy,ww,wh,wd, colTop, colFront, colSide, edge){
+    const x = X(wx), y = Y(wy), w = Wp(ww), h = Hp(wh), d = Hp(wd);
+
+    rrect(x+Wp(2), y+h-Hp(2), w-Wp(4), Hp(4), Wp(2), "rgba(0,0,0,.26)");
+
+    rrect(x, y-d, w, d, Wp(4), colTop);
+    texture(x, y-d, w, d, Math.max(2, Wp(2)), "rgba(255,255,255,.05)", "rgba(0,0,0,.03)");
+    ditherRect(x, y-d, w, d, 0.06);
+
+    rrect(x+w-d, y-d, d, h, Wp(3), colSide);
+    texture(x+w-d, y-d, d, h, Math.max(2, Wp(2)), "rgba(255,255,255,.04)", "rgba(0,0,0,.04)");
+    ditherRect(x+w-d, y-d, d, h, 0.07);
+
+    rrect(x, y, w, h, Wp(5), colFront);
+    texture(x, y, w, h, Math.max(2, Wp(2)), "rgba(255,255,255,.04)", "rgba(0,0,0,.03)");
+    ditherRect(x, y, w, h, 0.06);
+
+    rrect(x+Wp(2), y+Hp(2), w-Wp(10), Hp(5), Wp(3), "rgba(255,255,255,.06)");
+    outlineRect(x, y, w, h, edge);
+  }
+
+  /* ---------- atmosphere ---------- */
+  const motes = Array.from({length:22}, ()=>({
+    x: Math.random()*WORLD_W,
+    y: Math.random()*WORLD_H,
+    r: 1+Math.random()*2,
+    sp: 0.12+Math.random()*0.26
+  }));
+
+  function bg(){
+    ctx.fillStyle="#070612";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // paper walls
+    rrect(X(8),Y(8),Wp(VIEW_W-16),Hp(98),Wp(10), "#1a1927", "rgba(255,255,255,.08)");
+    texture(X(10),Y(10),Wp(VIEW_W-20),Hp(94),Math.max(2,Wp(2)),
+      "rgba(255,255,255,.018)","rgba(0,0,0,.03)");
+    ditherRect(X(10),Y(10),Wp(VIEW_W-20),Hp(94),0.05);
+
+    // window
+    const win = furn.window;
+    rrect(X(win.x),Y(win.y),Wp(win.w),Hp(win.h),Wp(8), "#2a2938", "rgba(255,255,255,.12)");
+
+    // moon spill
+    const gx = X(win.x+win.w/2), gy = Y(win.y+win.h/2);
+    const g = ctx.createRadialGradient(gx,gy, Wp(6), gx,gy, Wp(150));
+    g.addColorStop(0,"rgba(255,246,220,.16)");
+    g.addColorStop(.55,"rgba(170,210,195,.05)");
+    g.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=g;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // floor
+    const floorY = 106;
+    const fy = Y(floorY);
+    ctx.fillStyle="#120f1e";
+    ctx.fillRect(0, fy, canvas.width, canvas.height - fy);
+
+    for(let y=fy; y<canvas.height; y+=Hp(4)){
+      ctx.fillStyle="rgba(255,255,255,.028)";
+      ctx.fillRect(0, y, canvas.width, 1);
+    }
+    for(let x=0; x<canvas.width; x+=Wp(18)){
+      ctx.fillStyle="rgba(0,0,0,.12)";
+      ctx.fillRect(x, fy, 1, canvas.height - fy);
+    }
+    ditherRect(0, fy, canvas.width, canvas.height-fy, 0.04);
+
+    // rug
+    rrect(X(186),Y(186),Wp(150),Hp(72),Wp(12), "#23233a", "rgba(255,255,255,.10)");
+    texture(X(186),Y(186),Wp(150),Hp(72),Math.max(2,Wp(2)),"rgba(140,200,185,.05)","rgba(0,0,0,.06)");
+    ditherRect(X(186),Y(186),Wp(150),Hp(72),0.05);
+    rrect(X(202),Y(200),Wp(118),Hp(42),Wp(10), "#2b2742", "rgba(255,255,255,.08)");
+
+    // motes
+    for(const m of motes){
+      m.y -= m.sp;
+      m.x += Math.sin((m.y+m.r)*0.03)*0.12;
+      if(m.y < 0){ m.y = WORLD_H; m.x = Math.random()*WORLD_W; }
+      const px = X(m.x), py = Y(m.y);
+      if(px< -10 || px>canvas.width+10 || py< -10 || py>canvas.height+10) continue;
+      ctx.fillStyle="rgba(255,255,255,.05)";
+      ctx.fillRect(px,py, Math.max(1,Wp(m.r)), Math.max(1,Wp(m.r)));
+    }
+
+    // vignette + very light scanlines
+    ctx.fillStyle="rgba(0,0,0,.22)";
+    ctx.fillRect(0,0,canvas.width,Hp(6));
+    ctx.fillRect(0,canvas.height-Hp(6),canvas.width,Hp(6));
+    ctx.fillRect(0,0,Wp(6),canvas.height);
+    ctx.fillRect(canvas.width-Wp(6),0,Wp(6),canvas.height);
+
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle="#000";
+    for(let y=0;y<canvas.height;y+=3) ctx.fillRect(0,y,canvas.width,1);
+    ctx.globalAlpha = 1;
+  }
+
+  function drawFurniture(){
+    const EDGE = "rgba(0,0,0,.34)";
+
+    // desk
+    box3D(furn.desk.x, furn.desk.y, furn.desk.w, furn.desk.h, furn.desk.d,
+      "#7a644c", "#624f3d", "#4a3b2d", EDGE
+    );
+    // desk clutter
+    rrect(X(furn.desk.x+46), Y(furn.desk.y+8), Wp(14), Hp(6), Wp(2), "#2a2336", "rgba(255,255,255,.10)");
+    rrect(X(furn.desk.x+60), Y(furn.desk.y+8), Wp(10), Hp(6), Wp(2), "#2f2a44", "rgba(255,255,255,.10)");
+    rrect(X(furn.desk.x+74), Y(furn.desk.y+9), Wp(6), Hp(5), Wp(2), "#c98aa7", "rgba(0,0,0,.18)");
+
+    // monitor
+    rrect(X(furn.desk.x+12), Y(furn.desk.y - furn.desk.d + 4), Wp(26), Hp(14), Wp(5), "#15121f", "rgba(255,255,255,.10)");
+    rrect(X(furn.desk.x+15), Y(furn.desk.y - furn.desk.d + 8), Wp(18), Hp(6), Wp(3), "rgba(110,190,170,.90)", "rgba(0,0,0,.20)");
+    ditherRect(X(furn.desk.x+15), Y(furn.desk.y - furn.desk.d + 8), Wp(18), Hp(6), 0.08);
+
+    // bed
+    box3D(furn.bed.x, furn.bed.y, furn.bed.w, furn.bed.h, furn.bed.d,
+      "#3f6a63", "#2f514d", "#243d3a", EDGE
+    );
+    rrect(X(furn.bed.x+12), Y(furn.bed.y+10), Wp(40), Hp(14), Wp(7), "#efece3", "rgba(0,0,0,.16)");
+    rrect(X(furn.bed.x+10), Y(furn.bed.y+28), Wp(furn.bed.w-20), Hp(14), Wp(8), "#c98aa7", "rgba(0,0,0,.16)");
+    ditherRect(X(furn.bed.x+10), Y(furn.bed.y+28), Wp(furn.bed.w-20), Hp(14), 0.06);
+
+    // dresser
+    box3D(furn.dresser.x, furn.dresser.y, furn.dresser.w, furn.dresser.h, furn.dresser.d,
+      "#6a5845", "#5a4a3a", "#453629", EDGE
+    );
+    for(let i=0;i<2;i++){
+      rrect(X(furn.dresser.x+8), Y(furn.dresser.y+5+i*8), Wp(furn.dresser.w-16), Hp(6), Wp(4), "#3b2c22", "rgba(255,255,255,.08)");
+      rrect(X(furn.dresser.x+furn.dresser.w-16), Y(furn.dresser.y+6+i*8), Wp(5), Hp(3), Wp(2), "#f5e7c9", "rgba(0,0,0,.18)");
+    }
+
+    // clothes
+    box3D(furn.clothes.x, furn.clothes.y, furn.clothes.w, furn.clothes.h, furn.clothes.d,
+      "#7a5e8c", "#5f476d", "#473452", EDGE
+    );
+
+    // guitar
+    box3D(furn.guitar.x, furn.guitar.y, furn.guitar.w, furn.guitar.h, furn.guitar.d,
+      "#e6e0d8", "#cfc7be", "#b0a69b", EDGE
+    );
+    rrect(X(furn.guitar.x+6), Y(furn.guitar.y+10), Wp(8), Hp(18), Wp(4), "rgba(138,46,255,.55)", "rgba(0,0,0,.18)");
+
+    // table + lamp
+    box3D(furn.table.x, furn.table.y, furn.table.w, furn.table.h, furn.table.d,
+      "#d9d2c5", "#c8bfaf", "#a89f90", EDGE
+    );
+    rrect(X(furn.table.x+10), Y(furn.table.y - furn.table.d + 3), Wp(7), Hp(9), Wp(3), "#f6e8c9", "rgba(0,0,0,.16)");
+    const lamp = ctx.createRadialGradient(
+      X(furn.table.x+13), Y(furn.table.y - furn.table.d + 6), Wp(4),
+      X(furn.table.x+13), Y(furn.table.y - furn.table.d + 6), Wp(110)
+    );
+    lamp.addColorStop(0,"rgba(255,240,210,.16)");
+    lamp.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=lamp;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // altar
+    box3D(furn.altar.x, furn.altar.y, furn.altar.w, furn.altar.h, furn.altar.d,
+      "#3a3146", "#2a2236", "#1f1929", "rgba(0,0,0,.40)"
+    );
+    rrect(X(furn.altar.x+10), Y(furn.altar.y - furn.altar.d + 4), Wp(5), Hp(8), Wp(2), "#f5e7c9", "rgba(0,0,0,.18)");
+
+    // little plant (visual only)
+    rrect(X(furn.plant.x), Y(furn.plant.y), Wp(furn.plant.w), Hp(furn.plant.h), Wp(6), "#1f2a22", "rgba(255,255,255,.08)");
+    ctx.fillStyle="rgba(120,200,140,.28)";
+    ctx.fillRect(X(furn.plant.x)+Wp(5), Y(furn.plant.y)+Hp(3), Wp(8), Hp(2));
+    ctx.fillRect(X(furn.plant.x)+Wp(6), Y(furn.plant.y)+Hp(6), Wp(6), Hp(2));
+
+    // doors
+    rrect(X(WORLD_W-22), Y(114), Wp(14), Hp(40), Wp(6), "#262236", "rgba(0,255,213,.18)");
+    rrect(X(236), Y(WORLD_H-20), Wp(60), Hp(12), Wp(6), "#262236", "rgba(0,255,213,.18)");
+  }
+
+  /* ---------- sprites ---------- */
+  function drawSophia(){
+    const outfits=[
+      {dress:"#bfa7ff", bow:"#efe3ff"},
+      {dress:"#93eadc", bow:"#e6fbff"},
+      {dress:"#d98aa7", bow:"#ffe2ee"},
+      {dress:"#e7d08a", bow:"#fff2c7"}
+    ];
+    const o=outfits[state.outfit];
+
+    const bob = dance.on ? Math.sin(dance.t*0.8)*0.4 : Math.sin(sophia.bob)*0.8;
+    const x = X(sophia.x);
+    const y = Y(sophia.y + bob - sophia.z);
+
+    const sh = Math.max(0.55, 1 - sophia.z/18);
+    rrect(x+Wp(3), Y(sophia.y)+Hp(18), Math.round(Wp(10)*sh), Hp(3), Wp(2), "rgba(0,0,0,.26)");
+
+    rrect(x+Wp(2), y+Hp(0), Wp(12), Hp(22), Wp(4), "rgba(0,0,0,0)", "rgba(0,0,0,.35)");
+
+    rrect(x+Wp(3), y+Hp(0), Wp(10), Hp(7), Wp(3), "#e7c777");
+    ctx.fillStyle="#e7c777";
+    ctx.fillRect(x+Wp(2), y+Hp(3), Wp(12), Hp(6));
+    ctx.fillRect(x+Wp(3), y+Hp(6), Wp(3), Hp(3));
+    ctx.fillRect(x+Wp(10),y+Hp(6), Wp(3), Hp(3));
+
+    rrect(x+Wp(4), y+Hp(7), Wp(10), Hp(9), Wp(3), "#f2d2c2");
+    ditherRect(x+Wp(4), y+Hp(7), Wp(10), Hp(9), 0.03);
+
+    rrect(x+Wp(6), y+Hp(10), Wp(3), Hp(3), Wp(1), "#1a0f2a");
+    rrect(x+Wp(11),y+Hp(10), Wp(3), Hp(3), Wp(1), "#1a0f2a");
+
+    ctx.fillStyle="#78b6ff";
+    ctx.fillRect(x+Wp(7), y+Hp(11), Wp(1), Hp(1));
+    ctx.fillRect(x+Wp(12),y+Hp(11), Wp(1), Hp(1));
+
+    ctx.fillStyle="rgba(255,120,160,.16)";
+    ctx.fillRect(x+Wp(5), y+Hp(14), Wp(2), Hp(1));
+    ctx.fillRect(x+Wp(13),y+Hp(14), Wp(2), Hp(1));
+
+    rrect(x+Wp(9), y+Hp(6), Wp(4), Hp(2), Wp(1), o.bow);
+
+    rrect(x+Wp(5), y+Hp(16), Wp(10), Hp(6), Wp(3), o.dress);
+    ctx.fillStyle="rgba(255,255,255,.18)";
+    ctx.fillRect(x+Wp(6), y+Hp(18), Wp(8), Hp(1));
+
+    if(dance.on && (Math.sin(dance.t*1.7)>0.7)){
+      ctx.fillStyle="rgba(138,46,255,.18)";
+      ctx.fillRect(x+Wp(2), y+Hp(2), Wp(1), Hp(1));
+      ctx.fillRect(x+Wp(15), y+Hp(6), Wp(1), Hp(1));
+    }
+  }
+
+  function drawMilo(){
+    const bob = dance.on ? Math.sin(dance.t*0.9)*0.6 : Math.sin(milo.bob)*0.8;
+    const x = X(milo.x);
+    const y = Y(milo.y + bob);
+
+    rrect(x+Wp(2), y+Hp(10), Wp(12), Hp(3), Wp(2), "rgba(0,0,0,.20)");
+    rrect(x+Wp(2), y+Hp(4), Wp(14), Hp(9), Wp(4), "#ece7de", "rgba(0,0,0,.25)");
+
+    ctx.fillStyle="#1a0f2a";
+    ctx.fillRect(x+Wp(6), y+Hp(7), Wp(1), Hp(1));
+    ctx.fillRect(x+Wp(11),y+Hp(7), Wp(1), Hp(1));
+
+    ctx.fillStyle = dance.on ? "rgba(255,110,170,.75)" : "rgba(0,255,213,.80)";
+    ctx.fillRect(x+Wp(6), y+Hp(6), Wp(1), Hp(1));
+    ctx.fillRect(x+Wp(11),y+Hp(6), Wp(1), Hp(1));
+  }
+
+  function drawInteractHint(){
+    const z=nearest();
+    if(!z) return;
+    rrect(Wp(8), canvas.height-Hp(28), Wp(300), Hp(18), Wp(8), "rgba(0,0,0,.62)", "rgba(255,255,255,.16)");
+    ctx.fillStyle="rgba(255,255,255,.92)";
+    ctx.font = `${Math.max(10, Hp(10))}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.fillText(`Press E or tap: ${z.name}`, Wp(16), canvas.height-Hp(15));
+  }
+
+  /* ---------- save throttling (smoothness fix) ---------- */
+  let wantSave = false;
+  let saveAcc = 0;
+  function requestSave(){ wantSave = true; }
+  function maybeSave(dt){
+    saveAcc += dt;
+    if(wantSave && saveAcc > 0.45){
+      wantSave = false;
+      saveAcc = 0;
+      save();
+    }
+  }
+  window.addEventListener("beforeunload", () => { try{ save(); }catch(e){} });
+  document.addEventListener("visibilitychange", () => { if(document.hidden) { try{ save(); }catch(e){} } });
+
+  /* ---------- loop ---------- */
+  function go(f){ save(); location.href=f; }
+
+  function updateCamera(dt){
+    const targetX = (sophia.x + sophia.w/2) - VIEW_W/2;
+    const targetY = (sophia.y + sophia.h/2) - VIEW_H/2;
+
+    // exponential smoothing = consistent across FPS
+    const k = 10; // higher = snappier
+    const a = 1 - Math.exp(-k * dt);
+
+    cam.x += (targetX - cam.x) * a;
+    cam.y += (targetY - cam.y) * a;
+    cam.x = clamp(cam.x, 0, WORLD_W - VIEW_W);
+    cam.y = clamp(cam.y, 0, WORLD_H - VIEW_H);
+  }
+
+  function toggleDance(){
+    dance.on = !dance.on;
+    if(dance.on){
+      miloMoodEl.textContent = "dancing";
+      toast("Sophia + Milo do a small ritual dance.");
+    } else {
+      miloMoodEl.textContent = "following";
+      toast("Back to quiet steps.");
+    }
+  }
+
+  // delta-time loop for smoothness
+  let last = performance.now();
+  function loop(now){
+    const dt = Math.min(0.033, (now - last) / 1000); // cap big frame jumps
+    last = now;
+
+    if(!state.slept){
+      const run = keysDown.has("shift");
+      const speed = run ? 132 : 92; // units/sec
+
+      let ix = (keysDown.has("d")||keysDown.has("arrowright")?1:0) - (keysDown.has("a")||keysDown.has("arrowleft")?1:0);
+      let iy = (keysDown.has("s")||keysDown.has("arrowdown")?1:0) - (keysDown.has("w")||keysDown.has("arrowup")?1:0);
+
+      const slow = dance.on ? 0.55 : 1;
+
+      let dx=0, dy=0;
+      if(ix || iy){
+        const mag = Math.hypot(ix,iy) || 1;
+        dx = (ix/mag) * speed * dt * slow;
+        dy = (iy/mag) * speed * dt * slow;
+      }
+
+      moveWithSlide(dx,dy);
+      sophia.bob += (dance.on ? 3.6 : 6.4) * dt;
+    } else {
+      sophia.bob += 1.4 * dt;
+    }
+
+    // jump
+    const spaceHeld = keysDown.has(" ") || keysDown.has("space");
+    const onGround = sophia.z <= 0.0001;
+
+    if(spaceHeld && !held.space && onGround && !state.slept){
+      sophia.vz = 320; // px/sec impulse
+      held.space = true;
+    }
+    if(!spaceHeld) held.space = false;
+
+    // gravity
+    if(!onGround || sophia.vz > 0){
+      sophia.vz -= 980 * dt;
+      sophia.z += sophia.vz * dt;
+      if(sophia.z < 0){ sophia.z = 0; sophia.vz = 0; }
+    }
+
+    // interact
+    if(keysDown.has("e") && !held.e){ interact(); held.e=true; requestSave(); }
+    if(!keysDown.has("e")) held.e=false;
+
+    // dance toggle
+    if(keysDown.has("c") && !held.c){ toggleDance(); held.c=true; }
+    if(!keysDown.has("c")) held.c=false;
+
+    // Milo follow (dt smoothing)
+    const tx = sophia.x - 18;
+    const ty = sophia.y + 12;
+    const followK = dance.on ? 11 : 8;
+    const fa = 1 - Math.exp(-followK * dt);
+    milo.x += (tx - milo.x) * fa;
+    milo.y += (ty - milo.y) * fa;
+    milo.bob += (dance.on ? 7.6 : 5.6) * dt;
+
+    if(dance.on) dance.t += 9.5 * dt;
+    else dance.t *= Math.pow(0.001, dt);
+
+    // clamp
+    sophia.x = clamp(sophia.x, 12, WORLD_W - 28);
+    sophia.y = clamp(sophia.y, 12, WORLD_H - 30);
+
+    updateCamera(dt);
+
+    // save (throttled)
+    state.sophia.x = sophia.x; state.sophia.y = sophia.y;
+    state.milo.x   = milo.x;   state.milo.y   = milo.y;
+    requestSave();
+    maybeSave(dt);
+
+    // draw
+    bg();
+    drawFurniture();
+    drawMilo();
+    drawSophia();
+    drawInteractHint();
+
+    requestAnimationFrame(loop);
+  }
+
+  canvas.focus();
+  requestAnimationFrame(loop);
+})();
+</script>
 </body>
 </html>
