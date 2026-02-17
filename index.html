@@ -26,7 +26,7 @@ body{
   isolation:isolate; /* keeps the glow layers from blending over UI/text */
 }
 
-/* FULL PAGE VIOLET ATMOSPHERE */
+/* NEW: Start black, fade into violet atmosphere */
 body::before{
   content:"";
   position:fixed;
@@ -39,7 +39,14 @@ body::before{
     radial-gradient(circle at 50% 90%, rgba(138,46,255,.16), transparent 70%);
   mix-blend-mode:screen;
   filter:blur(10px) saturate(1.2);
-  animation:violetBreath 18s ease-in-out infinite;
+  opacity:0; /* start black */
+  animation:violetBreath 18s ease-in-out infinite, introViolet 1.6s ease-out forwards;
+  animation-delay:0s, .18s; /* slight pause then fade in */
+}
+
+@keyframes introViolet{
+  from{ opacity:0; }
+  to{ opacity:1; }
 }
 
 @keyframes violetBreath{
@@ -101,9 +108,9 @@ a{color:#fff;text-decoration:none}
   border-radius:999px;
   background:rgba(255,255,255,.9);
   box-shadow:
-    0 0 8px rgba(255,255,255,.22),
-    0 0 18px rgba(138,46,255,.10);
-  opacity:.55;
+    0 0 6px rgba(255,255,255,.18),
+    0 0 14px rgba(138,46,255,.08);
+  opacity:.45; /* more subtle */
   animation:
     drift var(--dur,18s) linear infinite,
     twinkle var(--tw,4.5s) ease-in-out infinite;
@@ -111,12 +118,12 @@ a{color:#fff;text-decoration:none}
   will-change: transform, opacity;
 }
 
-.star.s2{ width:1px; height:1px; opacity:.45; filter:blur(.2px); }
-.star.s3{ width:3px; height:3px; opacity:.35; filter:blur(.15px); }
+.star.s2{ width:1px; height:1px; opacity:.38; filter:blur(.15px); }
+.star.s3{ width:3px; height:3px; opacity:.28; filter:blur(.12px); }
 
 @keyframes twinkle{
-  0%,100%{ opacity: calc(var(--o, .55)); }
-  50%{ opacity: calc(var(--o, .55) * .45); }
+  0%,100%{ opacity: calc(var(--o, .45)); }
+  50%{ opacity: calc(var(--o, .45) * .70); } /* less dramatic dip */
 }
 
 @keyframes drift{
@@ -137,14 +144,14 @@ a{color:#fff;text-decoration:none}
     radial-gradient(520px 360px at 72% 58%, rgba(0,255,213,.05), transparent 70%),
     radial-gradient(780px 520px at 52% 82%, rgba(138,46,255,.06), transparent 68%);
   filter: blur(18px) saturate(1.15);
-  opacity:.28;
+  opacity:.24; /* slightly calmer */
   mix-blend-mode:screen;
   animation: galaxyFloat 22s ease-in-out infinite;
 }
 
 @keyframes galaxyFloat{
-  0%,100%{ transform:translate3d(0,0,0) scale(1); opacity:.26; }
-  50%{ transform:translate3d(-18px, 12px, 0) scale(1.02); opacity:.18; }
+  0%,100%{ transform:translate3d(0,0,0) scale(1); opacity:.22; }
+  50%{ transform:translate3d(-14px, 10px, 0) scale(1.01); opacity:.18; }
 }
 
 /* shooting stars */
@@ -172,7 +179,7 @@ a{color:#fff;text-decoration:none}
 
 /* keep it extra subtle on small devices */
 @media (max-width:800px){
-  .galaxy{ opacity:.22; }
+  .galaxy{ opacity:.20; }
   .shoot{ opacity:.0; } /* still runs but invisible, reduces visual noise */
 }
 /* ========================= */
@@ -252,15 +259,25 @@ header a:hover{opacity:1}
   letter-spacing:.34em;
   text-transform:uppercase;
   cursor:pointer;
+
+  /* NEW: slightly more alive visual without changing layout */
   text-shadow:
-    0 0 14px rgba(138,46,255,.35),
-    0 0 40px rgba(138,46,255,.18);
-  animation:logoPulse 5.4s ease-in-out infinite;
+    0 0 10px rgba(255,255,255,.10),
+    0 0 18px rgba(138,46,255,.40),
+    0 0 56px rgba(138,46,255,.20);
+  filter: saturate(1.05) contrast(1.03);
+
+  animation:logoPulse 5.4s ease-in-out infinite, logoShimmer 7.6s ease-in-out infinite;
   user-select:none;
 }
 @keyframes logoPulse{
   0%,100%{transform:scale(1)}
   50%{transform:scale(1.01)}
+}
+/* NEW: micro shimmer (subtle alive glow) */
+@keyframes logoShimmer{
+  0%,100%{ filter:saturate(1.05) contrast(1.03) brightness(1); }
+  55%{ filter:saturate(1.12) contrast(1.05) brightness(1.06); }
 }
 
 .logo.flash{ animation:flash .35s linear; }
@@ -628,11 +645,11 @@ document.getElementById("y").textContent=new Date().getFullYear();
     s.className = "star" + (r<0.22 ? " s2" : (r>0.92 ? " s3" : ""));
     const x = Math.random()*100;
     const y = Math.random()*100;
-    const dur = 14 + Math.random()*22;
-    const tw  = 3.2 + Math.random()*5.8;
-    const dx  = (-18 + Math.random()*36) + "px";
-    const dy  = (-28 + Math.random()*56) + "px";
-    const o   = (0.28 + Math.random()*0.48).toFixed(2);
+    const dur = 16 + Math.random()*26;      // slightly slower
+    const tw  = 3.8 + Math.random()*6.4;    // softer twinkle
+    const dx  = (-12 + Math.random()*24) + "px"; // less drift
+    const dy  = (-18 + Math.random()*36) + "px"; // less drift
+    const o   = (0.22 + Math.random()*0.34).toFixed(2); // more subtle
 
     s.style.left = x+"%";
     s.style.top  = y+"%";
