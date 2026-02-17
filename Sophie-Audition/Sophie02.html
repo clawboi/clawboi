@@ -1,448 +1,470 @@
-<!-- Sophie02.html (BACKYARD / GNOME + MUSHROOM FIELD) -->
+
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SOPHIE / AUDITION — Backyard (Sophie02)</title>
-  <meta name="theme-color" content="#06070c" />
-  <style>
-    :root{
-      --bg:#06070c;
-      --ink:#f2f2ff;
-      --muted:rgba(242,242,255,.72);
-      --hair:rgba(255,255,255,.10);
-      --violet:#8A2EFF;
-    }
-    html,body{height:100%;margin:0;background:radial-gradient(900px 650px at 55% 35%, #111a2b 0%, #06070c 55%, #05040a 100%);overflow:hidden;font-family:ui-monospace, Menlo, Consolas, monospace;color:var(--ink)}
-    canvas{position:fixed;inset:0;display:block}
-    .hud{position:fixed;left:14px;top:12px;z-index:10;display:flex;gap:10px;flex-wrap:wrap;user-select:none}
-    .pill{border:1px solid var(--hair);background:rgba(0,0,0,.35);backdrop-filter: blur(8px);border-radius:999px;padding:8px 10px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;display:flex;gap:10px;align-items:center;box-shadow:0 0 20px rgba(138,46,255,.14)}
-    .dot{width:8px;height:8px;border-radius:50%;background:var(--violet);box-shadow:0 0 14px rgba(138,46,255,.9)}
-    .tip{position:fixed;right:14px;top:12px;z-index:10;width:min(420px, calc(100vw - 28px));border:1px solid var(--hair);background:rgba(0,0,0,.35);backdrop-filter: blur(8px);border-radius:16px;padding:10px 12px;font-size:12px;color:var(--muted)}
-    .centerToast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;pointer-events:none;opacity:0;transition:.25s;border:1px solid var(--hair);background:rgba(0,0,0,.45);backdrop-filter: blur(10px);border-radius:18px;padding:12px 14px;max-width:min(520px, calc(100vw - 36px));text-align:center;line-height:1.35;box-shadow:0 0 36px rgba(138,46,255,.12)}
-    .centerToast.show{opacity:1}
-    .kbd{display:inline-block;padding:2px 6px;border-radius:8px;border:1px solid var(--hair);background:rgba(255,255,255,.06);color:var(--ink);font-size:11px}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia's Audition 02 — Backyard</title>
+<style>
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%; display:grid; place-items:center;}
+  canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+  .hud{
+    position:fixed; left:12px; right:12px; top:12px; z-index:5;
+    display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;
+  }
+  .pill{
+    pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.35);
+    backdrop-filter: blur(8px);
+    border-radius:999px; padding:10px 12px;
+    font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+    display:flex; gap:10px; align-items:center;
+  }
+  .toast{
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+    border-radius:14px; padding:10px 12px;
+    font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
+    max-width:min(720px, calc(100vw - 24px)); text-align:center;
+  }
+  .toast.on{opacity:1}
+</style>
 </head>
 <body>
-<canvas id="c"></canvas>
-
 <div class="hud">
-  <div class="pill"><span class="dot"></span><b>SOPHIE02</b><span>BACKYARD</span></div>
-  <div class="pill">Key: <span id="keyState">NO</span></div>
+  <div class="pill"><b>SOPHIA</b> <span id="status">BACKYARD</span></div>
+  <div class="pill">TRIP: <span id="trip">OFF</span></div>
+  <div class="pill">MILO: <span id="miloMood">following</span></div>
+  <div class="pill">KEYS: <span id="keys">NO</span></div>
+  <div class="pill">Door → Bedroom (bottom)</div>
 </div>
-
-<div class="tip" id="tip">
-  <b>Backyard</b> is a quiet spell: hammock breeze, mushrooms that whisper trouble, and a garden gnome that hoards secrets.
-  <div style="margin-top:6px">
-    Interact <span class="kbd">E</span> · Dance <span class="kbd">Z</span> · Jump <span class="kbd">Space</span> · Splits <span class="kbd">X</span> · Hide tips <span class="kbd">H</span>
-  </div>
-</div>
-
-<div class="centerToast" id="toast"></div>
+<div class="toast" id="toast"></div>
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
 
 <script>
-(() => {
-  const STORE_KEY = "SOPHIA_AUDITION_SAVE_V1";
-  const defaultSave = { outfit:"violet", hasFrontDoorKey:false, lastRoom:"Sophie02.html" };
-  const loadSave = () => { try{ const raw=localStorage.getItem(STORE_KEY); return raw ? {...defaultSave, ...JSON.parse(raw)} : {...defaultSave}; }catch(e){ return {...defaultSave}; } };
-  const save = loadSave();
-  const commitSave = () => { save.lastRoom="Sophie02.html"; localStorage.setItem(STORE_KEY, JSON.stringify(save)); keyState.textContent = save.hasFrontDoorKey ? "YES" : "NO"; };
-  const keyState = document.getElementById("keyState");
-  const tip = document.getElementById("tip");
-  const toast = document.getElementById("toast");
-  function showToast(html, ms=1400){ toast.innerHTML=html; toast.classList.add("show"); clearTimeout(showToast._t); showToast._t=setTimeout(()=>toast.classList.remove("show"), ms); }
-  function go(href){ commitSave(); location.href = href; }
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { alpha:false });
+ctx.imageSmoothingEnabled = false;
 
-  const canvas = document.getElementById("c");
-  const ctx = canvas.getContext("2d");
-  const DPR = Math.min(2, devicePixelRatio||1);
-  function resize(){ canvas.width=Math.floor(innerWidth*DPR); canvas.height=Math.floor(innerHeight*DPR); canvas.style.width=innerWidth+"px"; canvas.style.height=innerHeight+"px"; ctx.setTransform(DPR,0,0,DPR,0,0); }
-  addEventListener("resize", resize, {passive:true}); resize();
+const UI = {
+  trip: document.getElementById('trip'),
+  keys: document.getElementById('keys'),
+  miloMood: document.getElementById('miloMood'),
+  toast: document.getElementById('toast'),
+};
+const STORE_KEY = "SOPHIA_AUDITION_SAVE_V1";
+function loadState(){
+  const raw = localStorage.getItem(STORE_KEY);
+  if(raw){ try{return JSON.parse(raw);}catch(e){} }
+  return {hasKeys:false, slept:false, trip:false, puke:false, poemLines:0, guitarPlayed:0, lastRoom:"BACKYARD", sophia:{x:160,y:120}, milo:{x:148,y:132}};
+}
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+let state = loadState();
+state.lastRoom = "BACKYARD";
+saveState();
 
-  const keys = new Set();
-  addEventListener("keydown", (e)=>{
-    const k=e.key.toLowerCase(); keys.add(k);
-    if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key)) e.preventDefault();
-    if(k==="h") tip.style.display = (tip.style.display==="none") ? "" : "none";
-    if(k==="z") player.dancing=!player.dancing;
-    if(k==="x") player.splitsT=0.6;
-    if(e.key===" ") player.jumpT=Math.max(player.jumpT,0.35);
-    if(k==="e") tryInteract();
-  }, {passive:false});
-  addEventListener("keyup",(e)=>keys.delete(e.key.toLowerCase()),{passive:true});
-  const down = (k)=>keys.has(k);
-  const axis = ()=> {
-    const left=down("a")||down("arrowleft");
-    const right=down("d")||down("arrowright");
-    const up=down("w")||down("arrowup");
-    const dn=down("s")||down("arrowdown");
-    return {x:(right?1:0)-(left?1:0), y:(dn?1:0)-(up?1:0)};
+UI.keys.textContent = state.hasKeys ? "YES" : "NO";
+UI.trip.textContent = state.trip ? "ON" : "OFF";
+UI.miloMood.textContent = state.trip ? "playing" : "following";
+
+function toast(msg, ms=1400){
+  UI.toast.textContent = msg;
+  UI.toast.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>UI.toast.classList.remove('on'), ms);
+}
+
+/* Input */
+const keysDown = new Set();
+addEventListener('keydown',(e)=>{
+  const k = e.key.toLowerCase();
+  if(["arrowup","arrowdown","arrowleft","arrowright"," ","shift","w","a","s","d","e"].includes(k)) e.preventDefault();
+  keysDown.add(k);
+});
+addEventListener('keyup',(e)=>keysDown.delete(e.key.toLowerCase()));
+
+/* World */
+const W=canvas.width,H=canvas.height;
+const solids = [
+  [0,0,W,10],[0,0,10,H],[0,H-10,W,10],[W-10,0,10,H],
+  // fence top
+  [10,10,W-20,18],
+  // shrubs blocks
+  [30,56,60,18],
+  [230,62,62,18],
+  // pingpong table (solid)
+  [88,118,78,22],
+  // hammock posts (solid-ish frame)
+  [196,92,64,28],
+  // mushroom patch block (still passable but used for zone)
+];
+
+const zones = [
+  {name:"MUSHROOMS", rect:[120,72,76,40], action: eatMushroom},
+  {name:"DOOR_BEDROOM", rect:[148,H-20,34,10], action: ()=>go("Sophie01.html")},
+  // NEW: hammock
+  {name:"HAMMOCK", rect:[196,92,64,28], action: enterHammock},
+  // NEW: pingpong vs milo
+  {name:"PINGPONG", rect:[88,118,78,22], action: startPingpong},
+];
+
+const sophia = {x: state.sophia.x, y: state.sophia.y, w:10,h:12, speed:0.85, run:1.35};
+const milo = {x: state.milo.x, y: state.milo.y, w:8,h:8};
+
+function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
+  return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
+}
+function collides(x,y,w,h){
+  for(const s of solids){
+    if(rectsOverlap(x,y,w,h, s[0],s[1],s[2],s[3])) return true;
+  }
+  return false;
+}
+function tryMove(ent,dx,dy){
+  const nx=ent.x+dx, ny=ent.y+dy;
+  if(!collides(nx,ent.y,ent.w,ent.h)) ent.x=nx;
+  if(!collides(ent.x,ny,ent.w,ent.h)) ent.y=ny;
+}
+function nearestZone(){
+  const px=sophia.x+sophia.w/2, py=sophia.y+sophia.h/2;
+  let best=null, bd=9999;
+  for(const z of zones){
+    const [x,y,w,h]=z.rect; const cx=x+w/2, cy=y+h/2;
+    const d=(cx-px)*(cx-px)+(cy-py)*(cy-py);
+    if(d<bd && d<1300){bd=d; best=z;}
+  }
+  return best;
+}
+function interact(){
+  const z=nearestZone();
+  if(z) z.action();
+}
+
+function eatMushroom(){
+  state.trip = !state.trip;
+  saveState();
+  UI.trip.textContent = state.trip ? "ON" : "OFF";
+  UI.miloMood.textContent = state.trip ? "playing" : "following";
+  toast(state.trip ? "Mushroom eaten. Reality gets… soft." : "Trip fades. Backyard returns.", 1700);
+}
+
+/* NEW: hammock travel */
+function enterHammock(){
+  toast(state.trip ? "She melts into the hammock. The sky opens." : "She sits on the hammock. The night feels huge.", 1700);
+  // preserve exact engine/state, just jump to a new html
+  go("hammock.html");
+}
+
+/* NEW: pingpong mini */
+let pingpongActive=false;
+let pp={ sx:0, sy:0, mx:0, my:0, bx:0, by:0, vx:0, vy:0, s:0, m:0, over:0, hit:0 };
+
+function startPingpong(){
+  if(pingpongActive) return toast("Pingpong already in session.", 1200);
+  pingpongActive=true;
+  pp={
+    sx:sophia.x, sy:sophia.y,
+    mx:milo.x, my:milo.y,
+    bx:127, by:129, vx:(Math.random()<0.5?-1:1)*1.2, vy:-0.7,
+    s:0, m:0, over:0, hit:0
   };
+  toast("PINGPONG vs MILO. Press E to return. (Try not to lose to a cat.)", 2200);
+}
 
-  const world = {
-    w: 1400,
-    h: 900,
-    solids: [
-      // hammock zone support posts (simple)
-      {x: 160, y: 180, w: 140, h: 110, label:"Hammock", action: () => go("hammock.html")},
-      // ping pong table
-      {x: 980, y: 560, w: 220, h: 140, label:"Ping Pong", action: () => go("pingpong.html")},
-      // mushroom field blocker (still interactable)
-      {x: 520, y: 560, w: 340, h: 220, label:"Mushroom Field", action: eatMushroom},
-      // shrubs
-      {x: 1150, y: 140, w: 160, h: 160},
-      {x: 60, y: 680, w: 200, h: 160},
-    ],
-    doors: [
-      {x: 70, y: 380, w: 120, h: 140, label:"Back Inside", hint:"Bedroom (Sophie01.html)", action: () => go("Sophie01.html")}
-    ],
-    npcs: [
-      {x: 1080, y: 260, r: 18, label:"Garden Gnome", hint:"Trade a secret for a key", action: gnomeKey}
-    ]
-  };
+/* pingpong update */
+function updatePingpong(t){
+  // field over the pingpong table
+  // paddles move with sophia/milo positions mapped to table edges
+  const table={x:88,y:118,w:78,h:22};
+  const left=table.x+4, right=table.x+table.w-6;
+  const top=table.y+4, bottom=table.y+table.h-4;
 
-  const player = { x: 420, y: 420, r: 18, vx:0, vy:0, facing:{x:1,y:0}, dancing:false, jumpT:0, splitsT:0 };
-  const milo = { x: player.x-40, y: player.y+30, r: 14, purr:0 };
+  // Sophia paddle: follow Sophia's y position but clamp
+  let py = sophia.y + 6;
+  py = Math.max(top, Math.min(bottom, py));
+  // Milo paddle: follow ball slightly delayed + jitter when tripping
+  let my = pp.by + (state.trip ? Math.sin(t*0.12)*3 : 0);
+  my = Math.max(top, Math.min(bottom, my));
 
-  const cam = {x:0,y:0};
-  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  function collideCircleRect(cx,cy,cr, rx,ry,rw,rh){
-    const px=clamp(cx,rx,rx+rw), py=clamp(cy,ry,ry+rh);
-    const dx=cx-px, dy=cy-py;
-    return (dx*dx+dy*dy) < cr*cr;
-  }
-  function resolveSolids(ent){
-    ent.x = clamp(ent.x, ent.r, world.w-ent.r);
-    ent.y = clamp(ent.y, ent.r, world.h-ent.r);
-    for(const s of world.solids){
-      if(collideCircleRect(ent.x,ent.y,ent.r, s.x,s.y,s.w,s.h)){
-        const left=ent.x-s.x, right=(s.x+s.w)-ent.x, top=ent.y-s.y, bottom=(s.y+s.h)-ent.y;
-        const minX=Math.min(left,right), minY=Math.min(top,bottom);
-        if(minX<minY) ent.x += (left<right)?-(ent.r):(ent.r);
-        else ent.y += (top<bottom)?-(ent.r):(ent.r);
-        ent.x = clamp(ent.x, ent.r, world.w-ent.r);
-        ent.y = clamp(ent.y, ent.r, world.h-ent.r);
-      }
-    }
-  }
-  function updateCam(){
-    const tx=player.x-innerWidth/2, ty=player.y-innerHeight/2;
-    cam.x += (tx-cam.x)*0.08; cam.y += (ty-cam.y)*0.08;
-    cam.x = clamp(cam.x,0,world.w-innerWidth);
-    cam.y = clamp(cam.y,0,world.h-innerHeight);
-  }
+  // Move ball
+  pp.bx += pp.vx;
+  pp.by += pp.vy;
 
-  function nearestInteract(){
-    let best=null;
-    const consider=(label,action,hint,cx,cy)=>{
-      const d=Math.hypot(player.x-cx, player.y-cy);
-      if(d<92 && (!best || d<best.d)) best={d,label,action,hint,cx,cy};
-    };
-    for(const d of world.doors) consider(d.label,d.action,d.hint, d.x+d.w/2, d.y+d.h/2);
-    for(const s of world.solids) if(s.label && s.action) consider(s.label,s.action,null, s.x+s.w/2, s.y+s.h/2);
-    for(const n of world.npcs) consider(n.label,n.action,n.hint,n.x,n.y);
-    return best;
-  }
-  function tryInteract(){
-    const n=nearestInteract();
-    if(!n){ showToast("Nothing to interact with.", 800); return; }
-    if(n.hint) showToast(`<b>${n.label}</b><br><span style="opacity:.8">${n.hint}</span>`, 800);
-    else showToast(`<b>${n.label}</b>`, 550);
-    setTimeout(()=>n.action(),120);
-  }
+  // Bounce top/bottom
+  if(pp.by<top){pp.by=top; pp.vy*=-1;}
+  if(pp.by>bottom){pp.by=bottom; pp.vy*=-1;}
 
-  // ========= Backyard logic =========
-  let tripT = 0;
-  function eatMushroom(){
-    tripT = Math.max(tripT, 3.5);
-    showToast(`You taste the forest’s weird little joke… 🍄✨`, 1200);
-  }
-  function gnomeKey(){
-    if(save.hasFrontDoorKey){
-      showToast(`The gnome nods. “Already paid.”`, 1100);
-      return;
-    }
-    save.hasFrontDoorKey = true;
-    commitSave();
-    showToast(`<b>KEY FOUND.</b><br>The gnome whispers: “Front door. Living room.” 🔑`, 1500);
-  }
-
-  // ========= Rendering =========
-  function outfitColor(name){
-    switch(name){
-      case "blue": return "#4aa6ff";
-      case "red": return "#ff4a6b";
-      case "green": return "#53ff86";
-      case "black": return "#1a1a22";
-      default: return "#8A2EFF";
-    }
-  }
-
-  function drawGrass(){
-    ctx.fillStyle="#060a0f";
-    ctx.fillRect(0,0,world.w,world.h);
-
-    // soft lawn
-    ctx.fillStyle="rgba(90,180,120,.10)";
-    for(let y=0;y<world.h;y+=46){
-      ctx.fillRect(0,y,world.w,36);
-    }
-
-    // scattered fireflies
-    for(let i=0;i<120;i++){
-      const x=(i*97)%world.w, y=(i*173)%world.h;
-      ctx.fillStyle=`rgba(255,255,255,${0.04 + ((i%7)/7)*0.05})`;
-      ctx.fillRect(x, y, 1, 1);
-    }
-
-    // vignette
-    const g=ctx.createRadialGradient(world.w/2,world.h/2,140, world.w/2,world.h/2, 980);
-    g.addColorStop(0,"rgba(0,0,0,0)");
-    g.addColorStop(1,"rgba(0,0,0,.62)");
-    ctx.fillStyle=g;
-    ctx.fillRect(0,0,world.w,world.h);
-  }
-
-  function drawObjectRect(x,y,w,h, tint){
-    ctx.fillStyle="rgba(0,0,0,.35)";
-    ctx.fillRect(x+10,y+10,w,h);
-    ctx.fillStyle=tint;
-    ctx.fillRect(x,y,w,h);
-    ctx.strokeStyle="rgba(255,255,255,.14)";
-    ctx.lineWidth=2;
-    ctx.strokeRect(x,y,w,h);
-  }
-
-  function drawDoor(d){
-    ctx.fillStyle="rgba(138,46,255,.10)";
-    ctx.fillRect(d.x,d.y,d.w,d.h);
-    ctx.strokeStyle="rgba(255,255,255,.18)";
-    ctx.lineWidth=2;
-    ctx.strokeRect(d.x,d.y,d.w,d.h);
-    const g=ctx.createRadialGradient(d.x+d.w/2,d.y+d.h/2,10, d.x+d.w/2,d.y+d.h/2,120);
-    g.addColorStop(0,"rgba(138,46,255,.22)"); g.addColorStop(1,"rgba(0,0,0,0)");
-    ctx.fillStyle=g; ctx.fillRect(d.x-80,d.y-80,d.w+160,d.h+160);
-  }
-
-  function drawGnome(n){
-    // tiny cursed-cute gnome
-    ctx.fillStyle="rgba(0,0,0,.35)";
-    ctx.beginPath(); ctx.ellipse(n.x, n.y+14, 16, 7, 0, 0, Math.PI*2); ctx.fill();
-
-    ctx.fillStyle="rgba(255,255,255,.10)";
-    ctx.beginPath(); ctx.arc(n.x, n.y, 18, 0, Math.PI*2); ctx.fill();
-
-    ctx.fillStyle="rgba(255,90,130,.35)";
-    ctx.beginPath(); ctx.arc(n.x, n.y-16, 16, 0, Math.PI*2); ctx.fill();
-
-    ctx.fillStyle="rgba(255,255,255,.22)";
-    ctx.font="11px ui-monospace, Menlo, monospace";
-    ctx.fillText("GNOME", n.x-22, n.y-26);
-  }
-
-  function drawMushrooms(){
-    // mushrooms sparkly patch
-    const x=540, y=580, w=300, h=180;
-    const glow=ctx.createRadialGradient(x+w/2,y+h/2,20, x+w/2,y+h/2, 240);
-    glow.addColorStop(0,"rgba(138,46,255,.22)");
-    glow.addColorStop(1,"rgba(0,0,0,0)");
-    ctx.fillStyle=glow;
-    ctx.fillRect(x-80,y-80,w+160,h+160);
-
-    for(let i=0;i<38;i++){
-      const mx=x+(i*37)%w, my=y+(i*71)%h;
-      ctx.fillStyle="rgba(255,255,255,.10)";
-      ctx.beginPath(); ctx.arc(mx,my,4,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle="rgba(255,90,180,.14)";
-      ctx.beginPath(); ctx.arc(mx,my-6,6,0,Math.PI*2); ctx.fill();
-    }
-  }
-
-  function drawCharacter(){
-    const col=outfitColor(save.outfit);
-    const bob=player.dancing?Math.sin(tt*10)*3:0;
-    const jump=player.jumpT>0?Math.sin((1-player.jumpT)*Math.PI)*12:0;
-    const splits=player.splitsT>0?(1-player.splitsT/0.6):0;
-
-    const x=player.x, y=player.y - jump + bob;
-
-    ctx.fillStyle="rgba(0,0,0,.35)";
-    ctx.beginPath(); ctx.ellipse(x, player.y+10, 18, 9, 0, 0, Math.PI*2); ctx.fill();
-
-    const aura=ctx.createRadialGradient(x,y-22,6, x,y-22, 40);
-    aura.addColorStop(0,"rgba(180,140,255,.22)");
-    aura.addColorStop(1,"rgba(0,0,0,0)");
-    ctx.fillStyle=aura; ctx.beginPath(); ctx.arc(x,y-18,40,0,Math.PI*2); ctx.fill();
-
-    ctx.fillStyle="rgba(255,245,235,.95)";
-    ctx.beginPath(); ctx.arc(x,y-18,12,0,Math.PI*2); ctx.fill();
-
-    ctx.fillStyle="rgba(20,20,30,.85)";
-    ctx.beginPath(); ctx.arc(x,y-22,14,0,Math.PI*2); ctx.fill();
-
-    ctx.fillStyle=col;
-    ctx.beginPath();
-    ctx.moveTo(x,y-6); ctx.lineTo(x-14,y+16); ctx.lineTo(x+14,y+16);
-    ctx.closePath(); ctx.fill();
-
-    ctx.strokeStyle="rgba(255,245,235,.85)";
-    ctx.lineWidth=4; ctx.lineCap="round";
-    ctx.beginPath();
-    if(splits>0){
-      ctx.moveTo(x,y+16); ctx.lineTo(x-18-10*splits,y+24);
-      ctx.moveTo(x,y+16); ctx.lineTo(x+18+10*splits,y+24);
+  // Paddle collision
+  // Sophia side (left)
+  if(pp.bx<=left+1){
+    const d = Math.abs(pp.by - py);
+    if(d<=5){
+      pp.bx=left+1;
+      pp.vx = Math.abs(pp.vx) + 0.08;
+      pp.vy += (pp.by - py)*0.06;
+      pp.hit++;
+      if(pp.hit%4===0) toast("Sophia: *tap* (Milo narrows his eyes)", 900);
     }else{
-      ctx.moveTo(x-4,y+16); ctx.lineTo(x-6,y+26);
-      ctx.moveTo(x+4,y+16); ctx.lineTo(x+6,y+26);
+      pp.m++;
+      serveBall(1);
+      toast("Milo scores. (meow of victory)", 1200);
     }
-    ctx.stroke();
+  }
+  // Milo side (right)
+  if(pp.bx>=right-1){
+    const d = Math.abs(pp.by - my);
+    if(d<=5){
+      pp.bx=right-1;
+      pp.vx = -Math.abs(pp.vx) - 0.06;
+      pp.vy += (pp.by - my)*0.06;
+      pp.hit++;
+      if(pp.hit%4===0) toast("Milo returns it with a paw. disrespectful.", 900);
+    }else{
+      pp.s++;
+      serveBall(-1);
+      toast("Sophia scores. Milo pretends he let it happen.", 1200);
+    }
   }
 
-  function drawMilo(){
-    milo.purr += 0.02;
-    const tail=Math.sin(milo.purr*4)*6;
+  // End condition
+  if(pp.s>=5 || pp.m>=5){
+    pp.over=1;
+    pingpongActive=false;
+    toast(pp.s>pp.m ? "WIN: Sophia defeats Milo at pingpong. Milo demands a rematch." : "LOSS: Milo wins. He is now the athlete of the house.", 2400);
+  }
+}
+function serveBall(dir){
+  const table={x:88,y:118,w:78,h:22};
+  pp.bx=table.x+table.w/2;
+  pp.by=table.y+table.h/2;
+  pp.vx=dir*(1.2+Math.random()*0.2);
+  pp.vy=(Math.random()*1.2-0.6);
+}
 
-    ctx.fillStyle="rgba(0,0,0,.28)";
-    ctx.beginPath(); ctx.ellipse(milo.x,milo.y+8,14,7,0,0,Math.PI*2); ctx.fill();
+function go(file){
+  state.sophia.x=sophia.x; state.sophia.y=sophia.y;
+  state.milo.x=milo.x; state.milo.y=milo.y;
+  saveState();
+  location.href=file;
+}
 
-    ctx.fillStyle="rgba(255,255,255,.90)";
-    ctx.beginPath(); ctx.ellipse(milo.x,milo.y,12,9,0,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(milo.x+10,milo.y-6,7,0,Math.PI*2); ctx.fill();
+/* Render */
+function drawHintBubble(text,x,y){
+  const pad=3;
+  ctx.font="8px ui-monospace, monospace";
+  const m=ctx.measureText(text);
+  const w=Math.ceil(m.width)+pad*2, h=12;
+  ctx.fillStyle="rgba(0,0,0,.65)";
+  ctx.fillRect(x-w/2,y-h,w,h);
+  ctx.strokeStyle="rgba(255,255,255,.12)";
+  ctx.strokeRect(x-w/2+0.5,y-h+0.5,w-1,h-1);
+  ctx.fillStyle="rgba(255,255,255,.9)";
+  ctx.fillText(text,x-w/2+pad,y-4);
+}
+function drawRectBevel(x,y,w,h,fill){
+  ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(x,y,w,1);
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(x,y+h-1,w,1);
+  ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(x,y,1,h);
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(x+w-1,y,1,h);
+}
+function drawSophia(){
+  const x=Math.round(sophia.x), y=Math.round(sophia.y);
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(x-1,y+11,12,2);
+  ctx.fillStyle="#f2d27a"; ctx.fillRect(x+1,y+0,8,4); ctx.fillRect(x+0,y+3,10,3);
+  ctx.fillStyle="#ffd9c9"; ctx.fillRect(x+2,y+5,6,4);
+  ctx.fillStyle="#67b7ff"; ctx.fillRect(x+3,y+6,1,1); ctx.fillRect(x+6,y+6,1,1);
+  ctx.fillStyle="rgba(138,46,255,.55)"; ctx.fillRect(x+2,y+9,6,3);
+  ctx.fillStyle="rgba(255,255,255,.14)"; ctx.fillRect(x+3,y+10,4,1);
+}
+function drawMilo(t){
+  const x=Math.round(milo.x), y=Math.round(milo.y);
+  ctx.fillStyle="rgba(0,0,0,.40)"; ctx.fillRect(x-1,y+7,10,2);
+  ctx.fillStyle="#d8d8d8"; ctx.fillRect(x+1,y+2,6,5);
+  ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+1,y+1,2,2); ctx.fillRect(x+5,y+1,2,2);
+  ctx.fillStyle= state.trip ? "#ff63ff" : "#1affd3";
+  ctx.fillRect(x+2,y+4,1,1); ctx.fillRect(x+5,y+4,1,1);
+  // tail wiggle when tripping
+  ctx.fillStyle="#cfcfcf";
+  const wig = state.trip ? Math.round(Math.sin(t*0.2)*1) : 0;
+  ctx.fillRect(x+7,y+3+wig,1,3);
+}
+function drawWorld(t){
+  // base
+  ctx.fillStyle="#05050a"; ctx.fillRect(0,0,W,H);
 
-    ctx.beginPath();
-    ctx.moveTo(milo.x+6,milo.y-11); ctx.lineTo(milo.x+10,milo.y-18); ctx.lineTo(milo.x+14,milo.y-11);
-    ctx.closePath(); ctx.fill();
+  // night sky gradient
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,"rgba(138,46,255,.18)");
+  g.addColorStop(0.4,"rgba(0,0,0,0)");
+  g.addColorStop(1,"rgba(0,0,0,.35)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
-    ctx.strokeStyle="rgba(255,255,255,.85)";
-    ctx.lineWidth=4; ctx.lineCap="round";
-    ctx.beginPath();
-    ctx.moveTo(milo.x-10,milo.y+2);
-    ctx.quadraticCurveTo(milo.x-24,milo.y-6, milo.x-16,milo.y-16+tail);
-    ctx.stroke();
+  // grass
+  ctx.fillStyle="rgba(0,255,170,.06)";
+  ctx.fillRect(10,28,W-20,H-38);
 
-    ctx.fillStyle="rgba(30,30,40,.55)";
-    ctx.fillRect(milo.x+12,milo.y-8,2,2);
+  // fence
+  drawRectBevel(10,10,W-20,18,"rgba(255,255,255,.06)");
+  for(let x=12;x<W-12;x+=10){
+    ctx.fillStyle="rgba(255,255,255,.04)";
+    ctx.fillRect(x,12,2,14);
   }
 
-  function render(){
-    ctx.clearRect(0,0,innerWidth,innerHeight);
-    ctx.save();
-    ctx.translate(-cam.x, -cam.y);
+  // shrubs
+  drawRectBevel(30,56,60,18,"rgba(255,255,255,.05)");
+  drawRectBevel(230,62,62,18,"rgba(255,255,255,.05)");
 
-    drawGrass();
+  // mushroom patch
+  drawRectBevel(120,72,76,40,"rgba(255,255,255,.04)");
+  for(let i=0;i<9;i++){
+    const mx = 128 + (i%3)*22 + (i===8?8:0);
+    const my = 82 + Math.floor(i/3)*12;
+    ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(mx,my,6,3);
+    ctx.fillStyle= state.trip ? "rgba(255,99,255,.55)" : "rgba(138,46,255,.35)";
+    ctx.fillRect(mx+1,my-2,4,2);
+  }
 
-    // Objects
-    for(const s of world.solids){
-      let tint="rgba(255,255,255,.05)";
-      if(s.label==="Hammock") tint="rgba(160,210,255,.07)";
-      if(s.label==="Ping Pong") tint="rgba(255,255,255,.06)";
-      if(s.label==="Mushroom Field") tint="rgba(138,46,255,.06)";
-      drawObjectRect(s.x,s.y,s.w,s.h,tint);
+  // NEW: pingpong table
+  drawRectBevel(88,118,78,22,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(92,122,70,14);
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(127,122,1,14); // net line illusion
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(92,129,70,1); // center court
+  // tiny net
+  ctx.fillStyle="rgba(255,255,255,.12)"; ctx.fillRect(126,126,3,5);
 
-      if(s.label){
-        ctx.fillStyle="rgba(255,255,255,.22)";
-        ctx.font="11px ui-monospace, Menlo, monospace";
-        ctx.fillText(s.label, s.x+10, s.y+18);
+  // NEW: hammock area
+  drawRectBevel(196,92,64,28,"rgba(255,255,255,.04)");
+  // posts
+  ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(198,94,3,24);
+  ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(255,94,3,24);
+  // hammock curve
+  for(let i=0;i<46;i++){
+    const x=203+i;
+    const y=105 + Math.round(Math.sin((i/46)*Math.PI)*5);
+    ctx.fillStyle="rgba(138,46,255,.10)";
+    ctx.fillRect(x,y,1,2);
+  }
+
+  // door back to bedroom
+  ctx.fillStyle="rgba(255,255,255,.10)";
+  ctx.fillRect(148,H-20,34,10);
+  ctx.fillStyle="rgba(0,0,0,.55)";
+  ctx.fillRect(150,H-18,30,6);
+
+  // pingpong overlay (draw ball + scores) if active
+  if(pingpongActive){
+    // subtle focus wash
+    ctx.fillStyle="rgba(0,0,0,.20)";
+    ctx.fillRect(0,0,W,H);
+
+    // redraw table on top (keeps it crisp)
+    drawRectBevel(88,118,78,22,"rgba(255,255,255,.06)");
+    ctx.fillStyle="rgba(0,0,0,.50)"; ctx.fillRect(92,122,70,14);
+    ctx.fillStyle="rgba(255,255,255,.11)"; ctx.fillRect(127,122,1,14);
+    ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(92,129,70,1);
+    ctx.fillStyle="rgba(255,255,255,.14)"; ctx.fillRect(126,126,3,5);
+
+    // paddles
+    const table={x:88,y:118,w:78,h:22};
+    const top=table.y+4, bottom=table.y+table.h-4;
+    let py = Math.max(top, Math.min(bottom, sophia.y+6));
+    let my = Math.max(top, Math.min(bottom, pp.by + (state.trip ? Math.sin(t*0.12)*3 : 0)));
+
+    ctx.fillStyle="rgba(138,46,255,.55)";
+    ctx.fillRect(table.x+4, py-4, 2, 8);
+
+    ctx.fillStyle="rgba(0,255,213,.55)";
+    ctx.fillRect(table.x+table.w-6, my-4, 2, 8);
+
+    // ball
+    ctx.fillStyle="rgba(255,255,255,.85)";
+    ctx.fillRect(Math.round(pp.bx), Math.round(pp.by), 2, 2);
+
+    // score text
+    ctx.font="8px ui-monospace, monospace";
+    ctx.fillStyle="rgba(255,255,255,.9)";
+    ctx.fillText(`SOPHIA ${pp.s}  -  ${pp.m} MILO`, 94, 116);
+    ctx.fillStyle="rgba(255,255,255,.55)";
+    ctx.fillText(`(E to quit)`, 232, 116);
+  }
+
+  // hint
+  const z=nearestZone();
+  if(z) drawHintBubble(z.name, sophia.x+6, sophia.y-10);
+
+  // trip post effect (simple “shader” look)
+  if(state.trip){
+    ctx.fillStyle=`rgba(255,99,255,${0.10 + 0.06*Math.sin(t*0.07)})`;
+    ctx.fillRect(0,0,W,H);
+    // scanlines + wobble tint
+    for(let y=0;y<H;y+=3){
+      ctx.fillStyle=`rgba(0,255,213,${0.02 + 0.02*Math.sin(t*0.12 + y*0.2)})`;
+      ctx.fillRect(0,y,W,1);
+    }
+  }
+}
+
+/* Loop */
+let t=0;
+function loop(){
+  t++;
+
+  // pingpong gets priority and runs as a “mini overlay”
+  if(pingpongActive){
+    updatePingpong(t);
+  }
+
+  const run = keysDown.has("shift");
+  const sp = sophia.speed*(run?sophia.run:1);
+
+  let dx=0,dy=0;
+  if(keysDown.has("w")||keysDown.has("arrowup")) dy-=sp;
+  if(keysDown.has("s")||keysDown.has("arrowdown")) dy+=sp;
+  if(keysDown.has("a")||keysDown.has("arrowleft")) dx-=sp;
+  if(keysDown.has("d")||keysDown.has("arrowright")) dx+=sp;
+  if(dx && dy){dx*=0.72; dy*=0.72;}
+  if(dx||dy) tryMove(sophia,dx,dy);
+
+  // Milo follow or “play” orbit if tripping
+  if(state.trip){
+    const ox = sophia.x + 12 + Math.sin(t*0.06)*10;
+    const oy = sophia.y + 6 + Math.cos(t*0.07)*6;
+    milo.x += (ox - milo.x)*0.08;
+    milo.y += (oy - milo.y)*0.08;
+  }else{
+    const tx=sophia.x-10, ty=sophia.y+6;
+    milo.x += (tx - milo.x)*0.06;
+    milo.y += (ty - milo.y)*0.06;
+  }
+
+  if(keysDown.has("e")){
+    if(!loop._eWasDown){
+      // if pingpong active, E quits mini-game first (as requested “exit whenever”)
+      if(pingpongActive){
+        pingpongActive=false;
+        toast("Pingpong paused. Milo licks his paw like he won anyway.", 1600);
+      }else{
+        interact();
       }
     }
+    loop._eWasDown=true;
+  } else loop._eWasDown=false;
 
-    drawMushrooms();
-
-    for(const d of world.doors) drawDoor(d);
-    for(const n of world.npcs) drawGnome(n);
-
-    drawMilo();
-    drawCharacter();
-
-    // Interact prompt
-    const n=nearestInteract();
-    if(n){
-      ctx.strokeStyle="rgba(138,46,255,.45)";
-      ctx.lineWidth=2;
-      ctx.beginPath(); ctx.ellipse(player.x,player.y+8,28,14,0,0,Math.PI*2); ctx.stroke();
-
-      const text=`E · ${n.label}`;
-      ctx.font="12px ui-monospace, Menlo, monospace";
-      const m=ctx.measureText(text);
-      const px=player.x - m.width/2 - 10;
-      const py=player.y - 44;
-      ctx.fillStyle="rgba(0,0,0,.45)";
-      ctx.strokeStyle="rgba(255,255,255,.14)";
-      ctx.lineWidth=1;
-      ctx.beginPath(); roundRect(px,py,m.width+20,22,10); ctx.fill(); ctx.stroke();
-      ctx.fillStyle="rgba(255,255,255,.88)";
-      ctx.fillText(text, player.x - m.width/2, py+15);
-    }
-
-    // Trip overlay
-    if(tripT>0){
-      const wob = Math.sin(tt*10)*6;
-      ctx.globalAlpha = 0.15 + 0.12*Math.sin(tt*6);
-      ctx.fillStyle = "rgba(138,46,255,1)";
-      ctx.fillRect(0+wob, 0, world.w, world.h);
-      ctx.globalAlpha = 0.18;
-      ctx.fillStyle = "rgba(0,255,210,1)";
-      ctx.fillRect(0, 0+wob, world.w, world.h);
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.restore();
+  if(t%60===0){
+    state.sophia.x=sophia.x; state.sophia.y=sophia.y;
+    state.milo.x=milo.x; state.milo.y=milo.y;
+    saveState();
   }
 
-  function roundRect(x,y,w,h,r){
-    const rr=Math.min(r,w/2,h/2);
-    ctx.moveTo(x+rr,y);
-    ctx.arcTo(x+w,y,x+w,y+h,rr);
-    ctx.arcTo(x+w,y+h,x,y+h,rr);
-    ctx.arcTo(x,y+h,x,y,rr);
-    ctx.arcTo(x,y,x+w,y,rr);
-    ctx.closePath();
-  }
+  drawWorld(t);
+  drawMilo(t);
+  drawSophia();
 
-  // ========= Loop =========
-  let last=performance.now();
-  let tt=0;
-  function step(now){
-    const dt=Math.min(0.033,(now-last)/1000);
-    last=now; tt+=dt;
-
-    const a=axis();
-    let sp=(down("shift")?220:150);
-    if(player.dancing) sp*=0.65;
-
-    const mag=Math.hypot(a.x,a.y)||1;
-    const ax=a.x/mag, ay=a.y/mag;
-
-    player.vx += (ax*sp - player.vx)*0.18;
-    player.vy += (ay*sp - player.vy)*0.18;
-    player.x += player.vx*dt; player.y += player.vy*dt;
-
-    if(Math.abs(ax)+Math.abs(ay)>0.01){ player.facing.x=ax; player.facing.y=ay; }
-
-    resolveSolids(player);
-
-    const followDist=46;
-    const tx=player.x - player.facing.x*followDist - 18;
-    const ty=player.y - player.facing.y*followDist + 14;
-    milo.x += (tx-milo.x)*0.08;
-    milo.y += (ty-milo.y)*0.08;
-    resolveSolids(milo);
-
-    player.jumpT=Math.max(0,player.jumpT-dt);
-    player.splitsT=Math.max(0,player.splitsT-dt);
-    tripT=Math.max(0,tripT-dt);
-
-    updateCam();
-    render();
-    requestAnimationFrame(step);
-  }
-
-  commitSave();
-  showToast(`The gnome knows something.`, 1400);
-  requestAnimationFrame(step);
-})();
+  requestAnimationFrame(loop);
+}
+loop();
 </script>
 </body>
 </html>
