@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Poetry Desk</title>
+
+<style>
+:root{
+ --bg:#06060b;
+ --ink:#ffffff;
+ --vio:#8a2eff;
+}
+
+body{
+ margin:0;
+ background:radial-gradient(circle at 50% 20%, rgba(138,46,255,.18), transparent 70%), var(--bg);
+ color:var(--ink);
+ font-family:Georgia, serif;
+ display:grid;
+ place-items:center;
+ height:100vh;
+}
+
+.panel{
+ width:min(900px,94vw);
+ padding:28px;
+ border-radius:24px;
+ background:rgba(0,0,0,.55);
+ border:1px solid rgba(255,255,255,.15);
+ backdrop-filter:blur(12px);
+ box-shadow:0 0 80px rgba(138,46,255,.15);
+}
+
+.title{
+ letter-spacing:.4em;
+ text-transform:uppercase;
+ font-size:14px;
+ opacity:.7;
+ text-align:center;
+ margin-bottom:18px;
+}
+
+textarea{
+ width:100%;
+ height:260px;
+ resize:none;
+ background:#0a0a12;
+ border:1px solid rgba(255,255,255,.2);
+ color:#fff;
+ padding:16px;
+ font-size:18px;
+ line-height:1.6;
+ border-radius:14px;
+ outline:none;
+}
+
+.row{
+ display:flex;
+ gap:12px;
+ justify-content:center;
+ margin-top:18px;
+ flex-wrap:wrap;
+}
+
+button{
+ border:none;
+ background:rgba(138,46,255,.22);
+ color:#fff;
+ padding:14px 20px;
+ border-radius:999px;
+ font-size:12px;
+ letter-spacing:.25em;
+ cursor:pointer;
+}
+
+button:hover{
+ filter:brightness(1.15);
+}
+
+.note{
+ text-align:center;
+ font-size:11px;
+ opacity:.6;
+ margin-top:12px;
+ letter-spacing:.2em;
+}
+</style>
+</head>
+<body>
+
+<div class="panel">
+
+<div class="title">Sophia’s Notebook</div>
+
+<textarea id="text" placeholder="write something beautiful…"></textarea>
+
+<div class="row">
+<button onclick="save()">SAVE LINE</button>
+<button onclick="exportPDF()">EXPORT PDF</button>
+<button onclick="back()">RETURN</button>
+</div>
+
+<div class="note">poetry persists across rooms</div>
+
+</div>
+
+<script>
+const STORE="SOPHIA_AUDITION_SAVE_V1";
+
+function load(){
+ let s=JSON.parse(localStorage.getItem(STORE)||"{}");
+ if(!s.poems) s.poems=[];
+ return s;
+}
+function save(){
+ let s=load();
+ const val=text.value.trim();
+ if(!val) return;
+
+ s.poems.push(val);
+ s.poemLines=(s.poemLines||0)+1;
+
+ localStorage.setItem(STORE,JSON.stringify(s));
+ text.value="";
+ alert("saved");
+}
+
+/* PDF EXPORT */
+function exportPDF(){
+
+ const val=text.value.trim();
+ if(!val) return alert("write first");
+
+ const win=window.open("","print");
+
+ win.document.write(`
+ <html>
+ <head>
+ <title>Poem</title>
+ <style>
+ body{
+ font-family: "Times New Roman", serif;
+ padding:60px;
+ background:#fff;
+ color:#000;
+ }
+ .poem{
+ font-size:22px;
+ line-height:1.8;
+ white-space:pre-wrap;
+ }
+ .sig{
+ margin-top:80px;
+ font-size:14px;
+ letter-spacing:.2em;
+ }
+ </style>
+ </head>
+ <body>
+ <div class="poem">${val.replace(/\n/g,"<br>")}</div>
+ <div class="sig">— Sophia</div>
+ </body>
+ </html>
+ `);
+
+ win.document.close();
+ win.print();
+}
+
+function back(){
+ location.href="Sophie01.html";
+}
+</script>
+
+</body>
+</html>
