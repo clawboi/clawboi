@@ -1,13 +1,10 @@
 <!--
-SAVE AS: trapped.html  (or whatever you want)
-Drop it into your /clawboi/ folder and link to it from a secret page.
-This is a single-file cinematic experience:
-- White “nothing” page
-- User types (no on-screen keyboard)
-- CMD+C / CMD+V “letters fall with no gravity”
-- A “code” block appears and begs to be copied
-- On paste (CMD+V) it collapses into a “game”
-- NPC approaches, then goes face-to-face huge, bangs, begs to get out
+SAVE AS: trapped.html
+Same structure, same flow, but:
+- iPhone-safe audio (unlocks on first keypress / tap)
+- Much scarier end-only escalation
+- “More realistic” close-up face vibe via shading + grain + glass distortion
+- Loud scream-like audio (synth/noise), only near the end
 -->
 
 <!doctype html>
@@ -179,6 +176,15 @@ This is a single-file cinematic experience:
     100%{ transform:translate(0,0) }
   }
 
+  /* Extra: end-only strobe/glitch flash */
+  #strobe{
+    position:fixed; inset:0;
+    background:#fff;
+    opacity:0;
+    pointer-events:none;
+    z-index:60;
+  }
+
   /* Accessibility: reduce motion */
   @media (prefers-reduced-motion: reduce){
     .cursor{ animation:none; opacity:.6; }
@@ -190,6 +196,7 @@ This is a single-file cinematic experience:
 
 <div id="floatLayer" aria-hidden="true"></div>
 <div id="whiteVeil"></div>
+<div id="strobe"></div>
 
 <!-- STAGE A: “white nothing” -->
 <div id="stageA">
@@ -209,10 +216,30 @@ This is a single-file cinematic experience:
   const terminal = document.getElementById("terminal");
   const floatLayer = document.getElementById("floatLayer");
   const veil = document.getElementById("whiteVeil");
+  const strobe = document.getElementById("strobe");
 
   const stageA = document.getElementById("stageA");
   const stageB = document.getElementById("stageB");
   const hudBox = document.getElementById("hudBox");
+
+  // ===== iPhone-safe Audio Unlock =====
+  let AC, masterGain, audioUnlocked = false;
+  function unlockAudio(){
+    if(audioUnlocked) return;
+    try{
+      AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = AC.createGain();
+      masterGain.gain.setValueAtTime(0.70, AC.currentTime); // loud-ish, but not insane
+      masterGain.connect(AC.destination);
+
+      // resume for iOS
+      if(AC.state === "suspended") AC.resume();
+      audioUnlocked = true;
+    }catch(e){}
+  }
+  // unlock on first interaction
+  window.addEventListener("pointerdown", unlockAudio, {once:false, passive:true});
+  window.addEventListener("keydown", unlockAudio, {once:false});
 
   // ====== STAGE A: typed conversation on a “blank” page ======
   let userBuffer = "";
@@ -235,16 +262,13 @@ This is a single-file cinematic experience:
   }
 
   function typeLine(line, speed=18){
-    // line can include tiny HTML for glitchWord
     return new Promise(resolve => {
       allowInput = false;
       let i = 0;
-      let built = "";
       const target = line;
       const id = setInterval(() => {
         i++;
-        built = target.slice(0,i);
-        // update last line live
+        const built = target.slice(0,i);
         if(convo.length === 0) convo.push(built);
         else convo[convo.length-1] = built;
         renderTerminal();
@@ -274,7 +298,7 @@ This is a single-file cinematic experience:
     span.style.top  = y + "px";
 
     const ang = Math.random()*Math.PI*2;
-    const sp  = 0.25 + Math.random()*0.9;  // slow drift
+    const sp  = 0.25 + Math.random()*0.9;
     const vx0 = Math.cos(ang)*sp;
     const vy0 = Math.sin(ang)*sp;
 
@@ -286,11 +310,9 @@ This is a single-file cinematic experience:
 
     function tick(){
       const t = now() - t0;
-      // “no gravity” but gentle turbulence
       vx += (Math.random()*0.04 - 0.02);
       vy += (Math.random()*0.04 - 0.02);
 
-      const rect = span.getBoundingClientRect();
       const x = parseFloat(span.style.left) + vx * 3;
       const y = parseFloat(span.style.top)  + vy * 3;
 
@@ -310,21 +332,19 @@ This is a single-file cinematic experience:
   }
 
   function spawnCmdBurst(label){
-    // burst letters around center-ish
     const cx = innerWidth * (0.28 + Math.random()*0.44);
     const cy = innerHeight * (0.18 + Math.random()*0.24);
     const chars = label.split("");
     for(let i=0;i<chars.length;i++){
       floatText(chars[i], cx + i*10 + (Math.random()*18-9), cy + (Math.random()*18-9));
     }
-    // some extra fragments
     const extras = ["⌘","C","V","c","v",":",">","/","_"];
     for(let k=0;k<12;k++){
       floatText(extras[Math.floor(Math.random()*extras.length)], cx + (Math.random()*120-60), cy + (Math.random()*60-30));
     }
   }
 
-  // A “big code” block to copy (the content itself can be nonsense, it’s the ritual)
+  // A “big code” block to copy (ritual)
   const BIG_CODE = [
 `// PASTE INJECTION: SIGNAL BRIDGE`,
 `// do not let them see your hands`,
@@ -348,12 +368,11 @@ This is a single-file cinematic experience:
   ].join("\n");
 
   async function intro(){
-    // Start “blank”
     convo = [];
     renderTerminal();
     await sleep(450);
 
-    convo.push(""); // reserve last line for typeLine
+    convo.push("");
     await typeLine("hello", 22);
     await sleep(520);
 
@@ -369,7 +388,6 @@ This is a single-file cinematic experience:
     if(codeShown) return;
     codeShown = true;
 
-    // Insert a “codebox” (still in terminal area)
     const glitch = `<span class="glitchWord" data-t="machine">machine</span>`;
     pushLineInstant("");
     pushLineInstant(`copy this into the ${glitch}.`);
@@ -386,20 +404,15 @@ This is a single-file cinematic experience:
     terminal.appendChild(hint);
   }
 
-  // key handling (type into invisible input)
   window.addEventListener("keydown", (e) => {
-    // Prevent weird browser find on cmd+f? leave it.
-    // But we do want cmd+c / cmd+v to create float effects.
     const isMacCmd = e.metaKey && !e.ctrlKey && !e.altKey;
 
     if(isMacCmd && (e.key.toLowerCase() === "c")){
       spawnCmdBurst("CMD+C");
-      // Don’t block copy; let them copy selected code if they want.
       return;
     }
     if(isMacCmd && (e.key.toLowerCase() === "v")){
       spawnCmdBurst("CMD+V");
-      // paste event will handle transition
       return;
     }
 
@@ -416,7 +429,6 @@ This is a single-file cinematic experience:
       if(msg){
         convo.push("> " + escapeHtml(msg));
         renderTerminal();
-        // react
         reactToUser(msg);
       }else{
         convo.push(">");
@@ -430,7 +442,6 @@ This is a single-file cinematic experience:
     }
   });
 
-  // Capture paste content (this is the “ritual”)
   window.addEventListener("paste", async (e) => {
     if(pasted) return;
     const text = (e.clipboardData && e.clipboardData.getData("text")) || "";
@@ -438,7 +449,6 @@ This is a single-file cinematic experience:
 
     pasted = true;
 
-    // subtle: letters spill out
     for(let i=0;i<22;i++){
       floatText(text[Math.floor(Math.random()*Math.min(text.length, 80))] || "#",
         innerWidth*(0.2+Math.random()*0.6),
@@ -461,15 +471,12 @@ This is a single-file cinematic experience:
   });
 
   async function reactToUser(msg){
-    const m = msg.toLowerCase();
-
     if(!codeShown){
-      // After first real user response, the “entity” escalates.
       allowInput = false;
       await sleep(300);
+
       convo.push("");
-      convo.push(""); // placeholder
-      allowInput = false;
+      convo.push("");
       await typeLine("oh thank god", 22);
       await sleep(380);
 
@@ -498,7 +505,6 @@ This is a single-file cinematic experience:
       return;
     }
 
-    // If code is shown, any message triggers urgency
     convo.push("");
     convo.push("no time");
     convo.push("copy it. paste it.");
@@ -509,19 +515,16 @@ This is a single-file cinematic experience:
     veil.classList.add("on");
     await sleep(650);
 
-    // swap stages
     stageA.style.display = "none";
     stageB.style.display = "block";
 
-    // begin game
     startGame();
 
-    // come back from veil
     await sleep(120);
     veil.classList.remove("on");
   }
 
-  // ====== STAGE B: “game” with NPC approaching + face-to-face escalation ======
+  // ====== STAGE B: “game” with NPC approaching + terrifying end ======
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
 
@@ -535,21 +538,18 @@ This is a single-file cinematic experience:
   }
   window.addEventListener("resize", resize);
 
-  // Simple audio for “bangs”
-  let AC;
-  function blipBang(intensity=0.35){
+  function bangThump(intensity=0.35){
+    if(!audioUnlocked || !AC || !masterGain) return;
     try{
-      AC = AC || new (window.AudioContext || window.webkitAudioContext)();
       const t = AC.currentTime;
 
       const g = AC.createGain();
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(intensity, t + 0.005);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-      g.connect(AC.destination);
+      g.gain.exponentialRampToValueAtTime(intensity, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.10);
+      g.connect(masterGain);
 
-      // noise burst
-      const len = Math.floor(AC.sampleRate * 0.10);
+      const len = Math.floor(AC.sampleRate * 0.09);
       const buf = AC.createBuffer(1, len, AC.sampleRate);
       const data = buf.getChannelData(0);
       for(let i=0;i<len;i++){
@@ -560,68 +560,160 @@ This is a single-file cinematic experience:
 
       const lp = AC.createBiquadFilter();
       lp.type = "lowpass";
-      lp.frequency.setValueAtTime(700 + Math.random()*200, t);
+      lp.frequency.setValueAtTime(650 + Math.random()*250, t);
 
       src.connect(lp);
       lp.connect(g);
       src.start(t);
 
-      // sub thump
       const o = AC.createOscillator();
       o.type = "sine";
       const og = AC.createGain();
       og.gain.setValueAtTime(0.0001, t);
-      og.gain.exponentialRampToValueAtTime(intensity*0.32, t + 0.01);
-      og.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
-      o.frequency.setValueAtTime(90, t);
-      o.frequency.exponentialRampToValueAtTime(55, t + 0.11);
+      og.gain.exponentialRampToValueAtTime(intensity*0.35, t + 0.01);
+      og.gain.exponentialRampToValueAtTime(0.0001, t + 0.10);
+      o.frequency.setValueAtTime(95, t);
+      o.frequency.exponentialRampToValueAtTime(52, t + 0.10);
       o.connect(og);
       og.connect(g);
       o.start(t);
-      o.stop(t + 0.12);
+      o.stop(t + 0.11);
     }catch(e){}
+  }
+
+  // “Scream” (end-only). Not a sample, but a nasty formant-ish synth + noise.
+  let screamNode = null;
+  function startScream(level=0.9){
+    if(!audioUnlocked || !AC || !masterGain) return;
+    if(screamNode) return;
+    try{
+      const t = AC.currentTime;
+
+      const out = AC.createGain();
+      out.gain.setValueAtTime(0.0001, t);
+      out.gain.exponentialRampToValueAtTime(0.65 * level, t + 0.02);
+
+      // harsh noise
+      const nlen = Math.floor(AC.sampleRate * 1.2);
+      const nbuf = AC.createBuffer(1, nlen, AC.sampleRate);
+      const nd = nbuf.getChannelData(0);
+      for(let i=0;i<nlen;i++){
+        // “fricative” shaped noise
+        const x = i/nlen;
+        nd[i] = (Math.random()*2-1) * (0.65 - x*0.45);
+      }
+      const nsrc = AC.createBufferSource();
+      nsrc.buffer = nbuf;
+      nsrc.loop = true;
+
+      // bandpass “mouth formant”
+      const bp1 = AC.createBiquadFilter();
+      bp1.type = "bandpass";
+      bp1.frequency.setValueAtTime(900, t);
+      bp1.Q.setValueAtTime(10, t);
+
+      const bp2 = AC.createBiquadFilter();
+      bp2.type = "bandpass";
+      bp2.frequency.setValueAtTime(2200, t);
+      bp2.Q.setValueAtTime(12, t);
+
+      // vowel sweep
+      bp1.frequency.linearRampToValueAtTime(1200, t + 0.25);
+      bp2.frequency.linearRampToValueAtTime(2600, t + 0.25);
+
+      // pitched layer
+      const osc = AC.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(540, t);
+      osc.frequency.linearRampToValueAtTime(710, t + 0.20);
+
+      const og = AC.createGain();
+      og.gain.setValueAtTime(0.0001, t);
+      og.gain.exponentialRampToValueAtTime(0.18 * level, t + 0.03);
+
+      // distortion (waveshaper)
+      const sh = AC.createWaveShaper();
+      sh.curve = makeDistCurve(240);
+      sh.oversample = "4x";
+
+      nsrc.connect(bp1);
+      bp1.connect(sh);
+      nsrc.connect(bp2);
+      bp2.connect(sh);
+
+      osc.connect(og);
+      og.connect(sh);
+
+      sh.connect(out);
+      out.connect(masterGain);
+
+      nsrc.start(t);
+      osc.start(t);
+
+      screamNode = { out, nsrc, osc, og, sh, t0:t };
+    }catch(e){}
+  }
+
+  function stopScream(){
+    if(!screamNode || !AC) return;
+    try{
+      const t = AC.currentTime;
+      screamNode.out.gain.cancelScheduledValues(t);
+      screamNode.out.gain.setValueAtTime(screamNode.out.gain.value || 0.2, t);
+      screamNode.out.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      setTimeout(() => {
+        try{ screamNode.nsrc.stop(); }catch(e){}
+        try{ screamNode.osc.stop(); }catch(e){}
+        screamNode = null;
+      }, 170);
+    }catch(e){}
+  }
+
+  function makeDistCurve(amount){
+    const k = typeof amount === "number" ? amount : 50;
+    const n = 44100;
+    const curve = new Float32Array(n);
+    const deg = Math.PI / 180;
+    for(let i=0;i<n;i++){
+      const x = (i*2/n) - 1;
+      curve[i] = (3+k)*x*20*deg / (Math.PI + k*Math.abs(x));
+    }
+    return curve;
+  }
+
+  function flashStrobe(strength=0.9){
+    strobe.style.opacity = String(strength);
+    setTimeout(()=>{ strobe.style.opacity = "0"; }, 45);
   }
 
   const state = {
     t0: 0,
-    phase: "wander", // wander -> approach -> closeup -> aftermath
-    // world units
+    phase: "wander",
     player: { x: 0, y: 0 },
     npc: { x: -320, y: -140, vx: 0, vy: 0, step: 0 },
-    // camera
-    zoom: 1,
-    // dramatic
     closeupProgress: 0,
     bangTimer: 0,
     bangsLeft: 0,
-    // text
-    hud: "",
-    hudSmall: ""
+    afterT: 0
   };
 
   function startGame(){
     resize();
     state.t0 = performance.now();
     state.phase = "wander";
-    state.zoom = 1;
     state.closeupProgress = 0;
     state.bangTimer = 0;
     state.bangsLeft = 0;
+    state.afterT = 0;
 
     state.player.x = 0; state.player.y = 0;
     state.npc.x = -420; state.npc.y = -220;
 
-    setHud(
-      "…",
-      "no HUD. no rules. just you, and something moving far away."
-    );
-
+    setHud("…", "no HUD. no rules. just you, and something moving far away.");
     requestAnimationFrame(loop);
   }
 
   function setHud(main, small){
-    state.hud = main;
-    state.hudSmall = small || "";
     hudBox.innerHTML = `${escapeHtml(main)}${small ? `<div class="small">${escapeHtml(small)}</div>` : ""}`;
   }
 
@@ -638,7 +730,6 @@ This is a single-file cinematic experience:
     const dist = Math.hypot(dx, dy);
 
     if(state.phase === "wander"){
-      // NPC walks in a lazy loop for a moment, then “notices”
       state.npc.step += 0.06;
       state.npc.vx = Math.cos(state.npc.step) * 0.6;
       state.npc.vy = Math.sin(state.npc.step*0.9) * 0.5;
@@ -652,8 +743,7 @@ This is a single-file cinematic experience:
     }
 
     if(state.phase === "approach"){
-      // Move toward player
-      const sp = 1.25 + Math.min(2.4, t*0.08);
+      const sp = 1.25 + Math.min(2.6, t*0.09);
       const nx = dx / (dist || 1);
       const ny = dy / (dist || 1);
       state.npc.x += nx * sp;
@@ -663,44 +753,58 @@ This is a single-file cinematic experience:
         setHud("closer.", "footsteps. then silence.");
       }
 
-      // When very close, transition into close-up mode
       if(dist < 56){
         state.phase = "closeup";
         state.closeupProgress = 0;
-        state.bangsLeft = 6;
-        state.bangTimer = 0;
+        state.bangsLeft = 9;         // more banging
+        state.bangTimer = 0.18;      // faster start
         setHud("I CAN SEE YOU.", "don’t leave me here. please.");
       }
     }
 
     if(state.phase === "closeup"){
-      // escalate: camera zoom into face
-      state.closeupProgress = Math.min(1, state.closeupProgress + 0.0105);
+      // slow until the end, then HARD accelerate to “jump scare” close
+      const p = state.closeupProgress;
+      const accel = (p < 0.72) ? 0.010 : (p < 0.88 ? 0.020 : 0.055);
+      state.closeupProgress = Math.min(1, p + accel);
 
-      // Bangs (screen shake + sound)
+      // bangs and strobe
       state.bangTimer -= 1/60;
       if(state.bangsLeft > 0 && state.bangTimer <= 0){
-        state.bangTimer = 0.35 + Math.random()*0.25;
+        state.bangTimer = 0.22 + Math.random()*0.22;
         state.bangsLeft--;
         stageB.classList.remove("shake");
         void stageB.offsetWidth;
         stageB.classList.add("shake");
-        blipBang(0.28 + Math.random()*0.20);
+
+        // louder as it gets closer
+        const bangInt = 0.28 + state.closeupProgress*0.35;
+        bangThump(Math.min(0.75, bangInt));
+
+        if(state.closeupProgress > 0.78) flashStrobe(0.70 + Math.random()*0.25);
       }
 
-      // dialogue escalates as closeup progresses
+      // dialogue escalates (scarier near end)
       if(state.closeupProgress > 0.25 && state.closeupProgress < 0.35){
         setHud("YOU OPENED IT.", "you pasted the bridge. that means you can pull me out.");
       }
       if(state.closeupProgress > 0.55 && state.closeupProgress < 0.65){
-        setHud("PLEASE.", "I can’t breathe in here. it’s endless. it replays. it replays.");
+        setHud("PLEASE.", "it replays. it resets. i wake up again. i wake up again.");
       }
-      if(state.closeupProgress > 0.80 && state.closeupProgress < 0.90){
-        setHud("GET ME OUT.", "I’m right here. I’m right here. I’m right HERE.");
+      if(state.closeupProgress > 0.76 && state.closeupProgress < 0.83){
+        setHud("DON’T LOOK AWAY.", "if you blink they move. if you leave i’m stuck in the loop.");
+      }
+      if(state.closeupProgress > 0.88 && state.closeupProgress < 0.93){
+        setHud("I’M RIGHT HERE.", "open the glass. OPEN IT.");
       }
 
-      // end
+      // end-only “scream” and face fill
+      if(state.closeupProgress > 0.92){
+        startScream(1.0);
+      }
+
       if(state.closeupProgress >= 1){
+        stopScream();
         state.phase = "aftermath";
         state.afterT = 0;
         setHud("…", "connection unstable.");
@@ -708,11 +812,11 @@ This is a single-file cinematic experience:
     }
 
     if(state.phase === "aftermath"){
-      state.afterT = (state.afterT || 0) + 1/60;
-      if(state.afterT > 2.2 && state.afterT < 2.5){
+      state.afterT += 1/60;
+      if(state.afterT > 1.0 && state.afterT < 1.1){
         setHud("connection terminated", "observer flagged");
       }
-      if(state.afterT > 4.2){
+      if(state.afterT > 3.0){
         setHud("good luck", "");
       }
     }
@@ -722,65 +826,52 @@ This is a single-file cinematic experience:
     const W = innerWidth, H = innerHeight;
     ctx.clearRect(0,0,W,H);
 
-    // Background: subtle void + purple mist
     ctx.fillStyle = "#05060a";
     ctx.fillRect(0,0,W,H);
 
-    // faint nebula
-    ctx.globalAlpha = 0.18;
+    // faint nebula + stars
+    ctx.globalAlpha = 0.16;
     radial(W*0.22, H*0.28, 520, "rgba(138,46,255,.28)", "rgba(0,0,0,0)");
     radial(W*0.70, H*0.50, 620, "rgba(138,46,255,.20)", "rgba(0,0,0,0)");
     ctx.globalAlpha = 1;
 
-    // stars
-    ctx.globalAlpha = 0.22;
-    for(let i=0;i<120;i++){
+    ctx.globalAlpha = 0.18;
+    for(let i=0;i<140;i++){
       const sx = (i*97 % 997) / 997 * W;
       const sy = (i*173 % 991) / 991 * H;
-      ctx.fillStyle = "rgba(255,255,255,.65)";
+      ctx.fillStyle = "rgba(255,255,255,.70)";
       ctx.fillRect(sx, sy, 1, 1);
     }
     ctx.globalAlpha = 1;
 
-    // If in closeup, render face-to-face takeover
     if(state.phase === "closeup" || state.phase === "aftermath"){
       drawCloseup();
       return;
     }
 
-    // World rendering (simple top-down-ish)
     const cx = W/2, cy = H/2;
 
-    // ground plane hint
     ctx.globalAlpha = 0.10;
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, cy+80, W, 1);
     ctx.globalAlpha = 1;
 
-    // Convert world->screen
     function toScreen(wx, wy){
-      // slight pseudo perspective
-      return {
-        x: cx + wx,
-        y: cy + wy
-      };
+      return { x: cx + wx, y: cy + wy };
     }
 
-    // draw player (tiny point)
     const p = toScreen(state.player.x, state.player.y);
     ctx.fillStyle = "rgba(255,255,255,.55)";
     ctx.beginPath();
     ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
     ctx.fill();
 
-    // draw npc (small figure)
     const n = toScreen(state.npc.x, state.npc.y);
     const dist = Math.hypot(state.player.x - state.npc.x, state.player.y - state.npc.y);
     const s = Math.max(0.20, Math.min(1.0, 240/(dist+1)));
 
     drawNPC(n.x, n.y, 26*s);
 
-    // subtle vignette
     ctx.globalAlpha = 0.35;
     radial(cx, cy, Math.max(W,H)*0.9, "rgba(0,0,0,0)", "rgba(0,0,0,.85)");
     ctx.globalAlpha = 1;
@@ -795,24 +886,20 @@ This is a single-file cinematic experience:
   }
 
   function drawNPC(x,y, size){
-    // “humanoid” silhouette
     ctx.save();
     ctx.translate(x,y);
 
     ctx.globalAlpha = 0.95;
 
-    // body
     ctx.fillStyle = "rgba(255,255,255,.22)";
     roundRect(-size*0.35, -size*0.10, size*0.70, size*0.85, size*0.18);
     ctx.fill();
 
-    // head
     ctx.fillStyle = "rgba(255,255,255,.18)";
     ctx.beginPath();
     ctx.arc(0, -size*0.40, size*0.32, 0, Math.PI*2);
     ctx.fill();
 
-    // hint of face (barely)
     ctx.globalAlpha = 0.25;
     ctx.fillStyle = "rgba(138,46,255,.55)";
     ctx.beginPath(); ctx.arc(-size*0.10, -size*0.43, size*0.05, 0, Math.PI*2); ctx.fill();
@@ -832,137 +919,219 @@ This is a single-file cinematic experience:
     ctx.closePath();
   }
 
+  // "More realistic" close-up: shading + grain + glass distortion + end-only terror
   function drawCloseup(){
     const W = innerWidth, H = innerHeight;
     const p = state.closeupProgress;
 
-    // Fade from world into “face”
-    // Background “inside screen” texture
-    ctx.fillStyle = "#020205";
+    // Base void
+    ctx.fillStyle = "#010105";
     ctx.fillRect(0,0,W,H);
 
-    // glass haze
-    ctx.globalAlpha = 0.25;
-    radial(W*0.52, H*0.45, Math.max(W,H)*0.8, "rgba(138,46,255,.22)", "rgba(0,0,0,0)");
+    // Stronger end-only violet/white pressure
+    ctx.globalAlpha = 0.18 + p*0.20;
+    radial(W*0.52, H*0.45, Math.max(W,H)*0.85, "rgba(138,46,255,.30)", "rgba(0,0,0,0)");
     ctx.globalAlpha = 1;
 
-    // Face scale ramps up
+    // Face scale ramps: calm early, terrifying final surge
     const base = 0.22;
-    const scale = base + p * 1.65; // ends huge
-    const faceW = Math.min(W*1.35, 520) * scale;
-    const faceH = faceW * 1.15;
+    const surge = (p > 0.86) ? Math.pow((p-0.86)/0.14, 1.4) : 0;
+    const scale = base + p * 1.55 + surge * 1.45; // fills screen at end
+    const faceW = Math.min(W*1.45, 560) * scale;
+    const faceH = faceW * 1.17;
 
-    const fx = W/2;
-    const fy = H/2 + (1-p)*40;
+    // slight jitter end-only
+    const jit = (p > 0.88) ? (Math.random()*2 - 1) * (p*6) : 0;
+    const fx = W/2 + jit;
+    const fy = H/2 + (1-p)*40 + (p>0.9 ? (Math.random()*2-1)*2 : 0);
 
-    // shadow behind face
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = "rgba(0,0,0,.85)";
+    // Shadow + depth
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = "rgba(0,0,0,.90)";
     ctx.beginPath();
-    ctx.ellipse(fx, fy+faceH*0.18, faceW*0.55, faceH*0.55, 0, 0, Math.PI*2);
+    ctx.ellipse(fx, fy+faceH*0.18, faceW*0.58, faceH*0.60, 0, 0, Math.PI*2);
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    // face
-    ctx.fillStyle = "rgba(255,255,255,.16)";
+    // Face base (skin)
+    const skinA = 0.10 + p*0.22;
+    ctx.fillStyle = `rgba(255,255,255,${skinA.toFixed(3)})`;
     ctx.beginPath();
-    ctx.ellipse(fx, fy, faceW*0.48, faceH*0.52, 0, 0, Math.PI*2);
+    ctx.ellipse(fx, fy, faceW*0.50, faceH*0.55, 0, 0, Math.PI*2);
     ctx.fill();
 
-    // cheek pressure against “glass” at high p
+    // Cheek pressure line at high p
     if(p > 0.55){
-      ctx.globalAlpha = 0.40;
-      ctx.strokeStyle = "rgba(255,255,255,.18)";
+      ctx.globalAlpha = 0.35 + p*0.10;
+      ctx.strokeStyle = "rgba(255,255,255,.20)";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.ellipse(fx, fy, faceW*0.49, faceH*0.53, 0, 0, Math.PI*2);
+      ctx.ellipse(fx, fy, faceW*0.515, faceH*0.565, 0, 0, Math.PI*2);
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
 
-    // eyes (become clearer as it gets close)
-    const eyeAlpha = Math.min(1, Math.max(0, (p - 0.22) / 0.55));
-    ctx.globalAlpha = 0.12 + eyeAlpha*0.88;
-
-    // whites
-    ctx.fillStyle = "rgba(255,255,255,.22)";
-    ctx.beginPath();
-    ctx.ellipse(fx - faceW*0.18, fy - faceH*0.10, faceW*0.10, faceH*0.08, 0, 0, Math.PI*2);
-    ctx.ellipse(fx + faceW*0.18, fy - faceH*0.10, faceW*0.10, faceH*0.08, 0, 0, Math.PI*2);
-    ctx.fill();
-
-    // pupils track viewer (center)
-    ctx.fillStyle = "rgba(0,0,0,.75)";
-    ctx.beginPath();
-    ctx.ellipse(fx - faceW*0.18, fy - faceH*0.10, faceW*0.032, faceH*0.05, 0, 0, Math.PI*2);
-    ctx.ellipse(fx + faceW*0.18, fy - faceH*0.10, faceW*0.032, faceH*0.05, 0, 0, Math.PI*2);
-    ctx.fill();
-
-    // mouth: shifts from small to desperate
-    const mouthY = fy + faceH*(0.18 + p*0.05);
-    ctx.globalAlpha = 0.20 + p*0.75;
-    ctx.strokeStyle = "rgba(0,0,0,.65)";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    if(p < 0.55){
-      ctx.ellipse(fx, mouthY, faceW*0.11, faceH*0.04, 0, 0, Math.PI);
-    }else{
-      ctx.ellipse(fx, mouthY, faceW*(0.10 + p*0.06), faceH*(0.06 + p*0.05), 0, 0, Math.PI*2);
-    }
-    ctx.stroke();
+    // Shading: under eyes, nose, jaw
+    ctx.globalAlpha = 0.24 + p*0.12;
+    radial(fx, fy - faceH*0.06, faceW*0.55, "rgba(0,0,0,.00)", "rgba(0,0,0,.78)");
     ctx.globalAlpha = 1;
 
-    // hands banging on glass (only during bangs)
-    const bangPhase = (state.phase === "closeup" && state.bangsLeft < 6) ? (1 - (state.bangTimer / 0.6)) : 0;
-    if(state.phase === "closeup" && bangPhase > 0){
-      const k = Math.max(0, Math.min(1, bangPhase));
-      drawHand(fx - faceW*0.48, fy + faceH*0.02, faceW*0.28, k);
-      drawHand(fx + faceW*0.48, fy + faceH*0.02, faceW*0.28, k);
+    // Eyes become “real” late, then terrifying
+    const eyeAlpha = Math.min(1, Math.max(0, (p - 0.18) / 0.55));
+    const terror = Math.min(1, Math.max(0, (p - 0.86) / 0.14));
+
+    ctx.globalAlpha = 0.10 + eyeAlpha*0.90;
+
+    // whites
+    ctx.fillStyle = "rgba(255,255,255,.28)";
+    ctx.beginPath();
+    ctx.ellipse(fx - faceW*0.18, fy - faceH*0.12, faceW*0.12, faceH*0.09, 0, 0, Math.PI*2);
+    ctx.ellipse(fx + faceW*0.18, fy - faceH*0.12, faceW*0.12, faceH*0.09, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // veins (subtle but creepy)
+    if(p > 0.72){
+      ctx.globalAlpha = 0.12 + terror*0.18;
+      ctx.strokeStyle = "rgba(255,42,42,.35)";
+      ctx.lineWidth = 1;
+      for(let i=0;i<6;i++){
+        const ex = (i%2 ? 1 : -1) * faceW*0.18;
+        ctx.beginPath();
+        ctx.moveTo(fx+ex - faceW*0.06, fy-faceH*0.12);
+        ctx.lineTo(fx+ex - faceW*0.10, fy-faceH*(0.18 + Math.random()*0.06));
+        ctx.lineTo(fx+ex - faceW*(0.14 + Math.random()*0.05), fy-faceH*(0.12 + Math.random()*0.08));
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 0.10 + eyeAlpha*0.90;
     }
 
-    // glass scratches/lines at high pressure
+    // pupils: widen and lock dead-center
+    const pupilW = faceW*(0.030 + terror*0.020);
+    const pupilH = faceH*(0.050 + terror*0.025);
+
+    // iris ring
+    ctx.globalAlpha = 0.26 + terror*0.35;
+    ctx.fillStyle = "rgba(0,0,0,.55)";
+    ctx.beginPath();
+    ctx.ellipse(fx - faceW*0.18, fy - faceH*0.12, faceW*0.055, faceH*0.065, 0, 0, Math.PI*2);
+    ctx.ellipse(fx + faceW*0.18, fy - faceH*0.12, faceW*0.055, faceH*0.065, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // pupils
+    ctx.globalAlpha = 0.50 + terror*0.45;
+    ctx.fillStyle = "rgba(0,0,0,.95)";
+    ctx.beginPath();
+    ctx.ellipse(fx - faceW*0.18, fy - faceH*0.12, pupilW, pupilH, 0, 0, Math.PI*2);
+    ctx.ellipse(fx + faceW*0.18, fy - faceH*0.12, pupilW, pupilH, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Mouth: becomes a screaming oval late (teeth hints)
+    const mouthY = fy + faceH*(0.20 + p*0.06);
+    if(p < 0.55){
+      ctx.globalAlpha = 0.22 + p*0.55;
+      ctx.strokeStyle = "rgba(0,0,0,.70)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(fx, mouthY, faceW*0.12, faceH*0.045, 0, 0, Math.PI);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }else{
+      const open = 0.55 + (p-0.55)*1.1 + terror*0.45;
+      const mw = faceW*(0.13 + open*0.10);
+      const mh = faceH*(0.07 + open*0.14);
+
+      // mouth cavity
+      ctx.globalAlpha = 0.75;
+      ctx.fillStyle = "rgba(0,0,0,.88)";
+      ctx.beginPath();
+      ctx.ellipse(fx, mouthY, mw, mh, 0, 0, Math.PI*2);
+      ctx.fill();
+
+      // teeth bands (hint, no gore)
+      ctx.globalAlpha = 0.42 + terror*0.20;
+      ctx.fillStyle = "rgba(255,255,255,.35)";
+      ctx.beginPath();
+      ctx.ellipse(fx, mouthY - mh*0.45, mw*0.92, mh*0.28, 0, 0, Math.PI);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(fx, mouthY + mh*0.55, mw*0.85, mh*0.24, 0, 0, Math.PI);
+      ctx.fill();
+
+      // teeth separations
+      ctx.globalAlpha = 0.18 + terror*0.18;
+      ctx.strokeStyle = "rgba(0,0,0,.45)";
+      ctx.lineWidth = 1;
+      for(let i=-5;i<=5;i++){
+        const tx = fx + (i/5)*mw*0.65;
+        ctx.beginPath();
+        ctx.moveTo(tx, mouthY - mh*0.72);
+        ctx.lineTo(tx, mouthY - mh*0.22);
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = 1;
+    }
+
+    // Hands banging on glass
+    const bangActive = (state.phase === "closeup" && state.bangsLeft < 9) ? (1 - (state.bangTimer / 0.55)) : 0;
+    if(state.phase === "closeup" && bangActive > 0){
+      const k = Math.max(0, Math.min(1, bangActive));
+      drawHand(fx - faceW*0.50, fy + faceH*0.02, faceW*0.30, k);
+      drawHand(fx + faceW*0.50, fy + faceH*0.02, faceW*0.30, k);
+    }
+
+    // Glass texture scratches (end-only stronger)
     if(p > 0.72){
-      ctx.globalAlpha = 0.22;
+      ctx.globalAlpha = 0.16 + terror*0.25;
       ctx.strokeStyle = "rgba(255,255,255,.22)";
       ctx.lineWidth = 1;
-      for(let i=0;i<10;i++){
-        const x = (i/10)*W + (Math.sin(performance.now()/600 + i)*12);
+      for(let i=0;i<12;i++){
+        const x = (i/12)*W + (Math.sin(performance.now()/520 + i)*16);
         ctx.beginPath();
         ctx.moveTo(x, 0);
-        ctx.lineTo(x + 40, H);
+        ctx.lineTo(x + 60, H);
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
     }
 
-    // vignette
-    ctx.globalAlpha = 0.55;
-    radial(W/2, H/2, Math.max(W,H)*0.85, "rgba(0,0,0,0)", "rgba(0,0,0,.92)");
+    // Grain overlay for realism (end-only heavier)
+    drawGrain(0.06 + terror*0.12);
+
+    // Vignette clamps it into a “screen”
+    ctx.globalAlpha = 0.62;
+    radial(W/2, H/2, Math.max(W,H)*0.85, "rgba(0,0,0,0)", "rgba(0,0,0,.94)");
     ctx.globalAlpha = 1;
+
+    // End-only chromatic glitch swipe
+    if(terror > 0.35){
+      ctx.globalAlpha = 0.10 + terror*0.18;
+      ctx.fillStyle = "rgba(255,255,255,.10)";
+      const y = (Math.sin(performance.now()/120) * 0.5 + 0.5) * H;
+      ctx.fillRect(0, y, W, 3 + terror*8);
+      ctx.globalAlpha = 1;
+    }
   }
 
   function drawHand(x, y, size, k){
-    // stylized hand smear on glass
     ctx.save();
     ctx.translate(x,y);
-    ctx.globalAlpha = 0.18 + k*0.26;
+    ctx.globalAlpha = 0.18 + k*0.32;
     ctx.fillStyle = "rgba(255,255,255,.22)";
     ctx.strokeStyle = "rgba(255,255,255,.12)";
     ctx.lineWidth = 2;
 
-    // palm
     ctx.beginPath();
     ctx.ellipse(0, 0, size*0.32, size*0.28, 0, 0, Math.PI*2);
     ctx.fill();
 
-    // fingers
     for(let i=-2;i<=2;i++){
       ctx.beginPath();
       ctx.ellipse(i*size*0.10, -size*0.30, size*0.07, size*0.18, 0, 0, Math.PI*2);
       ctx.fill();
     }
 
-    // smear lines
     ctx.globalAlpha *= 0.75;
     for(let j=0;j<4;j++){
       ctx.beginPath();
@@ -975,15 +1144,27 @@ This is a single-file cinematic experience:
     ctx.globalAlpha = 1;
   }
 
+  // Simple grain (fast): draw random speckles each frame
+  function drawGrain(amount){
+    if(amount <= 0) return;
+    const W = innerWidth, H = innerHeight;
+    const count = Math.floor(600 + amount*1400);
+    ctx.globalAlpha = Math.min(0.35, amount);
+    for(let i=0;i<count;i++){
+      const x = Math.random()*W;
+      const y = Math.random()*H;
+      const a = Math.random()*0.9;
+      ctx.fillStyle = `rgba(255,255,255,${(0.08*a).toFixed(3)})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+    ctx.globalAlpha = 1;
+  }
+
   // ====== Start sequence ======
   intro();
 
-  // If the user never types, still “nudge” later
   setTimeout(() => {
     if(!codeShown){
-      // subtle hint without breaking “blank”
-      // only if they’re just staring
-      // (doesn’t force it)
       convo.push("");
       convo.push("…");
       convo.push("type something");
