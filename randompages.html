@@ -1,1 +1,621 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Random Pages — CLAWBOI</title>
+
+<style>
+:root{
+  --bg:#070707;
+  --fg:#fff;
+  --muted:rgba(255,255,255,.72);
+  --hair:rgba(255,255,255,.10);
+  --violet:#8a2eff;
+  --cyan:#00ffd5;
+  --max:1180px;
+  --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:var(--sans);
+  overflow-x:hidden;
+  position:relative;
+  isolation:isolate;
+}
+
+/* violet atmosphere */
+body::before{
+  content:"";
+  position:fixed; inset:-20%;
+  pointer-events:none;
+  z-index:-3;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(138,46,255,.22), transparent 60%),
+    radial-gradient(circle at 78% 28%, rgba(138,46,255,.16), transparent 65%),
+    radial-gradient(circle at 55% 88%, rgba(138,46,255,.14), transparent 70%),
+    radial-gradient(circle at 68% 72%, rgba(0,255,213,.08), transparent 70%);
+  mix-blend-mode:screen;
+  filter:blur(14px) saturate(1.25);
+  animation:breath 18s ease-in-out infinite;
+}
+@keyframes breath{
+  0%,100%{opacity:1; transform:translate3d(0,0,0)}
+  50%{opacity:.45; transform:translate3d(0.8%,-0.6%,0)}
+}
+
+/* subtle galaxy texture */
+body::after{
+  content:"";
+  position:fixed; inset:0;
+  pointer-events:none;
+  z-index:-2;
+  background:
+    radial-gradient(1200px 900px at 50% 40%, rgba(0,0,0,0) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.60) 100%),
+    repeating-radial-gradient(circle at 20% 24%,
+      rgba(255,255,255,.030) 0 1px,
+      transparent 1px 7px),
+    repeating-radial-gradient(circle at 76% 68%,
+      rgba(138,46,255,.024) 0 1px,
+      transparent 1px 8px),
+    repeating-linear-gradient(0deg,
+      rgba(255,255,255,.018) 0 1px,
+      transparent 1px 4px);
+  mix-blend-mode:overlay;
+  opacity:.55;
+}
+
+/* header */
+header{
+  position:fixed;
+  top:0; left:0; width:100%;
+  display:flex; justify-content:center; gap:26px;
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(10px);
+  padding:14px 16px;
+  z-index:10;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+header a{
+  color:#fff; text-decoration:none;
+  font-size:12px; letter-spacing:.25em; text-transform:uppercase;
+  opacity:.82; transition:.2s;
+}
+header a:hover{opacity:1}
+
+/* wrap */
+.wrap{
+  max-width:var(--max);
+  margin:auto;
+  padding:86px 18px 100px;
+  position:relative;
+  z-index:1;
+}
+
+/* title block */
+.top{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:18px;
+  flex-wrap:wrap;
+  margin:8px 0 22px;
+}
+.h1{
+  margin:0;
+  font-size:clamp(26px,4vw,44px);
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  text-shadow:0 0 18px rgba(138,46,255,.22);
+}
+.sub{
+  margin:8px 0 0;
+  font-size:12px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  opacity:.62;
+  line-height:1.5;
+  max-width:60ch;
+}
+.controls{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.pill{
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.03);
+  padding:10px 14px;
+  border-radius:999px;
+  font-size:11px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:#fff;
+  opacity:.9;
+}
+button.pill{
+  cursor:pointer;
+  transition:.2s;
+}
+button.pill:hover{transform:translateY(-1px); background:rgba(138,46,255,.08)}
+.pill.violet{background:rgba(138,46,255,.10); border-color:rgba(138,46,255,.20)}
+
+/* gallery stage */
+.stage{
+  position:relative;
+  border-radius:28px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.02);
+  box-shadow: 0 0 0 1px rgba(138,46,255,.06) inset;
+  min-height: clamp(520px, 70vh, 760px);
+}
+
+/* star canvas layers */
+canvas#stars, canvas#shooters{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+}
+canvas#stars{z-index:0; opacity:.85}
+canvas#shooters{z-index:1; opacity:.9}
+
+/* soft spotlight that follows pointer */
+.spot{
+  position:absolute;
+  inset:-40%;
+  z-index:0;
+  pointer-events:none;
+  background:radial-gradient(circle at var(--x,50%) var(--y,50%), rgba(138,46,255,.10), transparent 60%);
+  mix-blend-mode:screen;
+  filter:blur(2px);
+}
+
+/* cards layout: curated chaos */
+.grid{
+  position:relative;
+  z-index:2;
+  height:100%;
+  padding:18px;
+}
+
+.card{
+  position:absolute;
+  width: min(320px, 78vw);
+  border-radius:22px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.45);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 16px 50px rgba(0,0,0,.45),
+    0 0 0 1px rgba(138,46,255,.06) inset;
+  transform: translate3d(0,0,0);
+  transition: transform .22s ease, filter .22s ease, opacity .22s ease;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.card:hover{
+  transform: translate3d(0,-2px,0) scale(1.01) rotate(var(--r));
+  filter: brightness(1.05);
+}
+.card:active{transform: translate3d(0,0,0) scale(.99) rotate(var(--r))}
+.card a{color:#fff; text-decoration:none; display:block}
+
+.cover{
+  position:relative;
+  height: 170px;
+  background:#0b0b10;
+  overflow:hidden;
+}
+.cover img{
+  width:100%; height:100%;
+  object-fit:cover;
+  display:block;
+  filter: saturate(1.05) contrast(1.04);
+  opacity:.95;
+}
+.cover::after{
+  content:"";
+  position:absolute; inset:0;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.55) 100%),
+    radial-gradient(circle at 20% 20%, rgba(138,46,255,.22), transparent 55%),
+    radial-gradient(circle at 80% 30%, rgba(0,255,213,.10), transparent 60%);
+  mix-blend-mode:screen;
+  pointer-events:none;
+}
+
+.meta{
+  padding:14px 14px 12px;
+}
+.title{
+  margin:0;
+  letter-spacing:.20em;
+  text-transform:uppercase;
+  font-size:12px;
+}
+.desc{
+  margin:8px 0 0;
+  font-size:12px;
+  opacity:.70;
+  line-height:1.45;
+}
+.tags{
+  display:flex; flex-wrap:wrap;
+  gap:8px;
+  margin-top:12px;
+}
+.tag{
+  font-size:10px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  padding:7px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.03);
+  opacity:.88;
+}
+.tag.v{border-color:rgba(138,46,255,.25); background:rgba(138,46,255,.08)}
+.tag.c{border-color:rgba(0,255,213,.22); background:rgba(0,255,213,.06)}
+
+/* floating drift */
+@keyframes driftCard{
+  0%,100%{transform:translate3d(0,0,0) rotate(var(--r))}
+  50%{transform:translate3d(var(--dx), var(--dy),0) rotate(var(--r))}
+}
+.floaty{ animation: driftCard 7.8s ease-in-out infinite; }
+
+/* footer hint */
+.foot{
+  margin-top:16px;
+  text-align:center;
+  font-size:11px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  opacity:.55;
+}
+
+/* small screens: stack cards nicely */
+@media(max-width:720px){
+  .stage{min-height: 920px}
+  .card{position:relative; width:100%; margin:14px 0}
+  .grid{padding:14px}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <a href="index.html">HOME</a>
+  <a href="listen.html">LISTEN</a>
+  <a href="shop.html">SHOP</a>
+  <a href="follow.html">FOLLOW</a>
+</header>
+
+<main class="wrap">
+  <div class="top">
+    <div>
+      <h1 class="h1">RANDOM PAGES</h1>
+      <p class="sub">An exhibit of side-realms. Some are games. Some are glitches. Some are… unfinished doors.</p>
+    </div>
+
+    <div class="controls">
+      <span class="pill violet" id="countPill">9 RELICS</span>
+      <button class="pill" id="shuffleBtn">RESHUFFLE</button>
+      <button class="pill" id="calmBtn">CALM: ON</button>
+    </div>
+  </div>
+
+  <section class="stage" id="stage">
+    <div class="spot" id="spot"></div>
+    <canvas id="stars"></canvas>
+    <canvas id="shooters"></canvas>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <div class="foot">Tip: hover (or tap) to feel which ones are alive.</div>
+</main>
+
+<script>
+/* --------- curated list (edit these later freely) --------- */
+/* Put images in /images/random/  (or change paths). If missing, the cover auto-generates. */
+const items = [
+  { href:"mystery.html",  title:"MYSTERY",  desc:"Realm hopper. Buttons do things. Reality shrugs.", tags:["realm","chaos"], cover:"images/random/mystery.jpg" },
+  { href:"trapped.html",  title:"TRAPPED",  desc:"A page that watches you back. Don’t blink late.", tags:["horror","meta"], cover:"images/random/trapped.jpg" },
+
+  { href:"random_01.html", title:"STATIC GARDEN", desc:"A calm page that slowly becomes not calm.", tags:["ambient","drift"], cover:"images/random/static-garden.jpg" },
+  { href:"random_02.html", title:"GLASS RADIO",   desc:"Tune a frequency. Hear a voice that shouldn’t exist.", tags:["audio","signal"], cover:"images/random/glass-radio.jpg" },
+  { href:"random_03.html", title:"DREAM RECEIPT", desc:"A receipt printer for memories. Tear to forget.", tags:["weird","story"], cover:"images/random/dream-receipt.jpg" },
+  { href:"random_04.html", title:"VIOLET ORBIT",  desc:"A planet you can drag. It pulls the UI with gravity.", tags:["space","toy"], cover:"images/random/violet-orbit.jpg" },
+  { href:"random_05.html", title:"ECHO LIFT",     desc:"A silent elevator. Floor buttons whisper back.", tags:["liminal","loop"], cover:"images/random/echo-lift.jpg" },
+  { href:"random_06.html", title:"BONE WI-FI",    desc:"Connect. Get a password you don’t want to know.", tags:["glitch","network"], cover:"images/random/bone-wifi.jpg" },
+  { href:"random_07.html", title:"NEON CONFESS",  desc:"Type one sentence. It answers with another.", tags:["text","oracle"], cover:"images/random/neon-confess.jpg" },
+];
+
+const grid = document.getElementById("grid");
+const stage = document.getElementById("stage");
+const countPill = document.getElementById("countPill");
+countPill.textContent = items.length + " RELICS";
+
+/* --------- spotlight follows pointer --------- */
+document.addEventListener("pointermove", (e)=>{
+  const r = stage.getBoundingClientRect();
+  const x = ((e.clientX - r.left) / r.width) * 100;
+  const y = ((e.clientY - r.top) / r.height) * 100;
+  stage.style.setProperty("--x", x+"%");
+  stage.style.setProperty("--y", y+"%");
+});
+
+/* --------- cover fallback (procedural gradient) --------- */
+function fallbackCover(seed){
+  // tiny deterministic color-ish
+  let s = 0;
+  for (let i=0;i<seed.length;i++) s = (s*31 + seed.charCodeAt(i)) >>> 0;
+  const a = (s % 360);
+  const b = (a + 70 + (s%40)) % 360;
+  return `linear-gradient(135deg,
+    hsla(${a}, 88%, 55%, .28),
+    transparent 55%),
+    radial-gradient(circle at 70% 35%,
+    hsla(${b}, 90%, 60%, .22),
+    transparent 60%),
+    radial-gradient(circle at 25% 70%,
+    rgba(255,255,255,.10),
+    transparent 60%),
+    linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.55))`;
+}
+
+/* --------- place cards (desktop collage) --------- */
+let calm = true;
+
+function makeCard(it, idx){
+  const el = document.createElement("div");
+  el.className = "card floaty";
+  el.style.setProperty("--r", (Math.random()*2-1).toFixed(2)+"deg");
+  el.style.setProperty("--dx", ((Math.random()*2-1)*8).toFixed(1)+"px");
+  el.style.setProperty("--dy", ((Math.random()*2-1)*10).toFixed(1)+"px");
+  el.style.animationDelay = (Math.random()*1.8).toFixed(2)+"s";
+
+  // random size variance, still “not overwhelming”
+  const w = 260 + Math.random()*110;
+  el.style.width = w.toFixed(0)+"px";
+
+  // cover
+  const coverStyle = fallbackCover(it.title);
+  el.innerHTML = `
+    <a href="${it.href}">
+      <div class="cover" data-cover="${it.cover}" style="background:${coverStyle}">
+        <img alt="${it.title} cover" style="display:none" />
+      </div>
+      <div class="meta">
+        <h3 class="title">${it.title}</h3>
+        <p class="desc">${it.desc}</p>
+        <div class="tags">
+          ${(it.tags||[]).slice(0,2).map((t,i)=>`<span class="tag ${i===0?'v':'c'}">${t}</span>`).join("")}
+        </div>
+      </div>
+    </a>
+  `;
+  return el;
+}
+
+function layoutCollage(){
+  grid.innerHTML = "";
+
+  // mobile stack mode: let CSS handle
+  if (matchMedia("(max-width:720px)").matches){
+    items.forEach((it,idx)=>{
+      const c = makeCard(it,idx);
+      c.style.position="relative";
+      c.style.left="auto";
+      c.style.top="auto";
+      c.style.transform="none";
+      if(!calm) c.classList.remove("floaty");
+      grid.appendChild(c);
+      loadCover(c);
+    });
+    return;
+  }
+
+  const r = stage.getBoundingClientRect();
+  const pad = 18;
+  const W = r.width - pad*2;
+  const H = Math.max(520, r.height - pad*2);
+
+  // curated anchor points (feel like an art wall)
+  const points = [
+    [0.08,0.10],[0.44,0.08],[0.72,0.12],
+    [0.12,0.46],[0.46,0.38],[0.78,0.44],
+    [0.10,0.76],[0.46,0.74],[0.76,0.78]
+  ];
+
+  items.forEach((it,idx)=>{
+    const c = makeCard(it,idx);
+
+    // place around anchor with a little jitter
+    const p = points[idx % points.length];
+    const jitterX = (Math.random()*2-1)*0.05;
+    const jitterY = (Math.random()*2-1)*0.05;
+
+    const left = (p[0]+jitterX) * W;
+    const top  = (p[1]+jitterY) * H;
+
+    c.style.left = (pad + left) + "px";
+    c.style.top  = (pad + top) + "px";
+
+    // z-depth
+    c.style.zIndex = (10 + Math.floor(Math.random()*20)).toString();
+
+    if(!calm) c.classList.remove("floaty");
+
+    grid.appendChild(c);
+    loadCover(c);
+  });
+}
+
+function loadCover(card){
+  const cover = card.querySelector(".cover");
+  const img = cover.querySelector("img");
+  const src = cover.getAttribute("data-cover");
+  if(!src) return;
+
+  img.onload = ()=>{
+    img.style.display="block";
+  };
+  img.onerror = ()=>{
+    // keep procedural bg
+  };
+  img.src = src;
+}
+
+/* --------- shuffle / calm toggles --------- */
+document.getElementById("shuffleBtn").onclick = ()=>{
+  // Fisher-Yates
+  for(let i=items.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  layoutCollage();
+};
+
+document.getElementById("calmBtn").onclick = (e)=>{
+  calm = !calm;
+  e.target.textContent = "CALM: " + (calm ? "ON" : "OFF");
+  // calm OFF = no drift, slightly more “poster wall”
+  layoutCollage();
+};
+
+/* --------- starfields (subtle) --------- */
+const starCv = document.getElementById("stars");
+const starCtx = starCv.getContext("2d");
+const shootCv = document.getElementById("shooters");
+const shootCtx = shootCv.getContext("2d");
+
+let dpr=1, stars=[], shooters=[];
+function resizeCanv(){
+  const r = stage.getBoundingClientRect();
+  dpr = Math.max(1, Math.min(2, devicePixelRatio||1));
+
+  for(const cv of [starCv, shootCv]){
+    cv.width = Math.floor(r.width*dpr);
+    cv.height = Math.floor(r.height*dpr);
+    cv.style.width = r.width+"px";
+    cv.style.height = r.height+"px";
+  }
+
+  stars = [];
+  const n = Math.floor((r.width*r.height)/9000); // subtle density
+  for(let i=0;i<n;i++){
+    stars.push({
+      x: Math.random()*r.width,
+      y: Math.random()*r.height,
+      r: Math.random()*1.2 + 0.2,
+      a: Math.random()*0.55 + 0.10,
+      tw: Math.random()*1.6 + 0.4,
+      hue: Math.random()<0.18 ? "vio" : (Math.random()<0.12 ? "cyan" : "w")
+    });
+  }
+}
+addEventListener("resize", resizeCanv);
+resizeCanv();
+
+function drawStars(t){
+  const r = stage.getBoundingClientRect();
+  starCtx.setTransform(dpr,0,0,dpr,0,0);
+  starCtx.clearRect(0,0,r.width,r.height);
+
+  for(const s of stars){
+    const tw = (Math.sin(t*s.tw + s.x*0.02)+1)*0.5; // 0..1
+    const a = s.a * (0.55 + tw*0.65);
+    let col = `rgba(255,255,255,${a})`;
+    if(s.hue==="vio") col = `rgba(138,46,255,${a*0.9})`;
+    if(s.hue==="cyan") col = `rgba(0,255,213,${a*0.75})`;
+
+    starCtx.fillStyle = col;
+    starCtx.fillRect(s.x, s.y, s.r, s.r);
+  }
+}
+
+function spawnShooter(){
+  const r = stage.getBoundingClientRect();
+  const fromLeft = Math.random()<0.5;
+  const x = fromLeft ? -40 : r.width+40;
+  const y = Math.random()*r.height*0.6;
+  const vx = fromLeft ? (4+Math.random()*3) : -(4+Math.random()*3);
+  const vy = 1.2 + Math.random()*1.8;
+
+  shooters.push({
+    x,y,vx,vy,
+    life: 0,
+    max: 42 + Math.random()*28,
+    w: 90 + Math.random()*110
+  });
+}
+
+function drawShooters(){
+  const r = stage.getBoundingClientRect();
+  shootCtx.setTransform(dpr,0,0,dpr,0,0);
+  shootCtx.clearRect(0,0,r.width,r.height);
+
+  for(const sh of shooters){
+    sh.x += sh.vx;
+    sh.y += sh.vy;
+    sh.life++;
+
+    const a = Math.max(0, 1 - sh.life/sh.max) * 0.75;
+    const tx = sh.x, ty = sh.y;
+    const ex = sh.x - sh.vx*sh.w*0.12;
+    const ey = sh.y - sh.vy*sh.w*0.12;
+
+    const g = shootCtx.createLinearGradient(tx,ty,ex,ey);
+    g.addColorStop(0, `rgba(255,255,255,${a})`);
+    g.addColorStop(1, `rgba(138,46,255,0)`);
+
+    shootCtx.strokeStyle = g;
+    shootCtx.lineWidth = 2;
+    shootCtx.beginPath();
+    shootCtx.moveTo(tx,ty);
+    shootCtx.lineTo(ex,ey);
+    shootCtx.stroke();
+
+    // little head sparkle
+    shootCtx.fillStyle = `rgba(255,255,255,${a})`;
+    shootCtx.fillRect(tx,ty,2,2);
+  }
+
+  shooters = shooters.filter(s=>s.life < s.max);
+}
+
+let lastSpawn=0;
+function raf(ts){
+  const t = ts/1000;
+  drawStars(t);
+
+  // occasional shooter (subtle)
+  if(t - lastSpawn > 3.2 + Math.random()*3.8){
+    if(Math.random()<0.8) spawnShooter();
+    lastSpawn = t;
+  }
+  drawShooters();
+
+  requestAnimationFrame(raf);
+}
+requestAnimationFrame(raf);
+
+/* --------- init layout --------- */
+layoutCollage();
+addEventListener("resize", ()=>setTimeout(layoutCollage, 50));
+</script>
+
+</body>
+</html>
 
