@@ -367,6 +367,36 @@ function meow(){
 toast("Milo: meow (he wants outside)");
 }
 
+/* ---------- NEW: on-object proximity label + bottom nav hint (no layout change) ---------- */
+function drawHintBubble(text,x,y){
+  const pad=3;
+  ctx.font="8px ui-monospace, monospace";
+  const m=ctx.measureText(text);
+  const w=Math.ceil(m.width)+pad*2, h=12;
+  const bx=((x-w/2)|0), by=((y-h)|0);
+  ctx.fillStyle="rgba(0,0,0,.68)"; ctx.fillRect(bx,by,w,h);
+  ctx.strokeStyle="rgba(255,255,255,.14)"; ctx.strokeRect(bx+0.5,by+0.5,w-1,h-1);
+  ctx.fillStyle="rgba(255,255,255,.92)"; ctx.fillText(text,(bx+pad)|0,(by+8)|0);
+}
+function zonePrettyName(z){
+  if(!z) return "";
+  if(z.name==="DOOR_BATH") return "DOOR → BATHROOM";
+  if(z.name==="DOOR_LIVING") return "DOOR → LIVING ROOM";
+  if(z.name==="DOOR_YARD") return "DOOR → YARD";
+  if(z.name==="DESK") return "DESK (poetry)";
+  if(z.name==="BED") return "BED (sleep)";
+  if(z.name==="GUITAR") return "GUITAR (play)";
+  if(z.name==="CLOTHES") return "CLOTHES (wardrobe)";
+  return z.name;
+}
+function showZoneToast(z){
+  if(!z) return;
+  // tiny anti-spam: only toast when changed
+  if(showZoneToast._last===z.name) return;
+  showZoneToast._last=z.name;
+  toast(zonePrettyName(z));
+}
+
 /* ---------- render polish helpers ---------- */
 function pxNoiseStripe(y, a){
   ctx.fillStyle=`rgba(255,255,255,${a})`;
@@ -435,6 +465,14 @@ ctx.fillStyle="rgba(255,255,255,.05)";
 ctx.fillRect(124,134,70,24);
 
 vignette();
+
+/* NEW: draw proximity label on the actual object when near */
+const z=nearest();
+if(z){
+  const cx=z.rect[0]+z.rect[2]/2;
+  const cy=z.rect[1]-2; // above object
+  drawHintBubble("E • " + zonePrettyName(z), cx, cy);
+}
 }
 
 function rect(x,y,w,h){
@@ -624,6 +662,10 @@ let dx=(keysDown.has("d")||keysDown.has("arrowright")?sp:0)-(keysDown.has("a")||
 let dy=(keysDown.has("s")||keysDown.has("arrowdown")?sp:0)-(keysDown.has("w")||keysDown.has("arrowup")?sp:0);
 move(dx,dy);
 }
+
+/* NEW: when you get near something, we also show the name in the bottom toast (so you can’t miss it) */
+const z=nearest();
+showZoneToast(z);
 
 /* interact */
 if(keysDown.has("e")&&!loop.e){interact();loop.e=1;}
