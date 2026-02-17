@@ -13,9 +13,10 @@
   --hair:rgba(255,255,255,.10);
   --violet:#8a2eff;
   --cyan:#00ffd5;
-  --max:1180px;
+  --max:1100px;
   --sans:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
 }
+
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
@@ -28,19 +29,20 @@ body{
   isolation:isolate;
 }
 
-/* violet atmosphere */
+/* same clawboi atmosphere */
 body::before{
   content:"";
-  position:fixed; inset:-20%;
+  position:fixed;
+  inset:-20%;
   pointer-events:none;
   z-index:-3;
   background:
-    radial-gradient(circle at 18% 18%, rgba(138,46,255,.22), transparent 60%),
-    radial-gradient(circle at 78% 28%, rgba(138,46,255,.16), transparent 65%),
-    radial-gradient(circle at 55% 88%, rgba(138,46,255,.14), transparent 70%),
-    radial-gradient(circle at 68% 72%, rgba(0,255,213,.08), transparent 70%);
+    radial-gradient(circle at 18% 18%, rgba(138,46,255,.20), transparent 60%),
+    radial-gradient(circle at 78% 28%, rgba(138,46,255,.14), transparent 65%),
+    radial-gradient(circle at 55% 88%, rgba(138,46,255,.12), transparent 70%),
+    radial-gradient(circle at 68% 72%, rgba(0,255,213,.07), transparent 70%);
   mix-blend-mode:screen;
-  filter:blur(14px) saturate(1.25);
+  filter:blur(14px) saturate(1.2);
   animation:breath 18s ease-in-out infinite;
 }
 @keyframes breath{
@@ -48,32 +50,32 @@ body::before{
   50%{opacity:.45; transform:translate3d(0.8%,-0.6%,0)}
 }
 
-/* subtle galaxy texture */
+/* subtle texture/vignette */
 body::after{
   content:"";
-  position:fixed; inset:0;
+  position:fixed;
+  inset:0;
   pointer-events:none;
   z-index:-2;
   background:
     radial-gradient(1200px 900px at 50% 40%, rgba(0,0,0,0) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.60) 100%),
     repeating-radial-gradient(circle at 20% 24%,
-      rgba(255,255,255,.030) 0 1px,
+      rgba(255,255,255,.028) 0 1px,
       transparent 1px 7px),
-    repeating-radial-gradient(circle at 76% 68%,
-      rgba(138,46,255,.024) 0 1px,
-      transparent 1px 8px),
     repeating-linear-gradient(0deg,
-      rgba(255,255,255,.018) 0 1px,
+      rgba(255,255,255,.016) 0 1px,
       transparent 1px 4px);
   mix-blend-mode:overlay;
   opacity:.55;
 }
 
-/* header */
+a{color:#fff;text-decoration:none}
+
+/* NAV (kept similar) */
 header{
   position:fixed;
-  top:0; left:0; width:100%;
-  display:flex; justify-content:center; gap:26px;
+  top:0;left:0;width:100%;
+  display:flex;justify-content:center;gap:30px;
   background:rgba(0,0,0,.55);
   backdrop-filter:blur(10px);
   padding:14px 16px;
@@ -81,33 +83,34 @@ header{
   border-bottom:1px solid rgba(255,255,255,.06);
 }
 header a{
-  color:#fff; text-decoration:none;
-  font-size:12px; letter-spacing:.25em; text-transform:uppercase;
-  opacity:.82; transition:.2s;
+  font-size:12px;
+  letter-spacing:.25em;
+  text-transform:uppercase;
+  opacity:.85;
 }
 header a:hover{opacity:1}
 
-/* wrap */
+/* WRAP */
 .wrap{
   max-width:var(--max);
   margin:auto;
-  padding:86px 18px 100px;
+  padding:84px 18px 100px;
   position:relative;
   z-index:1;
 }
 
-/* title block */
+/* TOP */
 .top{
   display:flex;
-  align-items:flex-end;
   justify-content:space-between;
-  gap:18px;
+  align-items:flex-end;
+  gap:14px;
   flex-wrap:wrap;
-  margin:8px 0 22px;
+  margin:6px 0 18px;
 }
 .h1{
   margin:0;
-  font-size:clamp(26px,4vw,44px);
+  font-size:clamp(24px,4vw,42px);
   letter-spacing:.22em;
   text-transform:uppercase;
   text-shadow:0 0 18px rgba(138,46,255,.22);
@@ -118,9 +121,11 @@ header a:hover{opacity:1}
   letter-spacing:.16em;
   text-transform:uppercase;
   opacity:.62;
-  line-height:1.5;
-  max-width:60ch;
+  line-height:1.55;
+  max-width:70ch;
 }
+
+/* CONTROLS */
 .controls{
   display:flex;
   gap:10px;
@@ -128,6 +133,9 @@ header a:hover{opacity:1}
   flex-wrap:wrap;
 }
 .pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
   border:1px solid rgba(255,255,255,.12);
   background:rgba(255,255,255,.03);
   padding:10px 14px;
@@ -142,10 +150,30 @@ button.pill{
   cursor:pointer;
   transition:.2s;
 }
-button.pill:hover{transform:translateY(-1px); background:rgba(138,46,255,.08)}
-.pill.violet{background:rgba(138,46,255,.10); border-color:rgba(138,46,255,.20)}
+button.pill:hover{
+  transform:translateY(-1px);
+  background:rgba(138,46,255,.08);
+  border-color:rgba(138,46,255,.18);
+}
+.pill.violet{
+  background:rgba(138,46,255,.10);
+  border-color:rgba(138,46,255,.20);
+}
+.input{
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.35);
+  backdrop-filter: blur(8px);
+  color:#fff;
+  border-radius:999px;
+  padding:10px 12px;
+  font-size:12px;
+  letter-spacing:.10em;
+  outline:none;
+  width:min(240px, 70vw);
+}
+.input::placeholder{color:rgba(255,255,255,.45); letter-spacing:.12em; text-transform:uppercase}
 
-/* gallery stage */
+/* STAGE */
 .stage{
   position:relative;
   border-radius:28px;
@@ -153,94 +181,74 @@ button.pill:hover{transform:translateY(-1px); background:rgba(138,46,255,.08)}
   border:1px solid rgba(255,255,255,.08);
   background:rgba(255,255,255,.02);
   box-shadow: 0 0 0 1px rgba(138,46,255,.06) inset;
-  min-height: clamp(520px, 70vh, 760px);
 }
 
-/* star canvas layers */
-canvas#stars, canvas#shooters{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
+/* subtle star noise (no floating, no big motion) */
+#stars{
+  position:absolute; inset:0;
+  width:100%; height:100%;
   pointer-events:none;
-}
-canvas#stars{z-index:0; opacity:.85}
-canvas#shooters{z-index:1; opacity:.9}
-
-/* soft spotlight that follows pointer */
-.spot{
-  position:absolute;
-  inset:-40%;
-  z-index:0;
-  pointer-events:none;
-  background:radial-gradient(circle at var(--x,50%) var(--y,50%), rgba(138,46,255,.10), transparent 60%);
-  mix-blend-mode:screen;
-  filter:blur(2px);
+  opacity:.85;
 }
 
-/* cards layout: curated chaos */
+/* GRID */
 .grid{
   position:relative;
   z-index:2;
-  height:100%;
-  padding:18px;
+  padding:16px;
+  display:grid;
+  gap:14px;
+  grid-template-columns: repeat(4, minmax(0,1fr));
 }
+@media(max-width:980px){ .grid{grid-template-columns:repeat(3,1fr)} }
+@media(max-width:720px){ .grid{grid-template-columns:repeat(2,1fr)} }
+@media(max-width:420px){ .grid{grid-template-columns:1fr} }
 
 .card{
-  position:absolute;
-  width: min(320px, 78vw);
   border-radius:22px;
   overflow:hidden;
   border:1px solid rgba(255,255,255,.10);
-  background:rgba(0,0,0,.45);
+  background:rgba(0,0,0,.38);
   backdrop-filter: blur(10px);
-  box-shadow:
-    0 16px 50px rgba(0,0,0,.45),
-    0 0 0 1px rgba(138,46,255,.06) inset;
-  transform: translate3d(0,0,0);
-  transition: transform .22s ease, filter .22s ease, opacity .22s ease;
+  box-shadow: 0 16px 44px rgba(0,0,0,.45), 0 0 0 1px rgba(138,46,255,.05) inset;
+  transform:translate3d(0,0,0);
+  transition: filter .18s ease, transform .18s ease, border-color .18s ease;
   user-select:none;
-  -webkit-tap-highlight-color:transparent;
+  -webkit-tap-highlight-color: transparent;
 }
 .card:hover{
-  transform: translate3d(0,-2px,0) scale(1.01) rotate(var(--r));
-  filter: brightness(1.05);
+  filter:brightness(1.06);
+  border-color:rgba(138,46,255,.18);
 }
-.card:active{transform: translate3d(0,0,0) scale(.99) rotate(var(--r))}
-.card a{color:#fff; text-decoration:none; display:block}
+.card:active{transform:scale(.99)}
 
 .cover{
   position:relative;
-  height: 170px;
   background:#0b0b10;
-  overflow:hidden;
+  aspect-ratio: 3/4;
+  display:grid;
+  place-items:center;
+  padding:10px;
 }
-.cover img{
-  width:100%; height:100%;
-  object-fit:cover;
-  display:block;
-  filter: saturate(1.05) contrast(1.04);
-  opacity:.95;
-}
-.cover::after{
-  content:"";
-  position:absolute; inset:0;
-  background:
-    linear-gradient(180deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.55) 100%),
-    radial-gradient(circle at 20% 20%, rgba(138,46,255,.22), transparent 55%),
-    radial-gradient(circle at 80% 30%, rgba(0,255,213,.10), transparent 60%);
-  mix-blend-mode:screen;
-  pointer-events:none;
+.cover canvas{
+  width:100%;
+  height:100%;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.10);
+  background:#07070b;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.25) inset;
 }
 
 .meta{
-  padding:14px 14px 12px;
+  padding:12px 12px 14px;
 }
 .title{
   margin:0;
+  font-size:12px;
   letter-spacing:.20em;
   text-transform:uppercase;
-  font-size:12px;
 }
 .desc{
   margin:8px 0 0;
@@ -248,12 +256,14 @@ canvas#shooters{z-index:1; opacity:.9}
   opacity:.70;
   line-height:1.45;
 }
-.tags{
-  display:flex; flex-wrap:wrap;
-  gap:8px;
+.row{
   margin-top:12px;
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center;
 }
-.tag{
+.badge{
   font-size:10px;
   letter-spacing:.18em;
   text-transform:uppercase;
@@ -263,37 +273,22 @@ canvas#shooters{z-index:1; opacity:.9}
   background:rgba(255,255,255,.03);
   opacity:.88;
 }
-.tag.v{border-color:rgba(138,46,255,.25); background:rgba(138,46,255,.08)}
-.tag.c{border-color:rgba(0,255,213,.22); background:rgba(0,255,213,.06)}
+.badge.v{border-color:rgba(138,46,255,.22); background:rgba(138,46,255,.08)}
+.badge.c{border-color:rgba(0,255,213,.18); background:rgba(0,255,213,.06)}
 
-/* floating drift */
-@keyframes driftCard{
-  0%,100%{transform:translate3d(0,0,0) rotate(var(--r))}
-  50%{transform:translate3d(var(--dx), var(--dy),0) rotate(var(--r))}
-}
-.floaty{ animation: driftCard 7.8s ease-in-out infinite; }
-
-/* footer hint */
 .foot{
-  margin-top:16px;
+  margin-top:14px;
   text-align:center;
   font-size:11px;
   letter-spacing:.18em;
   text-transform:uppercase;
   opacity:.55;
-}
-
-/* small screens: stack cards nicely */
-@media(max-width:720px){
-  .stage{min-height: 920px}
-  .card{position:relative; width:100%; margin:14px 0}
-  .grid{padding:14px}
+  padding-bottom:4px;
 }
 </style>
 </head>
 
 <body>
-
 <header>
   <a href="index.html">HOME</a>
   <a href="listen.html">LISTEN</a>
@@ -305,317 +300,412 @@ canvas#shooters{z-index:1; opacity:.9}
   <div class="top">
     <div>
       <h1 class="h1">RANDOM PAGES</h1>
-      <p class="sub">An exhibit of side-realms. Some are games. Some are glitches. Some are… unfinished doors.</p>
+      <p class="sub">A 54-card deck of side-realms. Shuffle the draw. Type a number to open a card instantly.</p>
     </div>
 
     <div class="controls">
-      <span class="pill violet" id="countPill">9 RELICS</span>
-      <button class="pill" id="shuffleBtn">RESHUFFLE</button>
-      <button class="pill" id="calmBtn">CALM: ON</button>
+      <span class="pill violet" id="modePill">SHOW: 4</span>
+      <button class="pill" id="modeBtn">1 / 4 / 12 / 54</button>
+      <button class="pill" id="shuffleBtn">SHUFFLE</button>
+      <input class="input" id="jumpInput" placeholder="type card # (1–54) + enter" inputmode="numeric" />
     </div>
   </div>
 
   <section class="stage" id="stage">
-    <div class="spot" id="spot"></div>
     <canvas id="stars"></canvas>
-    <canvas id="shooters"></canvas>
     <div class="grid" id="grid"></div>
   </section>
 
-  <div class="foot">Tip: hover (or tap) to feel which ones are alive.</div>
+  <div class="foot" id="foot">Enter a number to open a page. If a page doesn’t exist yet, it’ll still route there so you can build it later.</div>
 </main>
 
 <script>
-/* --------- curated list (edit these later freely) --------- */
-/* Put images in /images/random/  (or change paths). If missing, the cover auto-generates. */
-const items = [
-  { href:"mystery.html",  title:"MYSTERY",  desc:"Realm hopper. Buttons do things. Reality shrugs.", tags:["realm","chaos"], cover:"images/random/mystery.jpg" },
-  { href:"trapped.html",  title:"TRAPPED",  desc:"A page that watches you back. Don’t blink late.", tags:["horror","meta"], cover:"images/random/trapped.jpg" },
+/* =========================================================
+   54-CARD DECK (no images, fast)
+   - Card 01 = mystery.html
+   - Card 02 = trapped.html
+   - The rest are placeholders like card03.html ... card54.html
+   Rename later freely.
+========================================================= */
 
-  { href:"random_01.html", title:"STATIC GARDEN", desc:"A calm page that slowly becomes not calm.", tags:["ambient","drift"], cover:"images/random/static-garden.jpg" },
-  { href:"random_02.html", title:"GLASS RADIO",   desc:"Tune a frequency. Hear a voice that shouldn’t exist.", tags:["audio","signal"], cover:"images/random/glass-radio.jpg" },
-  { href:"random_03.html", title:"DREAM RECEIPT", desc:"A receipt printer for memories. Tear to forget.", tags:["weird","story"], cover:"images/random/dream-receipt.jpg" },
-  { href:"random_04.html", title:"VIOLET ORBIT",  desc:"A planet you can drag. It pulls the UI with gravity.", tags:["space","toy"], cover:"images/random/violet-orbit.jpg" },
-  { href:"random_05.html", title:"ECHO LIFT",     desc:"A silent elevator. Floor buttons whisper back.", tags:["liminal","loop"], cover:"images/random/echo-lift.jpg" },
-  { href:"random_06.html", title:"BONE WI-FI",    desc:"Connect. Get a password you don’t want to know.", tags:["glitch","network"], cover:"images/random/bone-wifi.jpg" },
-  { href:"random_07.html", title:"NEON CONFESS",  desc:"Type one sentence. It answers with another.", tags:["text","oracle"], cover:"images/random/neon-confess.jpg" },
-];
+const deck = [];
+for(let i=1;i<=54;i++){
+  const n = String(i).padStart(2,"0");
+  let href = `card${n}.html`;          // placeholders you can create later
+  let title = `CARD ${n}`;
+  let desc  = `A sealed door (${n}).`;
+
+  if(i===1){ href="mystery.html"; title="MYSTERY"; desc="Realm hopper. Buttons do things."; }
+  if(i===2){ href="trapped.html"; title="TRAPPED"; desc="A page that watches you back."; }
+
+  // sprinkle a little flavor without forcing you into titles
+  const flavors = [
+    "signal", "liminal", "oracle", "glitch", "dream", "void",
+    "mirror", "door", "radio", "rift", "archive", "myth"
+  ];
+  const f = flavors[i % flavors.length];
+  deck.push({
+    i,
+    id: i,
+    href,
+    title,
+    desc,
+    tag: (i%2===0) ? "violet" : "cyan",
+    flavor: f
+  });
+}
+
+/* =========================================================
+   UI: show modes (1 / 4 / 12 / 54), shuffle, jump-to
+========================================================= */
 
 const grid = document.getElementById("grid");
-const stage = document.getElementById("stage");
-const countPill = document.getElementById("countPill");
-countPill.textContent = items.length + " RELICS";
+const modeBtn = document.getElementById("modeBtn");
+const modePill = document.getElementById("modePill");
+const shuffleBtn = document.getElementById("shuffleBtn");
+const jumpInput = document.getElementById("jumpInput");
+const foot = document.getElementById("foot");
 
-/* --------- spotlight follows pointer --------- */
-document.addEventListener("pointermove", (e)=>{
-  const r = stage.getBoundingClientRect();
-  const x = ((e.clientX - r.left) / r.width) * 100;
-  const y = ((e.clientY - r.top) / r.height) * 100;
-  stage.style.setProperty("--x", x+"%");
-  stage.style.setProperty("--y", y+"%");
-});
+const modes = [1,4,12,54];
+let modeIndex = 1; // default show 4
+let showCount = modes[modeIndex];
 
-/* --------- cover fallback (procedural gradient) --------- */
-function fallbackCover(seed){
-  // tiny deterministic color-ish
-  let s = 0;
-  for (let i=0;i<seed.length;i++) s = (s*31 + seed.charCodeAt(i)) >>> 0;
-  const a = (s % 360);
-  const b = (a + 70 + (s%40)) % 360;
-  return `linear-gradient(135deg,
-    hsla(${a}, 88%, 55%, .28),
-    transparent 55%),
-    radial-gradient(circle at 70% 35%,
-    hsla(${b}, 90%, 60%, .22),
-    transparent 60%),
-    radial-gradient(circle at 25% 70%,
-    rgba(255,255,255,.10),
-    transparent 60%),
-    linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.55))`;
+function setMode(idx){
+  modeIndex = idx % modes.length;
+  showCount = modes[modeIndex];
+  modePill.textContent = `SHOW: ${showCount}`;
+  // adjust grid columns slightly by count (keeps it clean)
+  if(showCount === 1) grid.style.gridTemplateColumns = "minmax(0, 420px)";
+  else if(showCount === 4) grid.style.gridTemplateColumns = "repeat(4, minmax(0,1fr))";
+  else if(showCount === 12) grid.style.gridTemplateColumns = "repeat(4, minmax(0,1fr))";
+  else grid.style.gridTemplateColumns = "repeat(6, minmax(0,1fr))";
+  draw();
 }
 
-/* --------- place cards (desktop collage) --------- */
-let calm = true;
+modeBtn.onclick = ()=> setMode(modeIndex+1);
 
-function makeCard(it, idx){
-  const el = document.createElement("div");
-  el.className = "card floaty";
-  el.style.setProperty("--r", (Math.random()*2-1).toFixed(2)+"deg");
-  el.style.setProperty("--dx", ((Math.random()*2-1)*8).toFixed(1)+"px");
-  el.style.setProperty("--dy", ((Math.random()*2-1)*10).toFixed(1)+"px");
-  el.style.animationDelay = (Math.random()*1.8).toFixed(2)+"s";
+shuffleBtn.onclick = ()=>{
+  // Fisher-Yates shuffle
+  for(let i=deck.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  foot.textContent = "Deck shuffled. The draw changed.";
+  draw();
+};
 
-  // random size variance, still “not overwhelming”
-  const w = 260 + Math.random()*110;
-  el.style.width = w.toFixed(0)+"px";
-
-  // cover
-  const coverStyle = fallbackCover(it.title);
-  el.innerHTML = `
-    <a href="${it.href}">
-      <div class="cover" data-cover="${it.cover}" style="background:${coverStyle}">
-        <img alt="${it.title} cover" style="display:none" />
-      </div>
-      <div class="meta">
-        <h3 class="title">${it.title}</h3>
-        <p class="desc">${it.desc}</p>
-        <div class="tags">
-          ${(it.tags||[]).slice(0,2).map((t,i)=>`<span class="tag ${i===0?'v':'c'}">${t}</span>`).join("")}
-        </div>
-      </div>
-    </a>
-  `;
-  return el;
-}
-
-function layoutCollage(){
-  grid.innerHTML = "";
-
-  // mobile stack mode: let CSS handle
-  if (matchMedia("(max-width:720px)").matches){
-    items.forEach((it,idx)=>{
-      const c = makeCard(it,idx);
-      c.style.position="relative";
-      c.style.left="auto";
-      c.style.top="auto";
-      c.style.transform="none";
-      if(!calm) c.classList.remove("floaty");
-      grid.appendChild(c);
-      loadCover(c);
-    });
+jumpInput.addEventListener("keydown",(e)=>{
+  if(e.key !== "Enter") return;
+  const v = (jumpInput.value||"").trim();
+  const num = parseInt(v,10);
+  if(!Number.isFinite(num) || num<1 || num>54){
+    foot.textContent = "Type a number from 1 to 54.";
     return;
   }
+  const card = deck.find(d=>d.id===num) || {href:`card${String(num).padStart(2,"0")}.html`};
+  location.href = card.href;
+});
 
-  const r = stage.getBoundingClientRect();
-  const pad = 18;
-  const W = r.width - pad*2;
-  const H = Math.max(520, r.height - pad*2);
+/* =========================================================
+   Pixel Tarot Generator (no assets)
+   - Draws a “tarot card” cover in pixels on a small canvas,
+     scaled up with image-rendering: pixelated.
+   - Deterministic per card number (seeded)
+========================================================= */
 
-  // curated anchor points (feel like an art wall)
-  const points = [
-    [0.08,0.10],[0.44,0.08],[0.72,0.12],
-    [0.12,0.46],[0.46,0.38],[0.78,0.44],
-    [0.10,0.76],[0.46,0.74],[0.76,0.78]
-  ];
-
-  items.forEach((it,idx)=>{
-    const c = makeCard(it,idx);
-
-    // place around anchor with a little jitter
-    const p = points[idx % points.length];
-    const jitterX = (Math.random()*2-1)*0.05;
-    const jitterY = (Math.random()*2-1)*0.05;
-
-    const left = (p[0]+jitterX) * W;
-    const top  = (p[1]+jitterY) * H;
-
-    c.style.left = (pad + left) + "px";
-    c.style.top  = (pad + top) + "px";
-
-    // z-depth
-    c.style.zIndex = (10 + Math.floor(Math.random()*20)).toString();
-
-    if(!calm) c.classList.remove("floaty");
-
-    grid.appendChild(c);
-    loadCover(c);
-  });
+function mulberry32(a){
+  return function(){
+    let t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ (t>>>15), t | 1);
+    t ^= t + Math.imul(t ^ (t>>>7), t | 61);
+    return ((t ^ (t>>>14)) >>> 0) / 4294967296;
+  };
 }
 
-function loadCover(card){
-  const cover = card.querySelector(".cover");
-  const img = cover.querySelector("img");
-  const src = cover.getAttribute("data-cover");
-  if(!src) return;
-
-  img.onload = ()=>{
-    img.style.display="block";
-  };
-  img.onerror = ()=>{
-    // keep procedural bg
-  };
-  img.src = src;
+function hexToRgb(hex){
+  const h = hex.replace("#","");
+  const n = parseInt(h,16);
+  return {r:(n>>16)&255, g:(n>>8)&255, b:n&255};
 }
 
-/* --------- shuffle / calm toggles --------- */
-document.getElementById("shuffleBtn").onclick = ()=>{
-  // Fisher-Yates
-  for(let i=items.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [items[i], items[j]] = [items[j], items[i]];
+function drawTarot(canvas, card){
+  // low-res canvas for pixel aesthetic
+  const W = 72, H = 96;
+  canvas.width = W;
+  canvas.height = H;
+
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+
+  const seed = 1000 + card.id*1337;
+  const rnd = mulberry32(seed);
+
+  // palette
+  const violet = hexToRgb("#8a2eff");
+  const cyan   = hexToRgb("#00ffd5");
+  const white  = {r:255,g:255,b:255};
+
+  // base background
+  ctx.fillStyle = "rgb(7,7,11)";
+  ctx.fillRect(0,0,W,H);
+
+  // border frame (tarot-ish)
+  ctx.fillStyle = "rgba(255,255,255,.12)";
+  ctx.fillRect(2,2,W-4,1);
+  ctx.fillRect(2,H-3,W-4,1);
+  ctx.fillRect(2,2,1,H-4);
+  ctx.fillRect(W-3,2,1,H-4);
+
+  // inner frame glow
+  ctx.fillStyle = `rgba(138,46,255,${0.08 + rnd()*0.08})`;
+  ctx.fillRect(4,6,W-8,H-12);
+
+  // noisy nebula pixels (subtle)
+  for(let i=0;i<520;i++){
+    const x = (rnd()*W)|0;
+    const y = (rnd()*H)|0;
+    const a = rnd()*0.10;
+    const useV = rnd()<0.65;
+    ctx.fillStyle = useV ? `rgba(138,46,255,${a})` : `rgba(0,255,213,${a*0.7})`;
+    ctx.fillRect(x,y,1,1);
   }
-  layoutCollage();
-};
 
-document.getElementById("calmBtn").onclick = (e)=>{
-  calm = !calm;
-  e.target.textContent = "CALM: " + (calm ? "ON" : "OFF");
-  // calm OFF = no drift, slightly more “poster wall”
-  layoutCollage();
-};
+  // central sigil area
+  const cx = (W/2)|0;
+  const cy = (H/2)|0;
 
-/* --------- starfields (subtle) --------- */
+  // pick a sigil type
+  const sig = card.id % 6;
+
+  ctx.fillStyle = "rgba(0,0,0,.35)";
+  ctx.fillRect(10,14,W-20,H-28);
+
+  // glyph strokes in pixels
+  const stroke = (use, a=0.65)=>{
+    const col = use==="v" ? violet : (use==="c" ? cyan : white);
+    return `rgba(${col.r},${col.g},${col.b},${a})`;
+  };
+
+  // draw a “tarot” symbol
+  ctx.fillStyle = stroke(card.tag==="violet" ? "v":"c", 0.72);
+
+  function px(x,y,w=1,h=1){ ctx.fillRect(x|0,y|0,w|0,h|0); }
+
+  // corners ornaments
+  ctx.fillStyle = "rgba(255,255,255,.18)";
+  px(6,6,3,1); px(6,6,1,3);
+  px(W-9,6,3,1); px(W-7,6,1,3);
+  px(6,H-9,3,1); px(6,H-7,1,3);
+  px(W-9,H-9,3,1); px(W-7,H-9,1,3);
+
+  // main symbol
+  ctx.fillStyle = stroke(card.tag==="violet" ? "v":"c", 0.75);
+
+  if(sig===0){
+    // eye
+    for(let x=-18;x<=18;x++){
+      const y = Math.round((x*x)/60);
+      px(cx+x, cy-y, 1, 1);
+      px(cx+x, cy+y, 1, 1);
+    }
+    ctx.fillStyle = "rgba(255,255,255,.65)";
+    px(cx-1,cy-1,3,3);
+    ctx.fillStyle = stroke(card.tag==="violet"?"v":"c",0.9);
+    px(cx,cy,1,1);
+  }else if(sig===1){
+    // moon + ring
+    for(let a=0;a<360;a+=8){
+      const rad = a*Math.PI/180;
+      px(cx+Math.cos(rad)*16, cy+Math.sin(rad)*16, 1,1);
+    }
+    ctx.fillStyle = "rgba(255,255,255,.55)";
+    for(let a=0;a<360;a+=10){
+      const rad = a*Math.PI/180;
+      px(cx+Math.cos(rad)*10, cy+Math.sin(rad)*10, 1,1);
+    }
+    ctx.fillStyle = stroke(card.tag==="violet"?"v":"c",0.85);
+    px(cx-4,cy-6,8,12);
+  }else if(sig===2){
+    // ladder/door
+    ctx.fillStyle = stroke("w",0.35);
+    px(cx-10,cy-18,20,36);
+    ctx.fillStyle = stroke(card.tag==="violet"?"v":"c",0.78);
+    px(cx-8,cy-16,16,32);
+    ctx.fillStyle = "rgba(0,0,0,.35)";
+    px(cx-2,cy-2,4,10);
+    ctx.fillStyle = "rgba(255,255,255,.55)";
+    px(cx+5,cy+3,1,1);
+  }else if(sig===3){
+    // crown
+    ctx.fillStyle = stroke(card.tag==="violet"?"v":"c",0.78);
+    px(cx-18,cy+10,36,2);
+    px(cx-16,cy+6,4,4);
+    px(cx-2,cy-2,4,12);
+    px(cx+12,cy+6,4,4);
+    px(cx-10,cy+2,4,4);
+    px(cx+6,cy+2,4,4);
+    ctx.fillStyle = "rgba(255,255,255,.6)";
+    px(cx-14,cy+5,1,1); px(cx,cy-1,1,1); px(cx+14,cy+5,1,1);
+  }else if(sig===4){
+    // tree / roots (Sophia universe wink)
+    ctx.fillStyle = stroke(card.tag==="violet"?"v":"c",0.78);
+    px(cx-1,cy-18,2,30);
+    px(cx-10,cy-6,8,2); px(cx+2,cy-6,8,2);
+    px(cx-14,cy-12,10,2); px(cx+4,cy-12,10,2);
+    // roots
+    px(cx-12,cy+12,10,2); px(cx+2,cy+12,10,2);
+    px(cx-16,cy+16,8,2); px(cx+8,cy+16,8,2);
+    ctx.fillStyle = "rgba(255,255,255,.55)";
+    px(cx,cy-20,1,1);
+  }else{
+    // spiral / glitch coil
+    ctx.fillStyle = stroke(card.tag==="violet"?"v":"c",0.78);
+    let x=cx, y=cy, step=1, dir=0;
+    for(let k=0;k<90;k++){
+      px(x,y,1,1);
+      if(dir===0) x++;
+      if(dir===1) y++;
+      if(dir===2) x--;
+      if(dir===3) y--;
+      if(k % step === 0){
+        dir=(dir+1)%4;
+        if(dir===0 || dir===2) step++;
+      }
+    }
+    ctx.fillStyle = "rgba(255,255,255,.55)";
+    px(cx,cy,2,2);
+  }
+
+  // top/bottom label strips
+  ctx.fillStyle = "rgba(0,0,0,.45)";
+  ctx.fillRect(6,6,W-12,10);
+  ctx.fillRect(6,H-16,W-12,10);
+
+  // tiny “card number” marks
+  ctx.fillStyle = "rgba(255,255,255,.7)";
+  // roman-ish ticks based on id
+  const ticks = Math.max(1, (card.id % 9));
+  for(let t=0;t<ticks;t++){
+    px(10+t*3, 10, 1,4);
+  }
+  // bottom pattern
+  ctx.fillStyle = stroke(card.tag==="violet"?"v":"c",0.55);
+  for(let t=0;t<10;t++){
+    if(rnd()<0.55) px(10+t*5, H-12, 2,1);
+  }
+
+  // small sparkle
+  if(card.id===1 || card.id===2 || rnd()<0.12){
+    ctx.fillStyle = "rgba(255,255,255,.65)";
+    px(58,18,1,1); px(59,18,1,1); px(58,19,1,1);
+  }
+}
+
+/* =========================================================
+   Render visible cards
+========================================================= */
+
+function cardLabel(card){
+  // keep titles minimal; you can rename later
+  if(card.id===1) return "MYSTERY";
+  if(card.id===2) return "TRAPPED";
+  return `CARD ${String(card.id).padStart(2,"0")}`;
+}
+
+function draw(){
+  grid.innerHTML = "";
+  const visible = deck.slice(0, showCount);
+
+  visible.forEach(card=>{
+    const el = document.createElement("div");
+    el.className = "card";
+    el.innerHTML = `
+      <a href="${card.href}">
+        <div class="cover">
+          <canvas></canvas>
+        </div>
+        <div class="meta">
+          <h3 class="title">${cardLabel(card)}</h3>
+          <p class="desc">${card.desc}</p>
+          <div class="row">
+            <span class="badge ${card.tag==='violet'?'v':'c'}">${card.flavor}</span>
+            <span class="badge">#${card.id}/54</span>
+          </div>
+        </div>
+      </a>
+    `;
+    const cv = el.querySelector("canvas");
+    drawTarot(cv, card);
+
+    // tap hold feel: quick “reshuffle draw” on right-click/long-press context
+    el.addEventListener("contextmenu",(e)=>{
+      e.preventDefault();
+      shuffleBtn.click();
+    });
+
+    grid.appendChild(el);
+  });
+
+  // subtle message depending on mode
+  if(showCount===54){
+    foot.textContent = "Full deck displayed. Type a number to open instantly.";
+  }else{
+    foot.textContent = `Showing the top ${showCount}. Shuffle for a new draw, or type a card number (1–54) to open.`;
+  }
+}
+
+/* =========================================================
+   Subtle stars canvas (very light)
+========================================================= */
+
+const stage = document.getElementById("stage");
 const starCv = document.getElementById("stars");
-const starCtx = starCv.getContext("2d");
-const shootCv = document.getElementById("shooters");
-const shootCtx = shootCv.getContext("2d");
+const sctx = starCv.getContext("2d");
+let dpr=1, starPts=[];
 
-let dpr=1, stars=[], shooters=[];
-function resizeCanv(){
+function resizeStars(){
   const r = stage.getBoundingClientRect();
   dpr = Math.max(1, Math.min(2, devicePixelRatio||1));
+  starCv.width = Math.floor(r.width*dpr);
+  starCv.height = Math.floor(r.height*dpr);
+  starCv.style.width = r.width+"px";
+  starCv.style.height = r.height+"px";
 
-  for(const cv of [starCv, shootCv]){
-    cv.width = Math.floor(r.width*dpr);
-    cv.height = Math.floor(r.height*dpr);
-    cv.style.width = r.width+"px";
-    cv.style.height = r.height+"px";
-  }
-
-  stars = [];
-  const n = Math.floor((r.width*r.height)/9000); // subtle density
+  // regenerate points
+  starPts = [];
+  const n = Math.floor((r.width*r.height)/12000);
   for(let i=0;i<n;i++){
-    stars.push({
+    starPts.push({
       x: Math.random()*r.width,
       y: Math.random()*r.height,
-      r: Math.random()*1.2 + 0.2,
-      a: Math.random()*0.55 + 0.10,
-      tw: Math.random()*1.6 + 0.4,
-      hue: Math.random()<0.18 ? "vio" : (Math.random()<0.12 ? "cyan" : "w")
+      a: 0.05 + Math.random()*0.12,
+      s: 1 + Math.random()*1
     });
   }
+  paintStars();
 }
-addEventListener("resize", resizeCanv);
-resizeCanv();
+addEventListener("resize", resizeStars);
+resizeStars();
 
-function drawStars(t){
+function paintStars(){
   const r = stage.getBoundingClientRect();
-  starCtx.setTransform(dpr,0,0,dpr,0,0);
-  starCtx.clearRect(0,0,r.width,r.height);
+  sctx.setTransform(dpr,0,0,dpr,0,0);
+  sctx.clearRect(0,0,r.width,r.height);
 
-  for(const s of stars){
-    const tw = (Math.sin(t*s.tw + s.x*0.02)+1)*0.5; // 0..1
-    const a = s.a * (0.55 + tw*0.65);
-    let col = `rgba(255,255,255,${a})`;
-    if(s.hue==="vio") col = `rgba(138,46,255,${a*0.9})`;
-    if(s.hue==="cyan") col = `rgba(0,255,213,${a*0.75})`;
-
-    starCtx.fillStyle = col;
-    starCtx.fillRect(s.x, s.y, s.r, s.r);
+  for(const p of starPts){
+    const violet = Math.random()<0.12;
+    const col = violet ? `rgba(138,46,255,${p.a})` : `rgba(255,255,255,${p.a})`;
+    sctx.fillStyle = col;
+    sctx.fillRect(p.x, p.y, p.s, p.s);
   }
 }
 
-function spawnShooter(){
-  const r = stage.getBoundingClientRect();
-  const fromLeft = Math.random()<0.5;
-  const x = fromLeft ? -40 : r.width+40;
-  const y = Math.random()*r.height*0.6;
-  const vx = fromLeft ? (4+Math.random()*3) : -(4+Math.random()*3);
-  const vy = 1.2 + Math.random()*1.8;
-
-  shooters.push({
-    x,y,vx,vy,
-    life: 0,
-    max: 42 + Math.random()*28,
-    w: 90 + Math.random()*110
-  });
-}
-
-function drawShooters(){
-  const r = stage.getBoundingClientRect();
-  shootCtx.setTransform(dpr,0,0,dpr,0,0);
-  shootCtx.clearRect(0,0,r.width,r.height);
-
-  for(const sh of shooters){
-    sh.x += sh.vx;
-    sh.y += sh.vy;
-    sh.life++;
-
-    const a = Math.max(0, 1 - sh.life/sh.max) * 0.75;
-    const tx = sh.x, ty = sh.y;
-    const ex = sh.x - sh.vx*sh.w*0.12;
-    const ey = sh.y - sh.vy*sh.w*0.12;
-
-    const g = shootCtx.createLinearGradient(tx,ty,ex,ey);
-    g.addColorStop(0, `rgba(255,255,255,${a})`);
-    g.addColorStop(1, `rgba(138,46,255,0)`);
-
-    shootCtx.strokeStyle = g;
-    shootCtx.lineWidth = 2;
-    shootCtx.beginPath();
-    shootCtx.moveTo(tx,ty);
-    shootCtx.lineTo(ex,ey);
-    shootCtx.stroke();
-
-    // little head sparkle
-    shootCtx.fillStyle = `rgba(255,255,255,${a})`;
-    shootCtx.fillRect(tx,ty,2,2);
-  }
-
-  shooters = shooters.filter(s=>s.life < s.max);
-}
-
-let lastSpawn=0;
-function raf(ts){
-  const t = ts/1000;
-  drawStars(t);
-
-  // occasional shooter (subtle)
-  if(t - lastSpawn > 3.2 + Math.random()*3.8){
-    if(Math.random()<0.8) spawnShooter();
-    lastSpawn = t;
-  }
-  drawShooters();
-
-  requestAnimationFrame(raf);
-}
-requestAnimationFrame(raf);
-
-/* --------- init layout --------- */
-layoutCollage();
-addEventListener("resize", ()=>setTimeout(layoutCollage, 50));
+/* =========================================================
+   Init
+========================================================= */
+setMode(modeIndex);
+draw();
 </script>
 
 </body>
 </html>
-
