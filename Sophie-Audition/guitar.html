@@ -1,62 +1,346 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<title>Guitar Practice</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia’s Audition — Guitar</title>
 <style>
-body{margin:0;background:#05050a;color:white;font-family:monospace;text-align:center}
-canvas{image-rendering:pixelated;margin-top:30px}
+:root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff; --cyan:#00ffd5;}
+html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; overflow:hidden;}
+canvas{position:fixed; inset:0; width:100%; height:100%;}
+body::before{
+  content:""; position:fixed; inset:-20%;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(138,46,255,.18), transparent 60%),
+    radial-gradient(circle at 80% 45%, rgba(0,255,213,.10), transparent 65%);
+  filter:blur(55px); animation:drift 14s ease-in-out infinite; pointer-events:none;
+}
+@keyframes drift{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(1.2%,-1.2%,0)}}
+
+.hud{position:fixed; left:12px; right:12px; top:12px; z-index:5; display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+.pill{
+  border:1px solid var(--ui2); background:rgba(0,0,0,.42); backdrop-filter: blur(10px);
+  border-radius:999px; padding:10px 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+  display:inline-flex; gap:10px; align-items:center;
+}
+.row{position:fixed; left:12px; right:12px; bottom:12px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; z-index:6;}
+button,a.btn{
+  border:1px solid rgba(255,255,255,.16); background:rgba(0,0,0,.45); color:#fff;
+  padding:14px 16px; border-radius:16px; cursor:pointer;
+  font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+  backdrop-filter: blur(10px); text-decoration:none;
+}
+button.primary{background:rgba(138,46,255,.72); border-color:transparent}
+button.cyan{background:rgba(0,255,213,.14); border-color:rgba(0,255,213,.26)}
+.toast{
+  position:fixed; left:50%; bottom:76px; transform:translateX(-50%);
+  border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+  border-radius:14px; padding:10px 12px;
+  font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
+  max-width:min(720px, calc(100vw - 24px)); text-align:center; z-index:6;
+}
+.toast.on{opacity:1}
 </style>
 </head>
 <body>
-<h2>GUITAR PRACTICE</h2>
-<p>Hit A S D F when notes touch line</p>
-<canvas id="c" width="400" height="200"></canvas>
+<canvas id="c"></canvas>
+
+<div class="hud">
+  <div class="pill"><b>GUITAR</b></div>
+  <div class="pill">Tap strings to pluck (unlock audio with first tap on iPhone)</div>
+  <div class="pill">Take: <span id="take">0</span> · Flow: <span id="flow">0%</span></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="row">
+  <button class="cyan" id="chordBtn">CHORD: OFF</button>
+  <button id="modeBtn">MODE: SOFT</button>
+  <button class="primary" id="resetBtn">RESET TAKE</button>
+  <a class="btn" href="Sophie01.html">BACK</a>
+</div>
+
 <script>
-const ctx=c.getContext("2d");
-let notes=[];
-let score=0;
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+let state=JSON.parse(localStorage.getItem(STORE_KEY)||`{
+"guitarPlayed":0,"dressColor":"#a64dff","shoeColor":"#ffffff"
+}`);
+function save(){localStorage.setItem(STORE_KEY,JSON.stringify(state));}
 
-setInterval(()=>notes.push({lane:Math.floor(Math.random()*4),y:0}),800);
-
-onkeydown=e=>{
-const k="asdf".indexOf(e.key);
-if(k>-1){
-for(let n of notes){
-if(n.lane==k && n.y>150 && n.y<185){
-score++;
-notes.splice(notes.indexOf(n),1);
-return;
-}}
-score--;
+const cv=document.getElementById("c");
+const ctx=cv.getContext("2d");
+let dpr=1;
+function resize(){
+  dpr=Math.max(1, Math.min(2, devicePixelRatio||1));
+  cv.width=Math.floor(innerWidth*dpr);
+  cv.height=Math.floor(innerHeight*dpr);
+  cv.style.width=innerWidth+"px";
+  cv.style.height=innerHeight+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
 }
+addEventListener("resize",resize); resize();
+
+const toastEl=document.getElementById("toast");
+function toast(m){ toastEl.textContent=m; toastEl.classList.add("on"); setTimeout(()=>toastEl.classList.remove("on"),1300); }
+
+// iPhone-safe audio
+let AC, master, unlocked=false;
+function unlock(){
+  if(unlocked) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==="suspended") AC.resume();
+    master = AC.createGain();
+    master.gain.value=0.65;
+    master.connect(AC.destination);
+    unlocked=true;
+  }catch(e){}
+}
+addEventListener("pointerdown", unlock, {passive:true});
+
+// String synth (Karplus-Strong-ish pluck)
+function pluck(freq=220, vol=0.20, bright=0.8){
+  if(!unlocked||!AC||!master) return;
+
+  const t=AC.currentTime;
+
+  // noise burst buffer
+  const nlen = Math.floor(AC.sampleRate * 0.06);
+  const buf = AC.createBuffer(1, nlen, AC.sampleRate);
+  const data = buf.getChannelData(0);
+  for(let i=0;i<nlen;i++){
+    data[i] = (Math.random()*2-1) * (1 - i/nlen);
+  }
+  const src = AC.createBufferSource();
+  src.buffer=buf;
+
+  // resonant bandpass near freq
+  const bp = AC.createBiquadFilter();
+  bp.type="bandpass";
+  bp.frequency.setValueAtTime(freq, t);
+  bp.Q.setValueAtTime(6 + bright*10, t);
+
+  // lowpass to tame harshness
+  const lp = AC.createBiquadFilter();
+  lp.type="lowpass";
+  lp.frequency.setValueAtTime(2400 + bright*2200, t);
+
+  const g = AC.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+0.90);
+
+  src.connect(bp); bp.connect(lp); lp.connect(g); g.connect(master);
+  src.start(t);
+  src.stop(t+0.12);
+}
+
+// soft chord helper
+const chords = {
+  "Am":[220,262,330],
+  "C":[262,330,392],
+  "G":[196,247,392],
+  "F":[175,220,349]
 };
 
-function draw(){
-ctx.fillStyle="#000";
-ctx.fillRect(0,0,400,200);
+let chordMode=false;
+let mode=0; // 0 soft, 1 bright, 2 dirty
+document.getElementById("chordBtn").onclick=()=>{
+  chordMode=!chordMode;
+  document.getElementById("chordBtn").textContent="CHORD: "+(chordMode?"ON":"OFF");
+  toast(chordMode ? "Chord mode: tap anywhere for Am/C/G/F" : "Single string mode: tap strings");
+};
 
-ctx.fillStyle="#444";
-ctx.fillRect(0,180,400,4);
+document.getElementById("modeBtn").onclick=()=>{
+  mode=(mode+1)%3;
+  document.getElementById("modeBtn").textContent="MODE: "+(mode===0?"SOFT":mode===1?"BRIGHT":"DIRTY");
+  toast(mode===0?"Soft & warm":"Bright & clean");
+};
 
-notes.forEach(n=>{
-ctx.fillStyle="#8a2eff";
-ctx.fillRect(50+n.lane*80,n.y,40,10);
-n.y+=2;
-});
+let take=0;
+let flow=0;
+document.getElementById("resetBtn").onclick=()=>{
+  take=0; flow=0;
+  document.getElementById("take").textContent=take;
+  document.getElementById("flow").textContent=Math.round(flow)+"%";
+  toast("Take reset.");
+};
 
-ctx.fillStyle="#fff";
-ctx.fillText("Score: "+score,10,15);
-
-requestAnimationFrame(draw);
+function bumpFlow(amt){
+  flow = Math.max(0, Math.min(100, flow + amt));
+  document.getElementById("flow").textContent=Math.round(flow)+"%";
 }
-draw();
 
-setTimeout(()=>{
-localStorage.setItem("SOPHIA_AUDITION_SAVE_V1",
-localStorage.getItem("SOPHIA_AUDITION_SAVE_V1"));
-location.href="Sophie01.html";
-},30000);
+// Visual guitar
+const strings = [0.22,0.30,0.38,0.46,0.54,0.62]; // y ratios
+let stringVib = strings.map(()=>0);
+
+function drawSophiaCloseUp(){
+  // silhouette + subtle “hands” near guitar
+  ctx.globalAlpha=0.30;
+  ctx.fillStyle="rgba(255,255,255,.20)";
+  ctx.beginPath();
+  ctx.ellipse(innerWidth*0.30, innerHeight*0.42, 110, 150, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.globalAlpha=0.18;
+  ctx.fillStyle="rgba(138,46,255,.35)";
+  ctx.beginPath();
+  ctx.ellipse(innerWidth*0.33, innerHeight*0.35, 90, 120, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.globalAlpha=1;
+}
+
+function drawGuitar(){
+  // body
+  const gx=innerWidth*0.56, gy=innerHeight*0.58;
+  const bodyW=Math.min(innerWidth*0.58, 680);
+  const bodyH=Math.min(innerHeight*0.60, 520);
+
+  // guitar glow
+  let glow=ctx.createRadialGradient(gx,gy,20,gx,gy,bodyW*0.7);
+  glow.addColorStop(0,"rgba(138,46,255,.14)");
+  glow.addColorStop(1,"transparent");
+  ctx.fillStyle=glow; ctx.fillRect(0,0,innerWidth,innerHeight);
+
+  // main body
+  ctx.fillStyle="rgba(255,255,255,.06)";
+  ctx.beginPath();
+  ctx.ellipse(gx, gy, bodyW*0.33, bodyH*0.28, -0.15, 0, Math.PI*2);
+  ctx.fill();
+
+  // sound hole
+  ctx.fillStyle="rgba(0,0,0,.55)";
+  ctx.beginPath();
+  ctx.ellipse(gx-10, gy-10, bodyW*0.07, bodyW*0.07, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // neck
+  ctx.fillStyle="rgba(255,255,255,.05)";
+  ctx.fillRect(gx+bodyW*0.18, gy-bodyH*0.12, bodyW*0.30, bodyH*0.07);
+
+  // frets
+  ctx.globalAlpha=0.22;
+  ctx.fillStyle="#fff";
+  for(let i=0;i<10;i++){
+    const x = gx+bodyW*0.18 + i*(bodyW*0.30/10);
+    ctx.fillRect(x, gy-bodyH*0.12, 1, bodyH*0.07);
+  }
+  ctx.globalAlpha=1;
+
+  // strings
+  ctx.strokeStyle="rgba(255,255,255,.40)";
+  ctx.lineWidth=1;
+  for(let i=0;i<strings.length;i++){
+    const y = innerHeight*strings[i] + stringVib[i];
+    ctx.beginPath();
+    ctx.moveTo(innerWidth*0.18, y);
+    ctx.quadraticCurveTo(innerWidth*0.55, y + stringVib[i]*1.4, innerWidth*0.86, y);
+    ctx.stroke();
+  }
+
+  // pick hint
+  ctx.fillStyle="rgba(255,255,255,.60)";
+  ctx.font="12px ui-monospace, Menlo, monospace";
+  ctx.fillText(chordMode ? "tap anywhere: Am / C / G / F" : "tap the strings", 18, innerHeight-18);
+}
+
+function bg(){
+  ctx.fillStyle="#05050a";
+  ctx.fillRect(0,0,innerWidth,innerHeight);
+
+  let g1=ctx.createRadialGradient(innerWidth*0.22,innerHeight*0.18,20,innerWidth*0.22,innerHeight*0.18,innerWidth*0.8);
+  g1.addColorStop(0,"rgba(138,46,255,.18)");
+  g1.addColorStop(1,"transparent");
+  ctx.fillStyle=g1; ctx.fillRect(0,0,innerWidth,innerHeight);
+
+  let g2=ctx.createRadialGradient(innerWidth*0.78,innerHeight*0.44,20,innerWidth*0.78,innerHeight*0.44,innerWidth*0.8);
+  g2.addColorStop(0,"rgba(0,255,213,.10)");
+  g2.addColorStop(1,"transparent");
+  ctx.fillStyle=g2; ctx.fillRect(0,0,innerWidth,innerHeight);
+
+  // subtle grain
+  ctx.globalAlpha=0.12;
+  for(let i=0;i<120;i++){
+    ctx.fillStyle="rgba(255,255,255,"+(Math.random()*0.06)+")";
+    ctx.fillRect(Math.random()*innerWidth, Math.random()*innerHeight, 2, 2);
+  }
+  ctx.globalAlpha=1;
+}
+
+function tick(){
+  // decay vibrations
+  for(let i=0;i<stringVib.length;i++){
+    stringVib[i]*=0.86;
+  }
+  bg();
+  drawSophiaCloseUp();
+  drawGuitar();
+  requestAnimationFrame(tick);
+}
+tick();
+
+// Input
+function nearestStringY(y){
+  let best=-1, bd=1e9;
+  for(let i=0;i<strings.length;i++){
+    const sy = innerHeight*strings[i];
+    const d=Math.abs(y-sy);
+    if(d<bd){bd=d;best=i;}
+  }
+  return {i:best, d:bd};
+}
+
+function playString(idx){
+  // standard-ish tuning EADGBE
+  const freqs=[82.41,110,146.83,196,246.94,329.63];
+  let f=freqs[idx];
+  let vol=0.18;
+  let bright=0.70;
+  if(mode===1){ vol=0.20; bright=1.0; }
+  if(mode===2){ vol=0.22; bright=0.9; }
+
+  pluck(f, vol, bright);
+  stringVib[idx] = -10 - Math.random()*10;
+
+  take++;
+  state.guitarPlayed = (state.guitarPlayed||0)+1;
+  save();
+
+  document.getElementById("take").textContent=take;
+  bumpFlow(1.2);
+}
+
+function playChord(name){
+  const notes=chords[name];
+  if(!notes) return;
+  let baseVol = (mode===0?0.16:mode===1?0.18:0.20);
+  let bright = (mode===0?0.70:mode===1?1.0:0.9);
+  notes.forEach((f,i)=> setTimeout(()=>pluck(f, baseVol*0.9, bright), i*18));
+  bumpFlow(3.5);
+  take++;
+  document.getElementById("take").textContent=take;
+}
+
+let chordCycle=0;
+const chordList=["Am","C","G","F"];
+
+addEventListener("pointerdown",(e)=>{
+  unlock();
+  if(chordMode){
+    playChord(chordList[chordCycle%chordList.length]);
+    toast("Chord: "+chordList[chordCycle%chordList.length]);
+    chordCycle++;
+    return;
+  }
+  const {i,d}=nearestStringY(e.clientY);
+  if(d<36){
+    playString(i);
+  }else{
+    // off-string tap still gives a soft muted pluck
+    pluck(196, 0.10, 0.4);
+    bumpFlow(0.2);
+  }
+},{passive:true});
 </script>
 </body>
 </html>
