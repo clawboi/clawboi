@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia’s Audition — Milo Bath</title>
+<style>
+:root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff; --cyan:#00ffd5;}
+html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; overflow:hidden;}
+canvas{position:fixed; inset:0; width:100%; height:100%;}
+body::before{
+  content:""; position:fixed; inset:-20%;
+  background:
+    radial-gradient(circle at 25% 15%, rgba(138,46,255,.18), transparent 60%),
+    radial-gradient(circle at 75% 55%, rgba(0,255,213,.10), transparent 65%);
+  filter:blur(55px); animation:drift 14s ease-in-out infinite; pointer-events:none;
+}
+@keyframes drift{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(1.2%,-1.2%,0)}}
+
+.hud{position:fixed; left:12px; right:12px; top:12px; z-index:5; display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+.pill{
+  border:1px solid var(--ui2); background:rgba(0,0,0,.42); backdrop-filter: blur(10px);
+  border-radius:999px; padding:10px 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+  display:inline-flex; gap:10px; align-items:center;
+}
+.row{position:fixed; left:12px; right:12px; bottom:12px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; z-index:6;}
+button,a.btn{
+  border:1px solid rgba(255,255,255,.16); background:rgba(0,0,0,.45); color:#fff;
+  padding:14px 16px; border-radius:16px; cursor:pointer;
+  font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+  backdrop-filter: blur(10px); text-decoration:none;
+}
+button.cyan{background:rgba(0,255,213,.14); border-color:rgba(0,255,213,.26)}
+button.primary{background:rgba(138,46,255,.72); border-color:transparent}
+.toast{
+  position:fixed; left:50%; bottom:76px; transform:translateX(-50%);
+  border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+  border-radius:14px; padding:10px 12px;
+  font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
+  max-width:min(720px, calc(100vw - 24px)); text-align:center; z-index:6;
+}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="hud">
+  <div class="pill"><b>MILO BATH</b></div>
+  <div class="pill">Mood: <span id="mood">angry</span></div>
+  <div class="pill">Clean: <span id="clean">0%</span></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="row">
+  <button class="cyan" id="washBtn">WASH</button>
+  <button id="rinseBtn">RINSE</button>
+  <button class="primary" id="towelBtn">TOWEL</button>
+  <a class="btn" href="bathroom.html">BACK</a>
+</div>
+
+<script>
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+let state=JSON.parse(localStorage.getItem(STORE_KEY)||`{"dressColor":"#a64dff","shoeColor":"#ffffff"}`);
+function save(){localStorage.setItem(STORE_KEY,JSON.stringify(state));}
+
+const cv=document.getElementById("c");
+const ctx=cv.getContext("2d");
+let dpr=1;
+function resize(){
+  dpr=Math.max(1, Math.min(2, devicePixelRatio||1));
+  cv.width=Math.floor(innerWidth*dpr);
+  cv.height=Math.floor(innerHeight*dpr);
+  cv.style.width=innerWidth+"px";
+  cv.style.height=innerHeight+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener("resize",resize); resize();
+
+const toastEl=document.getElementById("toast");
+function toast(m){ toastEl.textContent=m; toastEl.classList.add("on"); setTimeout(()=>toastEl.classList.remove("on"),1300); }
+
+// iPhone-safe audio
+let AC, master, unlocked=false, waterSrc=null;
+function unlock(){
+  if(unlocked) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==="suspended") AC.resume();
+    master = AC.createGain(); master.gain.value=0.65; master.connect(AC.destination);
+    unlocked=true;
+  }catch(e){}
+}
+addEventListener("pointerdown", unlock, {passive:true});
+
+function blip(freq=520, dur=0.08, vol=0.09){
+  if(!unlocked||!AC||!master) return;
+  const t=AC.currentTime;
+  const o=AC.createOscillator();
+  const g=AC.createGain();
+  o.type="sine";
+  o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t+dur+0.03);
+}
+
+function startWater(){
+  if(!unlocked||!AC||!master) return;
+  if(waterSrc) return;
+
+  const len = Math.floor(AC.sampleRate*1.0);
+  const buf = AC.createBuffer(1,len,AC.sampleRate);
+  const data = buf.getChannelData(0);
+  let last=0;
+  for(let i=0;i<len;i++){
+    const n=(Math.random()*2-1);
+    last = last*0.98 + n*0.02;
+    data[i]=last*0.7;
+  }
+  const src = AC.createBufferSource();
+  src.buffer=buf; src.loop=true;
+
+  const bp=AC.createBiquadFilter();
+  bp.type="bandpass"; bp.frequency.value=900; bp.Q.value=0.8;
+
+  const g=AC.createGain();
+  g.gain.value=0.10;
+
+  src.connect(bp); bp.connect(g); g.connect(master);
+  src.start();
+  waterSrc={src,g};
+}
+function stopWater(){
+  if(!waterSrc) return;
+  try{ waterSrc.g.gain.value=0.0001; waterSrc.src.stop(); }catch(e){}
+  waterSrc=null;
+}
+
+let clean=0;       // 0..100
+let bubbles=0;     // 0..1
+let wet=0;         // 0..1
+let mood="angry";
+
+const moodEl=document.getElementById("mood");
+const cleanEl=document.getElementById("clean");
+
+function setMood(m){
+  mood=m;
+  moodEl.textContent=m;
+}
+
+let bubbleParts=[];
+function addBubbles(n=14){
+  for(let i=0;i<n;i++){
+    bubbleParts.push({
+      x: innerWidth*0.52 + (Math.random()*2-1)*160,
+      y: innerHeight*0.58 + (Math.random()*2-1)*90,
+      r: 6 + Math.random()*16,
+      vy: -0.4 - Math.random()*1.1,
+      life: 1.4 + Math.random()*1.2
+    });
+  }
+}
+
+document.getElementById("washBtn").onclick=()=>{
+  unlock();
+  startWater();
+  bubbles=Math.min(1, bubbles+0.22);
+  wet=Math.min(1, wet+0.25);
+  clean=Math.min(100, clean+9);
+  addBubbles(18);
+  blip(740,0.08,0.10);
+  toast("Washing Milo…");
+  if(clean>25) setMood("annoyed");
+  if(clean>55) setMood("confused");
+  if(clean>85) setMood("calm");
+  cleanEl.textContent=Math.round(clean)+"%";
+};
+
+document.getElementById("rinseBtn").onclick=()=>{
+  unlock();
+  startWater();
+  bubbles=Math.max(0, bubbles-0.34);
+  wet=Math.min(1, wet+0.12);
+  clean=Math.min(100, clean+4);
+  blip(520,0.06,0.09);
+  toast("Rinsing…");
+  cleanEl.textContent=Math.round(clean)+"%";
+};
+
+document.getElementById("towelBtn").onclick=()=>{
+  unlock();
+  stopWater();
+  wet=Math.max(0, wet-0.40);
+  bubbles=Math.max(0, bubbles-0.22);
+  clean=Math.min(100, clean+2);
+  blip(320,0.08,0.10);
+  toast("Towel dry…");
+  if(clean>=100 && wet<0.2){
+    setMood("purring");
+    toast("Milo is clean. He forgives you.");
+  }
+  cleanEl.textContent=Math.round(clean)+"%";
+};
+
+function drawSophia(){
+  // simple side silhouette
+  const x=innerWidth*0.22, y=innerHeight*0.58;
+  ctx.globalAlpha=0.25;
+  ctx.fillStyle="rgba(255,255,255,.20)";
+  ctx.beginPath(); ctx.ellipse(x, y-120, 70, 90, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillRect(x-40, y-40, 80, 150);
+  ctx.globalAlpha=1;
+}
+
+function drawTub(){
+  const tx=innerWidth*0.52, ty=innerHeight*0.66;
+  const tw=Math.min(innerWidth*0.70, 760);
+  const th=Math.min(innerHeight*0.34, 340);
+
+  // tub frame
+  ctx.fillStyle="rgba(255,255,255,.06)";
+  ctx.fillRect(tx-tw/2-10, ty-th/2-10, tw+20, th+20);
+  ctx.fillStyle="rgba(0,0,0,.45)";
+  ctx.fillRect(tx-tw/2, ty-th/2, tw, th);
+
+  // water surface
+  ctx.globalAlpha = 0.22 + wet*0.28;
+  ctx.fillStyle="rgba(0,255,213,.55)";
+  ctx.fillRect(tx-tw/2+18, ty-th/2+th*0.45, tw-36, th*0.45);
+  ctx.globalAlpha=1;
+
+  // Milo in tub
+  const mx=tx, my=ty-th*0.05;
+  ctx.fillStyle="rgba(216,216,216,.95)";
+  ctx.beginPath(); ctx.ellipse(mx, my, 90, 60, 0, 0, Math.PI*2); ctx.fill();
+  // ears
+  ctx.beginPath(); ctx.ellipse(mx-60,my-44,18,18,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(mx+60,my-44,18,18,0,0,Math.PI*2); ctx.fill();
+  // eyes
+  ctx.fillStyle="rgba(0,0,0,.50)";
+  ctx.beginPath(); ctx.ellipse(mx-28,my-10,6,6,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(mx+28,my-10,6,6,0,0,Math.PI*2); ctx.fill();
+  // nose
+  ctx.fillStyle="rgba(0,255,213,.70)";
+  ctx.beginPath(); ctx.ellipse(mx,my+8,8,6,0,0,Math.PI*2); ctx.fill();
+
+  // bubbles overlay
+  ctx.globalAlpha = 0.22 + bubbles*0.40;
+  ctx.fillStyle="rgba(255,255,255,.90)";
+  for(let i=0;i<20;i++){
+    const bx=mx+(Math.random()*2-1)*90;
+    const by=my+(Math.random()*2-1)*55;
+    ctx.beginPath(); ctx.ellipse(bx,by,10+Math.random()*18,8+Math.random()*14,0,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawBubbles(){
+  // particle bubbles float up
+  bubbleParts.forEach(p=>{
+    p.y += p.vy;
+    p.life -= 1/60;
+  });
+  bubbleParts = bubbleParts.filter(p=>p.life>0);
+
+  bubbleParts.forEach(p=>{
+    ctx.globalAlpha = Math.min(0.35, p.life*0.22);
+    ctx.strokeStyle="rgba(255,255,255,.85)";
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.ellipse(p.x,p.y,p.r,p.r*0.8,0,0,Math.PI*2); ctx.stroke();
+  });
+  ctx.globalAlpha=1;
+}
+
+let t0=performance.now();
+function loop(){
+  const t=(performance.now()-t0)/1000;
+
+  // bg
+  ctx.fillStyle="#05050a";
+  ctx.fillRect(0,0,innerWidth,innerHeight);
+
+  let g1=ctx.createRadialGradient(innerWidth*0.30,innerHeight*0.20,20,innerWidth*0.30,innerHeight*0.20,innerWidth*0.9);
+  g1.addColorStop(0,"rgba(138,46,255,.18)");
+  g1.addColorStop(1,"transparent");
+  ctx.fillStyle=g1; ctx.fillRect(0,0,innerWidth,innerHeight);
+
+  let g2=ctx.createRadialGradient(innerWidth*0.78,innerHeight*0.55,20,innerWidth*0.78,innerHeight*0.55,innerWidth*0.9);
+  g2.addColorStop(0,"rgba(0,255,213,.10)");
+  g2.addColorStop(1,"transparent");
+  ctx.fillStyle=g2; ctx.fillRect(0,0,innerWidth,innerHeight);
+
+  // subtle grain
+  ctx.globalAlpha=0.10;
+  for(let i=0;i<120;i++){
+    ctx.fillStyle="rgba(255,255,255,"+(Math.random()*0.06)+")";
+    ctx.fillRect(Math.random()*innerWidth, Math.random()*innerHeight, 2, 2);
+  }
+  ctx.globalAlpha=1;
+
+  drawSophia();
+  drawTub();
+  drawBubbles();
+
+  // status hint
+  ctx.fillStyle="rgba(255,255,255,.75)";
+  ctx.font="12px ui-monospace, Menlo, monospace";
+  ctx.fillText("clean "+Math.round(clean)+"%  ·  wet "+Math.round(wet*100)+"%  ·  bubbles "+Math.round(bubbles*100)+"%", 18, innerHeight-18);
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
