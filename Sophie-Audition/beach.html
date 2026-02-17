@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia's Audition — Beach</title>
+<style>
+  :root{
+    --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14);
+    --vio:#8a2eff; --aqua:#00ffd5; --hot:#ff63ff; --sun:#ffd24d;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%;display:grid;place-items:center;}
+  canvas{width:min(980px, 100vw);height:auto;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;}
+  .hud{
+    position:fixed;left:12px;right:12px;top:12px;z-index:6;
+    display:flex;gap:10px;flex-wrap:wrap;pointer-events:none;
+  }
+  .pill{
+    pointer-events:auto;border:1px solid var(--ui2);background:rgba(0,0,0,.32);
+    backdrop-filter: blur(8px);
+    border-radius:999px;padding:10px 12px;font-size:11px;
+    letter-spacing:.18em;text-transform:uppercase;display:flex;gap:10px;align-items:center;
+  }
+  .pill b{letter-spacing:.22em}
+  .toast{
+    position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+    border:1px solid var(--ui2);background:rgba(0,0,0,.55);
+    border-radius:14px;padding:10px 12px;font-size:12px;letter-spacing:.08em;
+    opacity:0;transition:.2s;max-width:min(920px, calc(100vw - 24px));text-align:center;z-index:7;
+  }
+  .toast.on{opacity:1}
+  body::before{
+    content:"";position:fixed;inset:-20%;pointer-events:none;
+    background:
+      radial-gradient(circle at 20% 18%, rgba(255,210,77,.18), transparent 58%),
+      radial-gradient(circle at 78% 22%, rgba(0,255,213,.14), transparent 62%),
+      radial-gradient(circle at 45% 85%, rgba(138,46,255,.10), transparent 62%);
+    filter:blur(44px) saturate(1.12);
+  }
+</style>
+</head>
+<body>
+  <div class="hud">
+    <div class="pill"><b>SOPHIA</b> <span id="status">BEACH</span></div>
+    <div class="pill">CASH: $<span id="cash">0</span></div>
+    <div class="pill">SHELLS: <span id="shells">0</span></div>
+    <div class="pill">Move: WASD · Run: SHIFT · Interact: E · Back: B</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d',{alpha:false});
+ctx.imageSmoothingEnabled=false;
+
+const UI={
+  toast:document.getElementById('toast'),
+  cash:document.getElementById('cash'),
+  shells:document.getElementById('shells'),
+};
+function toast(msg,ms=1400){
+  UI.toast.textContent=msg; UI.toast.classList.add('on');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>UI.toast.classList.remove('on'),ms);
+}
+
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+function loadState(){
+  const r=localStorage.getItem(STORE_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return { cash:0, beach:{shells:0}, sophia:{x:160,y:160}, milo:{x:140,y:170}, lastRoom:"BEACH" };
+}
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+let state=loadState();
+state.beach=state.beach||{shells:0};
+
+UI.cash.textContent=state.cash|0;
+UI.shells.textContent=state.beach.shells|0;
+
+const keysDown=new Set();
+addEventListener('keydown',(e)=>{
+  const k=e.key.toLowerCase();
+  if(["arrowup","arrowdown","arrowleft","arrowright","shift","w","a","s","d","e","b"].includes(k)) e.preventDefault();
+  keysDown.add(k);
+});
+addEventListener('keyup',(e)=>keysDown.delete(e.key.toLowerCase()));
+
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const dist2=(ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by; return dx*dx+dy*dy;}
+function drawRectBevel(x,y,w,h,fill){
+  ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(x,y,w,1);
+  ctx.fillStyle="rgba(0,0,0,.40)"; ctx.fillRect(x,y+h-1,w,1);
+  ctx.fillStyle="rgba(255,255,255,.07)"; ctx.fillRect(x,y,1,h);
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(x+w-1,y,1,h);
+}
+function drawHintBubble(text,x,y){
+  const pad=3;
+  ctx.font="8px ui-monospace, monospace";
+  const m=ctx.measureText(text);
+  const w=Math.ceil(m.width)+pad*2, h=12;
+  ctx.fillStyle="rgba(0,0,0,.70)";
+  ctx.fillRect(x-w/2,y-h,w,h);
+  ctx.strokeStyle="rgba(255,255,255,.16)";
+  ctx.strokeRect(x-w/2+0.5,y-h+0.5,w-1,h-1);
+  ctx.fillStyle="rgba(255,255,255,.92)";
+  ctx.fillText(text,x-w/2+pad,y-4);
+}
+
+const WORLD={w:900,h:520};
+const sophia={x:state.sophia?.x||160,y:state.sophia?.y||280,w:10,h:12, speed:70, run:110};
+const milo={x:state.milo?.x||140,y:state.milo?.y||295,w:8,h:8};
+const cam={x:0,y:0};
+
+// shells
+const shells=[];
+for(let i=0;i<24;i++){
+  shells.push({x:80+Math.random()*(WORLD.w-160), y:240+Math.random()*(WORLD.h-300), alive:true});
+}
+
+// vendor
+const vendor={x:760,y:250,w:10,h:12};
+
+function goBack(){
+  state.sophia={x:sophia.x,y:sophia.y};
+  state.milo={x:milo.x,y:milo.y};
+  state.lastRoom="BEACH";
+  saveState();
+  location.href="street.html";
+}
+
+function nearestZone(){
+  const px=sophia.x+sophia.w/2, py=sophia.y+sophia.h/2;
+  let best=null, bd=1e12;
+
+  // vendor interaction
+  {
+    const cx=vendor.x+5, cy=vendor.y+6;
+    const d=dist2(px,py,cx,cy);
+    if(d<bd && d<2600) best={name:"SHELL VENDOR (TRADE)", act:tradeShells}, bd=d;
+  }
+
+  // pick shell
+  for(const s of shells){
+    if(!s.alive) continue;
+    const d=dist2(px,py,s.x,s.y);
+    if(d<bd && d<900){
+      best={name:"PICK UP SHELL", act:()=>pickupShell(s)};
+      bd=d;
+    }
+  }
+
+  return best;
+}
+
+function pickupShell(s){
+  s.alive=false;
+  state.beach.shells=(state.beach.shells|0)+1;
+  UI.shells.textContent=state.beach.shells|0;
+  toast("Shell collected.",1100);
+  saveState();
+}
+
+function tradeShells(){
+  const n=state.beach.shells|0;
+  if(n<=0) return toast("Vendor: “Bring shells.”",1200);
+  const cashGain = Math.min(10, n) * 1; // 1 per shell up to 10
+  state.beach.shells = Math.max(0, n-10);
+  state.cash = (state.cash|0) + cashGain;
+  UI.shells.textContent=state.beach.shells|0;
+  UI.cash.textContent=state.cash|0;
+  toast(`Traded shells. +$${cashGain}.`,1400);
+  saveState();
+}
+
+function drawSophia(x,y){
+  ctx.fillStyle="rgba(0,0,0,.22)"; ctx.fillRect(x-1,y+11,12,2);
+  ctx.fillStyle="#f2d27a"; ctx.fillRect(x+1,y+0,8,4); ctx.fillRect(x+0,y+3,10,3);
+  ctx.fillStyle="#ffd9c9"; ctx.fillRect(x+2,y+5,6,4);
+  ctx.fillStyle="#67b7ff"; ctx.fillRect(x+3,y+6,1,1); ctx.fillRect(x+6,y+6,1,1);
+  ctx.fillStyle="rgba(138,46,255,.70)"; ctx.fillRect(x+2,y+9,6,3);
+  ctx.fillStyle="rgba(255,255,255,.18)"; ctx.fillRect(x+3,y+10,4,1);
+}
+function drawMilo(x,y){
+  ctx.fillStyle="rgba(0,0,0,.20)"; ctx.fillRect(x-1,y+7,10,2);
+  ctx.fillStyle="#d8d8d8"; ctx.fillRect(x+1,y+2,6,5);
+  ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+1,y+1,2,2); ctx.fillRect(x+5,y+1,2,2);
+  ctx.fillStyle="#1affd3"; ctx.fillRect(x+2,y+4,1,1); ctx.fillRect(x+5,y+4,1,1);
+  ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+7,y+3,1,3);
+}
+function drawVendor(ox,oy){
+  const x=Math.round(vendor.x+ox), y=Math.round(vendor.y+oy);
+  ctx.fillStyle="rgba(0,0,0,.18)"; ctx.fillRect(x-1,y+11,12,2);
+  ctx.fillStyle="rgba(255,255,255,.16)"; ctx.fillRect(x,y,10,12);
+  ctx.fillStyle="rgba(255,210,77,.20)"; ctx.fillRect(x+2,y+9,6,3);
+  ctx.fillStyle="rgba(0,255,213,.20)"; ctx.fillRect(x+2,y-2,6,2);
+}
+
+let last=performance.now(), t=0;
+let eWas=false, bWas=false;
+function loop(){
+  const now=performance.now();
+  const dt=Math.max(0, Math.min(0.05, (now-last)/1000));
+  last=now; t++;
+
+  const run=keysDown.has("shift");
+  const sp=(run?sophia.run:sophia.speed);
+
+  let dx=0,dy=0;
+  if(keysDown.has("w")||keysDown.has("arrowup")) dy-=sp*dt;
+  if(keysDown.has("s")||keysDown.has("arrowdown")) dy+=sp*dt;
+  if(keysDown.has("a")||keysDown.has("arrowleft")) dx-=sp*dt;
+  if(keysDown.has("d")||keysDown.has("arrowright")) dx+=sp*dt;
+  if(dx&&dy){dx*=0.72;dy*=0.72;}
+  sophia.x=clamp(sophia.x+dx, 0, WORLD.w-sophia.w);
+  sophia.y=clamp(sophia.y+dy, 0, WORLD.h-sophia.h);
+
+  // Milo follow
+  const tx=sophia.x-10, ty=sophia.y+6;
+  milo.x += (tx-milo.x)*0.09*(dt*60);
+  milo.y += (ty-milo.y)*0.09*(dt*60);
+
+  const e=keysDown.has("e");
+  if(e && !eWas){
+    const z=nearestZone();
+    if(z) z.act();
+    else toast("Waves don’t have menus.",1200);
+  }
+  eWas=e;
+
+  const b=keysDown.has("b");
+  if(b && !bWas) goBack();
+  bWas=b;
+
+  // camera
+  cam.x += ((sophia.x-160) - cam.x)*0.14*(dt*60);
+  cam.y += ((sophia.y-90) - cam.y)*0.14*(dt*60);
+  cam.x=clamp(cam.x,0,WORLD.w-320);
+  cam.y=clamp(cam.y,0,WORLD.h-180);
+
+  // draw sky
+  const g=ctx.createLinearGradient(0,0,0,180);
+  g.addColorStop(0,"rgba(90,180,255,1)");
+  g.addColorStop(0.55,"rgba(150,215,255,1)");
+  g.addColorStop(1,"rgba(220,245,255,1)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,320,180);
+
+  // ocean + sand
+  ctx.fillStyle="rgba(0,120,180,1)"; ctx.fillRect(0,60,320,70);
+  ctx.fillStyle="rgba(245,220,160,1)"; ctx.fillRect(0,130,320,50);
+
+  // waves
+  ctx.fillStyle="rgba(255,255,255,.22)";
+  for(let i=0;i<40;i++){
+    const x=(i*22 + (t*2|0))%320;
+    const y=78 + ((i%5)*4) + (Math.sin((t+i)*0.12)*1);
+    ctx.fillRect(x,y,14,1);
+  }
+
+  const ox=-cam.x, oy=-cam.y;
+
+  // shells
+  for(const s of shells){
+    if(!s.alive) continue;
+    const x=Math.round(s.x+ox), y=Math.round(s.y+oy);
+    if(x<-10||x>330||y<-10||y>190) continue;
+    ctx.fillStyle="rgba(255,210,77,.65)"; ctx.fillRect(x,y,3,2);
+    ctx.fillStyle="rgba(255,255,255,.18)"; ctx.fillRect(x+1,y,1,1);
+  }
+
+  // vendor umbrella
+  const ux=Math.round(740+ox), uy=Math.round(228+oy);
+  drawRectBevel(ux,uy,60,12,"rgba(255,99,255,.16)");
+  ctx.fillStyle="rgba(0,0,0,.25)"; ctx.fillRect(ux+2,uy+2,56,8);
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(ux+28,uy+12,2,18);
+
+  drawVendor(ox,oy);
+
+  // sprites
+  drawMilo(Math.round(milo.x+ox), Math.round(milo.y+oy));
+  drawSophia(Math.round(sophia.x+ox), Math.round(sophia.y+oy));
+
+  const z=nearestZone();
+  if(z) drawHintBubble(z.name, Math.round(sophia.x+6+ox), Math.round(sophia.y-10+oy));
+
+  // autosave
+  if((t%30)===0){
+    state.sophia={x:sophia.x,y:sophia.y};
+    state.milo={x:milo.x,y:milo.y};
+    saveState();
+  }
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
