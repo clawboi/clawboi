@@ -2,63 +2,143 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Milo Pong</title>
+<title>Pingpong</title>
 <style>
-body{margin:0;background:#000;color:#fff;font-family:monospace;text-align:center}
-canvas{display:block;margin:auto;background:#111}
-button{margin:10px;padding:10px 18px;background:#000;border:1px solid #fff;color:#fff}
+body{margin:0;background:#000;overflow:hidden;color:#fff;font-family:monospace}
+canvas{display:block;margin:auto;image-rendering:pixelated}
+.exit{
+position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+padding:10px 18px;border:1px solid #fff;background:#000;color:#fff;
+cursor:pointer;letter-spacing:.2em;
+}
 </style>
 </head>
 <body>
 
 <canvas id="c" width="320" height="180"></canvas>
-<button onclick="location.href='Sophie02.html'">RETURN</button>
+<div class="exit" onclick="location.href='Sophie02.html'">EXIT GAME</div>
 
 <script>
 const c=document.getElementById("c");
 const x=c.getContext("2d");
 
-let ball={x:160,y:90,vx:2,vy:1.5};
-let player=70;
-let milo=70;
+let ball={x:160,y:90,vx:2,vy:1};
+let p1=80,p2=80;
+let s1=0,s2=0;
+let shake=0;
+let t=0;
 
-function loop(){
+const miloTalk=[
+"milo: pathetic.",
+"milo: your reflexes are theoretical",
+"milo: i trained in space",
+"milo: paws > hands",
+"milo: this is my sport now"
+];
 
-/* physics */
+function taunt(){
+if(Math.random()<.02){
+x.fillStyle="rgba(0,0,0,.6)";
+x.fillRect(60,150,200,16);
+x.fillStyle="#fff";
+x.fillText(miloTalk[Math.floor(Math.random()*miloTalk.length)],70,162);
+}
+}
+
+addEventListener("mousemove",e=>{
+let rect=c.getBoundingClientRect();
+p1=(e.clientY-rect.top)/rect.height*180;
+});
+
+/* AI */
+function ai(){
+p2+=((ball.y)-p2)*.1;
+}
+
+/* ball physics */
+function physics(){
 ball.x+=ball.vx;
 ball.y+=ball.vy;
 
-if(ball.y<0||ball.y>180)ball.vy*=-1;
+if(ball.y<0||ball.y>180) ball.vy*=-1;
 
-if(ball.x<20 && ball.y>player && ball.y<player+40)
-ball.vx*=-1;
-
-if(ball.x>300 && ball.y>milo && ball.y<milo+40)
-ball.vx*=-1;
-
-/* reset */
-if(ball.x<0||ball.x>320){
-ball={x:160,y:90,vx:(Math.random()>.5?2:-2),vy:1.5};
+if(ball.x<20 && Math.abs(ball.y-p1)<14){
+ball.vx*=-1.1;
+shake=6;
 }
 
-/* AI */
-milo+=(ball.y-(milo+20))*.05;
+if(ball.x>300 && Math.abs(ball.y-p2)<14){
+ball.vx*=-1.1;
+shake=6;
+}
 
-/* controls */
-onmousemove=e=>player=e.clientY-20;
+if(ball.x<0){s2++; reset();}
+if(ball.x>320){s1++; reset();}
+}
 
-/* draw */
-x.fillStyle="#000";x.fillRect(0,0,320,180);
+function reset(){
+ball.x=160; ball.y=90;
+ball.vx=(Math.random()<.5?-2:2);
+ball.vy=Math.random()*2-1;
+}
 
+/* render */
+function draw(){
+t++;
+
+x.save();
+if(shake){
+x.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
+shake*=.85;
+}
+x.fillStyle="#05050a";
+x.fillRect(0,0,320,180);
+
+/* court glow */
+let g=x.createRadialGradient(160,90,20,160,90,140);
+g.addColorStop(0,"rgba(138,46,255,.25)");
+g.addColorStop(1,"transparent");
+x.fillStyle=g;
+x.fillRect(0,0,320,180);
+
+/* net */
+x.fillStyle="#fff3";
+for(let y=0;y<180;y+=6)x.fillRect(160,y,1,4);
+
+/* paddles */
+x.fillStyle="#8a2eff";
+x.fillRect(12,p1-12,4,24);
+
+x.fillStyle="#00ffd5";
+x.fillRect(304,p2-12,4,24);
+
+/* ball trail */
+for(let i=0;i<6;i++){
+x.fillStyle=`rgba(255,255,255,${.2-i*.03})`;
+x.fillRect(ball.x-ball.vx*i,ball.y-ball.vy*i,2,2);
+}
+
+/* ball */
 x.fillStyle="#fff";
-x.fillRect(10,player,6,40);
-x.fillRect(304,milo,6,40);
-x.fillRect(ball.x,ball.y,6,6);
+x.fillRect(ball.x,ball.y,2,2);
 
+/* score */
+x.fillStyle="#fff";
+x.fillText(`${s1}  -  ${s2}`,150,14);
+
+x.restore();
+
+taunt();
+}
+
+/* loop */
+function loop(){
+physics();
+ai();
+draw();
 requestAnimationFrame(loop);
 }
 loop();
 </script>
 </body>
 </html>
-
