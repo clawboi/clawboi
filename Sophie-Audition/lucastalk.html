@@ -7,6 +7,26 @@
 <style>
   :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --aqua:#00ffd5; --vio:#8a2eff;}
   html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+
+  /* same polish layer vibe as rooms */
+  body::before{
+    content:""; position:fixed; inset:-20%; pointer-events:none;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(138,46,255,.16), transparent 60%),
+      radial-gradient(circle at 84% 42%, rgba(0,255,213,.10), transparent 65%),
+      radial-gradient(circle at 50% 92%, rgba(138,46,255,.10), transparent 70%);
+    filter:blur(40px) saturate(1.15);
+    animation:drift 12s ease-in-out infinite;
+  }
+  body::after{
+    content:""; position:fixed; inset:0; pointer-events:none;
+    background:
+      radial-gradient(1200px 900px at 50% 45%, rgba(0,0,0,0) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.60) 100%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 4px);
+    mix-blend-mode:overlay; opacity:.55;
+  }
+  @keyframes drift{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(1.5%,-1.5%,0)}}
+
   .wrap{min-height:100%; display:grid; place-items:center; padding:18px;}
   .panel{
     width:min(980px, calc(100vw - 24px));
@@ -14,6 +34,7 @@
     background:rgba(0,0,0,.35);
     border-radius:18px;
     overflow:hidden;
+    backdrop-filter: blur(10px);
   }
   .top{
     display:flex; align-items:center; justify-content:space-between; gap:12px;
@@ -33,7 +54,14 @@
     text-transform:uppercase;
     opacity:.9;
     background:rgba(0,0,0,.35);
+    display:flex; gap:8px; align-items:center;
   }
+  .dot{
+    width:8px; height:8px; border-radius:999px;
+    background:rgba(0,255,213,.65);
+    box-shadow:0 0 18px rgba(0,255,213,.25);
+  }
+  .dot.vio{ background:rgba(138,46,255,.7); box-shadow:0 0 18px rgba(138,46,255,.25); }
   .btn{
     border:1px solid rgba(255,255,255,.14);
     background:rgba(0,0,0,.45);
@@ -45,13 +73,65 @@
     text-transform:uppercase;
     cursor:pointer;
   }
+
+  /* ===== NEW: Kitchen close-up strip (pixel faces) ===== */
+  .scene{
+    display:grid;
+    grid-template-columns: 1fr;
+    border-bottom:1px solid rgba(255,255,255,.10);
+    background:linear-gradient(to bottom, rgba(0,0,0,.18), rgba(0,0,0,0));
+  }
+  .sceneInner{
+    display:flex; gap:14px; align-items:center;
+    padding:12px 14px;
+    flex-wrap:wrap;
+  }
+  .portraits{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+  }
+  .face{
+    width:64px; height:64px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;
+    background:rgba(0,0,0,.35);
+    display:grid; place-items:center;
+  }
+  .face canvas{ width:64px; height:64px; image-rendering:pixelated; image-rendering:crisp-edges; }
+  .meters{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    font-size:10px; letter-spacing:.14em; text-transform:uppercase; opacity:.88;
+  }
+  .meter{
+    display:flex; gap:8px; align-items:center;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(0,0,0,.28);
+    border-radius:999px;
+    padding:8px 10px;
+  }
+  .bar{
+    width:92px; height:8px; border-radius:999px; overflow:hidden;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .bar > i{
+    display:block; height:100%;
+    width:50%;
+    background:linear-gradient(90deg, rgba(138,46,255,.55), rgba(0,255,213,.45));
+  }
+  .sceneHint{
+    font-size:11px; letter-spacing:.08em; opacity:.75;
+    margin-left:auto;
+    white-space:nowrap;
+  }
+
   .chat{
-    height:min(60vh, 520px);
+    height:min(54vh, 520px);
     overflow:auto;
     padding:14px;
     display:flex;
     flex-direction:column;
     gap:10px;
+    scroll-behavior:smooth;
   }
   .bubble{
     border:1px solid rgba(255,255,255,.10);
@@ -61,10 +141,33 @@
     max-width:85%;
     font-size:13px;
     letter-spacing:.03em;
-    line-height:1.3;
+    line-height:1.35;
+    white-space:pre-wrap;
+  }
+  .meta{
+    display:block;
+    font-size:10px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    opacity:.65;
+    margin-top:6px;
   }
   .me{ align-self:flex-end; border-color: rgba(138,46,255,.22); }
   .lucas{ align-self:flex-start; border-color: rgba(0,255,213,.20); }
+
+  .chips{display:flex; gap:8px; flex-wrap:wrap; padding:0 14px 14px;}
+  .chip{
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.35);
+    color:var(--fg);
+    border-radius:999px;
+    padding:8px 10px;
+    font-size:10px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    cursor:pointer;
+    opacity:.92;
+  }
   .row{
     display:flex; gap:10px; padding:14px; border-top:1px solid rgba(255,255,255,.10);
     flex-wrap:wrap;
@@ -79,19 +182,6 @@
     font-size:14px;
     outline:none;
   }
-  .chips{display:flex; gap:8px; flex-wrap:wrap; padding:0 14px 14px;}
-  .chip{
-    border:1px solid rgba(255,255,255,.14);
-    background:rgba(0,0,0,.35);
-    color:var(--fg);
-    border-radius:999px;
-    padding:8px 10px;
-    font-size:10px;
-    letter-spacing:.14em;
-    text-transform:uppercase;
-    cursor:pointer;
-    opacity:.92;
-  }
   .hint{opacity:.7; font-size:11px; letter-spacing:.10em; padding:0 14px 14px;}
 </style>
 </head>
@@ -101,11 +191,33 @@
     <div class="top">
       <div class="title">
         Lucas Talk
-        <span class="badge" id="mode">Sober-ish</span>
+        <span class="badge" id="mode"><span class="dot" id="dot"></span><span id="modeText">Sober-ish</span></span>
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <button class="btn" id="clear">Clear</button>
         <button class="btn" id="back">Back to Kitchen</button>
+      </div>
+    </div>
+
+    <!-- NEW: close-up kitchen “faces” strip -->
+    <div class="scene">
+      <div class="sceneInner">
+        <div class="portraits">
+          <div class="face" title="Sophia">
+            <canvas id="sFace" width="64" height="64"></canvas>
+          </div>
+          <div class="face" title="Lucas">
+            <canvas id="lFace" width="64" height="64"></canvas>
+          </div>
+        </div>
+
+        <div class="meters">
+          <div class="meter">Warmth <span class="bar"><i id="warmBar"></i></span></div>
+          <div class="meter">Edge <span class="bar"><i id="edgeBar"></i></span></div>
+          <div class="meter">Tipsy <span class="bar"><i id="tipsyBar"></i></span></div>
+        </div>
+
+        <div class="sceneHint" id="sceneHint">Kitchen light: low • fridge hum • sink drip</div>
       </div>
     </div>
 
@@ -118,6 +230,8 @@
       <button class="chip" data-say="Dance with me.">Dance with me.</button>
       <button class="chip" data-say="What do you want right now?">What do you want?</button>
       <button class="chip" data-say="We should find the gnome.">Find the gnome.</button>
+      <button class="chip" data-say="I'm nervous about the audition.">Audition nerves</button>
+      <button class="chip" data-say="Stop hiding in the screen.">Screen</button>
     </div>
 
     <div class="row">
@@ -125,16 +239,18 @@
       <button class="btn" id="send">Send</button>
     </div>
 
-    <div class="hint">Lucas responses are rule-based (keywords + mood). It feels alive, but stays stable.</div>
+    <div class="hint">Lucas responses stay stable (keywords + mood), but now they flow like an actual kitchen conversation.</div>
   </div>
 </div>
 
 <script>
 const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
-const CHAT_KEY="SOPHIA_AUDITION_LUCAS_CHAT_V1";
+const CHAT_KEY="SOPHIA_AUDITION_LUCAS_CHAT_V2"; // bump version so old chat doesn't fight new cadence
 
-function loadState(){ const r=localStorage.getItem(STORE_KEY); if(r){try{return JSON.parse(r);}catch(e){}}
-  return { kitchen:{ margaritaDone:false, drunk:false }, lucas:{ mood:0, following:false, inKitchen:false } };
+function loadState(){
+  const r=localStorage.getItem(STORE_KEY);
+  if(r){try{return JSON.parse(r);}catch(e){}}
+  return { kitchen:{ margaritaDone:false, drunk:false }, lucas:{ mood:0, follow:false, inKitchen:false, kissed:false, annoyed:0 } };
 }
 function saveState(s){ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
 
@@ -144,122 +260,367 @@ function loadChat(){ const r=localStorage.getItem(CHAT_KEY); if(r){try{return JS
 function saveChat(arr){ localStorage.setItem(CHAT_KEY, JSON.stringify(arr)); }
 
 let state = loadState();
+state.kitchen = state.kitchen || {margaritaDone:false, drunk:false};
+state.lucas = state.lucas || {mood:0, follow:false, inKitchen:false, kissed:false, annoyed:0};
+
 const chatEl=document.getElementById("chat");
 const input=document.getElementById("input");
-const mode=document.getElementById("mode");
+const modeEl=document.getElementById("modeText");
+const dotEl=document.getElementById("dot");
+const sceneHint=document.getElementById("sceneHint");
 
-mode.textContent = state.kitchen?.drunk ? "Drunk Mode" : "Sober-ish";
+const warmBar=document.getElementById("warmBar");
+const edgeBar=document.getElementById("edgeBar");
+const tipsyBar=document.getElementById("tipsyBar");
 
-function addBubble(who, text){
+const sFace=document.getElementById("sFace");
+const lFace=document.getElementById("lFace");
+const sctx=sFace.getContext("2d",{alpha:false});
+const lctx=lFace.getContext("2d",{alpha:false});
+sctx.imageSmoothingEnabled=false;
+lctx.imageSmoothingEnabled=false;
+
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function normalize(s){ return (s||"").toLowerCase().trim(); }
+
+function toastBubble(who, text, tag){
   const div=document.createElement("div");
   div.className = "bubble " + (who==="me" ? "me":"lucas");
   div.textContent = text;
+  if(tag){
+    const m=document.createElement("span");
+    m.className="meta";
+    m.textContent = tag;
+    div.appendChild(m);
+  }
   chatEl.appendChild(div);
   chatEl.scrollTop = chatEl.scrollHeight;
-}
-
-function seedIfEmpty(){
-  const hist=loadChat();
-  if(hist.length) return;
-  const intro = state.kitchen?.drunk
-    ? "Okay… we’re kinda floating. Say anything. I’m listening. 🥴"
-    : "What’s up? Say it straight. I’m here.";
-  const arr=[{who:"lucas", text:intro, t:Date.now()}];
-  saveChat(arr);
-}
-
-function normalize(s){ return (s||"").toLowerCase().trim(); }
-
-function lucasReply(msg){
-  const m=normalize(msg);
-  const drunk=!!state.kitchen?.drunk;
-  const mood = (state.lucas?.mood||0);
-
-  // keyword buckets
-  const has = (k)=>m.includes(k);
-
-  // “tone” variables
-  const warm = (mood>=3) ? 1 : 0;
-  const edge = (mood<=-2) ? 1 : 0;
-
-  // responses
-  if(!m) return drunk ? "Bro… type something real. My brain is soup." : "Say it.";
-  if(has("sorry") || has("apolog")) return drunk ? "You’re forgiven. Come here." : "Alright. We move on.";
-  if(has("love") || has("miss")) return drunk ? "I love you too. It’s embarrassing. Don’t tell anyone." : (warm ? "I got you." : "…yeah.");
-  if(has("okay") || has("are we ok")) return drunk ? "We’re okay. We’re just… wobbly." : (warm ? "Yeah. We’re okay." : "We will be.");
-  if(has("audition") || has("acting") || has("nervous")) return drunk
-    ? "You’re gonna crush it. Even if you don’t. You still crush it."
-    : "Breathe. Show up. Do the work. Don’t spiral.";
-  if(has("gnome") || has("key")) return drunk
-    ? "The gnome has the key… obviously. Why would the world be normal?"
-    : "If the key’s outside, we check the yard. Window first.";
-  if(has("dance")) return drunk
-    ? "Yes. Dance. If we dance long enough, reality gets confused."
-    : "Fine. But no weird moves.";
-  if(has("kissing") || has("kiss")) return drunk
-    ? "Come here. Don’t make it a whole movie."
-    : (warm ? "…maybe." : "Not right now.");
-  if(has("why") && has("computer")) return drunk
-    ? "I was trapped in the screen. Like a bug. It happens."
-    : (warm ? "I zone out sometimes. I’m trying." : "I was busy.");
-  if(has("help") || has("please")) return drunk
-    ? "I’m helping. Look. I’m standing up. Big growth."
-    : "Tell me what you need.";
-  if(has("hurt") || has("mad") || has("angry")) return drunk
-    ? "Don’t be mad. I’m soft inside. Just… bad at showing it."
-    : (warm ? "I hear you. That’s fair." : "Okay. Say it clean.");
-  if(has("what do you want")) return drunk
-    ? "I want you to stop disappearing inside your head."
-    : (warm ? "I want you safe." : "I want peace.");
-
-  // fallback: echo-ish with flavor
-  const variants = drunk ? [
-    "That’s wild. But I get it. Keep going.",
-    "Say it again slower. My thoughts are skating.",
-    "Okay… yeah. That’s real. I’m here.",
-    "I hear you. Like… actually."
-  ] : [
-    "I hear you. Keep talking.",
-    "Okay. What’s the next part?",
-    "Yeah. And how do you feel about it?",
-    "Got it. What do you want me to do?"
-  ];
-
-  // tiny mood influence
-  if(edge) return drunk ? "You’re poking the bear… but I’m too tipsy to bite." : "Careful. But I’m listening.";
-  return variants[(Math.random()*variants.length)|0];
 }
 
 function render(){
   chatEl.innerHTML="";
   const hist=loadChat();
-  for(const m of hist) addBubble(m.who, m.text);
+  for(const m of hist){
+    toastBubble(m.who, m.text, m.tag || "");
+  }
 }
 
-function pushMsg(who, text){
+function pushMsg(who, text, tag){
   const hist=loadChat();
-  hist.push({who, text, t:Date.now()});
+  hist.push({who, text, tag, t:Date.now()});
   saveChat(hist);
 }
 
+function seedIfEmpty(){
+  const hist=loadChat();
+  if(hist.length) return;
+
+  const drunk=!!state.kitchen.drunk;
+  const intro = drunk
+    ? "Okay… kitchen’s spinning a little. Sit with me.\nSay it normal. I’ll translate it through the wobble."
+    : "You’re pacing. Talk to me.\nWhat’s actually going on?";
+
+  const arr=[{who:"lucas", text:intro, tag: drunk ? "lucas • tipsy" : "lucas • low voice", t:Date.now()}];
+  saveChat(arr);
+}
+
+/* ===== Mood system (gentle, but makes convo feel human) =====
+   mood: -5..+5
+   warmth rises when you ask for reassurance / say love / say truth
+   edge rises when you accuse / insult / push
+   drunk adds softness + chaos in phrasing
+*/
+function getMood(){ return clamp((state.lucas.mood||0), -5, 5); }
+function setMood(v){ state.lucas.mood = clamp(v, -5, 5); saveState(state); }
+
+function setModeUI(){
+  const drunk=!!state.kitchen.drunk;
+  modeEl.textContent = drunk ? "Drunk Mode" : "Sober-ish";
+  dotEl.className = "dot " + (drunk ? "vio":"");
+  sceneHint.textContent = drunk
+    ? "Kitchen light: wavy • blender regret • laugh threatens"
+    : "Kitchen light: low • fridge hum • sink drip";
+}
+
+/* ===== Pixel close-up faces ===== */
+function drawFace(ctx, who, mood, drunk, blink){
+  // bg
+  ctx.fillStyle="#05050a"; ctx.fillRect(0,0,64,64);
+  // glow halo
+  const a = drunk ? 0.18 : 0.12;
+  ctx.fillStyle = drunk ? `rgba(138,46,255,${a})` : `rgba(0,255,213,${a*0.7})`;
+  ctx.fillRect(0,0,64,64);
+
+  // “camera close” framing: big head, shoulders
+  const offX = who==="lucas" ? 2 : -2;
+  const offY = 2;
+
+  // shoulders
+  const hoodie = who==="lucas";
+  ctx.fillStyle = hoodie ? "rgba(0,255,213,.10)" : "rgba(138,46,255,.16)";
+  ctx.fillRect(10+offX, 40+offY, 44, 20);
+
+  // neck
+  ctx.fillStyle = "rgba(255,217,201,.65)";
+  ctx.fillRect(28+offX, 36+offY, 8, 6);
+
+  // hair
+  if(who==="sophia"){
+    ctx.fillStyle="#f2d27a";
+    ctx.fillRect(14+offX, 10+offY, 36, 16);
+    ctx.fillRect(10+offX, 22+offY, 44, 8);
+  }else{
+    ctx.fillStyle="rgba(120,70,40,.55)";
+    ctx.fillRect(14+offX, 12+offY, 36, 14);
+  }
+
+  // face
+  ctx.fillStyle="rgba(255,217,201,.95)";
+  ctx.fillRect(16+offX, 22+offY, 32, 22);
+
+  // expression: warm vs edge
+  const warm = mood>=2;
+  const edge = mood<=-2;
+
+  // eyes
+  const eyeY = 30+offY;
+  const eyeLx = 26+offX;
+  const eyeRx = 38+offX;
+
+  if(blink){
+    ctx.fillStyle="rgba(0,0,0,.35)";
+    ctx.fillRect(eyeLx, eyeY, 4, 1);
+    ctx.fillRect(eyeRx, eyeY, 4, 1);
+  }else{
+    ctx.fillStyle = who==="sophia" ? "#67b7ff" : "rgba(255,255,255,.12)";
+    ctx.fillRect(eyeLx, eyeY, 2, 2);
+    ctx.fillRect(eyeRx, eyeY, 2, 2);
+
+    // drunk sparkle
+    if(drunk && (Math.random()<0.25)){
+      ctx.fillStyle="rgba(255,99,255,.25)";
+      ctx.fillRect(eyeLx-2, eyeY-2, 1, 1);
+      ctx.fillRect(eyeRx+3, eyeY-2, 1, 1);
+    }
+  }
+
+  // brows
+  ctx.fillStyle="rgba(0,0,0,.25)";
+  if(edge){
+    ctx.fillRect(24+offX, 27+offY, 8, 1);
+    ctx.fillRect(36+offX, 28+offY, 8, 1);
+  }else if(warm){
+    ctx.fillRect(24+offX, 28+offY, 8, 1);
+    ctx.fillRect(36+offX, 28+offY, 8, 1);
+  }else{
+    ctx.fillRect(24+offX, 28+offY, 8, 1);
+    ctx.fillRect(36+offX, 28+offY, 8, 1);
+  }
+
+  // mouth
+  ctx.fillStyle="rgba(0,0,0,.35)";
+  if(edge){
+    ctx.fillRect(30+offX, 39+offY, 8, 1);
+  }else if(warm){
+    ctx.fillRect(28+offX, 39+offY, 12, 1);
+    ctx.fillRect(30+offX, 40+offY, 8, 1);
+  }else{
+    ctx.fillRect(30+offX, 39+offY, 10, 1);
+  }
+
+  // little “close proximity” highlight
+  ctx.fillStyle="rgba(255,255,255,.06)";
+  ctx.fillRect(18+offX, 24+offY, 2, 18);
+}
+
+let faceT=0;
+function updateFaces(){
+  faceT++;
+  const drunk=!!state.kitchen.drunk;
+  const mood=getMood();
+  const blink = (faceT%60>54); // short blink
+  drawFace(sctx, "sophia", mood, drunk, blink);
+  drawFace(lctx, "lucas", mood, drunk, blink);
+  requestAnimationFrame(updateFaces);
+}
+updateFaces();
+
+/* ===== Conversation brain: more natural + still rule-based ===== */
+function has(m,k){ return m.includes(k); }
+function any(m, arr){ return arr.some(k=>m.includes(k)); }
+
+function lucasReply(msg){
+  const m=normalize(msg);
+  const drunk=!!state.kitchen.drunk;
+  let mood=getMood();
+
+  // empty
+  if(!m) return drunk ? {t:"Say words, Soph. I can’t read vibes tonight.", tag:"lucas • tipsy"} : {t:"Say it.", tag:"lucas • steady"};
+
+  // mood nudges
+  const tender = any(m, ["love","miss","believe","proud","real","truth","okay","are we ok","are we okay"]);
+  const pushy  = any(m, ["whatever","you never","you always","hate","shut up","stupid","screen","ignoring"]);
+  const audition = any(m, ["audition","acting","nervous","scared","late","timer","time"]);
+
+  if(tender) mood += 1;
+  if(pushy) mood -= 1;
+  if(audition) mood += drunk ? 1 : 0; // tipsy lucas gets extra soft about it
+  mood = clamp(mood, -5, 5);
+  setMood(mood);
+
+  const warm = mood>=2;
+  const edge = mood<=-2;
+
+  // quick “kitchen specific” lines
+  if(any(m, ["fridge","smell","puke","gross"])) {
+    return drunk
+      ? {t:"That fridge is haunted. Like… emotionally.\nIf you open it again, I’m leaving my body.", tag:"lucas • laughing"}
+      : {t:"Don’t do that to yourself. Water first.", tag:"lucas • practical"};
+  }
+  if(any(m, ["drink","margarita","daiquiri","blender"])) {
+    return drunk
+      ? {t:"The blender started it. Don’t blame us.\nWe’re just… consequences with faces.", tag:"lucas • tipsy"}
+      : {t:"If you drink, drink water too. I’m not carrying you.", tag:"lucas • trying"};
+  }
+
+  // apologies
+  if(any(m, ["sorry","apolog"])) {
+    return drunk
+      ? {t:"Okay… yeah. I accept it.\nCome closer. Not a speech. Just… closer.", tag:"lucas • soft"}
+      : {t:(warm ? "Alright. Thank you. We move on." : "Okay. I hear you."), tag:"lucas • grounded"};
+  }
+
+  // love/miss
+  if(any(m, ["love","miss"])) {
+    return drunk
+      ? {t:"I love you too.\nI’m saying it because the room is spinning and honesty is faster than balance.", tag:"lucas • vulnerable"}
+      : {t:(warm ? "I got you. I’m here." : "…yeah. I’m here."), tag:"lucas • quiet"};
+  }
+
+  // are we okay
+  if(any(m, ["are we ok","are we okay","okay?"])) {
+    return drunk
+      ? {t:"We’re okay.\nWe’re just… wobbly humans with a deadline.", tag:"lucas • reassuring"}
+      : {t:(warm ? "Yeah. We’re okay." : "We will be. Talk to me."), tag:"lucas • steady"};
+  }
+
+  // audition nerves
+  if(audition) {
+    return drunk
+      ? {t:"Look at me.\nYou’re gonna walk in there like you belong.\nEven if your hands shake. Even if your voice does.\nStill you.", tag:"lucas • protective"}
+      : {t:"Breathe. Show up. Do the work.\nDon’t spiral. You know what you’re doing.", tag:"lucas • calm"};
+  }
+
+  // gnome / key
+  if(any(m, ["gnome","key","keys","yard","backyard"])) {
+    return drunk
+      ? {t:"The gnome has the key. Of course it does.\nReality loves a tiny villain.", tag:"lucas • amused"}
+      : {t:"Backyard. Check around the gnome. If it’s a game, it’ll be there.", tag:"lucas • focused"};
+  }
+
+  // dance request
+  if(any(m, ["dance"])) {
+    return drunk
+      ? {t:"Yes.\nDance with me right here.\nIf we move long enough, the kitchen turns into a club and forgets we’re stressed.", tag:"lucas • playful"}
+      : {t:(warm ? "Okay. One song. Then we get serious." : "Fine. But don’t make it weird."), tag:"lucas • reluctant"};
+  }
+
+  // kiss
+  if(any(m, ["kiss","kissing"])) {
+    return drunk
+      ? {t:"Come here.\nNo monologue. Just… come here.", tag:"lucas • close"}
+      : {t:(warm ? "…yeah. Come closer." : "Not right now. Talk first."), tag:"lucas • boundary"};
+  }
+
+  // screen / ignoring / computer
+  if(any(m, ["screen","computer","game","ignoring","zone out"])) {
+    return drunk
+      ? {t:"I get lost in it sometimes.\nIt’s quiet in there.\nBut I’m here now. With you. In this loud kitchen.", tag:"lucas • honest"}
+      : {t:(warm ? "I do that. I’m trying to stop. You matter more." : "I hear you. Tell me what you need."), tag:"lucas • listening"};
+  }
+
+  // what do you want
+  if(any(m, ["what do you want"])) {
+    return drunk
+      ? {t:"I want you to stop disappearing inside your head.\nAnd I want you to make it to that audition.", tag:"lucas • real"}
+      : {t:(warm ? "I want you safe. And proud of yourself." : "I want peace. For both of us."), tag:"lucas • plain"};
+  }
+
+  // help/please
+  if(any(m, ["help","please"])) {
+    return drunk
+      ? {t:"Okay. I’m helping.\nPoint me. I’ll do the thing.", tag:"lucas • up"}
+      : {t:"Tell me what you need. One step.", tag:"lucas • ready"};
+  }
+
+  // hurt / mad / angry
+  if(any(m, ["hurt","mad","angry"])) {
+    return drunk
+      ? {t:"Don’t be mad.\nI’m soft inside.\nJust bad at showing it without… liquid confidence.", tag:"lucas • messy"}
+      : {t:(warm ? "That’s fair. I hear you." : "Okay. Say it clean. I’m listening."), tag:"lucas • direct"};
+  }
+
+  // fallback variants (more natural cadence)
+  const variantsDrunk = [
+    {t:"Okay… yeah. That’s real.\nKeep going. I’m here.", tag:"lucas • present"},
+    {t:"Say it slower.\nMy brain is skating but I’m still listening.", tag:"lucas • tipsy"},
+    {t:"I get what you mean.\nI don’t have the perfect words, but I’m not leaving.", tag:"lucas • soft"},
+    {t:"That hits.\nDo you want comfort, or do you want a plan?", tag:"lucas • choosing"},
+  ];
+  const variantsSober = [
+    {t:"I’m listening. What’s the part you’re not saying?", tag:"lucas • attentive"},
+    {t:"Okay. What do you want from me right now?", tag:"lucas • clear"},
+    {t:"Yeah. And how does that feel in your chest?", tag:"lucas • grounded"},
+    {t:"Got it. Give me the next sentence.", tag:"lucas • steady"},
+  ];
+
+  if(edge){
+    return drunk
+      ? {t:"You’re poking the bear…\nBut I’m too tipsy to bite.\nSay what you mean.", tag:"lucas • edge"}
+      : {t:"Careful. But I’m listening. Say it clean.", tag:"lucas • edge"};
+  }
+
+  const pick = drunk ? variantsDrunk : variantsSober;
+  return pick[(Math.random()*pick.length)|0];
+}
+
+/* ===== UI meters ===== */
+function syncMeters(){
+  const drunk=!!state.kitchen.drunk;
+  const mood=getMood();
+  const warm = clamp((mood+5)/10, 0, 1);        // higher mood => higher warmth
+  const edge = clamp((-mood+5)/10, 0, 1);       // lower mood => higher edge
+  const tipsy = drunk ? 0.92 : 0.10;
+
+  warmBar.style.width = Math.round(100*warm) + "%";
+  edgeBar.style.width = Math.round(100*edge) + "%";
+  tipsyBar.style.width = Math.round(100*tipsy) + "%";
+}
+
+/* ===== send pipeline ===== */
 function send(){
   const msg=input.value;
   input.value="";
-  pushMsg("me", msg);
+  pushMsg("me", msg, "sophia");
   render();
+  syncMeters();
 
-  const reply = lucasReply(msg);
+  const r = lucasReply(msg);
+  const delay = 240 + Math.random()*240 + (state.kitchen.drunk ? 80 : 0);
 
-  // slight delay for vibe
   setTimeout(()=>{
-    pushMsg("lucas", reply);
+    pushMsg("lucas", r.t, r.tag);
     render();
-  }, 260 + Math.random()*220);
+    syncMeters();
+  }, delay);
 }
 
 seedIfEmpty();
+setModeUI();
+syncMeters();
 render();
 
+/* wire */
 document.getElementById("send").addEventListener("click", send);
 input.addEventListener("keydown", (e)=>{ if(e.key==="Enter") send(); });
 
@@ -276,6 +637,16 @@ document.getElementById("clear").addEventListener("click", ()=>{
   seedIfEmpty();
   render();
 });
+
+/* keep badge accurate if kitchen drunk toggles elsewhere */
+setInterval(()=>{
+  const latest=loadState();
+  const was=!!state.kitchen.drunk;
+  state=latest;
+  const now=!!state.kitchen.drunk;
+  if(now!==was) setModeUI();
+  syncMeters();
+}, 800);
 </script>
 </body>
 </html>
