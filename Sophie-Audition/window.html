@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Window — Backyard View</title>
+<style>
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --aqua:#00ffd5; --vio:#8a2eff;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%; display:grid; place-items:center; padding:18px;}
+  canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; border:1px solid rgba(255,255,255,.12); border-radius:18px;}
+  .hud{
+    position:fixed; left:12px; right:12px; top:12px; z-index:5;
+    display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;
+  }
+  .pill{
+    pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.35);
+    backdrop-filter: blur(8px);
+    border-radius:999px; padding:10px 12px;
+    font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+    display:flex; gap:10px; align-items:center;
+  }
+  .btn{
+    pointer-events:auto;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.45);
+    color:var(--fg);
+    border-radius:999px;
+    padding:10px 12px;
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .toast{
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+    border-radius:14px; padding:10px 12px;
+    font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
+    max-width:min(720px, calc(100vw - 24px)); text-align:center;
+    z-index:6;
+  }
+  .toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="hud">
+  <div class="pill"><b>WINDOW</b> <span>BACKYARD</span></div>
+  <div class="pill">GNOME: <span id="g">?</span></div>
+  <button class="btn" id="back">Back to Kitchen</button>
+</div>
+<div class="toast" id="toast"></div>
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+
+<script>
+const canvas=document.getElementById("c");
+const ctx=canvas.getContext("2d",{alpha:false});
+ctx.imageSmoothingEnabled=false;
+
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+function loadState(){ const r=localStorage.getItem(STORE_KEY); if(r){try{return JSON.parse(r);}catch(e){}}
+  return { hasKeys:false };
+}
+let state=loadState();
+
+const gEl=document.getElementById("g");
+gEl.textContent = state.hasKeys ? "NO KEY" : "HAS KEY";
+
+const toastEl=document.getElementById("toast");
+function toast(msg,ms=1500){
+  toastEl.textContent=msg;
+  toastEl.classList.add("on");
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>toastEl.classList.remove("on"),ms);
+}
+
+document.getElementById("back").addEventListener("click", ()=>location.href="Sophie04.html");
+
+const W=320,H=180;
+
+function drawGnome(t, hasKey){
+  const x=248, y=118;
+
+  // shadow
+  ctx.fillStyle="rgba(0,0,0,.45)";
+  ctx.fillRect(x-2,y+18,22,3);
+
+  // hat (red-ish via alpha only)
+  ctx.fillStyle="rgba(138,46,255,.22)";
+  ctx.fillRect(x+6,y-2,10,6);
+  ctx.fillRect(x+8,y-6,6,4);
+
+  // beard
+  ctx.fillStyle="rgba(255,255,255,.16)";
+  ctx.fillRect(x+8,y+6,8,10);
+
+  // face
+  ctx.fillStyle="rgba(255,217,201,.22)";
+  ctx.fillRect(x+10,y+4,4,4);
+
+  // body
+  ctx.fillStyle="rgba(0,255,213,.10)";
+  ctx.fillRect(x+6,y+12,12,8);
+
+  // wobble eyes
+  const blink = Math.sin(t*0.08) > 0.96;
+  ctx.fillStyle="rgba(0,0,0,.35)";
+  if(blink) ctx.fillRect(x+11,y+5,2,1);
+  else { ctx.fillRect(x+11,y+5,1,1); ctx.fillRect(x+13,y+5,1,1); }
+
+  // key glint (only if you don’t have keys yet)
+  if(hasKey){
+    const gl = 0.08 + 0.08*Math.abs(Math.sin(t*0.18));
+    ctx.fillStyle=`rgba(0,255,213,${gl})`;
+    ctx.fillRect(x+20,y+12,3,8);
+    ctx.fillRect(x+18,y+12,7,2);
+    ctx.fillRect(x+19,y+18,5,2);
+  }
+}
+
+function draw(){
+  const t=performance.now();
+
+  // night sky
+  ctx.fillStyle="#030307";
+  ctx.fillRect(0,0,W,H);
+
+  // stars
+  for(let i=0;i<70;i++){
+    const px = (Math.sin(i*91 + t*0.0009)*0.5+0.5)*W;
+    const py = (Math.cos(i*77 + t*0.0011)*0.5+0.5)*80;
+    ctx.fillStyle=`rgba(255,255,255,${0.06 + 0.08*(i%5===0)})`;
+    ctx.fillRect(px|0, py|0, 1, 1);
+  }
+
+  // yard ground
+  ctx.fillStyle="rgba(255,255,255,.05)";
+  ctx.fillRect(0,82,W,H-82);
+
+  // mushrooms area
+  ctx.fillStyle="rgba(138,46,255,.10)";
+  ctx.fillRect(10,120,70,40);
+  for(let i=0;i<10;i++){
+    const mx = 18 + i*6;
+    const my = 144 + ((i%3)*4);
+    ctx.fillStyle="rgba(255,255,255,.10)";
+    ctx.fillRect(mx,my,2,6);
+    ctx.fillStyle="rgba(0,255,213,.08)";
+    ctx.fillRect(mx-1,my,4,2);
+  }
+
+  // hammock (left-mid)
+  ctx.strokeStyle="rgba(255,255,255,.10)";
+  ctx.beginPath();
+  ctx.moveTo(80,108); ctx.lineTo(150,110);
+  ctx.stroke();
+  ctx.fillStyle="rgba(255,255,255,.06)";
+  ctx.fillRect(90,110,50,6);
+
+  // pingpong table (center)
+  ctx.fillStyle="rgba(255,255,255,.06)";
+  ctx.fillRect(148,128,70,18);
+  ctx.fillStyle="rgba(0,0,0,.45)";
+  ctx.fillRect(152,132,62,10);
+  ctx.fillStyle="rgba(255,255,255,.10)";
+  ctx.fillRect(182,128,2,18);
+
+  // path glow
+  ctx.fillStyle="rgba(0,255,213,.04)";
+  ctx.fillRect(120,150,120,12);
+
+  // gnome
+  drawGnome(t, !state.hasKeys);
+
+  // window frame overlay for “looking through glass”
+  ctx.fillStyle="rgba(0,0,0,.25)";
+  ctx.fillRect(0,0,W,10);
+  ctx.fillRect(0,0,10,H);
+  ctx.fillRect(0,H-10,W,10);
+  ctx.fillRect(W-10,0,10,H);
+
+  // message
+  ctx.font="10px ui-monospace, monospace";
+  ctx.fillStyle="rgba(255,255,255,.75)";
+  ctx.fillText(state.hasKeys ? "gnome: empty hands…" : "gnome: holding something shiny", 14, 20);
+
+  requestAnimationFrame(draw);
+}
+draw();
+
+canvas.addEventListener("click", ()=>{
+  state=loadState();
+  toast(state.hasKeys ? "No key in sight. The gnome looks smug anyway." : "The gnome definitely has the key. Outside mission confirmed.", 1900);
+});
+</script>
+</body>
+</html>
