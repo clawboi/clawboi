@@ -269,6 +269,14 @@ header a:hover{opacity:1}
 
   animation:logoPulse 5.4s ease-in-out infinite, logoShimmer 7.6s ease-in-out infinite;
   user-select:none;
+
+  /* ADDED: prevent highlight/copy selection across browsers (no layout change) */
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  -ms-user-select:none;
+  -webkit-touch-callout:none;
+  -webkit-tap-highlight-color: transparent;
+  caret-color: transparent;
 }
 @keyframes logoPulse{
   0%,100%{transform:scale(1)}
@@ -632,6 +640,14 @@ footer{
 <script>
 document.getElementById("y").textContent=new Date().getFullYear();
 
+/* ADDED: block text selection/highlight on the logo (no behavior change) */
+(function(){
+  const logo = document.getElementById("logo");
+  if(!logo) return;
+  logo.addEventListener("mousedown", e => e.preventDefault());
+  logo.addEventListener("selectstart", e => e.preventDefault());
+})();
+  
 /* NEW: subtle stars + occasional shooting stars (no layout change) */
 (function(){
   const fx = document.getElementById("spaceFX");
