@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Mystery Man</title>
+<style>
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff; --aqua:#00ffd5;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%; display:grid; place-items:center;}
+  canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+  .hud{position:fixed; left:12px; right:12px; top:12px; z-index:7; display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;}
+  .pill{pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.35); backdrop-filter: blur(8px);
+    border-radius:999px; padding:10px 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase; display:flex; gap:10px; align-items:center; white-space:nowrap;}
+  .toast{position:fixed; left:50%; bottom:16px; transform:translateX(-50%); border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+    border-radius:14px; padding:10px 12px; font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s; max-width:min(860px, calc(100vw - 24px)); text-align:center; z-index:8;}
+  .toast.on{opacity:1}
+  .microhint{position:fixed; right:12px; bottom:12px; z-index:6; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.35);
+    backdrop-filter: blur(8px); border-radius:14px; padding:8px 10px; font-size:10px; letter-spacing:.12em; opacity:.88; pointer-events:none;}
+</style>
+</head>
+<body>
+<div class="hud">
+  <div class="pill"><b>MYSTERY MAN</b> <span>BACK ROOM</span></div>
+  <div class="pill">MUSHROOMS: <span id="ammo">0</span></div>
+  <div class="pill">CASH: <span id="cash">0</span></div>
+  <div class="pill">PUFF TOOL: <span id="tool">NO</span></div>
+  <div class="pill">E: TRADE · ESC: BACK</div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="microhint">Trade 10 mushrooms → “Stun Puff” tool (non-lethal)</div>
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d',{alpha:false});
+ctx.imageSmoothingEnabled=false;
+
+const UI={
+  toast:document.getElementById('toast'),
+  ammo:document.getElementById('ammo'),
+  cash:document.getElementById('cash'),
+  tool:document.getElementById('tool'),
+};
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+function loadState(){
+  const r=localStorage.getItem(STORE_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return { street:{ammo:0}, wallet:{cash:0}, upgrades:{} };
+}
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+
+let state=loadState();
+state.street=state.street||{ammo:0};
+state.wallet=state.wallet||{cash:0};
+state.upgrades=state.upgrades||{};
+if(typeof state.upgrades.puffTool!=="boolean") state.upgrades.puffTool=false;
+saveState();
+
+function toast(msg,ms=1600){
+  UI.toast.textContent=msg;
+  UI.toast.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>UI.toast.classList.remove('on'),ms);
+}
+function syncUI(){
+  UI.ammo.textContent=String(state.street.ammo|0);
+  UI.cash.textContent=String(state.wallet.cash|0);
+  UI.tool.textContent=state.upgrades.puffTool ? "YES" : "NO";
+}
+syncUI();
+
+const keysDown=new Set();
+addEventListener('keydown',(e)=>{
+  const k=e.key.toLowerCase();
+  if(["e","escape"].includes(k)) e.preventDefault();
+  keysDown.add(k);
+});
+addEventListener('keyup',(e)=>keysDown.delete(e.key.toLowerCase()));
+
+function trade(){
+  if(state.upgrades.puffTool) return toast("He already gave you the Puff Tool.", 1400);
+  if((state.street.ammo|0) < 10) return toast("Need 10 mushrooms.", 1400);
+
+  state.street.ammo -= 10;
+  state.upgrades.puffTool = true;
+
+  // tiny cash bonus too
+  state.wallet.cash = (state.wallet.cash|0) + 40;
+
+  saveState();
+  syncUI();
+  toast("Trade accepted. Puff Tool acquired. (+$40)", 1900);
+}
+
+function back(){
+  saveState();
+  location.href="weedstore.html";
+}
+
+function draw(t){
+  ctx.fillStyle="#05050a"; ctx.fillRect(0,0,320,180);
+  const g=ctx.createRadialGradient(250,70,8,250,70,160);
+  g.addColorStop(0,"rgba(138,46,255,.14)");
+  g.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,320,180);
+
+  // door glow
+  ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(20,30,280,120);
+  ctx.fillStyle="rgba(0,0,0,.55)"; ctx.fillRect(40,52,240,70);
+
+  // silhouette
+  ctx.fillStyle="rgba(255,255,255,.10)";
+  ctx.fillRect(240,70,20,50);
+  ctx.fillRect(232,84,36,12);
+  ctx.fillStyle="rgba(0,255,213,.08)";
+  ctx.fillRect(242,78,16,6);
+
+  // table
+  ctx.fillStyle="rgba(255,255,255,.06)";
+  ctx.fillRect(60,110,140,20);
+  ctx.fillStyle="rgba(138,46,255,.10)";
+  ctx.fillRect(70,114,40,12);
+  ctx.fillStyle="rgba(0,255,213,.08)";
+  ctx.fillRect(120,114,30,12);
+
+  // blinking cursor vibe
+  if(t%40<20){
+    ctx.fillStyle="rgba(255,255,255,.10)";
+    ctx.fillRect(64,64,2,10);
+  }
+
+  ctx.font="8px ui-monospace, monospace";
+  ctx.fillStyle="rgba(255,255,255,.75)";
+  ctx.fillText("TRADE: 10 MUSHROOMS → PUFF TOOL", 58, 92);
+  ctx.fillText("E to trade · ESC to go back", 58, 104);
+}
+
+let t=0;
+function loop(){
+  t++;
+  if(keysDown.has("e")){
+    if(!loop._e){ loop._e=true; trade(); }
+  } else loop._e=false;
+
+  if(keysDown.has("escape")){
+    if(!loop._esc){ loop._esc=true; back(); }
+  } else loop._esc=false;
+
+  draw(t);
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
