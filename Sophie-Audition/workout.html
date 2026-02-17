@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Workout</title>
+<style>
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --aqua:#00ffd5; --vio:#8a2eff;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%; display:grid; place-items:center;}
+  canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+  .hud{position:fixed; left:12px; right:12px; top:12px; z-index:5; display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;}
+  .pill{pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.35); backdrop-filter: blur(8px);
+    border-radius:999px; padding:10px 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase; display:flex; gap:10px; align-items:center;}
+  .toast{position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    border:1px solid var(--ui2); background:rgba(0,0,0,.55); border-radius:14px; padding:10px 12px;
+    font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s; max-width:min(760px, calc(100vw - 24px)); text-align:center; z-index:6;}
+  .toast.on{opacity:1}
+  .microhint{position:fixed; right:12px; bottom:12px; z-index:4; border:1px solid rgba(255,255,255,.10);
+    background:rgba(0,0,0,.35); backdrop-filter: blur(8px); border-radius:14px; padding:8px 10px; font-size:10px; letter-spacing:.12em; opacity:.85; pointer-events:none;}
+  .exit{position:fixed; left:12px; bottom:12px; z-index:7; pointer-events:auto; border:1px solid rgba(255,255,255,.18);
+    background:rgba(0,0,0,.45); backdrop-filter: blur(8px); border-radius:14px; padding:10px 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase; cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="hud">
+  <div class="pill"><b>WORKOUT</b> <span id="mode">RHYTHM</span></div>
+  <div class="pill">TIME: <span id="time">10:00</span></div>
+  <div class="pill">ROUND: <span id="round">0</span></div>
+  <div class="pill">SCORE: <span id="score">0</span></div>
+  <div class="pill">STREAK: <span id="streak">0</span></div>
+</div>
+<div class="toast" id="toast"></div>
+<button class="exit" id="exitBtn">EXIT → LIVING ROOM</button>
+<div class="microhint">Hit prompts: J=JUMP · S=SQUAT · P=PLANK · R=REST · Exit: E</div>
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+
+<script>
+const c=document.getElementById("c");
+const ctx=c.getContext("2d",{alpha:false});
+ctx.imageSmoothingEnabled=false;
+
+const UI={
+  toast:document.getElementById("toast"),
+  time:document.getElementById("time"),
+  round:document.getElementById("round"),
+  score:document.getElementById("score"),
+  streak:document.getElementById("streak"),
+  exitBtn:document.getElementById("exitBtn"),
+};
+
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+const RUN_KEY="SOPHIA_AUDITION_RUN_V1";
+const DURATION_MS=10*60*1000;
+
+function loadState(){
+  const r=localStorage.getItem(STORE_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return {trip:false};
+}
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+function loadRun(){
+  const r=localStorage.getItem(RUN_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return { startTime:0, durationMs:DURATION_MS, active:false, ended:false };
+}
+function saveRun(run){ localStorage.setItem(RUN_KEY, JSON.stringify(run)); }
+
+let state=loadState();
+state.workout = state.workout || { best:0, done:false };
+saveState();
+
+function toast(msg,ms=1500){
+  UI.toast.textContent=msg;
+  UI.toast.classList.add("on");
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>UI.toast.classList.remove("on"),ms);
+}
+
+/* timer */
+function fmt(ms){
+  ms=Math.max(0, ms|0);
+  const s=Math.ceil(ms/1000);
+  const m=(s/60)|0;
+  const ss=String(s%60).padStart(2,"0");
+  return `${m}:${ss}`;
+}
+function timeLeftMs(){
+  const run=loadRun();
+  if(!run.active || run.ended) return run.durationMs;
+  return (run.startTime + run.durationMs - Date.now());
+}
+function tickTimer(){
+  const left=timeLeftMs();
+  UI.time.textContent=fmt(left);
+  if(left<=0){
+    const run=loadRun();
+    run.ended=true; run.active=false;
+    saveRun(run);
+    toast("TIME UP. Audition missed.", 1800);
+    setTimeout(()=>location.href="Sophie00.html", 700);
+  }
+}
+setInterval(tickTimer,250);
+tickTimer();
+
+/* input */
+const keysDown=new Set();
+addEventListener("keydown",(e)=>{
+  const k=e.key.toLowerCase();
+  if(["j","s","p","r","e"," "].includes(k)) e.preventDefault();
+  keysDown.add(k);
+});
+addEventListener("keyup",(e)=>keysDown.delete(e.key.toLowerCase()));
+
+const W=c.width,H=c.height;
+
+function bevel(x,y,w,h,fill){
+  ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(x,y,w,1);
+  ctx.fillStyle="rgba(0,0,0,.40)"; ctx.fillRect(x,y+h-1,w,1);
+  ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(x,y,1,h);
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(x+w-1,y,1,h);
+}
+function hint(text,x,y){
+  const pad=3;
+  ctx.font="8px ui-monospace, monospace";
+  const m=ctx.measureText(text);
+  const w=Math.ceil(m.width)+pad*2, h=12;
+  ctx.fillStyle="rgba(0,0,0,.65)"; ctx.fillRect(x-w/2,y-h,w,h);
+  ctx.strokeStyle="rgba(255,255,255,.12)"; ctx.strokeRect(x-w/2+0.5,y-h+0.5,w-1,h-1);
+  ctx.fillStyle="rgba(255,255,255,.9)"; ctx.fillText(text,x-w/2+pad,y-4);
+}
+
+/* GAME: prompt rhythm */
+const PROMPTS=[
+  {name:"JUMP", key:"j", color:"rgba(0,255,213,.18)"},
+  {name:"SQUAT", key:"s", color:"rgba(255,255,255,.10)"},
+  {name:"PLANK", key:"p", color:"rgba(138,46,255,.16)"},
+  {name:"REST", key:"r", color:"rgba(0,0,0,.25)"},
+];
+
+let t=0;
+let score=0;
+let streak=0;
+let round=0;
+
+let active=true;
+let prompt=null;
+let promptStart=0;
+let windowMs=900;      // hit window
+let gapMs=450;         // time between prompts
+let nextAt=0;
+let lastKeyHit=0;
+
+function newPrompt(){
+  round++;
+  UI.round.textContent=String(round);
+  const hard = Math.min(5, Math.floor(round/6));
+  windowMs = Math.max(520, 900 - hard*80);
+  gapMs = Math.max(250, 450 - hard*40);
+
+  // weighted: more action than rest
+  const r=Math.random();
+  if(r<0.36) prompt=PROMPTS[0];
+  else if(r<0.70) prompt=PROMPTS[1];
+  else if(r<0.92) prompt=PROMPTS[2];
+  else prompt=PROMPTS[3];
+
+  promptStart=performance.now();
+  nextAt=promptStart + windowMs + gapMs;
+
+  if(state.trip && Math.random()<0.20){
+    toast("MILO: do the ritual moves. earn the sweat points.", 1400);
+  }
+}
+
+function judgeHit(key){
+  if(!prompt) return;
+  const now=performance.now();
+  const dt=now - promptStart;
+
+  // too late
+  if(dt>windowMs){
+    streak=0;
+    toast("MISS. Too slow.", 900);
+    prompt=null;
+    return;
+  }
+
+  if(key===prompt.key){
+    // accuracy bonus
+    const acc = 1 - (dt/windowMs);
+    const gain = prompt.name==="REST" ? 5 : (10 + Math.floor(acc*10));
+    score += gain + Math.min(12, streak);
+    streak++;
+    toast(`HIT: ${prompt.name} (+${gain})`, 700);
+  }else{
+    streak=0;
+    toast(`WRONG KEY. Needed ${prompt.key.toUpperCase()}.`, 900);
+  }
+  prompt=null;
+}
+
+function endWorkout(){
+  active=false;
+  state.workout.done=true;
+  state.workout.best=Math.max(state.workout.best||0, score);
+  saveState();
+  toast(`WORKOUT COMPLETE. Score ${score}. Best ${state.workout.best}.`, 2200);
+}
+
+function goBack(){
+  // keep score in state (already saved in endWorkout if finished)
+  saveState();
+  location.href="Sophie03.html";
+}
+
+UI.exitBtn.addEventListener("click", goBack);
+
+function draw(){
+  ctx.fillStyle="#05050a"; ctx.fillRect(0,0,W,H);
+
+  // soft gym glow
+  const g=ctx.createRadialGradient(160,70,10,160,70,170);
+  g.addColorStop(0,"rgba(0,255,213,.10)");
+  g.addColorStop(0.5,"rgba(138,46,255,.08)");
+  g.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  // mat
+  bevel(36,118,248,44,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,0,0,.35)";
+  ctx.fillRect(42,124,236,32);
+
+  // avatar “Sophia” silhouette doing moves
+  const baseX=90, baseY=120;
+  const bob=Math.sin(t*0.10)*2;
+  ctx.fillStyle="rgba(255,255,255,.10)";
+  ctx.fillRect(baseX, baseY-22+bob, 10, 10); // head
+  ctx.fillRect(baseX-2, baseY-12+bob, 14, 18); // torso
+
+  if(prompt){
+    // show current prompt panel
+    bevel(146,40,140,44,prompt.color);
+    ctx.fillStyle="rgba(0,0,0,.55)";
+    ctx.fillRect(152,46,128,32);
+
+    ctx.font="10px ui-monospace, monospace";
+    ctx.fillStyle="rgba(255,255,255,.92)";
+    ctx.fillText(prompt.name, 160, 62);
+    ctx.fillStyle="rgba(255,255,255,.55)";
+    ctx.fillText(`PRESS ${prompt.key.toUpperCase()}`, 160, 76);
+
+    // timer bar
+    const now=performance.now();
+    const dt=Math.max(0, Math.min(windowMs, now-promptStart));
+    const p=1-(dt/windowMs);
+    ctx.fillStyle="rgba(0,255,213,.25)";
+    ctx.fillRect(152,82, Math.floor(128*p), 4);
+  }else{
+    hint("WAITING FOR NEXT MOVE…", 160, 46);
+  }
+
+  // progress + best
+  ctx.font="8px ui-monospace, monospace";
+  ctx.fillStyle="rgba(255,255,255,.7)";
+  ctx.fillText(`BEST ${state.workout.best||0}`, 12, 172);
+
+  // trip overlay
+  if(state.trip){
+    ctx.fillStyle=`rgba(255,99,255,${0.06+0.05*Math.sin(t*0.06)})`;
+    ctx.fillRect(0,0,W,H);
+  }
+}
+
+function loop(){
+  t++;
+
+  // exit with E anytime
+  if(keysDown.has("e")){
+    if(!loop._e){ goBack(); }
+    loop._e=true;
+  } else loop._e=false;
+
+  if(!active){
+    draw();
+    requestAnimationFrame(loop);
+    return;
+  }
+
+  // start prompts
+  const now=performance.now();
+  if(!prompt && now>nextAt){
+    if(round>=18){ // ~ short session
+      endWorkout();
+    }else{
+      newPrompt();
+    }
+  }
+
+  // auto-miss if prompt expired
+  if(prompt){
+    const dt=now - promptStart;
+    if(dt>windowMs){
+      streak=0;
+      toast("MISS.", 700);
+      prompt=null;
+    }
+  }
+
+  // handle hit keys
+  const hitKey = ["j","s","p","r"].find(k=>keysDown.has(k));
+  if(hitKey){
+    if(!lastKeyHit){
+      judgeHit(hitKey);
+      UI.score.textContent=String(score);
+      UI.streak.textContent=String(streak);
+    }
+    lastKeyHit=hitKey;
+  }else{
+    lastKeyHit=0;
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+newPrompt();
+loop();
+</script>
+</body>
+</html>
