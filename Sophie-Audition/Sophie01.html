@@ -8,7 +8,7 @@
 :root{ --bg:#07070b; --fg:#fff; --ui:rgba(255,255,255,.08); --ui2:rgba(255,255,255,.14); --vio:#8a2eff;}
 html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
 .wrap{height:100%; display:grid; place-items:center;}
-canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none; outline:none;}
 
 body::before{
 content:"";
@@ -83,259 +83,323 @@ color:white;
 padding:6px 14px;
 cursor:pointer;
 }
-
 </style>
 </head>
 <body>
 
 <div class="hud">
-<div class="pill"><b>SOPHIA</b> <span id="status">BEDROOM</span></div>
-<div class="pill">MILO: <span id="miloMood">following</span></div>
-<div class="pill">KEYS: <span id="keys">NO</span></div>
-<div class="hint">
-Move: <span class="k">WASD</span> · Interact: <span class="k">E</span> · Run: <span class="k">SHIFT</span><br>
-Desk = write poetry · Guitar = play · Clothes = change outfit · Bed = sleep · Doors lead out
-</div>
+  <div class="pill"><b>SOPHIA</b> <span id="status">BEDROOM</span></div>
+  <div class="pill">MILO: <span id="miloMood">following</span></div>
+  <div class="pill">KEYS: <span id="keys">NO</span></div>
+  <div class="hint">
+    Move: <span class="k">WASD</span> · Interact: <span class="k">E</span> · Run: <span class="k">SHIFT</span> · Click/Tap = interact<br>
+    Desk = write poetry · Guitar = play · Clothes = change outfit · Bed = sleep · Doors lead out
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
+
 <div id="poemBox">
-<div>
-<textarea id="poemInput" placeholder="Write poetry..."></textarea><br>
-<button onclick="savePoem()">Save Line</button>
-</div>
+  <div>
+    <textarea id="poemInput" placeholder="Write poetry..."></textarea><br>
+    <button id="poemSaveBtn">Save Line</button>
+  </div>
 </div>
 
-<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+<div class="wrap"><canvas id="c" width="320" height="180" tabindex="0"></canvas></div>
 
 <script>
-const canvas=document.getElementById("c");
-const ctx=canvas.getContext("2d",{alpha:false});
-ctx.imageSmoothingEnabled=false;
+(() => {
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d", { alpha:false });
+  ctx.imageSmoothingEnabled = false;
 
-const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+  const statusEl = document.getElementById("status");
+  const keysEl = document.getElementById("keys");
+  const miloMoodEl = document.getElementById("miloMood");
+  const toastEl = document.getElementById("toast");
+  const poemBoxEl = document.getElementById("poemBox");
+  const poemInputEl = document.getElementById("poemInput");
+  const poemSaveBtn = document.getElementById("poemSaveBtn");
 
-let state=JSON.parse(localStorage.getItem(STORE_KEY)||`{
-"hasKeys":false,"slept":false,"trip":false,"puke":false,
-"poemLines":0,"poems":[],"guitarPlayed":0,
-"outfit":0,
-"lastRoom":"BEDROOM",
-"sophia":{"x":160,"y":120},
-"milo":{"x":148,"y":132}
-}`);
+  const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
 
-function save(){localStorage.setItem(STORE_KEY,JSON.stringify(state));}
+  let state = JSON.parse(localStorage.getItem(STORE_KEY) || `{
+    "hasKeys":false,"slept":false,"trip":false,"puke":false,
+    "poemLines":0,"poems":[],"guitarPlayed":0,
+    "outfit":0,
+    "lastRoom":"BEDROOM",
+    "sophia":{"x":160,"y":120},
+    "milo":{"x":148,"y":132}
+  }`);
 
-const W=320,H=180;
+  function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
-/* ---------- controls ---------- */
-const keysDown=new Set();
-onkeydown=e=>{keysDown.add(e.key.toLowerCase());}
-onkeyup=e=>keysDown.delete(e.key.toLowerCase());
+  const W=320, H=180;
 
-/* ---------- solids ---------- */
-const solids=[
-[0,0,W,10],[0,0,10,H],[0,H-10,W,10],[W-10,0,10,H],
-[38,48,90,34],
-[210,42,78,42],
-[52,118,22,30],
-[132,86,56,18],
-[90,130,40,20]
-];
+  // Keep UI consistent
+  statusEl.textContent = "BEDROOM";
+  keysEl.textContent = state.hasKeys ? "YES" : "NO";
+  miloMoodEl.textContent = "following";
 
-/* ---------- zones ---------- */
-const zones=[
-{name:"DESK",rect:[44,52,78,26],action:()=>{ location.href="poetry.html"; }},
-{name:"BED",rect:[216,46,66,34],action:()=>{state.slept=true;save();toast("She sleeps. Audition gone.");}},
-{name:"GUITAR",rect:[48,122,32,26],action:()=>location.href="guitar.html"},
-{name:"CLOTHES",rect:[90,130,40,20],action:changeOutfit},
-{name:"DOOR_LIVING",rect:[W-24,78,14,28],action:()=>go("Sophie03.html")},
-{name:"DOOR_YARD",rect:[154,H-20,34,10],action:()=>go("Sophie02.html")}
-];
+  /* ---------- controls ---------- */
+  const keysDown = new Set();
 
-function changeOutfit(){
-state.outfit=(state.outfit+1)%4;
-save();
-toast("Outfit changed.");
-}
+  function keyName(e){
+    // normalize space/shift etc if you expand later
+    return (e.key || "").toLowerCase();
+  }
 
-/* ---------- poem ---------- */
-function savePoem(){
-const t=document.getElementById("poemInput");
-if(!t.value.trim())return;
-state.poems.push(t.value.trim());
-state.poemLines++;
-t.value="";
-save();
-poemBox.style.display="none";
-toast("Poetry saved.");
-}
+  window.addEventListener("keydown", (e) => {
+    // prevent page scrolling on arrows/space
+    if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(keyName(e))) e.preventDefault();
+    keysDown.add(keyName(e));
+  }, { passive:false });
 
-/* ---------- movement ---------- */
-const sophia={x:state.sophia.x,y:state.sophia.y,w:10,h:12};
-const milo={x:state.milo.x,y:state.milo.y};
+  window.addEventListener("keyup", (e) => {
+    keysDown.delete(keyName(e));
+  });
 
-function col(x,y,w,h){
-for(const s of solids){
-if(x<s[0]+s[2]&&x+w>s[0]&&y<s[1]+s[3]&&y+h>s[1])return true;
-}
-return false;
-}
-function move(dx,dy){
-if(!col(sophia.x+dx,sophia.y,sophia.w,sophia.h))sophia.x+=dx;
-if(!col(sophia.x,sophia.y+dy,sophia.w,sophia.h))sophia.y+=dy;
-}
+  // Make sure key events hit even if user clicked elsewhere
+  window.addEventListener("pointerdown", () => canvas.focus(), { passive:true });
 
-/* ---------- interact ---------- */
-function nearest(){
-let best=null,bd=9999;
-for(const z of zones){
-let cx=z.rect[0]+z.rect[2]/2;
-let cy=z.rect[1]+z.rect[3]/2;
-let d=(cx-sophia.x)**2+(cy-sophia.y)**2;
-if(d<bd&&d<1400){bd=d;best=z;}
-}
-return best;
-}
+  /* ---------- solids ---------- */
+  const solids=[
+    [0,0,W,10],[0,0,10,H],[0,H-10,W,10],[W-10,0,10,H],
 
-function interact(){
-let z=nearest();
-if(z)z.action();
-}
+    // furniture collision blocks
+    [38,48,90,34],    // desk
+    [210,42,78,42],   // bed
+    [52,118,22,30],   // guitar stand
+    [132,86,56,18],   // dresser
+    [90,130,40,20]    // clothes pile
+  ];
 
-/* ---------- toast ---------- */
-function toast(msg){
-toastEl.textContent=msg;
-toastEl.classList.add("on");
-setTimeout(()=>toastEl.classList.remove("on"),1500);
-}
-const toastEl=document.getElementById("toast");
+  /* ---------- zones ---------- */
+  const zones=[
+    {name:"DESK", rect:[44,52,78,26], action:()=>{ location.href="poetry.html"; }},
+    {name:"BED", rect:[216,46,66,34], action:()=>{ state.slept=true; save(); toast("She sleeps. Audition gone."); }},
+    {name:"GUITAR", rect:[48,122,32,26], action:()=>{ location.href="guitar.html"; }},
+    {name:"CLOTHES", rect:[90,130,40,20], action:changeOutfit},
+    {name:"DOOR_LIVING", rect:[W-24,78,14,28], action:()=>go("Sophie03.html")},
+    {name:"DOOR_YARD", rect:[154,H-20,34,10], action:()=>go("Sophie02.html")}
+  ];
 
-/* ---------- milo ---------- */
-function updateMilo(){
-let tx=sophia.x-12,ty=sophia.y+6;
-milo.x+= (tx-milo.x)*.05;
-milo.y+= (ty-milo.y)*.05;
+  function changeOutfit(){
+    state.outfit = (state.outfit+1)%4;
+    save();
+    toast("Outfit changed.");
+  }
 
-if(Math.random()<.002) meow();
-}
-function meow(){
-toast("Milo: meow (he wants outside)");
-}
+  /* ---------- poem modal ---------- */
+  function savePoem(){
+    const t = poemInputEl.value.trim();
+    if(!t) return;
+    state.poems.push(t);
+    state.poemLines++;
+    poemInputEl.value="";
+    save();
+    poemBoxEl.style.display="none";
+    toast("Poetry saved.");
+  }
+  poemSaveBtn.addEventListener("click", savePoem);
+  // keep your inline compatibility too
+  window.savePoem = savePoem;
 
-/* ---------- render ---------- */
-function bg(){
-ctx.fillStyle="#05050a";
-ctx.fillRect(0,0,W,H);
+  /* ---------- entities ---------- */
+  const sophia={ x: state.sophia.x, y: state.sophia.y, w:10, h:12 };
+  const milo={ x: state.milo.x, y: state.milo.y };
 
-/* ambient room glow */
-let g=ctx.createRadialGradient(80,60,10,80,60,160);
-g.addColorStop(0,"rgba(138,46,255,.2)");
-g.addColorStop(.6,"rgba(138,46,255,.06)");
-g.addColorStop(1,"transparent");
-ctx.fillStyle=g;
-ctx.fillRect(0,0,W,H);
+  function col(x,y,w,h){
+    for(const s of solids){
+      if(x < s[0]+s[2] && x+w > s[0] && y < s[1]+s[3] && y+h > s[1]) return true;
+    }
+    return false;
+  }
 
-/* subtle cinematic lighting pass */
-let light = ctx.createRadialGradient(
-  sophia.x+5, sophia.y+5, 8,
-  sophia.x+5, sophia.y+5, 90
-);
-light.addColorStop(0,"rgba(255,255,255,.06)");
-light.addColorStop(.4,"rgba(255,255,255,.025)");
-light.addColorStop(1,"transparent");
-ctx.fillStyle=light;
-ctx.fillRect(0,0,W,H);
+  function move(dx,dy){
+    if(!col(sophia.x+dx, sophia.y, sophia.w, sophia.h)) sophia.x += dx;
+    if(!col(sophia.x, sophia.y+dy, sophia.w, sophia.h)) sophia.y += dy;
+  }
 
-/* floor scanlines (depth illusion) */
-for(let y=92;y<H-10;y++){
-ctx.fillStyle=`rgba(255,255,255,${y%6==0?.10:.045})`;
-ctx.fillRect(10,y,W-20,1);
-}
+  /* ---------- interact ---------- */
+  function nearest(){
+    let best=null, bd=9999;
+    for(const z of zones){
+      const cx = z.rect[0] + z.rect[2]/2;
+      const cy = z.rect[1] + z.rect[3]/2;
+      const d = (cx - (sophia.x+5))**2 + (cy - (sophia.y+6))**2;
+      if(d < bd && d < 1400){ bd=d; best=z; }
+    }
+    return best;
+  }
 
-/* vignette edges (cinematic framing) */
-ctx.fillStyle="rgba(0,0,0,.18)";
-ctx.fillRect(0,0,W,8);
-ctx.fillRect(0,H-8,W,8);
-ctx.fillRect(0,0,8,H);
-ctx.fillRect(W-8,0,8,H);
-}
+  function interact(){
+    const z = nearest();
+    if(z) z.action();
+    else toast("Nothing to interact with.");
+  }
 
-ctx.fillStyle="rgba(255,255,255,.06)";
-ctx.fillRect(10,10,W-20,80);
+  // Click/tap to interact too (less finicky)
+  canvas.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    canvas.focus();
+    interact();
+  }, { passive:false });
 
-rect(38,48,90,34);
-rect(210,42,78,42);
-rect(52,118,22,30);
-rect(132,86,56,18);
-rect(90,130,40,20);
+  /* ---------- toast ---------- */
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("on");
+    setTimeout(()=>toastEl.classList.remove("on"), 1500);
+  }
 
+  /* ---------- milo ---------- */
+  function updateMilo(){
+    const tx=sophia.x-12, ty=sophia.y+6;
+    milo.x += (tx-milo.x)*.05;
+    milo.y += (ty-milo.y)*.05;
+    if(Math.random()<.002) toast("Milo: meow (he wants outside)");
+  }
 
-function rect(x,y,w,h){
-ctx.fillStyle="rgba(255,255,255,.07)";
-ctx.fillRect(x,y,w,h);
-}
+  /* ---------- render ---------- */
+  function drawFurniture(){
+    // furniture blocks more visible (still minimal)
+    rect(38,48,90,34, "rgba(255,255,255,.10)");   // desk
+    rect(210,42,78,42,"rgba(255,255,255,.09)");   // bed
+    rect(52,118,22,30,"rgba(255,255,255,.09)");   // guitar stand
+    rect(132,86,56,18,"rgba(255,255,255,.08)");   // dresser
+    rect(90,130,40,20,"rgba(255,255,255,.10)");   // clothes
+    // door hints
+    rect(W-24,78,14,28,"rgba(0,255,213,.10)");
+    rect(154,H-20,34,10,"rgba(0,255,213,.10)");
+  }
 
-/* sophia sprite */
-function drawSophia(){
-let x=sophia.x,y=sophia.y;
+  function rect(x,y,w,h,fill){
+    ctx.fillStyle = fill || "rgba(255,255,255,.08)";
+    ctx.fillRect(x,y,w,h);
+  }
 
-ctx.fillStyle="#f2d27a";
-ctx.fillRect(x+1,y,8,4);
-ctx.fillRect(x,y+3,10,3);
+  function bg(){
+    ctx.fillStyle="#05050a";
+    ctx.fillRect(0,0,W,H);
 
-ctx.fillStyle="#ffd9c9";
-ctx.fillRect(x+2,y+5,6,4);
+    // ambient room glow
+    let g=ctx.createRadialGradient(80,60,10,80,60,160);
+    g.addColorStop(0,"rgba(138,46,255,.20)");
+    g.addColorStop(.6,"rgba(138,46,255,.06)");
+    g.addColorStop(1,"transparent");
+    ctx.fillStyle=g;
+    ctx.fillRect(0,0,W,H);
 
-ctx.fillStyle="#67b7ff";
-ctx.fillRect(x+3,y+6,1,1);
-ctx.fillRect(x+6,y+6,1,1);
+    // subtle cinematic lighting pass
+    let light = ctx.createRadialGradient(
+      sophia.x+5, sophia.y+5, 8,
+      sophia.x+5, sophia.y+5, 90
+    );
+    light.addColorStop(0,"rgba(255,255,255,.07)");
+    light.addColorStop(.4,"rgba(255,255,255,.03)");
+    light.addColorStop(1,"transparent");
+    ctx.fillStyle=light;
+    ctx.fillRect(0,0,W,H);
 
-const outfits=["#a64dff","#4dffcf","#ff4d88","#ffd24d"];
-ctx.fillStyle=outfits[state.outfit];
-ctx.fillRect(x+2,y+9,6,3);
-}
+    // top wall panel
+    ctx.fillStyle="rgba(255,255,255,.05)";
+    ctx.fillRect(10,10,W-20,80);
 
-function drawMilo(){
-let x=milo.x,y=milo.y;
-ctx.fillStyle="#d8d8d8";
-ctx.fillRect(x+1,y+2,6,5);
-ctx.fillRect(x+1,y+1,2,2);
-ctx.fillRect(x+5,y+1,2,2);
-ctx.fillStyle="#1affd3";
-ctx.fillRect(x+2,y+4,1,1);
-ctx.fillRect(x+5,y+4,1,1);
-}
+    // floor scanlines
+    for(let y=92;y<H-10;y++){
+      ctx.fillStyle=`rgba(255,255,255,${y%6===0?.10:.045})`;
+      ctx.fillRect(10,y,W-20,1);
+    }
 
-/* ---------- loop ---------- */
-function loop(){
-if(!state.slept){
-let sp=keysDown.has("shift")?1.4:.9;
-let dx=(keysDown.has("d")||keysDown.has("arrowright")?sp:0)-(keysDown.has("a")||keysDown.has("arrowleft")?sp:0);
-let dy=(keysDown.has("s")||keysDown.has("arrowdown")?sp:0)-(keysDown.has("w")||keysDown.has("arrowup")?sp:0);
-move(dx,dy);
-}
+    // vignette edges
+    ctx.fillStyle="rgba(0,0,0,.18)";
+    ctx.fillRect(0,0,W,8);
+    ctx.fillRect(0,H-8,W,8);
+    ctx.fillRect(0,0,8,H);
+    ctx.fillRect(W-8,0,8,H);
 
-if(keysDown.has("e")&&!loop.e){interact();loop.e=1;} 
-if(!keysDown.has("e"))loop.e=0;
+    drawFurniture();
+  }
 
-updateMilo();
+  function drawSophia(){
+    const x=sophia.x, y=sophia.y;
 
-state.sophia.x=sophia.x;
-state.sophia.y=sophia.y;
-state.milo.x=milo.x;
-state.milo.y=milo.y;
-save();
+    ctx.fillStyle="#f2d27a"; // hair
+    ctx.fillRect(x+1,y,8,4);
+    ctx.fillRect(x,y+3,10,3);
 
-bg();
-drawMilo();
-drawSophia();
+    ctx.fillStyle="#ffd9c9"; // face
+    ctx.fillRect(x+2,y+5,6,4);
 
-requestAnimationFrame(loop);
-}
-loop();
+    ctx.fillStyle="#67b7ff"; // eyes
+    ctx.fillRect(x+3,y+6,1,1);
+    ctx.fillRect(x+6,y+6,1,1);
 
-function go(f){save();location.href=f;}
+    const outfits=["#a64dff","#4dffcf","#ff4d88","#ffd24d"];
+    ctx.fillStyle=outfits[state.outfit];
+    ctx.fillRect(x+2,y+9,6,3);
+  }
+
+  function drawMilo(){
+    const x=milo.x, y=milo.y;
+    ctx.fillStyle="#d8d8d8";
+    ctx.fillRect(x+1,y+2,6,5);
+    ctx.fillRect(x+1,y+1,2,2);
+    ctx.fillRect(x+5,y+1,2,2);
+    ctx.fillStyle="#1affd3";
+    ctx.fillRect(x+2,y+4,1,1);
+    ctx.fillRect(x+5,y+4,1,1);
+  }
+
+  function drawInteractHint(){
+    const z = nearest();
+    if(!z) return;
+    // tiny on-canvas hint so you KNOW it’s hittable
+    ctx.fillStyle="rgba(0,0,0,.55)";
+    ctx.fillRect(10, H-26, 160, 16);
+    ctx.strokeStyle="rgba(255,255,255,.18)";
+    ctx.strokeRect(10.5, H-25.5, 160, 16);
+
+    ctx.fillStyle="rgba(255,255,255,.92)";
+    ctx.font="10px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+    ctx.fillText(`Press E or tap: ${z.name}`, 16, H-14);
+  }
+
+  /* ---------- loop ---------- */
+  function go(f){ save(); location.href=f; }
+
+  function loop(){
+    if(!state.slept){
+      const sp = keysDown.has("shift") ? 1.4 : .9;
+      const dx = (keysDown.has("d")||keysDown.has("arrowright")?sp:0) - (keysDown.has("a")||keysDown.has("arrowleft")?sp:0);
+      const dy = (keysDown.has("s")||keysDown.has("arrowdown")?sp:0) - (keysDown.has("w")||keysDown.has("arrowup")?sp:0);
+      move(dx,dy);
+    }
+
+    // make E reliable (fires once per press)
+    if(keysDown.has("e") && !loop.e){ interact(); loop.e=1; }
+    if(!keysDown.has("e")) loop.e=0;
+
+    updateMilo();
+
+    state.sophia.x=sophia.x; state.sophia.y=sophia.y;
+    state.milo.x=milo.x; state.milo.y=milo.y;
+    save();
+
+    bg();
+    drawMilo();
+    drawSophia();
+    drawInteractHint();
+
+    requestAnimationFrame(loop);
+  }
+
+  // start focused
+  canvas.focus();
+  loop();
+})();
 </script>
 </body>
 </html>
