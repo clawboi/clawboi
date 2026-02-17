@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Guitar Practice</title>
+<style>
+body{margin:0;background:#05050a;color:white;font-family:monospace;text-align:center}
+canvas{image-rendering:pixelated;margin-top:30px}
+</style>
+</head>
+<body>
+<h2>GUITAR PRACTICE</h2>
+<p>Hit A S D F when notes touch line</p>
+<canvas id="c" width="400" height="200"></canvas>
+<script>
+const ctx=c.getContext("2d");
+let notes=[];
+let score=0;
+
+setInterval(()=>notes.push({lane:Math.floor(Math.random()*4),y:0}),800);
+
+onkeydown=e=>{
+const k="asdf".indexOf(e.key);
+if(k>-1){
+for(let n of notes){
+if(n.lane==k && n.y>150 && n.y<185){
+score++;
+notes.splice(notes.indexOf(n),1);
+return;
+}}
+score--;
+}
+};
+
+function draw(){
+ctx.fillStyle="#000";
+ctx.fillRect(0,0,400,200);
+
+ctx.fillStyle="#444";
+ctx.fillRect(0,180,400,4);
+
+notes.forEach(n=>{
+ctx.fillStyle="#8a2eff";
+ctx.fillRect(50+n.lane*80,n.y,40,10);
+n.y+=2;
+});
+
+ctx.fillStyle="#fff";
+ctx.fillText("Score: "+score,10,15);
+
+requestAnimationFrame(draw);
+}
+draw();
+
+setTimeout(()=>{
+localStorage.setItem("SOPHIA_AUDITION_SAVE_V1",
+localStorage.getItem("SOPHIA_AUDITION_SAVE_V1"));
+location.href="Sophie01.html";
+},30000);
+</script>
+</body>
+</html>
