@@ -35,17 +35,85 @@
   }
   .toast.on{opacity:1}
 
-  /* Day glow layer */
   body::before{
     content:"";
     position:fixed; inset:-20%;
     background:
-      radial-gradient(circle at 20% 18%, rgba(255,210,77,.22), transparent 58%),
-      radial-gradient(circle at 78% 22%, rgba(0,255,213,.14), transparent 62%),
-      radial-gradient(circle at 40% 85%, rgba(138,46,255,.10), transparent 62%),
-      radial-gradient(circle at 90% 75%, rgba(255,99,255,.08), transparent 65%);
-    filter:blur(44px) saturate(1.08);
+      radial-gradient(circle at 20% 18%, rgba(255,210,77,.24), transparent 58%),
+      radial-gradient(circle at 78% 22%, rgba(0,255,213,.16), transparent 62%),
+      radial-gradient(circle at 40% 85%, rgba(138,46,255,.11), transparent 62%),
+      radial-gradient(circle at 90% 75%, rgba(255,99,255,.09), transparent 65%),
+      radial-gradient(circle at 52% 44%, rgba(255,255,255,.04), transparent 62%);
+    filter:blur(44px) saturate(1.12);
     pointer-events:none;
+  }
+
+  .panel{
+    position:fixed; right:12px; bottom:12px; z-index:8;
+    width:min(380px, calc(100vw - 24px));
+    border:1px solid var(--ui2);
+    background:rgba(0,0,0,.48);
+    backdrop-filter: blur(10px);
+    border-radius:16px;
+    padding:10px 12px;
+    display:none;
+  }
+  .panel.on{display:block}
+  .panel h3{
+    margin:0 0 8px 0;
+    font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+    opacity:.9;
+  }
+  .panel .row{
+    display:flex; justify-content:space-between; gap:12px;
+    font-size:12px; line-height:1.35;
+    border-top:1px solid rgba(255,255,255,.08);
+    padding:8px 0;
+  }
+  .panel .row:first-of-type{border-top:0; padding-top:0}
+  .panel .k{opacity:.72; letter-spacing:.06em}
+  .panel .v{opacity:.95}
+  .panel .tiny{font-size:11px; opacity:.72; letter-spacing:.06em}
+
+  /* NEW: choice dialog (same style language) */
+  .dialog{
+    position:fixed; left:12px; bottom:12px; z-index:9;
+    width:min(520px, calc(100vw - 24px));
+    border:1px solid var(--ui2);
+    background:rgba(0,0,0,.56);
+    backdrop-filter: blur(10px);
+    border-radius:16px;
+    padding:10px 12px;
+    display:none;
+  }
+  .dialog.on{display:block}
+  .dialog h3{
+    margin:0 0 6px 0;
+    font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+    opacity:.92;
+  }
+  .dialog .say{
+    font-size:12px; line-height:1.4; letter-spacing:.04em;
+    opacity:.92;
+    padding:8px 0 10px 0;
+    border-top:1px solid rgba(255,255,255,.08);
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .dialog .opt{
+    display:grid; gap:6px;
+    padding-top:10px;
+    font-size:12px;
+  }
+  .dialog .opt div{
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.06);
+    border-radius:12px;
+    padding:8px 10px;
+    letter-spacing:.04em;
+  }
+  .dialog .hint{
+    margin-top:8px;
+    font-size:11px; opacity:.72; letter-spacing:.06em;
   }
 </style>
 </head>
@@ -57,22 +125,47 @@
     <div class="pill">MUSH: <span id="mush">0</span></div>
     <div class="pill">WANTED: <span id="wanted">0</span>★</div>
     <div class="pill">KEYS: <span id="keys">NO</span></div>
-    <div class="pill">Move: WASD · Run/Boost: SHIFT · Interact: E · Throw: SPACE</div>
+    <div class="pill">CASH: $<span id="cash">0</span></div>
+    <div class="pill">QUEST: <span id="questShort">NONE</span></div>
+    <div class="pill">Move: WASD · Run/Boost: SHIFT · Interact: E · Throw: SPACE · Map: M · Journal: Q · Trip: T</div>
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <div class="panel" id="journal">
+    <h3>Journal</h3>
+    <div class="row"><div class="k">Active</div><div class="v" id="qActive">None</div></div>
+    <div class="row"><div class="k">Objective</div><div class="v" id="qObj">…</div></div>
+    <div class="row"><div class="k">Hint</div><div class="v tiny" id="qHint">Press Q to close.</div></div>
+  </div>
+
+  <div class="panel" id="mapPanel">
+    <h3>Map</h3>
+    <div class="row"><div class="k">Tip</div><div class="v tiny">Press M to close. Click map to set waypoint.</div></div>
+    <div class="row"><div class="k">Waypoint</div><div class="v" id="wpText">None</div></div>
+    <div class="row"><div class="k">Lucas</div><div class="v" id="lucasText">Not called</div></div>
+  </div>
+
+  <!-- NEW: dialog choice box -->
+  <div class="dialog" id="dialog">
+    <h3 id="dlgTitle">Conversation</h3>
+    <div class="say" id="dlgSay">…</div>
+    <div class="opt" id="dlgOpts"></div>
+    <div class="hint" id="dlgHint">Press 1/2/3 to choose. ESC to close.</div>
+  </div>
+
   <div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
 
 <script>
 /* ==========================================================
-   STREET.HTML (DAY CITY)
-   - Friendly pedestrians + dogs + waving
-   - Cars on streets
-   - Driveable car (E to enter/exit)
-   - Mushrooms collect + throw (SPACE) stun
-   - Cops + 0-5 wanted stars + line-of-sight + forget timer
-   - Minimap with STAR audition target + building markers
-   - Same save key + timer key as your house scenes
+   STREET.HTML (DAY CITY) — EVEN MORE UPGRADED, SAME VIBE
+   - No breaking changes. Only additions.
+   - NEW: Payphone (payphone.html) + Lucas follower
+   - NEW: More city layers: restaurant/yoga/sophieshop doors
+   - NEW: Robber purse quest, catcallers choice bubble
+   - NEW: Performers (dancers/clowns/statues/guitar)
+   - NEW: Talk choices + wrong answer -> arcade scuffle
+   - NEW: Duck pond
    ========================================================== */
 
 const canvas=document.getElementById('c');
@@ -87,12 +180,27 @@ const UI={
   wanted:document.getElementById('wanted'),
   keys:document.getElementById('keys'),
   toast:document.getElementById('toast'),
+  cash:document.getElementById('cash'),
+  questShort:document.getElementById('questShort'),
+  journal:document.getElementById('journal'),
+  mapPanel:document.getElementById('mapPanel'),
+  qActive:document.getElementById('qActive'),
+  qObj:document.getElementById('qObj'),
+  qHint:document.getElementById('qHint'),
+  wpText:document.getElementById('wpText'),
+  lucasText:document.getElementById('lucasText'),
+  dlg:document.getElementById('dialog'),
+  dlgTitle:document.getElementById('dlgTitle'),
+  dlgSay:document.getElementById('dlgSay'),
+  dlgOpts:document.getElementById('dlgOpts'),
+  dlgHint:document.getElementById('dlgHint'),
 };
 
 const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
 const RUN_KEY="SOPHIA_AUDITION_RUN_V1";
 const DURATION_MS=10*60*1000;
 
+/* ---------- state ---------- */
 function loadState(){
   const r=localStorage.getItem(STORE_KEY);
   if(r){ try{return JSON.parse(r);}catch(e){} }
@@ -100,9 +208,22 @@ function loadState(){
     hasKeys:false, slept:false, trip:false, puke:false,
     poemLines:0, guitarPlayed:0,
     lastRoom:"STREET",
+    cash: 0,
+    quests: { activeId:null, completed:{}, data:{} },
+    waypoint: null,
     sophia:{x:380,y:920}, milo:{x:360,y:940},
-    street:{ mush:0, wanted:0, inCar:false, hidden:false, seen:0,
-      car:{x:420,y:940,vx:0,vy:0}, lastThrow:0 }
+    lucas:{ active:false, called:false, x:340, y:960, mood:"cool", bond:0 },
+    street:{
+      mush:0, wanted:0, inCar:false, hidden:false, seen:0,
+      car:{x:420,y:940,vx:0,vy:0},
+      lastThrow:0,
+      tripUntil:0,
+      lastTalk:0
+    },
+    events:{
+      purse:{ stage:"idle", rewardGiven:false, robberDown:false },
+      catcall:{ done:false }
+    }
   };
 }
 function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
@@ -116,13 +237,23 @@ function saveRun(run){ localStorage.setItem(RUN_KEY, JSON.stringify(run)); }
 
 let state=loadState();
 state.lastRoom="STREET";
-state.street = state.street || { mush:0, wanted:0, inCar:false, hidden:false, seen:0, car:{x:420,y:940,vx:0,vy:0}, lastThrow:0 };
+state.street = state.street || { mush:0, wanted:0, inCar:false, hidden:false, seen:0, car:{x:420,y:940,vx:0,vy:0}, lastThrow:0, tripUntil:0, lastTalk:0 };
 if(!state.street.car) state.street.car={x:420,y:940,vx:0,vy:0};
+if(typeof state.cash!=="number") state.cash=0;
+state.quests = state.quests || {activeId:null, completed:{}, data:{}};
+state.quests.completed = state.quests.completed || {};
+state.quests.data = state.quests.data || {};
+state.lucas = state.lucas || {active:false, called:false, x:340, y:960, mood:"cool", bond:0};
+state.events = state.events || { purse:{stage:"idle", rewardGiven:false, robberDown:false}, catcall:{done:false} };
+state.events.purse = state.events.purse || {stage:"idle", rewardGiven:false, robberDown:false};
+state.events.catcall = state.events.catcall || {done:false};
 
 UI.keys.textContent = state.hasKeys ? "YES" : "NO";
 UI.mush.textContent = (state.street.mush|0);
 UI.wanted.textContent = (state.street.wanted|0);
 UI.mode.textContent = state.street.inCar ? "IN CAR" : "ON FOOT";
+UI.cash.textContent = (state.cash|0);
+UI.lucasText.textContent = state.lucas.called ? (state.lucas.active ? "Following" : "Called (not here)") : "Not called";
 
 /* ---------- toast ---------- */
 function toast(msg,ms=1500){
@@ -132,7 +263,7 @@ function toast(msg,ms=1500){
   toast._t=setTimeout(()=>UI.toast.classList.remove('on'),ms);
 }
 
-/* ---------- timer (same as your living room) ---------- */
+/* ---------- timer (kept) ---------- */
 function fmt(ms){
   ms=Math.max(0, ms|0);
   const s=Math.ceil(ms/1000);
@@ -163,15 +294,17 @@ tickTimer();
 const keysDown=new Set();
 addEventListener('keydown',(e)=>{
   const k=e.key.toLowerCase();
-  if(["arrowup","arrowdown","arrowleft","arrowright"," ","shift","w","a","s","d","e"].includes(k)) e.preventDefault();
+  // keep your originals + add 1/2/3 + escape
+  if(["arrowup","arrowdown","arrowleft","arrowright"," ","shift","w","a","s","d","e","m","q","t","f","h","1","2","3","escape"].includes(k)) e.preventDefault();
   keysDown.add(k);
 });
 addEventListener('keyup',(e)=>keysDown.delete(e.key.toLowerCase()));
 
-/* ---------- math helpers ---------- */
+/* ---------- helpers ---------- */
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rand=(a,b)=>a+Math.random()*(b-a);
 const dist2=(ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by; return dx*dx+dy*dy;}
+const lerp=(a,b,t)=>a+(b-a)*t;
 function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
   return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
 }
@@ -180,29 +313,26 @@ function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
    WORLD
    ========================================================== */
 const VW=canvas.width, VH=canvas.height;
-
-// Bigger + more “open world”
-const WORLD={ w: 2600, h: 1800 };
+const WORLD={ w: 3200, h: 2300 }; // slightly bigger, still tight
 
 // Camera
-const cam={x:0,y:0};
+const cam={x:0,y:0, shake:0};
 
-// Road network (gray) + sidewalks + grass.
-// We’ll define road rectangles and treat building blocks as solids.
+// Road network (kept + nudged expansions)
 const roads = [
-  // big east-west main
-  {x:0,y:980,w:WORLD.w,h:140},
-  // north-south boulevard to STARR
-  {x:1740,y:0,w:170,h:WORLD.h},
-  // neighborhood roads
-  {x:360,y:1220,w:820,h:120},
-  {x:1180,y:1160,w:820,h:120},
-  {x:520,y:620,w:980,h:110},
-  {x:980,y:760,w:850,h:110},
-  {x:2200,y:640,w:260,h:110},
+  {x:0,y:1100,w:WORLD.w,h:160, name:"MAIN"},
+  {x:1960,y:0,w:190,h:WORLD.h, name:"BOULEVARD"},
+  {x:380,y:1400,w:980,h:130, name:"NEIGHBOR"},
+  {x:1400,y:1320,w:980,h:130, name:"MARKET"},
+  {x:560,y:680,w:1200,h:120, name:"NORTH"},
+  {x:1160,y:860,w:900,h:120, name:"MID"},
+  {x:2520,y:720,w:520,h:120, name:"EAST"},
+  {x:240,y:960,w:720,h:110, name:"HOMEWAY"},
+  {x:940,y:1010,w:860,h:110, name:"CUT"},
+  // NEW: canyon route hint (Topanga-ish)
+  {x:40,y:340,w:520,h:110, name:"CANYON RD"},
 ];
 
-// Sidewalk strips around roads (visual only)
 function isOnRoad(x,y){
   for(const r of roads){
     if(x>=r.x && x<=r.x+r.w && y>=r.y && y<=r.y+r.h) return true;
@@ -210,145 +340,288 @@ function isOnRoad(x,y){
   return false;
 }
 
-// Solids for buildings + big park fences + “no-drive” blocks
+// Solids
 const solids=[];
 const addSolid=(x,y,w,h)=>solids.push([x,y,w,h]);
 
 // World bounds
-addSolid(-80,-80,WORLD.w+160,80);
-addSolid(-80,WORLD.h,WORLD.w+160,80);
-addSolid(-80,-80,80,WORLD.h+160);
-addSolid(WORLD.w,-80,80,WORLD.h+160);
+addSolid(-120,-120,WORLD.w+240,120);
+addSolid(-120,WORLD.h,WORLD.w+240,120);
+addSolid(-120,-120,120,WORLD.h+240);
+addSolid(WORLD.w,-120,120,WORLD.h+240);
 
-// Buildings (enterable markers)
+// Buildings / Doors (kept + NEW)
 const buildings=[
-  {name:"HOME", x:180, y:1420, w:260, h:220, link:"Sophie03.html", tag:"HOME"},
-  {name:"GROCERY", x:560, y:1280, w:300, h:220, link:"grocery-store.html", tag:"GROC"},
-  {name:"BLOCKBUSTER", x:920, y:1300, w:330, h:240, link:"blockbuster.html", tag:"BLCK"},
-  {name:"CAT STORE", x:1320, y:1280, w:280, h:220, link:"catstore.html", tag:"CAT"},
-  {name:"WEED SHOP", x:1620, y:1280, w:280, h:220, link:"weedshop.html", tag:"WEED"},
-  {name:"STARR", x:2050, y:180, w:420, h:320, link:"audition.html", tag:"STAR"},
+  {name:"HOME", x:180, y:1660, w:260, h:220, link:"Sophie03.html", tag:"HOME"},
+  {name:"GROCERY", x:620, y:1480, w:300, h:230, link:"grocery-store.html", tag:"GROC"},
+  {name:"BLOCKBUSTER", x:980, y:1500, w:330, h:250, link:"blockbuster.html", tag:"BLCK"},
+  {name:"CAT STORE", x:1380, y:1480, w:290, h:230, link:"catstore.html", tag:"CAT"},
+  {name:"WEED SHOP", x:1700, y:1480, w:290, h:230, link:"weedshop.html", tag:"WEED"},
+  {name:"STARR", x:2320, y:180, w:460, h:340, link:"audition.html", tag:"STAR"},
+
+  // flavor interact buildings
+  {name:"COFFEE", x:420, y:560, w:240, h:190, link:null, tag:"CAF"},
+  {name:"ARCADE", x:780, y:560, w:240, h:190, link:null, tag:"ARC"},
+  {name:"GAS", x:2640, y:1020, w:280, h:220, link:null, tag:"GAS"},
+
+  // NEW pages you asked
+  {name:"FOLLOW YOUR HEART", x:1120, y:540, w:300, h:210, link:"followyourheart.html", tag:"REST"},
+  {name:"YOGA", x:420, y:220, w:230, h:170, link:"yoga.html", tag:"YOGA"},
+  {name:"SOPHIE SHOP", x:1560, y:560, w:280, h:210, link:"sophieshop.html", tag:"SHOP"},
+
+  // beach later (placeholder sign-only, no link yet)
+  {name:"BEACH (LATER)", x:60, y:180, w:220, h:150, link:null, tag:"BEACH"},
 ];
 
-// Build solids for buildings
+// Solids for buildings
 for(const b of buildings) addSolid(b.x,b.y,b.w,b.h);
 
-// Park (big green square with fence)
-const park={x:280,y:220,w:560,h:340};
+// Park (kept, larger)
+const park={x:320,y:220,w:700,h:430};
 addSolid(park.x,park.y,park.w,18);
 addSolid(park.x,park.y+park.h-18,park.w,18);
 addSolid(park.x,park.y,18,park.h);
 addSolid(park.x+park.w-18,park.y,18,park.h);
 
-/* Street signs (decor + little “corner” landmarks) */
-const signs=[];
-function addSign(x,y,text){
-  signs.push({x,y,text});
-}
-addSign(520,930,"PALM AVE");
-addSign(950,930,"VIOLET ST");
-addSign(1740,930,"BOULEVARD");
-addSign(2050,930,"STARR WAY");
-addSign(1180,1120,"MILO LN");
-addSign(1320,760,"SUNSET RD");
+// NEW: duck pond area (no solids, just feature)
+const pond={x:1040,y:300,w:220,h:160};
 
-/* Dumpsters for hiding */
+// Signs
+const signs=[];
+function addSign(x,y,text){ signs.push({x,y,text}); }
+addSign(520,1040,"PALM AVE");
+addSign(970,1040,"VIOLET ST");
+addSign(1960,1040,"BOULEVARD");
+addSign(2360,1040,"STARR WAY");
+addSign(1180,1260,"MILO LN");
+addSign(1460,860,"SUNSET RD");
+addSign(520,760,"COFFEE CT");
+addSign(860,760,"ARCADE BLVD");
+addSign(2640,980,"GAS ROW");
+addSign(160,400,"TOPANGA ROUTE");
+addSign(1180,760,"FOLLOW YOUR HEART");
+
+// Dumpsters
 const dumpsters=[
-  {x:820,y:1180,w:36,h:20},
-  {x:1540,y:1180,w:36,h:20},
-  {x:1960,y:930,w:36,h:20},
-  {x:600,y:760,w:36,h:20},
-  {x:2380,y:740,w:36,h:20},
+  {x:860,y:1360,w:36,h:20},
+  {x:1600,y:1360,w:36,h:20},
+  {x:2140,y:1020,w:36,h:20},
+  {x:660,y:860,w:36,h:20},
+  {x:2560,y:800,w:36,h:20},
+  {x:560,y:1560,w:36,h:20},
 ];
 
-/* Trees */
-const trees=[];
-for(let i=0;i<220;i++){
-  const x=rand(40,WORLD.w-40), y=rand(40,WORLD.h-40);
-  // keep trees off roads a bit
-  if(isOnRoad(x,y)) continue;
-  if(x>park.x && x<park.x+park.w && y>park.y && y<park.y+park.h) continue;
-  trees.push({x,y,s:rand(0.8,1.8), tint:(Math.random()<0.5?"aqua":"sun")});
+// Benches, mailboxes, vending, photo spots (kept + extra)
+const benches=[
+  {x:520,y:340,w:26,h:10},
+  {x:860,y:360,w:26,h:10},
+  {x:2580,y:1100,w:26,h:10},
+  {x:1160,y:1600,w:26,h:10},
+  {x:1060,y:480,w:26,h:10}, // near pond
+];
+const mailboxes=[
+  {x:520,y:1560,w:10,h:10, id:"MB_HOME"},
+  {x:720,y:1430,w:10,h:10, id:"MB_GROC"},
+  {x:1000,y:1430,w:10,h:10, id:"MB_BLCK"},
+  {x:1420,y:1430,w:10,h:10, id:"MB_CAT"},
+  {x:1740,y:1430,w:10,h:10, id:"MB_WEED"},
+  {x:2460,y:520,w:10,h:10, id:"MB_STAR"},
+  {x:1120,y:820,w:10,h:10, id:"MB_REST"},
+];
+const vending=[
+  {x:520,y:630,w:14,h:18, uses:3},
+  {x:820,y:630,w:14,h:18, uses:3},
+  {x:1560,y:630,w:14,h:18, uses:3},
+];
+const photoSpots=[
+  {x:250,y:1240,w:18,h:18, id:"PS_WALL"},
+  {x:720,y:260,w:18,h:18, id:"PS_PARK"},
+  {x:2440,y:360,w:18,h:18, id:"PS_STAR"},
+  {x:1140,y:320,w:18,h:18, id:"PS_POND"},
+];
+
+// Intersections + traffic lights
+const intersections=[];
+function addIntersection(x,y){ intersections.push({x,y, r:34, t: rand(0,999)|0}); }
+addIntersection(520, 1180);
+addIntersection(980, 1180);
+addIntersection(1960, 1180);
+addIntersection(1960, 820);
+addIntersection(1960, 1560);
+addIntersection(1400, 1390);
+addIntersection(860, 1390);
+addIntersection(2640, 1100);
+addIntersection(520, 740);
+addIntersection(860, 740);
+
+const lights=[
+  {x:1960, y:1180, phase:0},
+  {x:1960, y:820, phase:1},
+  {x:2640, y:1100, phase:0},
+];
+function lightState(L, t){
+  const cyc=540;
+  const p = ((t + (L.x+L.y|0)) % cyc) / cyc;
+  if(p<0.42) return "EW_G";
+  if(p<0.48) return "EW_Y";
+  if(p<0.50) return "ALL_R";
+  if(p<0.92) return "NS_G";
+  if(p<0.98) return "NS_Y";
+  return "ALL_R";
 }
 
-/* Mushrooms to collect */
+// Trees
+const trees=[];
+for(let i=0;i<320;i++){
+  const x=rand(40,WORLD.w-40), y=rand(40,WORLD.h-40);
+  if(isOnRoad(x,y)) continue;
+  if(x>park.x && x<park.x+park.w && y>park.y && y<park.y+park.h) continue;
+  if(x>pond.x && x<pond.x+pond.w && y>pond.y && y<pond.y+pond.h) continue;
+  trees.push({x,y,s:rand(0.9,1.9), tint:(Math.random()<0.5?"aqua":"sun")});
+}
+
+/* Mushrooms + coins */
 const mushWorld=[];
-for(let i=0;i<120;i++){
+for(let i=0;i<170;i++){
   let x=rand(80,WORLD.w-80), y=rand(80,WORLD.h-80);
   if(isOnRoad(x,y)) { y+=160; }
-  mushWorld.push({x,y,alive:true,kind:(Math.random()<0.10?"gold":"vio")});
+  mushWorld.push({x,y,alive:true,kind:(Math.random()<0.10?"gold":(Math.random()<0.18?"aqua":"vio"))});
+}
+const coins=[];
+for(let i=0;i<140;i++){
+  let x=rand(90,WORLD.w-90), y=rand(90,WORLD.h-90);
+  if(isOnRoad(x,y)) y += (Math.random()<0.5?-120:120);
+  coins.push({x,y,alive:true, v:(Math.random()<0.08?5:1)});
 }
 
 /* ==========================================================
    ENTITIES
    ========================================================== */
-
-// Sophia on foot
-const sophia={x:state.sophia.x, y:state.sophia.y, w:10,h:12, speed:0.95, run:1.45};
-
-// Milo follower (on foot only)
+const sophia={x:state.sophia.x, y:state.sophia.y, w:10,h:12, speed:70, run:110};
 const milo={x:state.milo.x, y:state.milo.y, w:8,h:8};
+
+// NEW: Lucas follower (looser roam)
+const lucas={
+  active: !!state.lucas.active,
+  called: !!state.lucas.called,
+  x: state.lucas.x ?? (sophia.x-24),
+  y: state.lucas.y ?? (sophia.y+12),
+  w: 10, h: 12,
+  vx:0, vy:0,
+  roamSeed: (Math.random()*9999)|0,
+  bond: state.lucas.bond|0,
+  mood: state.lucas.mood || "cool",
+};
 
 // Drivable car
 const car={
   x: state.street.car.x, y: state.street.car.y,
   w: 18, h: 10,
-  vx: state.street.car.vx||0, vy: state.street.car.vy||0
+  vx: state.street.car.vx||0, vy: state.street.car.vy||0,
+  fuel: 100
 };
+if(!localStorage.getItem(STORE_KEY)){
+  car.x = 360; car.y = 1240;
+  state.street.car.x = car.x; state.street.car.y = car.y;
+}
 
-// Friendly pedestrians (look like Sophia style, varied)
-const PCOUNT=34;
+/* Pedestrians + Roles (expanded: performers + catcallers + old lady + robber) */
 const peds=[];
-for(let i=0;i<PCOUNT;i++){
-  let x=rand(120,WORLD.w-120), y=rand(160,WORLD.h-160);
-  // bias toward sidewalks (near roads but not inside them)
-  if(!isOnRoad(x,y)){
-    // ok
-  }else{
-    // push off road
-    y += (Math.random()<0.5?-90:90);
-  }
-  const hair = (Math.random()<0.33?"blonde":(Math.random()<0.5?"brown":"black"));
-  const shirt = (Math.random()<0.33?"vio":(Math.random()<0.5?"aqua":"sun"));
-  const hasDog = Math.random()<0.22;
-  peds.push({
+const PED_LINES=[
+  "Good luck at STARR. Your outfit says ‘main character.’",
+  "Topanga road is pretty. Also slightly cursed. In a cute way.",
+  "Audition nerves? Breathe like you’re hiding from a thought.",
+  "Arcade hums like a tiny universe.",
+  "Coffee shop is a speed buff. Don’t ask, just sip.",
+  "Follow Your Heart has soup that feels like a hug with rules.",
+  "Duck pond is a real place. City lore confirmed.",
+  "If you see a robber… do your hero thing.",
+];
+
+function makePed(x,y,opts={}){
+  const hair = opts.hair ?? (Math.random()<0.33?"blonde":(Math.random()<0.5?"brown":"black"));
+  const shirt = opts.shirt ?? (Math.random()<0.33?"vio":(Math.random()<0.5?"aqua":"sun"));
+  const hasDog = opts.hasDog ?? (Math.random()<0.18);
+  const role = opts.role ?? (Math.random()<0.08?"QUEST":(Math.random()<0.12?"VENDOR":"NORM"));
+  const type = opts.type ?? "ped";
+  return {
     x,y,w:10,h:12,
     vx:rand(-0.25,0.25), vy:rand(-0.25,0.25),
     hair, shirt, hasDog,
     dog: hasDog ? {x:x-12,y:y+6, vx:0,vy:0} : null,
     wave:0,
     stunned:0,
-  });
+    role,
+    type,
+    line: opts.line ?? PED_LINES[(Math.random()*PED_LINES.length)|0],
+    id: opts.id ?? ("PED_"+((Math.random()*1e9)|0)),
+    angry:0,
+    performer: opts.performer ?? null, // dancer/clown/statue/guitar
+    fight: { hp: opts.hp ?? 0, active:false, who:null, cooldown:0 },
+  };
 }
 
-// Traffic cars (AI vehicles)
-const TCOUNT=16;
+// populate normal crowd
+for(let i=0;i<34;i++){
+  let x=rand(140,WORLD.w-140), y=rand(180,WORLD.h-180);
+  if(isOnRoad(x,y)) y += (Math.random()<0.5?-90:90);
+  peds.push(makePed(x,y));
+}
+
+// street performers
+peds.push(makePed(700,980,{role:"NORM",type:"performer",performer:"guitar",line:"(guitar) Want a song? Press E, tip $1."}));
+peds.push(makePed(980,980,{role:"NORM",type:"performer",performer:"dancer",line:"(dance) Pick a vibe: 1) hype 2) smooth 3) weird."}));
+peds.push(makePed(1220,980,{role:"NORM",type:"performer",performer:"clown",line:"(clown) I can juggle feelings. Want chaos?"}));
+peds.push(makePed(520,360,{role:"NORM",type:"performer",performer:"statue",line:"(statue) ... (they blink)"}));
+
+// catcall construction duo (choice bubble)
+const catcallers=[
+  makePed(2140,1180,{type:"catcaller",role:"NORM",line:"Construction Worker: “Hey Sophia! You look like a movie scene.”", shirt:"sun"}),
+  makePed(2170,1180,{type:"catcaller",role:"NORM",line:"Other Worker: “For real, you’re glowing.”", shirt:"sun"}),
+];
+catcallers[0].id="CATCALL_A";
+catcallers[1].id="CATCALL_B";
+peds.push(...catcallers);
+
+// old lady + robber event
+const oldLady = makePed(860,860,{type:"oldlady",role:"NORM",line:"Old Lady: “My purse… I just bought oranges…”", hair:"white", shirt:"aqua"});
+oldLady.id="OLD_LADY";
+peds.push(oldLady);
+
+const robber = makePed(900,860,{type:"robber",role:"NORM",line:"Robber: “Nope.”", hair:"black", shirt:"vio", hp:6});
+robber.id="ROBBER";
+robber.fight.hp=6;
+peds.push(robber);
+
+// Duck (simple critter)
+const duck={x: pond.x+80, y: pond.y+92, vx:0.28, vy:0.12, t:0};
+
+// Traffic cars (kept)
 const traffic=[];
-for(let i=0;i<TCOUNT;i++){
-  // spawn on roads
+for(let i=0;i<20;i++){
   const r=roads[(Math.random()*roads.length)|0];
   const x=rand(r.x+20, r.x+r.w-40);
   const y=rand(r.y+20, r.y+r.h-20);
   const dir = (Math.random()<0.5) ? "east" : "west";
   traffic.push({
     x,y,w:18,h:10,
-    vx: dir==="east" ? rand(0.4,0.9) : rand(-0.9,-0.4),
+    vx: dir==="east" ? rand(30,70) : rand(-70,-30),
     vy: 0,
     color: (Math.random()<0.33?"vio":(Math.random()<0.5?"aqua":"sun")),
     beep: 0,
+    wait: 0,
   });
 }
 
-// Projectiles (thrown mushrooms)
+// Projectiles (mush)
 const shots=[];
 
-// Cops (spawn with wanted)
+// Cops
 const cops=[];
 
 /* ==========================================================
    COLLISION
    ========================================================== */
-
 function collides(x,y,w,h){
   for(const s of solids){
     if(rectsOverlap(x,y,w,h, s[0],s[1],s[2],s[3])) return true;
@@ -364,21 +637,38 @@ function tryMove(ent,dx,dy){
 }
 function tryMoveCar(dx,dy){
   const nx=car.x+dx, ny=car.y+dy;
-  if(!collides(nx,car.y,car.w,car.h)) car.x=nx; else car.vx*=-0.35;
-  if(!collides(car.x,ny,car.w,car.h)) car.y=ny; else car.vy*=-0.35;
+  if(!collides(nx,car.y,car.w,car.h)) car.x=nx; else { car.vx*=-0.35; cam.shake=8; }
+  if(!collides(car.x,ny,car.w,car.h)) car.y=ny; else { car.vy*=-0.35; cam.shake=8; }
   car.x=clamp(car.x,0,WORLD.w-car.w);
   car.y=clamp(car.y,0,WORLD.h-car.h);
 }
 
 /* ==========================================================
-   ZONES (buildings, car, dumpsters)
+   ZONES / INTERACTIONS
    ========================================================== */
+function buildingDoorRect(b){ return [b.x + b.w/2 - 22, b.y + b.h - 10, 44, 10]; }
+const near=(px,py, x,y,r)=>dist2(px,py,x,y)<r*r;
 
-function buildingDoorRect(b){
-  // door strip at bottom center
-  return [b.x + b.w/2 - 22, b.y + b.h - 10, 44, 10];
+function go(file){
+  state.sophia.x=sophia.x; state.sophia.y=sophia.y;
+  state.milo.x=milo.x; state.milo.y=milo.y;
+  state.street.car={x:car.x,y:car.y,vx:car.vx,vy:car.vy};
+
+  state.lucas.called = lucas.called;
+  state.lucas.active = lucas.active;
+  state.lucas.x = lucas.x; state.lucas.y = lucas.y;
+  state.lucas.bond = lucas.bond;
+  state.lucas.mood = lucas.mood;
+
+  saveState();
+  location.href=file;
 }
 
+/* Payphone */
+const payphone={x:520,y:1120,w:16,h:18};
+function payphoneRect(){ return [payphone.x,payphone.y,payphone.w,payphone.h]; }
+
+/* Determine nearest zone */
 function nearestZone(){
   const px = state.street.inCar ? car.x+car.w/2 : sophia.x+sophia.w/2;
   const py = state.street.inCar ? car.y+car.h/2 : sophia.y+sophia.h/2;
@@ -391,12 +681,28 @@ function nearestZone(){
     const cx=rect[0]+rect[2]/2, cy=rect[1]+rect[3]/2;
     const d=dist2(px,py,cx,cy);
     if(d<bd && d<2200){
-      best={name:(b.name==="STARR"?"STARR BUILDING":"ENTER "+b.name), rect, action:()=>go(b.link)};
+      if(b.link){
+        best={name:(b.name==="STARR"?"STARR BUILDING":"ENTER "+b.name), rect, action:()=>go(b.link)};
+      }else{
+        best={name: (b.tag==="CAF"?"COFFEE COUNTER":(b.tag==="ARC"?"ARCADE DOOR":(b.tag==="GAS"?"GAS PUMP":"(LOCKED)"))), rect,
+          action:()=>interactBuilding(b)};
+      }
       bd=d;
     }
   }
 
-  // car enter/exit
+  // payphone
+  if(!state.street.inCar && !state.street.hidden){
+    const pr=payphoneRect();
+    const cx=pr[0]+pr[2]/2, cy=pr[1]+pr[3]/2;
+    const d=dist2(px,py,cx,cy);
+    if(d<bd && d<1800){
+      best={name:"PAYPHONE", rect:pr, action:()=>go("payphone.html")};
+      bd=d;
+    }
+  }
+
+  // car
   const carRect=[car.x-8,car.y-8,car.w+16,car.h+16];
   {
     const cx=carRect[0]+carRect[2]/2, cy=carRect[1]+carRect[3]/2;
@@ -407,7 +713,7 @@ function nearestZone(){
     }
   }
 
-  // dumpsters (hide)
+  // dumpsters
   if(!state.street.inCar){
     for(const dmp of dumpsters){
       const cx=dmp.x+dmp.w/2, cy=dmp.y+dmp.h/2;
@@ -419,34 +725,234 @@ function nearestZone(){
     }
   }
 
+  // benches
+  if(!state.street.inCar){
+    for(const bn of benches){
+      const d=dist2(px,py,bn.x+bn.w/2,bn.y+bn.h/2);
+      if(d<bd && d<1500){
+        best={name:"BENCH (SIT)", rect:[bn.x,bn.y,bn.w,bn.h], action:sitBench};
+        bd=d;
+      }
+    }
+  }
+
+  // mailboxes
+  if(!state.street.inCar){
+    for(const mb of mailboxes){
+      const d=dist2(px,py,mb.x+5,mb.y+5);
+      if(d<bd && d<1400){
+        best={name:"MAILBOX", rect:[mb.x,mb.y,mb.w,mb.h], action:()=>mailboxInteract(mb)};
+        bd=d;
+      }
+    }
+  }
+
+  // vending
+  if(!state.street.inCar){
+    for(const v of vending){
+      const d=dist2(px,py,v.x+7,v.y+9);
+      if(d<bd && d<1500){
+        best={name:"VENDING", rect:[v.x,v.y,v.w,v.h], action:()=>vendingInteract(v)};
+        bd=d;
+      }
+    }
+  }
+
+  // photo spots
+  if(!state.street.inCar){
+    for(const ps of photoSpots){
+      const d=dist2(px,py,ps.x+9,ps.y+9);
+      if(d<bd && d<1600){
+        best={name:"PHOTO SPOT", rect:[ps.x,ps.y,ps.w,ps.h], action:()=>photoInteract(ps)};
+        bd=d;
+      }
+    }
+  }
+
+  // talk peds
+  if(!state.street.inCar && !state.street.hidden){
+    for(const p of peds){
+      const d=dist2(px,py,p.x+5,p.y+6);
+      if(d<bd && d<1700){
+        best={name:(p.type==="robber"?"CONFRONT ROBBER":(p.type==="oldlady"?"TALK":"TALK")), rect:[p.x,p.y,p.w,p.h], action:()=>talkPed(p)};
+        bd=d;
+      }
+    }
+  }
+
+  // Lucas toggle talk
+  if(!state.street.inCar && lucas.active && !state.street.hidden){
+    const d=dist2(px,py,lucas.x+5,lucas.y+6);
+    if(d<bd && d<1700){
+      best={name:"LUCAS", rect:[lucas.x,lucas.y,lucas.w,lucas.h], action:()=>talkLucas()};
+      bd=d;
+    }
+  }
+
   return best;
 }
 
 function interact(){
+  if(dialog.on) return;
   const z=nearestZone();
   if(z) z.action();
 }
 
 /* ==========================================================
-   GAMEPLAY: Car, Hide, Mushrooms, Wanted, Cops
+   QUESTS
    ========================================================== */
+const QUESTS={
+  "DELIVER_FLYERS":{
+    name:"Deliver Flyers",
+    short:"FLYERS",
+    objective:"Deliver flyers to 3 mailboxes (GROC, BLCK, CAT).",
+    hint:"Look for MAILBOX near shops. Press E on them.",
+    init:()=>({delivered:{MB_GROC:false,MB_BLCK:false,MB_CAT:false}, count:0}),
+    onMailbox:(q, mbId)=>{
+      if(q.delivered[mbId]===false){
+        q.delivered[mbId]=true;
+        q.count++;
+        return true;
+      }
+      return false;
+    },
+    isDone:(q)=>q.count>=3,
+    reward:()=>({cash:15, mush:2, msg:"Flyers delivered. Cash + Mush."})
+  },
+  "POSTER_SELFIE":{
+    name:"Poster Selfie",
+    short:"PHOTO",
+    objective:"Hit 2 photo spots for promo shots (WALL + STAR).",
+    hint:"Press E on PHOTO SPOT. It's a mini-fame ritual.",
+    init:()=>({PS_WALL:false, PS_STAR:false}),
+    isDone:(q)=>q.PS_WALL && q.PS_STAR,
+    reward:()=>({cash:10, mush:1, msg:"Promo shots done. Hype unlocked."})
+  },
+  "Purse_Snatch":{
+    name:"Purse Snatch",
+    short:"PURSE",
+    objective:"Chase the robber and get the purse back. Return it to the old lady.",
+    hint:"Robber runs when you get close. Corner them, then press E.",
+    init:()=>({gotPurse:false, returned:false}),
+    isDone:(q)=>q.returned,
+    reward:()=>({cash:25, mush:1, msg:"Purse returned. The city remembers kindness."})
+  }
+};
 
+function activeQuest(){
+  const id=state.quests.activeId;
+  if(!id) return null;
+  const def=QUESTS[id];
+  if(!def) return null;
+  if(!state.quests.data[id]) state.quests.data[id]=def.init();
+  return {id, def, data:state.quests.data[id]};
+}
+function setActiveQuest(id){
+  if(!QUESTS[id]) return;
+  state.quests.activeId=id;
+  if(!state.quests.data[id]) state.quests.data[id]=QUESTS[id].init();
+  UI.questShort.textContent = QUESTS[id].short;
+  toast("Quest accepted: "+QUESTS[id].name, 1400);
+  syncJournal();
+  maybeAutoWaypoint(true);
+  saveState();
+}
+function completeQuest(id){
+  const def=QUESTS[id];
+  if(!def) return;
+  const reward=def.reward();
+  state.cash += reward.cash|0;
+  state.street.mush += reward.mush|0;
+  UI.cash.textContent=state.cash|0;
+  UI.mush.textContent=state.street.mush|0;
+
+  state.quests.completed[id]=true;
+  state.quests.activeId=null;
+  UI.questShort.textContent="NONE";
+
+  toast(reward.msg + ` (+$${reward.cash}, +${reward.mush} mush)`, 1800);
+  syncJournal();
+  saveState();
+}
+function syncJournal(){
+  const q=activeQuest();
+  if(!q){
+    UI.qActive.textContent="None";
+    UI.qObj.textContent="Explore, talk, or hit the payphone.";
+    UI.qHint.textContent="Press Q to close.";
+    return;
+  }
+  UI.qActive.textContent=q.def.name;
+  UI.qObj.textContent=q.def.objective;
+  UI.qHint.textContent=q.def.hint;
+}
+
+/* ==========================================================
+   Dialog / Choice System
+   ========================================================== */
+const dialog={
+  on:false,
+  targetId:null,
+  kind:null,
+  say:"",
+  opts:[],
+  onPick:null,
+};
+
+function openDialog(title, say, opts, onPick){
+  dialog.on=true;
+  dialog.say=say;
+  dialog.opts=opts;
+  dialog.onPick=onPick;
+
+  UI.dlgTitle.textContent=title;
+  UI.dlgSay.textContent=say;
+  UI.dlgOpts.innerHTML="";
+  opts.forEach((o,i)=>{
+    const d=document.createElement("div");
+    d.textContent = `${i+1}) ${o}`;
+    UI.dlgOpts.appendChild(d);
+  });
+  UI.dlg.classList.add("on");
+}
+function closeDialog(){
+  dialog.on=false;
+  dialog.say="";
+  dialog.opts=[];
+  dialog.onPick=null;
+  UI.dlg.classList.remove("on");
+}
+
+addEventListener("keydown",(e)=>{
+  if(!dialog.on) return;
+  const k=e.key.toLowerCase();
+  if(k==="escape"){ closeDialog(); return; }
+  if(k==="1"||k==="2"||k==="3"){
+    const idx = (k==="1"?0:(k==="2"?1:2));
+    if(dialog.onPick) dialog.onPick(idx);
+    closeDialog();
+  }
+});
+
+/* ==========================================================
+   Gameplay: car, hide, pickups, wanted, etc.
+   ========================================================== */
 function toggleCar(){
   if(state.street.hidden) return toast("Not while hiding.", 1200);
+  if(dialog.on) return;
 
   if(!state.street.inCar){
-    // only enter if close
     const d=dist2(sophia.x,sophia.y,car.x,car.y);
-    if(d>1200) return toast("Get closer to the car.", 1100);
+    if(d>1400) return toast("Get closer to the car.", 1100);
     state.street.inCar=true;
     UI.mode.textContent="IN CAR";
-    toast("She hops in. Seatbelt? optional. vibes? mandatory.", 1600);
-    // snap sophia/milo onto car position
+    toast("She hops in. Mirrors? checked. Destiny? pending.", 1600);
     sophia.x=car.x+4; sophia.y=car.y+2;
     milo.x=car.x+car.w-10; milo.y=car.y+2;
+    if(lucas.active){ lucas.x=car.x-18; lucas.y=car.y+6; }
   }else{
     const sp=Math.hypot(car.vx,car.vy);
-    if(sp>2.3) return toast("Too fast to jump out.", 1200);
+    if(sp>120) return toast("Too fast to jump out.", 1200);
     state.street.inCar=false;
     UI.mode.textContent="ON FOOT";
     toast("Back on foot.", 1200);
@@ -458,7 +964,7 @@ function toggleCar(){
 
 let hideHold=0;
 function startHide(){
-  if(state.street.wanted<=0) return toast("She checks the dumpster. (It is… not friendly.)", 1400);
+  if(state.street.wanted<=0) return toast("She checks the dumpster. (It is… judgemental.)", 1400);
   toast("Hold E to hide…", 1100);
   hideHold=1;
 }
@@ -474,57 +980,174 @@ function exitHidden(){
   saveState();
 }
 
-/* Mushrooms collect */
-function collectMushrooms(){
+let sitUntil=0;
+function sitBench(){
+  if(state.street.wanted>0) return toast("No sitting while wanted.", 1200);
+  if(sitUntil>performance.now()) return;
+  sitUntil = performance.now()+1800;
+  toast("She sits. Breath resets. Camera steadies.", 1400);
+  cam.shake=0;
+}
+
+const buffs={ coffeeUntil:0 };
+
+function interactBuilding(b){
+  if(b.tag==="CAF"){
+    if(state.cash<3) return toast("Coffee costs $3. Find coins or finish a quest.", 1500);
+    state.cash-=3; UI.cash.textContent=state.cash|0;
+    buffs.coffeeUntil = performance.now()+20000;
+    toast("Coffee acquired. Speed buff (20s).", 1500);
+    saveState();
+    return;
+  }
+  if(b.tag==="ARC"){
+    if(state.cash<2) return toast("Arcade token is $2. Retro laws.", 1400);
+    state.cash-=2; UI.cash.textContent=state.cash|0;
+    if(Math.random()<0.55){
+      state.cash += 5; UI.cash.textContent=state.cash|0;
+      toast("Arcade win. +$5. Your thumbs are legendary.", 1600);
+    }else{
+      toast("Arcade loss. The machine laughs politely.", 1400);
+    }
+    saveState();
+    return;
+  }
+  if(b.tag==="GAS"){
+    if(state.cash<4) return toast("Gas station air pump costs $4.", 1500);
+    state.cash-=4; UI.cash.textContent=state.cash|0;
+    car.fuel = 100;
+    toast("Car tuned. Fuel topped. It purrs in pixels.", 1500);
+    saveState();
+    return;
+  }
+  if(b.tag==="BEACH"){
+    toast("Beach is later. The ocean is currently in pre-production.", 1500);
+    return;
+  }
+  toast("Locked.", 1000);
+}
+
+/* Mailbox / vending / photo (kept) */
+function mailboxInteract(mb){
+  if(dialog.on) return;
+  const q=activeQuest();
+  if(q && q.id==="DELIVER_FLYERS"){
+    const did = q.def.onMailbox(q.data, mb.id);
+    if(did){
+      toast("Flyer delivered.", 1100);
+      cam.shake=4;
+      if(q.def.isDone(q.data)) completeQuest(q.id);
+      saveState();
+      return;
+    }
+    return toast("Already delivered here.", 1100);
+  }
+  toast("Mailbox. It has secrets. Not yours though.", 1200);
+}
+function vendingInteract(v){
+  if(dialog.on) return;
+  if(v.uses<=0) return toast("Vending is empty. It looks tired.", 1200);
+  if(state.cash<2) return toast("Snack costs $2.", 1100);
+  state.cash-=2; UI.cash.textContent=state.cash|0;
+  v.uses--;
+  if(Math.random()<0.65){
+    state.street.mush += 1; UI.mush.textContent=state.street.mush|0;
+    toast("Snack… plus a bonus mushroom?? (+1 mush)", 1500);
+  }else{
+    toast("Snack acquired. Emotional stability +0.2.", 1400);
+  }
+  saveState();
+}
+function photoInteract(ps){
+  if(dialog.on) return;
+  if(state.street.wanted>0) return toast("No photos while wanted.", 1200);
+  const q=activeQuest();
+  if(q && q.id==="POSTER_SELFIE"){
+    q.data[ps.id]=true;
+    toast("Photo captured. (Your future fans approve.)", 1500);
+    if(q.def.isDone(q.data)) completeQuest(q.id);
+    saveState();
+    return;
+  }
+  state.cash += 1; UI.cash.textContent=state.cash|0;
+  toast("Cute shot. +$1 from ‘algorithm.’", 1400);
+  saveState();
+}
+
+/* Pickups */
+function collectPickups(){
   const px = state.street.inCar ? car.x+car.w/2 : sophia.x+sophia.w/2;
   const py = state.street.inCar ? car.y+car.h/2 : sophia.y+sophia.h/2;
 
   for(const m of mushWorld){
     if(!m.alive) continue;
-    if(dist2(px,py,m.x,m.y) < 14*14){
+    if(dist2(px,py,m.x,m.y) < 16*16){
       m.alive=false;
-      state.street.mush += (m.kind==="gold"?2:1);
-      UI.mush.textContent=state.street.mush;
+      const add = (m.kind==="gold"?2:1);
+      state.street.mush += add;
+      UI.mush.textContent=state.street.mush|0;
       toast(m.kind==="gold" ? "GOLD MUSHROOM (+2)" : "Mushroom collected (+1)", 1200);
+      saveState();
+    }
+  }
+  for(const c of coins){
+    if(!c.alive) continue;
+    if(dist2(px,py,c.x,c.y) < 14*14){
+      c.alive=false;
+      state.cash += c.v|0;
+      UI.cash.textContent=state.cash|0;
+      toast(c.v>1 ? `Found $${c.v}!` : "Found $1.", 1000);
       saveState();
     }
   }
 }
 
-/* Throw mushroom projectile (SPACE) */
-function canThrow(){
-  const now=performance.now();
+/* Throw mush */
+function canThrow(now){
+  if(dialog.on) return false;
   if(now - state.street.lastThrow < 220) return false;
   if(state.street.mush<=0) return false;
   return true;
 }
-function throwMushroom(){
+function throwMushroom(now){
   if(state.street.inCar) return toast("Not while driving.", 900);
   if(state.street.hidden) return toast("Not while hiding.", 900);
-  if(!canThrow()) return;
+  if(!canThrow(now)) return;
 
-  state.street.lastThrow=performance.now();
+  state.street.lastThrow=now;
   state.street.mush--;
-  UI.mush.textContent=state.street.mush;
+  UI.mush.textContent=state.street.mush|0;
 
-  // aim from movement keys, else forward-ish
   let ax=0, ay=0;
   if(keysDown.has("w")||keysDown.has("arrowup")) ay-=1;
   if(keysDown.has("s")||keysDown.has("arrowdown")) ay+=1;
   if(keysDown.has("a")||keysDown.has("arrowleft")) ax-=1;
   if(keysDown.has("d")||keysDown.has("arrowright")) ax+=1;
-  if(ax===0 && ay===0){ ax=1; } // default right
+  if(ax===0 && ay===0){ ax=1; }
   const mag=Math.hypot(ax,ay)||1;
   ax/=mag; ay/=mag;
 
-  shots.push({x:sophia.x+5,y:sophia.y+6,vx:ax*3.0,vy:ay*3.0,life:120});
+  shots.push({x:sophia.x+5,y:sophia.y+6,vx:ax*220,vy:ay*220,life:0.55, kind:"mush"});
+  saveState();
+}
+
+/* Trip mode */
+function tripToggle(){
+  if(dialog.on) return;
+  if(state.street.inCar) return toast("Trip mode requires feet on ground.", 1200);
+  if(state.street.hidden) return toast("Not while hiding.", 1000);
+  if(state.street.mush<=0) return toast("No mushrooms to trigger trip mode.", 1200);
+  state.street.mush--;
+  UI.mush.textContent=state.street.mush|0;
+  state.street.tripUntil = performance.now()+12000;
+  toast("TRIP MODE (12s). Reality gets wavy.", 1500);
   saveState();
 }
 
 /* Wanted system */
 function setWanted(w){
   state.street.wanted=clamp(w|0,0,5);
-  UI.wanted.textContent=state.street.wanted;
+  UI.wanted.textContent=state.street.wanted|0;
   saveState();
 }
 function bumpWanted(amt=1){
@@ -533,16 +1156,11 @@ function bumpWanted(amt=1){
   if(before===0) toast("People panic. Somewhere: sirens wake up.", 1500);
   spawnCops();
 }
-function markSeen(){
-  state.street.seen=0;
-}
-function coolWanted(){
+function markSeen(){ state.street.seen=0; }
+function coolWanted(dt){
   if(state.street.wanted<=0) return;
-  // unseen timer climbs; faster if hidden
   const step = state.street.hidden ? 2.5 : 1.0;
-  state.street.seen += step;
-
-  // decay each ~8 seconds of not being seen
+  state.street.seen += step*(dt*60);
   if(state.street.seen > 480){
     state.street.seen=0;
     setWanted(state.street.wanted-1);
@@ -550,10 +1168,8 @@ function coolWanted(){
     if(state.street.wanted<=1) cops.splice(0, Math.max(0,cops.length-2));
   }
 }
-
-/* Cops */
 function spawnCops(){
-  const target = 1 + state.street.wanted*2;
+  const target = 1 + (state.street.wanted|0)*2;
   while(cops.length<target){
     const edge=(Math.random()*4)|0;
     let x=0,y=0;
@@ -564,74 +1180,67 @@ function spawnCops(){
     cops.push({x,y,w:10,h:12, lose:0, stunned:0, blink:(Math.random()*999)|0});
   }
 }
-
-/* "Line of sight" simplified (distance + no hide + not behind building box) */
 function blockedByBuilding(ax,ay,bx,by){
-  // super-lightweight: sample along the line a few steps and see if inside any building solid
-  const steps=6;
+  const steps=7;
   for(let i=1;i<steps;i++){
     const t=i/steps;
     const x=ax+(bx-ax)*t;
     const y=ay+(by-ay)*t;
-    // only check building solids (not fences) by testing overlap with building rectangles
     for(const b of buildings){
       if(x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h) return true;
     }
   }
   return false;
 }
-
-function updateCops(t){
+function updateCops(t,dt){
   if(state.street.wanted<=0){ cops.length=0; return; }
 
   const tx = state.street.inCar ? car.x+car.w/2 : sophia.x+sophia.w/2;
   const ty = state.street.inCar ? car.y+car.h/2 : sophia.y+sophia.h/2;
 
   for(const c of cops){
-    if(c.stunned>0){ c.stunned--; continue; }
+    if(c.stunned>0){ c.stunned-=dt*60; if(c.stunned<0)c.stunned=0; continue; }
 
     const dx=tx-(c.x+5), dy=ty-(c.y+6);
     const d=Math.hypot(dx,dy)||1;
 
-    // seen check
-    const inRange = (!state.street.hidden && d<260) || (state.street.hidden && d<60);
+    const inRange = (!state.street.hidden && d<280) || (state.street.hidden && d<70);
     const blocked = blockedByBuilding(c.x+5,c.y+6, tx,ty);
     const seen = inRange && !blocked;
 
     if(seen){ c.lose=0; markSeen(); }
-    else c.lose++;
+    else c.lose += dt*60;
 
-    // if hiding and cops lose for a bit, they search around
-    let sp=0.95 + 0.18*state.street.wanted;
+    let sp=90 + 18*(state.street.wanted|0);
     let vx=0,vy=0;
     if(state.street.hidden && c.lose>100){
-      vx=Math.sin((t+c.blink)*0.03)*0.35;
-      vy=Math.cos((t+c.blink)*0.04)*0.35;
+      vx=Math.sin((t+c.blink)*0.03)*26;
+      vy=Math.cos((t+c.blink)*0.04)*26;
     }else{
       vx=(dx/d)*sp;
       vy=(dy/d)*sp;
     }
 
-    const nx=c.x+vx, ny=c.y+vy;
+    const nx=c.x+vx*dt, ny=c.y+vy*dt;
     if(!collides(nx,c.y,c.w,c.h)) c.x=nx;
     if(!collides(c.x,ny,c.w,c.h)) c.y=ny;
 
-    // collision “catch”
     if(!state.street.hidden){
       if(state.street.inCar){
         if(rectsOverlap(c.x,c.y,c.w,c.h, car.x,car.y,car.w,car.h)){
-          toast("Cop bumps your bumper. Siren does a little scream.", 1200);
+          toast("Cop bumps your bumper.", 1100);
           car.vx*=-0.5; car.vy*=-0.5;
-          if(Math.random()<0.18) bumpWanted(1);
+          cam.shake=10;
+          if(Math.random()<0.16) bumpWanted(1);
         }
       }else{
         if(rectsOverlap(c.x,c.y,c.w,c.h, sophia.x,sophia.y,sophia.w,sophia.h)){
           toast("Caught. They lecture you about public mushroom safety.", 1400);
-          if(state.street.mush>0){ state.street.mush--; UI.mush.textContent=state.street.mush; }
-          // push away
+          if(state.street.mush>0){ state.street.mush--; UI.mush.textContent=state.street.mush|0; }
           sophia.x=clamp(sophia.x - dx*0.02,0,WORLD.w-sophia.w);
           sophia.y=clamp(sophia.y - dy*0.02,0,WORLD.h-sophia.h);
           markSeen();
+          cam.shake=7;
         }
       }
     }
@@ -639,73 +1248,48 @@ function updateCops(t){
 }
 
 /* ==========================================================
-   Pedestrians + Dogs + Traffic
+   Traffic obey lights
    ========================================================== */
-
-function updatePeds(t){
-  for(const p of peds){
-    if(p.stunned>0){ p.stunned--; continue; }
-
-    // gentle sidewalk wandering: prefer not-road
-    if(Math.random()<0.02){
-      p.vx += rand(-0.10,0.10);
-      p.vy += rand(-0.10,0.10);
-    }
-    p.vx=clamp(p.vx,-0.40,0.40);
-    p.vy=clamp(p.vy,-0.40,0.40);
-
-    let nx=p.x+p.vx, ny=p.y+p.vy;
-
-    // keep off roads: if they drift onto road, push back
-    if(isOnRoad(nx,ny)){
-      ny += (Math.random()<0.5 ? -1 : 1)*1.6;
-      nx += (Math.random()<0.5 ? -1 : 1)*0.8;
-    }
-
-    // collide with buildings
-    if(!collides(nx,p.y,p.w,p.h)) p.x=nx; else p.vx*=-0.8;
-    if(!collides(p.x,ny,p.w,p.h)) p.y=ny; else p.vy*=-0.8;
-
-    p.x=clamp(p.x,0,WORLD.w-p.w);
-    p.y=clamp(p.y,0,WORLD.h-p.h);
-
-    // wave if Sophia passes and not wanted
-    if(state.street.wanted===0 && !state.street.inCar && dist2(p.x,p.y,sophia.x,sophia.y)<90*90){
-      p.wave = Math.min(60, p.wave+2);
-    }else{
-      p.wave = Math.max(0, p.wave-1);
-    }
-
-    // dog follow
-    if(p.hasDog && p.dog){
-      const dx=(p.x-12)-p.dog.x;
-      const dy=(p.y+6)-p.dog.y;
-      p.dog.x += dx*0.06;
-      p.dog.y += dy*0.06;
-    }
+function nearestLightForCar(x,y){
+  let best=null, bd=1e12;
+  for(const L of lights){
+    const d=dist2(x,y,L.x,L.y);
+    if(d<bd && d<160*160){ best=L; bd=d; }
   }
+  return best;
 }
-
-function updateTraffic(t){
+function updateTraffic(t,dt){
   for(const v of traffic){
-    // move primarily along x; bounce if hit solids/buildings
-    let nx=v.x+v.vx, ny=v.y+v.vy;
+    let nx=v.x+v.vx*dt, ny=v.y+v.vy*dt;
 
-    // stay on roads: if leaving road, nudge back
-    if(!isOnRoad(nx+v.w/2, ny+v.h/2)){
-      // flip direction
-      v.vx *= -1;
-      nx=v.x+v.vx;
+    const L=nearestLightForCar(v.x+v.w/2, v.y+v.h/2);
+    if(L){
+      const st=lightState(L,t);
+      const movingEW = Math.abs(v.vx)>Math.abs(v.vy);
+      const allow = movingEW ? (st==="EW_G" || st==="EW_Y") : (st==="NS_G" || st==="NS_Y");
+      const close = dist2(v.x,v.y,L.x,L.y) < 70*70;
+      if(close && !allow){
+        v.wait = Math.min(1.0, v.wait + dt*2.2);
+      }else{
+        v.wait = Math.max(0, v.wait - dt*1.8);
+      }
+    }else{
+      v.wait = Math.max(0, v.wait - dt*1.2);
     }
 
-    // collision with buildings
-    if(collides(nx, v.y, v.w, v.h)){ v.vx*=-1; nx=v.x+v.vx; }
-    if(collides(v.x, ny, v.w, v.h)){ v.vy*=-1; ny=v.y+v.vy; }
+    const waitMul = 1.0 - v.wait;
 
-    v.x=clamp(nx,0,WORLD.w-v.w);
-    v.y=clamp(ny,0,WORLD.h-v.h);
+    if(!isOnRoad(nx+v.w/2, ny+v.h/2)){
+      v.vx *= -1;
+      nx=v.x+v.vx*dt;
+    }
 
-    // little “beep” if Sophia in car too close
+    if(collides(nx, v.y, v.w, v.h)){ v.vx*=-1; nx=v.x+v.vx*dt; }
+    if(collides(v.x, ny, v.w, v.h)){ v.vy*=-1; ny=v.y+v.vy*dt; }
+
+    v.x = clamp(lerp(v.x,nx,waitMul),0,WORLD.w-v.w);
+    v.y = clamp(lerp(v.y,ny,waitMul),0,WORLD.h-v.h);
+
     if(state.street.inCar && dist2(v.x,v.y,car.x,car.y)<60*60 && Math.random()<0.01){
       v.beep=40;
       toast("BEEP! (traffic car is offended)", 900);
@@ -715,29 +1299,316 @@ function updateTraffic(t){
 }
 
 /* ==========================================================
-   Projectiles: stun pedestrians/cops if hit
+   Peds update + special event logic
    ========================================================== */
+function updatePeds(t,dt){
+  // purse snatch event bootstrap (only once)
+  if(state.events.purse.stage==="idle"){
+    state.events.purse.stage="snatched";
+    setActiveQuest("Purse_Snatch");
+    toast("A robber snatches an old lady’s purse!", 1700);
+    saveState();
+  }
 
-function updateShots(){
+  const q=activeQuest();
+
+  for(const p of peds){
+    if(p.fight.cooldown>0) p.fight.cooldown -= dt*60;
+
+    if(p.stunned>0){ p.stunned-=dt*60; if(p.stunned<0)p.stunned=0; continue; }
+
+    // robber runs if quest active and not caught
+    if(p.type==="robber" && q && q.id==="Purse_Snatch" && !q.data.gotPurse){
+      const dx=(sophia.x - p.x), dy=(sophia.y - p.y);
+      const d=Math.hypot(dx,dy)||1;
+      if(d<140){
+        // run away from Sophia
+        p.vx = clamp((-dx/d)*0.95, -1.2, 1.2);
+        p.vy = clamp((-dy/d)*0.95, -1.2, 1.2);
+      }else{
+        // wander
+        if(Math.random()<0.02){ p.vx += rand(-0.10,0.10); p.vy += rand(-0.10,0.10); }
+        p.vx=clamp(p.vx,-0.40,0.40);
+        p.vy=clamp(p.vy,-0.40,0.40);
+      }
+    }else{
+      if(Math.random()<0.02){
+        p.vx += rand(-0.10,0.10);
+        p.vy += rand(-0.10,0.10);
+      }
+      p.vx=clamp(p.vx,-0.40,0.40);
+      p.vy=clamp(p.vy,-0.40,0.40);
+    }
+
+    // statue barely moves
+    if(p.performer==="statue"){ p.vx*=0.2; p.vy*=0.2; }
+
+    let nx=p.x+p.vx*(dt*60), ny=p.y+p.vy*(dt*60);
+
+    if(isOnRoad(nx,ny)){
+      ny += (Math.random()<0.5 ? -1 : 1)*1.6;
+      nx += (Math.random()<0.5 ? -1 : 1)*0.8;
+    }
+
+    if(!collides(nx,p.y,p.w,p.h)) p.x=nx; else p.vx*=-0.8;
+    if(!collides(p.x,ny,p.w,p.h)) p.y=ny; else p.vy*=-0.8;
+
+    p.x=clamp(p.x,0,WORLD.w-p.w);
+    p.y=clamp(p.y,0,WORLD.h-p.h);
+
+    // wave
+    if(state.street.wanted===0 && !state.street.inCar && dist2(p.x,p.y,sophia.x,sophia.y)<95*95){
+      p.wave = Math.min(60, p.wave+2);
+    }else{
+      p.wave = Math.max(0, p.wave-1);
+    }
+
+    // dog follow
+    if(p.hasDog && p.dog){
+      const dx=(p.x-12)-p.dog.x;
+      const dy=(p.y+6)-p.dog.y;
+      p.dog.x += dx*0.06*(dt*60);
+      p.dog.y += dy*0.06*(dt*60);
+    }
+  }
+
+  // duck swim
+  duck.t += dt;
+  duck.x += duck.vx*(dt*60);
+  duck.y += duck.vy*(dt*60);
+  if(duck.x<pond.x+20||duck.x>pond.x+pond.w-20) duck.vx*=-1;
+  if(duck.y<pond.y+20||duck.y>pond.y+pond.h-20) duck.vy*=-1;
+}
+
+/* ==========================================================
+   Talk system + choices + fights (arcade)
+   ========================================================== */
+function talkLucas(){
+  if(dialog.on) return;
+  openDialog(
+    "Lucas",
+    "Lucas: “We got this. Want me to stick close, or roam and scout?”",
+    ["Stick closer", "Roam freer", "Head home (dismiss)"],
+    (pick)=>{
+      if(pick===0){ lucas.mood="close"; toast("Lucas stays closer.", 1200); }
+      if(pick===1){ lucas.mood="roam"; toast("Lucas roams freer.", 1200); }
+      if(pick===2){ lucas.active=false; toast("Lucas heads off. (You can call again at the payphone.)", 1600); }
+      state.lucas.active=lucas.active;
+      state.lucas.mood=lucas.mood;
+      saveState();
+      UI.lucasText.textContent = lucas.called ? (lucas.active?"Following":"Called (not here)") : "Not called";
+    }
+  );
+}
+
+function startArcadeFight(p){
+  // simple scuffle: Sophia “bumps” them, they bump back, lose a tiny bit of cash if you get caught
+  p.fight.active=true;
+  p.fight.hp = p.fight.hp || 5;
+  p.angry=240;
+  toast("They get mad. Quick scuffle!", 1200);
+}
+function resolveFightHit(p){
+  if(p.fight.cooldown>0) return;
+  p.fight.cooldown=18;
+  p.fight.hp -= 1;
+  cam.shake=6;
+  if(p.fight.hp<=0){
+    p.fight.active=false;
+    p.angry=0;
+    p.stunned=1.3;
+    toast("Fight over. They back off.", 1200);
+    // tiny wanted chance
+    if(Math.random()<0.12) bumpWanted(1);
+  }else{
+    toast("Hit! (spam E near them)", 700);
+  }
+}
+
+// catcaller bubble
+function catcallDialog(){
+  if(dialog.on) return;
+  openDialog(
+    "Street Moment",
+    "Two construction workers are catcalling. Sophia’s bubble pops up…",
+    ["Yell at them", "Thank them (keep it moving)", "Ignore and walk"],
+    (pick)=>{
+      state.events.catcall.done=true;
+      if(pick===0){
+        toast("Sophia: “Relax.” They get salty.", 1400);
+        // chance of scuffle (very light)
+        if(Math.random()<0.5){
+          startArcadeFight(catcallers[0]);
+          startArcadeFight(catcallers[1]);
+        }
+      }else if(pick===1){
+        toast("Sophia: “Thanks.” They cheer, then go back to work.", 1400);
+        state.cash += 1; UI.cash.textContent=state.cash|0;
+      }else{
+        toast("Sophia keeps walking. Silence wins.", 1300);
+      }
+      saveState();
+    }
+  );
+}
+
+function talkPed(p){
+  const now=performance.now();
+  if(now - state.street.lastTalk < 450) return;
+  state.street.lastTalk=now;
+
+  // catcallers trigger once
+  if(p.type==="catcaller" && !state.events.catcall.done){
+    return catcallDialog();
+  }
+
+  // robber quest flow
+  const q=activeQuest();
+  if(p.type==="oldlady"){
+    if(q && q.id==="Purse_Snatch"){
+      if(q.data.gotPurse && !q.data.returned){
+        q.data.returned=true;
+        toast("You returned the purse. Old Lady: “Thank you, sweetheart…”", 1700);
+        completeQuest(q.id);
+        state.events.purse.rewardGiven=true;
+        saveState();
+        return;
+      }
+      if(!q.data.gotPurse){
+        toast("Old Lady: “Please… he ran toward the boulevard…”", 1500);
+        return;
+      }
+    }
+    return toast(p.line, 1500);
+  }
+
+  if(p.type==="robber"){
+    if(q && q.id==="Purse_Snatch" && !q.data.gotPurse){
+      // confront: choice to chase/fight
+      openDialog(
+        "Robber",
+        "Robber: “Don’t be a hero.”",
+        ["Give it back", "Try to grab it", "Let him go"],
+        (pick)=>{
+          if(pick===0){
+            // small chance he tosses purse
+            if(Math.random()<0.55){
+              q.data.gotPurse=true;
+              toast("He drops the purse and bolts.", 1500);
+              p.stunned=1.4;
+              maybeAutoWaypoint(true);
+              saveState();
+            }else{
+              toast("He laughs and shoves past. Chase him!", 1400);
+              startArcadeFight(p);
+            }
+          }else if(pick===1){
+            startArcadeFight(p);
+          }else{
+            toast("He runs. The city side-eyes you.", 1500);
+            if(Math.random()<0.25) bumpWanted(1);
+          }
+        }
+      );
+      return;
+    }
+    return toast("Robber: “…”", 900);
+  }
+
+  // performers
+  if(p.type==="performer"){
+    if(p.performer==="guitar"){
+      if(state.cash<=0) return toast("Guitar Player: “Tip $1 and I’ll play.”", 1400);
+      openDialog("Guitar Player","Pick a song vibe.",["Melancholy","Hype","Dreamy"],(pick)=>{
+        state.cash -= 1; UI.cash.textContent=state.cash|0;
+        const lines=["A soft riff drips into the street.","A fast riff sparks the crosswalk.","A dreamy riff makes the air shimmer."];
+        toast(lines[pick], 1600);
+        // small bond with Lucas if present
+        if(lucas.active){ lucas.bond += 1; }
+        saveState();
+      });
+      return;
+    }
+    if(p.performer==="dancer"){
+      openDialog("Street Dancer","The dancer asks you to pick the routine.",["Hype","Smooth","Weird"],(pick)=>{
+        const lines=["They go OFF. Crowd claps.","It’s smooth like sliding on sunlight.","It gets experimental. Art happens."];
+        toast(lines[pick], 1500);
+        state.cash += (pick===0?2:1); UI.cash.textContent=state.cash|0;
+        saveState();
+      });
+      return;
+    }
+    if(p.performer==="clown"){
+      openDialog("Clown","Clown: “Choose your chaos.”",["Balloon animal","Bad joke","Tiny magic trick"],(pick)=>{
+        const lines=["A balloon dog appears. It looks judgmental.","A joke lands like a pillow. Soft impact.","A coin vanishes… then returns behind your ear."];
+        toast(lines[pick], 1500);
+        if(pick===2){ state.cash += 1; UI.cash.textContent=state.cash|0; }
+        if(pick===1 && Math.random()<0.25){ startArcadeFight(p); }
+        saveState();
+      });
+      return;
+    }
+    if(p.performer==="statue"){
+      toast("The statue doesn’t move… then blinks. ($1 tip? nah.)", 1500);
+      return;
+    }
+  }
+
+  // generic NPC: sometimes choice leads to hug or fight
+  if(Math.random()<0.18){
+    openDialog(
+      "Stranger",
+      "NPC: “You talking to me?”",
+      ["Compliment them", "Be rude", "Ask for directions"],
+      (pick)=>{
+        if(pick===0){
+          toast("They smile. “Thanks.” (hug energy)", 1400);
+          state.cash += 1; UI.cash.textContent=state.cash|0;
+        }else if(pick===1){
+          toast("They get mad.", 1200);
+          startArcadeFight(p);
+        }else{
+          toast("They point: “STARR is north-east.”", 1400);
+          setWaypoint(2550, 320, "STARR AREA");
+        }
+        saveState();
+      }
+    );
+    return;
+  }
+
+  toast(p.line, 1500);
+}
+
+/* ==========================================================
+   Shots
+   ========================================================== */
+function anyCopSeesPoint(x,y){
+  if(state.street.wanted<=0 || cops.length===0) return false;
+  for(const c of cops){
+    const d=dist2(c.x,c.y,x,y);
+    if(d<280*280 && !blockedByBuilding(c.x+5,c.y+6,x,y)) return true;
+  }
+  return false;
+}
+function updateShots(dt){
   for(let i=shots.length-1;i>=0;i--){
     const s=shots[i];
-    s.x+=s.vx; s.y+=s.vy;
-    s.life--;
+    s.x += s.vx*dt;
+    s.y += s.vy*dt;
+    s.life -= dt;
 
     if(collides(s.x,s.y,2,2)){ shots.splice(i,1); continue; }
 
-    // hit pedestrian
+    // hit ped
     for(const p of peds){
       if(p.stunned>0) continue;
       if(rectsOverlap(s.x,s.y,2,2, p.x,p.y,p.w,p.h)){
-        p.stunned=120;
+        p.stunned=2.0;
         shots.splice(i,1);
-
-        // If cop can see this, wanted goes up. Otherwise, people just freak out (small chance still increases)
         if(anyCopSeesPoint(p.x+5,p.y+6)) bumpWanted(1);
-        else if(Math.random()<0.25) bumpWanted(1);
-
-        toast("SPLAT. Pedestrian stunned. Bad karma speedrun.", 1500);
+        else if(Math.random()<0.22) bumpWanted(1);
+        toast("SPLAT. Ped stunned.", 1200);
         break;
       }
     }
@@ -747,11 +1618,10 @@ function updateShots(){
     for(const c of cops){
       if(c.stunned>0) continue;
       if(rectsOverlap(s.x,s.y,2,2, c.x,c.y,c.w,c.h)){
-        c.stunned=120;
+        c.stunned=2.2;
         shots.splice(i,1);
-        // hitting cops escalates faster
         bumpWanted(1);
-        toast("You hit a cop with a mushroom. They take it personally.", 1500);
+        toast("You hit a cop with a mushroom.", 1300);
         break;
       }
     }
@@ -761,43 +1631,104 @@ function updateShots(){
   }
 }
 
-function anyCopSeesPoint(x,y){
-  if(state.street.wanted<=0 || cops.length===0) return false;
-  for(const c of cops){
-    const d=dist2(c.x,c.y,x,y);
-    if(d<260*260 && !blockedByBuilding(c.x+5,c.y+6,x,y)) return true;
-  }
-  return false;
-}
-
 /* ==========================================================
-   Run over logic (car vs pedestrian) increases wanted
+   Car hits
    ========================================================== */
 function checkCarHits(){
   if(!state.street.inCar) return;
   for(const p of peds){
     if(p.stunned>0) continue;
     if(rectsOverlap(car.x,car.y,car.w,car.h, p.x,p.y,p.w,p.h)){
-      p.stunned=160;
+      p.stunned=2.6;
       bumpWanted(2);
-      toast("You hit someone. Screams. Sirens. Five-star energy.", 1700);
-      // knock car slightly
+      toast("You hit someone. Sirens wake up.", 1600);
       car.vx*=-0.35; car.vy*=-0.35;
+      cam.shake=14;
       markSeen();
     }
   }
 }
 
 /* ==========================================================
+   Lucas follow AI (looser roam)
+   ========================================================== */
+function updateLucas(t,dt){
+  if(!lucas.called) return;
+  if(!lucas.active) return;
+  if(state.street.inCar){ // jog near car
+    const tx=car.x-18, ty=car.y+6;
+    lucas.x += (tx-lucas.x)*0.10*(dt*60);
+    lucas.y += (ty-lucas.y)*0.10*(dt*60);
+    return;
+  }
+  if(state.street.hidden){ // wait nearby
+    const tx=sophia.x-14, ty=sophia.y+10;
+    lucas.x += (tx-lucas.x)*0.06*(dt*60);
+    lucas.y += (ty-lucas.y)*0.06*(dt*60);
+    return;
+  }
+
+  // roam radius depends on mood
+  const mood = lucas.mood || "roam";
+  const radius = (mood==="close") ? 36 : 92;
+
+  // desired anchor orbit around Sophia, with mild noise
+  const ang = (t*0.03) + (lucas.roamSeed*0.001);
+  const ox = Math.cos(ang)*radius;
+  const oy = Math.sin(ang*0.9)*radius*0.7;
+
+  const ax = sophia.x + ox;
+  const ay = sophia.y + oy;
+
+  // steer
+  const dx=ax - lucas.x;
+  const dy=ay - lucas.y;
+  const d=Math.hypot(dx,dy)||1;
+
+  // if far, sprint in; if close, drift
+  const sp = d>120 ? 110 : (d>60?85:55);
+  lucas.vx += (dx/d)*sp*dt;
+  lucas.vy += (dy/d)*sp*dt;
+
+  // friction
+  lucas.vx *= Math.pow(0.86, dt*60);
+  lucas.vy *= Math.pow(0.86, dt*60);
+
+  // cap
+  const maxSp=140;
+  const s=Math.hypot(lucas.vx,lucas.vy);
+  if(s>maxSp){ lucas.vx=(lucas.vx/s)*maxSp; lucas.vy=(lucas.vy/s)*maxSp; }
+
+  // move with collision
+  const nx=lucas.x+lucas.vx*dt, ny=lucas.y+lucas.vy*dt;
+  if(!collides(nx,lucas.y,lucas.w,lucas.h)) lucas.x=nx; else lucas.vx*=-0.3;
+  if(!collides(lucas.x,ny,lucas.w,lucas.h)) lucas.y=ny; else lucas.vy*=-0.3;
+
+  lucas.x=clamp(lucas.x,0,WORLD.w-lucas.w);
+  lucas.y=clamp(lucas.y,0,WORLD.h-lucas.h);
+
+  // bond ticks for hanging out
+  if(dist2(lucas.x,lucas.y,sophia.x,sophia.y)<70*70 && (t%120|0)===0){
+    lucas.bond = Math.min(999, lucas.bond+1);
+  }
+}
+
+/* ==========================================================
    Movement + camera
    ========================================================== */
+function updatePlayer(t,dt){
+  if(dialog.on){
+    // freeze input movement lightly (still camera updates)
+    return;
+  }
 
-function updatePlayer(t){
-  // hidden state
   if(state.street.hidden){
     if(!keysDown.has("e")) exitHidden();
     return;
   }
+
+  const coffeeOn = performance.now() < buffs.coffeeUntil;
+  const speedMul = coffeeOn ? 1.12 : 1.0;
 
   if(state.street.inCar){
     const boost = keysDown.has("shift") ? 1.18 : 1.0;
@@ -809,104 +1740,218 @@ function updatePlayer(t){
     if(keysDown.has("d")||keysDown.has("arrowright")) ax+=1;
     if(ax && ay){ ax*=0.72; ay*=0.72; }
 
-    // accelerate
-    const accel=0.24*boost;
-    car.vx += ax*accel;
-    car.vy += ay*accel;
+    const accel=260*boost;
+    car.vx += ax*accel*dt;
+    car.vy += ay*accel*dt;
 
-    // friction
-    car.vx *= 0.92;
-    car.vy *= 0.92;
+    car.vx *= Math.pow(0.92, dt*60);
+    car.vy *= Math.pow(0.92, dt*60);
 
-    // cap speed
-    const maxSp=3.2*boost;
+    const maxSp=220*boost;
     const sp=Math.hypot(car.vx,car.vy);
     if(sp>maxSp){
       car.vx=(car.vx/sp)*maxSp;
       car.vy=(car.vy/sp)*maxSp;
     }
 
-    tryMoveCar(car.vx,car.vy);
+    if(sp>40) car.fuel = Math.max(0, car.fuel - dt*3.5);
+    if(car.fuel<=0){
+      car.vx *= 0.90;
+      car.vy *= 0.90;
+      if((t%30|0)===0) toast("Out of fuel. Find GAS.", 900);
+    }
 
-    // keep sophia + milo “riding”
+    tryMoveCar(car.vx*dt,car.vy*dt);
+
     sophia.x=car.x+4; sophia.y=car.y+2;
     milo.x=car.x+car.w-10; milo.y=car.y+2;
 
   }else{
     const run=keysDown.has("shift");
-    const sp=sophia.speed*(run?sophia.run:1);
+    const sp=(run?sophia.run:sophia.speed)*speedMul;
 
     let dx=0,dy=0;
-    if(keysDown.has("w")||keysDown.has("arrowup")) dy-=sp;
-    if(keysDown.has("s")||keysDown.has("arrowdown")) dy+=sp;
-    if(keysDown.has("a")||keysDown.has("arrowleft")) dx-=sp;
-    if(keysDown.has("d")||keysDown.has("arrowright")) dx+=sp;
+    if(keysDown.has("w")||keysDown.has("arrowup")) dy-=sp*dt;
+    if(keysDown.has("s")||keysDown.has("arrowdown")) dy+=sp*dt;
+    if(keysDown.has("a")||keysDown.has("arrowleft")) dx-=sp*dt;
+    if(keysDown.has("d")||keysDown.has("arrowright")) dx+=sp*dt;
     if(dx && dy){ dx*=0.72; dy*=0.72; }
     if(dx||dy) tryMove(sophia,dx,dy);
 
     // Milo follow
     const tx=sophia.x-10, ty=sophia.y+6;
-    milo.x += (tx-milo.x)*0.07;
-    milo.y += (ty-milo.y)*0.07;
+    milo.x += (tx-milo.x)*0.08*(dt*60);
+    milo.y += (ty-milo.y)*0.08*(dt*60);
 
     // hide hold
     if(keysDown.has("e") && hideHold){
-      hideHold++;
+      hideHold += dt*60;
       if(hideHold>28){ hideHold=0; enterHidden(); }
     }
     if(!keysDown.has("e")) hideHold=0;
   }
 
-  collectMushrooms();
+  collectPickups();
   checkCarHits();
 }
 
-function updateCamera(){
+function updateCamera(dt){
   const px = state.street.inCar ? (car.x+car.w/2) : (sophia.x+sophia.w/2);
   const py = state.street.inCar ? (car.y+car.h/2) : (sophia.y+sophia.h/2);
 
   const tx=clamp(px - VW/2, 0, WORLD.w - VW);
   const ty=clamp(py - VH/2, 0, WORLD.h - VH);
 
-  cam.x += (tx - cam.x)*0.12;
-  cam.y += (ty - cam.y)*0.12;
+  cam.x += (tx - cam.x)*0.14*(dt*60);
+  cam.y += (ty - cam.y)*0.14*(dt*60);
+
+  if(cam.shake>0){
+    cam.shake = Math.max(0, cam.shake - dt*30);
+  }
 }
 
 /* ==========================================================
-   Navigation
+   Controls
    ========================================================== */
-function go(file){
-  state.sophia.x=sophia.x; state.sophia.y=sophia.y;
-  state.milo.x=milo.x; state.milo.y=milo.y;
-  state.street.car={x:car.x,y:car.y,vx:car.vx,vy:car.vy};
-  saveState();
-  location.href=file;
+let eWas=false, spWas=false, qWas=false, mWas=false, tWas=false;
+let mapOpen=false, journalOpen=false;
+
+function toggleJournal(){
+  journalOpen=!journalOpen;
+  UI.journal.classList.toggle("on", journalOpen);
+  if(journalOpen) syncJournal();
+}
+function toggleMap(){
+  mapOpen=!mapOpen;
+  UI.mapPanel.classList.toggle("on", mapOpen);
+  UI.lucasText.textContent = lucas.called ? (lucas.active ? `Following (bond ${lucas.bond})` : "Called (not here)") : "Not called";
 }
 
-/* ==========================================================
-   Controls: tap E to interact, SPACE to throw
-   ========================================================== */
-let eWas=false, spWas=false;
-function handleButtons(){
+function handleButtons(now){
+  if(dialog.on){
+    // no E/space actions during dialog
+    const q=keysDown.has("q");
+    if(q && !qWas) toggleJournal();
+    qWas=q;
+    const m=keysDown.has("m");
+    if(m && !mWas) toggleMap();
+    mWas=m;
+    const tt=keysDown.has("t");
+    tWas=tt;
+    eWas=keysDown.has("e");
+    spWas=keysDown.has(" ");
+    return;
+  }
+
   const e=keysDown.has("e");
   if(e && !eWas){
-    // if near dumpster and wanted>0: start hide
+    // if near a fighting ped, E is "hit"
     const z=nearestZone();
-    if(z && z.name.startsWith("DUMPSTER") && state.street.wanted>0) startHide();
-    else interact();
+    if(z && z.name==="CONFRONT ROBBER"){
+      // also allow grab/attack via dialog, handled in talkPed
+      z.action();
+    }else{
+      // check if any active fight ped within range
+      const px=sophia.x+5, py=sophia.y+6;
+      let fought=false;
+      for(const p of peds){
+        if(!p.fight.active) continue;
+        if(near(px,py,p.x+5,p.y+6,18)){
+          resolveFightHit(p);
+          fought=true;
+          break;
+        }
+      }
+      if(!fought){
+        if(z && z.name.startsWith("DUMPSTER") && state.street.wanted>0) startHide();
+        else interact();
+      }
+    }
   }
   eWas=e;
 
   const sp=keysDown.has(" ");
-  if(sp && !spWas) throwMushroom();
+  if(sp && !spWas) throwMushroom(now);
   spWas=sp;
+
+  const q=keysDown.has("q");
+  if(q && !qWas) toggleJournal();
+  qWas=q;
+
+  const m=keysDown.has("m");
+  if(m && !mWas) toggleMap();
+  mWas=m;
+
+  const tt=keysDown.has("t");
+  if(tt && !tWas) tripToggle();
+  tWas=tt;
 }
 
 /* ==========================================================
-   Draw helpers (bevel + hint)
+   Waypoint + auto
    ========================================================== */
-function worldToView(x,y){ return {x:Math.round(x-cam.x), y:Math.round(y-cam.y)}; }
+function setWaypoint(x,y,label="WAYPOINT"){
+  state.waypoint={x,y,label};
+  UI.wpText.textContent = `${label} (${x|0},${y|0})`;
+  toast("Waypoint set.", 1100);
+  saveState();
+}
+function maybeAutoWaypoint(force=false){
+  if(state.waypoint && !force) return;
+  const q=activeQuest();
+  if(!q) return;
 
+  if(q.id==="DELIVER_FLYERS"){
+    const b=buildings.find(b=>b.tag==="GROC");
+    if(b) setWaypoint(b.x+b.w/2, b.y+b.h/2, "GROCERY AREA");
+  }else if(q.id==="POSTER_SELFIE"){
+    setWaypoint(250,1240,"PHOTO WALL");
+  }else if(q.id==="Purse_Snatch"){
+    setWaypoint(robber.x, robber.y, "ROBBER");
+  }
+}
+
+/* ==========================================================
+   Big Map click
+   ========================================================== */
+let mouse={x:0,y:0,down:false};
+addEventListener("mousemove",(e)=>{
+  const r=canvas.getBoundingClientRect();
+  const scaleX = canvas.width / r.width;
+  const scaleY = canvas.height / r.height;
+  mouse.x = ((e.clientX - r.left)*scaleX)|0;
+  mouse.y = ((e.clientY - r.top)*scaleY)|0;
+});
+addEventListener("mousedown",()=>mouse.down=true);
+addEventListener("mouseup",()=>mouse.down=false);
+
+function bigMapClick(){
+  if(!mapOpen) return;
+  if(!mouse.down) return;
+
+  const pad=10;
+  const w=VW-pad*2, h=VH-pad*2;
+  const sx=(w-12)/WORLD.w;
+  const sy=(h-12)/WORLD.h;
+
+  const mx=mouse.x, my=mouse.y;
+  const inside = mx>pad+6 && mx<pad+6+(WORLD.w*sx) && my>pad+6 && my<pad+6+(WORLD.h*sy);
+  if(!inside) return;
+
+  const wx = (mx-(pad+6))/sx;
+  const wy = (my-(pad+6))/sy;
+  setWaypoint(wx,wy,"CUSTOM");
+  mouse.down=false;
+}
+
+/* ==========================================================
+   DRAW HELPERS
+   ========================================================== */
+function worldToView(x,y){
+  const sx = (cam.shake>0)? (Math.sin(performance.now()*0.04)*cam.shake*0.25) : 0;
+  const sy = (cam.shake>0)? (Math.cos(performance.now()*0.05)*cam.shake*0.25) : 0;
+  return {x:Math.round(x-cam.x+sx), y:Math.round(y-cam.y+sy)};
+}
 function drawRectBevel(x,y,w,h,fill){
   ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
   ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(x,y,w,1);
@@ -928,10 +1973,9 @@ function drawHintBubble(text,x,y){
 }
 
 /* ==========================================================
-   DRAW WORLD (bright day)
+   DRAW WORLD
    ========================================================== */
 function drawBackground(t){
-  // sky
   const g=ctx.createLinearGradient(0,0,0,VH);
   g.addColorStop(0,"rgba(90,180,255,1)");
   g.addColorStop(0.55,"rgba(150,215,255,1)");
@@ -939,41 +1983,39 @@ function drawBackground(t){
   ctx.fillStyle=g;
   ctx.fillRect(0,0,VW,VH);
 
-  // soft sun bloom
-  const s=ctx.createRadialGradient(60,30,8,60,30,140);
-  s.addColorStop(0,"rgba(255,255,255,.35)");
-  s.addColorStop(0.35,"rgba(255,210,77,.24)");
+  const s=ctx.createRadialGradient(62,28,10,62,28,150);
+  s.addColorStop(0,"rgba(255,255,255,.38)");
+  s.addColorStop(0.35,"rgba(255,210,77,.26)");
   s.addColorStop(1,"rgba(255,255,255,0)");
   ctx.fillStyle=s; ctx.fillRect(0,0,VW,VH);
-}
 
-function drawGround(){
-  // grass base
+  ctx.fillStyle="rgba(40,60,90,.10)";
+  for(let i=0;i<16;i++){
+    const x=(i*22 + (t*0.3|0))%VW;
+    const h=18 + (i%5)*6;
+    ctx.fillRect(x, 34+h, 14, 50);
+  }
+}
+function drawGround(t){
   ctx.fillStyle="rgba(60,190,110,1)";
   ctx.fillRect(0,0,VW,VH);
-
-  // tiny noise sparkle
-  for(let i=0;i<90;i++){
-    const x=(i*37 + (t*2|0))%VW;
-    const y=(i*19)%VH;
+  for(let i=0;i<80;i++){
+    const x=(i*41 + (t*2|0))%VW;
+    const y=(i*17 + (t|0))%VH;
     ctx.fillStyle="rgba(255,255,255,.05)";
     ctx.fillRect(x,y,1,1);
   }
 }
-
-function drawRoads(){
+function drawRoads(t){
   for(const r of roads){
-    // cull
     if(r.x+r.w<cam.x-40||r.x>cam.x+VW+40||r.y+r.h<cam.y-40||r.y>cam.y+VH+40) continue;
     const v=worldToView(r.x,r.y);
 
-    // asphalt gray
     drawRectBevel(v.x,v.y,r.w,r.h,"rgba(90,95,105,1)");
-    ctx.fillStyle="rgba(40,45,55,.45)";
+    ctx.fillStyle="rgba(40,45,55,.48)";
     ctx.fillRect(v.x+2,v.y+2,r.w-4,r.h-4);
 
-    // lane hints
-    ctx.fillStyle="rgba(255,255,255,.22)";
+    ctx.fillStyle="rgba(255,255,255,.24)";
     if(r.w>r.h){
       const yy=v.y + (r.h/2|0);
       for(let x=v.x+10;x<v.x+r.w-10;x+=18){
@@ -994,58 +2036,87 @@ function drawRoads(){
     ctx.fillRect(v.x+r.w-3, v.y, 3, r.h);
   }
 }
-
 function drawPark(){
-  // park fill
   if(park.x+park.w<cam.x-10||park.x>cam.x+VW+10||park.y+park.h<cam.y-10||park.y>cam.y+VH+10) return;
   const v=worldToView(park.x,park.y);
   drawRectBevel(v.x,v.y,park.w,park.h,"rgba(40,160,90,1)");
   ctx.fillStyle="rgba(255,255,255,.08)";
   ctx.fillRect(v.x+20,v.y+30,park.w-40,2);
   ctx.fillRect(v.x+20,v.y+park.h-40,park.w-40,2);
-
-  // fountain dot
   ctx.fillStyle="rgba(0,255,213,.18)";
-  ctx.fillRect(v.x+park.w/2-8, v.y+park.h/2-6, 16, 12);
+  ctx.fillRect(v.x+park.w/2-10, v.y+park.h/2-8, 20, 16);
   ctx.fillStyle="rgba(255,255,255,.25)";
   ctx.fillRect(v.x+park.w/2-3, v.y+park.h/2-2, 6, 4);
 }
-
+function drawPond(t){
+  if(pond.x+pond.w<cam.x-10||pond.x>cam.x+VW+10||pond.y+pond.h<cam.y-10||pond.y>cam.y+VH+10) return;
+  const v=worldToView(pond.x,pond.y);
+  drawRectBevel(v.x,v.y,pond.w,pond.h,"rgba(90,180,255,.35)");
+  ctx.fillStyle="rgba(0,0,0,.25)";
+  ctx.fillRect(v.x+3,v.y+3,pond.w-6,pond.h-6);
+  ctx.fillStyle="rgba(0,255,213,.10)";
+  for(let i=0;i<10;i++){
+    const rx = v.x+10 + ((i*21 + (t*2|0)) % (pond.w-20));
+    const ry = v.y+14 + ((i*11 + (t|0)) % (pond.h-28));
+    ctx.fillRect(rx,ry,6,1);
+  }
+}
 function drawTrees(){
   for(const tr of trees){
     if(tr.x<cam.x-40||tr.x>cam.x+VW+40||tr.y<cam.y-40||tr.y>cam.y+VH+40) continue;
     const v=worldToView(tr.x,tr.y);
     const s=tr.s;
 
-    // shadow
     ctx.fillStyle="rgba(0,0,0,.18)";
     ctx.fillRect(v.x-3*s, v.y+6*s, 10*s, 2*s);
 
-    // trunk
     ctx.fillStyle="rgba(80,50,30,.9)";
     ctx.fillRect(v.x, v.y, 2, 6*s);
 
-    // canopy
     const glow = (tr.tint==="aqua") ? "rgba(0,255,213,.16)" : "rgba(255,210,77,.14)";
     ctx.fillStyle=glow;
-    ctx.fillRect(v.x-5*s, v.y-6*s, 12*s, 10*s);
+    ctx.fillRect(v.x-6*s, v.y-7*s, 14*s, 12*s);
 
     ctx.fillStyle="rgba(30,120,60,.92)";
-    ctx.fillRect(v.x-4*s, v.y-5*s, 10*s, 8*s);
+    ctx.fillRect(v.x-5*s, v.y-6*s, 12*s, 10*s);
 
     ctx.fillStyle="rgba(255,255,255,.08)";
-    ctx.fillRect(v.x-2*s, v.y-4*s, 4*s, 2*s);
+    ctx.fillRect(v.x-2*s, v.y-4*s, 5*s, 2*s);
   }
 }
+function drawStopSign(x,y){
+  const v=worldToView(x,y);
+  ctx.fillStyle="rgba(60,60,70,1)";
+  ctx.fillRect(v.x, v.y, 2, 12);
+  ctx.fillStyle="rgba(255,99,255,.65)";
+  ctx.fillRect(v.x-6, v.y-12, 14, 10);
+  ctx.fillStyle="rgba(0,0,0,.35)";
+  ctx.fillRect(v.x-5, v.y-11, 12, 8);
+  ctx.font="7px ui-monospace, monospace";
+  ctx.fillStyle="rgba(255,255,255,.92)";
+  ctx.fillText("STOP", v.x-4, v.y-5);
+}
+function drawTrafficLight(L,t){
+  const v=worldToView(L.x+10, L.y-24);
+  ctx.fillStyle="rgba(60,60,70,1)";
+  ctx.fillRect(v.x, v.y+18, 2, 18);
+  drawRectBevel(v.x-4, v.y, 10, 16, "rgba(255,255,255,.16)");
+  ctx.fillStyle="rgba(0,0,0,.55)";
+  ctx.fillRect(v.x-3, v.y+1, 8, 14);
 
-function drawSigns(){
+  const st=lightState(L,t);
+  const ew = (st==="EW_G") ? "rgba(0,255,213,.85)" : (st==="EW_Y"?"rgba(255,210,77,.85)":"rgba(255,99,255,.35)");
+  const ns = (st==="NS_G") ? "rgba(0,255,213,.85)" : (st==="NS_Y"?"rgba(255,210,77,.85)":"rgba(255,99,255,.35)");
+
+  ctx.fillStyle=ew; ctx.fillRect(v.x-2, v.y+3, 4, 4);
+  ctx.fillStyle=ns; ctx.fillRect(v.x-2, v.y+9, 4, 4);
+}
+function drawSigns(t){
   for(const s of signs){
     if(s.x<cam.x-60||s.x>cam.x+VW+60||s.y<cam.y-60||s.y>cam.y+VH+60) continue;
     const v=worldToView(s.x,s.y);
-    // pole
     ctx.fillStyle="rgba(60,60,70,1)";
     ctx.fillRect(v.x, v.y, 2, 12);
-    // sign
     drawRectBevel(v.x-14, v.y-10, 34, 10, "rgba(255,255,255,.18)");
     ctx.fillStyle="rgba(0,0,0,.45)";
     ctx.fillRect(v.x-12, v.y-8, 30, 6);
@@ -1053,24 +2124,38 @@ function drawSigns(){
     ctx.fillStyle="rgba(255,255,255,.9)";
     ctx.fillText(s.text, v.x-10, v.y-3);
   }
+  for(const I of intersections){
+    if(I.x<cam.x-80||I.x>cam.x+VW+80||I.y<cam.y-80||I.y>cam.y+VH+80) continue;
+    drawStopSign(I.x+22, I.y-26);
+    drawStopSign(I.x-22, I.y+26);
+  }
+  for(const L of lights){
+    if(L.x<cam.x-120||L.x>cam.x+VW+120||L.y<cam.y-120||L.y>cam.y+VH+120) continue;
+    drawTrafficLight(L,t);
+  }
 }
-
 function drawBuildings(){
   for(const b of buildings){
     if(b.x+b.w<cam.x-20||b.x>cam.x+VW+20||b.y+b.h<cam.y-20||b.y>cam.y+VH+20) continue;
     const v=worldToView(b.x,b.y);
 
-    // base
     drawRectBevel(v.x,v.y,b.w,b.h,"rgba(255,255,255,.20)");
     ctx.fillStyle="rgba(0,0,0,.35)";
     ctx.fillRect(v.x+3,v.y+3,b.w-6,b.h-6);
 
-    // roof sign strip
     let glow="rgba(138,46,255,.22)";
     if(b.tag==="GROC") glow="rgba(255,210,77,.22)";
     if(b.tag==="CAT") glow="rgba(255,99,255,.18)";
     if(b.tag==="WEED") glow="rgba(0,255,213,.20)";
     if(b.tag==="STAR") glow="rgba(255,210,77,.26)";
+    if(b.tag==="CAF") glow="rgba(0,255,213,.14)";
+    if(b.tag==="ARC") glow="rgba(255,99,255,.14)";
+    if(b.tag==="GAS") glow="rgba(255,210,77,.18)";
+    if(b.tag==="REST") glow="rgba(255,99,255,.12)";
+    if(b.tag==="YOGA") glow="rgba(0,255,213,.12)";
+    if(b.tag==="SHOP") glow="rgba(138,46,255,.14)";
+    if(b.tag==="BEACH") glow="rgba(90,180,255,.12)";
+
     ctx.fillStyle=glow;
     ctx.fillRect(v.x+6,v.y+6,b.w-12,18);
 
@@ -1089,7 +2174,6 @@ function drawBuildings(){
       ctx.fillRect(wx+1,wy+1,24,10);
     }
 
-    // door marker
     const dr=buildingDoorRect(b);
     const dv=worldToView(dr[0],dr[1]);
     ctx.fillStyle="rgba(255,255,255,.20)";
@@ -1097,7 +2181,6 @@ function drawBuildings(){
     ctx.fillStyle="rgba(0,0,0,.55)";
     ctx.fillRect(dv.x+2,dv.y+2,dr[2]-4,dr[3]-4);
 
-    // STARR star badge
     if(b.tag==="STAR"){
       ctx.fillStyle="rgba(255,210,77,.80)";
       ctx.fillRect(dv.x+4,dv.y+3,4,4);
@@ -1105,7 +2188,6 @@ function drawBuildings(){
     }
   }
 }
-
 function drawDumpsters(){
   for(const d of dumpsters){
     if(d.x+d.w<cam.x-20||d.x>cam.x+VW+20||d.y+d.h<cam.y-20||d.y>cam.y+VH+20) continue;
@@ -1117,17 +2199,110 @@ function drawDumpsters(){
     ctx.fillRect(v.x+4,v.y+4,10,5);
   }
 }
-
-function drawMushrooms(){
+function drawProps(t){
+  // benches
+  for(const b of benches){
+    if(b.x<cam.x-30||b.x>cam.x+VW+30||b.y<cam.y-30||b.y>cam.y+VH+30) continue;
+    const v=worldToView(b.x,b.y);
+    drawRectBevel(v.x,v.y,b.w,b.h,"rgba(255,255,255,.14)");
+    ctx.fillStyle="rgba(0,0,0,.35)";
+    ctx.fillRect(v.x+2,v.y+2,b.w-4,b.h-4);
+    ctx.fillStyle="rgba(255,210,77,.18)";
+    ctx.fillRect(v.x+2,v.y+1,b.w-4,1);
+  }
+  // mailboxes
+  for(const mb of mailboxes){
+    if(mb.x<cam.x-30||mb.x>cam.x+VW+30||mb.y<cam.y-30||mb.y>cam.y+VH+30) continue;
+    const v=worldToView(mb.x,mb.y);
+    drawRectBevel(v.x,v.y,mb.w,mb.h,"rgba(255,255,255,.18)");
+    ctx.fillStyle="rgba(0,0,0,.45)";
+    ctx.fillRect(v.x+1,v.y+1,mb.w-2,mb.h-2);
+    ctx.fillStyle="rgba(0,255,213,.18)";
+    ctx.fillRect(v.x+2,v.y+2,mb.w-4,2);
+  }
+  // vending
+  for(const vd of vending){
+    if(vd.x<cam.x-40||vd.x>cam.x+VW+40||vd.y<cam.y-40||vd.y>cam.y+VH+40) continue;
+    const v=worldToView(vd.x,vd.y);
+    drawRectBevel(v.x,v.y,vd.w,vd.h,"rgba(255,255,255,.18)");
+    ctx.fillStyle="rgba(0,0,0,.55)";
+    ctx.fillRect(v.x+2,v.y+2,vd.w-4,vd.h-4);
+    ctx.fillStyle="rgba(255,99,255,.18)";
+    ctx.fillRect(v.x+3,v.y+3,vd.w-6,3);
+    ctx.fillStyle="rgba(255,255,255,.10)";
+    ctx.fillRect(v.x+3,v.y+8,vd.w-6,2);
+  }
+  // photo spots
+  for(const ps of photoSpots){
+    if(ps.x<cam.x-40||ps.x>cam.x+VW+40||ps.y<cam.y-40||ps.y>cam.y+VH+40) continue;
+    const v=worldToView(ps.x,ps.y);
+    ctx.fillStyle="rgba(255,255,255,.14)";
+    ctx.fillRect(v.x,v.y,ps.w,ps.h);
+    ctx.fillStyle="rgba(0,0,0,.55)";
+    ctx.fillRect(v.x+2,v.y+2,ps.w-4,ps.h-4);
+    ctx.fillStyle="rgba(255,210,77,.35)";
+    ctx.fillRect(v.x+6,v.y+6,6,6);
+  }
+  // payphone
+  if(payphone.x<cam.x-40||payphone.x>cam.x+VW+40||payphone.y<cam.y-40||payphone.y>cam.y+VH+40) return;
+  const pv=worldToView(payphone.x,payphone.y);
+  drawRectBevel(pv.x,pv.y,payphone.w,payphone.h,"rgba(255,255,255,.20)");
+  ctx.fillStyle="rgba(0,0,0,.55)";
+  ctx.fillRect(pv.x+2,pv.y+2,payphone.w-4,payphone.h-4);
+  ctx.fillStyle="rgba(0,255,213,.18)";
+  ctx.fillRect(pv.x+4,pv.y+4,payphone.w-8,3);
+  ctx.font="7px ui-monospace, monospace";
+  ctx.fillStyle="rgba(255,255,255,.85)";
+  ctx.fillText("☎", pv.x+6, pv.y+14);
+}
+function drawMushrooms(t){
   for(const m of mushWorld){
     if(!m.alive) continue;
-    if(m.x<cam.x-20||m.x>cam.x+VW+20||m.y<cam.y-20||m.y>cam.y+VH+20) continue;
+    if(m.x<cam.x-24||m.x>cam.x+VW+24||m.y<cam.y-24||m.y>cam.y+VH+24) continue;
     const v=worldToView(m.x,m.y);
-    ctx.fillStyle="rgba(255,255,255,.20)";
-    ctx.fillRect(v.x, v.y+2, 6, 2);
-    ctx.fillStyle = (m.kind==="gold") ? "rgba(255,210,77,.80)" : "rgba(138,46,255,.65)";
-    ctx.fillRect(v.x+1, v.y, 4, 2);
+    ctx.fillStyle="rgba(0,0,0,.18)";
+    ctx.fillRect(v.x-1, v.y+6, 8, 2);
+    ctx.fillStyle="rgba(255,255,255,.32)";
+    ctx.fillRect(v.x+3, v.y+3, 2, 4);
+
+    let cap="rgba(138,46,255,.72)";
+    let glow="rgba(138,46,255,.18)";
+    if(m.kind==="gold"){ cap="rgba(255,210,77,.86)"; glow="rgba(255,210,77,.22)"; }
+    if(m.kind==="aqua"){ cap="rgba(0,255,213,.72)"; glow="rgba(0,255,213,.20)"; }
+
+    ctx.fillStyle=glow;
+    ctx.fillRect(v.x+0, v.y+0, 8, 6);
+    ctx.fillStyle=cap;
+    ctx.fillRect(v.x+1, v.y+1, 6, 3);
+
+    ctx.fillStyle="rgba(255,255,255,.22)";
+    ctx.fillRect(v.x+2, v.y+2, 1, 1);
+    ctx.fillRect(v.x+5, v.y+2, 1, 1);
   }
+}
+function drawCoins(t){
+  for(const c of coins){
+    if(!c.alive) continue;
+    if(c.x<cam.x-20||c.x>cam.x+VW+20||c.y<cam.y-20||c.y>cam.y+VH+20) continue;
+    const v=worldToView(c.x,c.y);
+    const bob = Math.round(Math.sin((t + c.x)*0.06)*1);
+    ctx.fillStyle="rgba(255,210,77,.70)";
+    ctx.fillRect(v.x, v.y+bob, 3, 3);
+    ctx.fillStyle="rgba(255,255,255,.22)";
+    ctx.fillRect(v.x+1, v.y+bob+1, 1, 1);
+  }
+}
+function drawDuck(t){
+  if(duck.x<cam.x-40||duck.x>cam.x+VW+40||duck.y<cam.y-40||duck.y>cam.y+VH+40) return;
+  const v=worldToView(duck.x,duck.y);
+  ctx.fillStyle="rgba(0,0,0,.20)";
+  ctx.fillRect(v.x-1,v.y+6,10,2);
+  ctx.fillStyle="rgba(255,210,77,.85)";
+  ctx.fillRect(v.x+1,v.y+2,6,4);
+  ctx.fillStyle="rgba(255,99,255,.35)";
+  ctx.fillRect(v.x+6,v.y+3,2,2);
+  ctx.fillStyle="rgba(255,255,255,.18)";
+  ctx.fillRect(v.x+2,v.y+3,1,1);
 }
 
 /* Sprites */
@@ -1141,6 +2316,11 @@ function drawSophia(){
   ctx.fillStyle="#67b7ff"; ctx.fillRect(x+3,y+6,1,1); ctx.fillRect(x+6,y+6,1,1);
   ctx.fillStyle="rgba(138,46,255,.70)"; ctx.fillRect(x+2,y+9,6,3);
   ctx.fillStyle="rgba(255,255,255,.18)"; ctx.fillRect(x+3,y+10,4,1);
+
+  if(performance.now()<buffs.coffeeUntil){
+    ctx.fillStyle="rgba(0,255,213,.12)";
+    ctx.fillRect(x-3,y-3,16,18);
+  }
 }
 function drawMilo(t){
   if(state.street.inCar || state.street.hidden) return;
@@ -1152,11 +2332,25 @@ function drawMilo(t){
   ctx.fillStyle="#1affd3"; ctx.fillRect(x+2,y+4,1,1); ctx.fillRect(x+5,y+4,1,1);
   ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+7,y+3,1,3);
 }
+function drawLucas(t){
+  if(!lucas.called || !lucas.active) return;
+  if(state.street.inCar || state.street.hidden) return;
+  const v=worldToView(lucas.x,lucas.y);
+  const x=v.x,y=v.y;
+  ctx.fillStyle="rgba(0,0,0,.22)"; ctx.fillRect(x-1,y+11,12,2);
+  ctx.fillStyle="#c79a63"; ctx.fillRect(x+1,y+0,8,4); ctx.fillRect(x+0,y+3,10,3);
+  ctx.fillStyle="#ffd9c9"; ctx.fillRect(x+2,y+5,6,4);
+  ctx.fillStyle="#67b7ff"; ctx.fillRect(x+3,y+6,1,1); ctx.fillRect(x+6,y+6,1,1);
+  ctx.fillStyle="rgba(0,255,213,.55)"; ctx.fillRect(x+2,y+9,6,3);
+  ctx.fillStyle="rgba(255,255,255,.18)"; ctx.fillRect(x+3,y+10,4,1);
 
+  // tiny “freeroam aura”
+  ctx.fillStyle="rgba(255,99,255,.10)";
+  ctx.fillRect(x-2,y-2,14,16);
+}
 function drawCar(t){
   if(car.x<cam.x-40||car.x>cam.x+VW+40||car.y<cam.y-40||car.y>cam.y+VH+40) return;
   const v=worldToView(car.x,car.y);
-  // shadow
   ctx.fillStyle="rgba(0,0,0,.18)";
   ctx.fillRect(v.x, v.y+car.h, car.w, 2);
 
@@ -1170,15 +2364,17 @@ function drawCar(t){
   ctx.fillStyle="rgba(255,210,77,.16)";
   ctx.fillRect(v.x+3,v.y+6,car.w-6,2);
 
+  const fu = clamp(car.fuel,0,100);
+  ctx.fillStyle="rgba(0,255,213,.12)";
+  ctx.fillRect(v.x+2, v.y-3, Math.round((car.w-4)*(fu/100)), 1);
+
   if(state.street.inCar){
-    // driver + milo pixels
     ctx.fillStyle="rgba(255,255,255,.20)";
     ctx.fillRect(v.x+4,v.y+4,2,2);
     ctx.fillStyle="rgba(0,255,213,.20)";
     ctx.fillRect(v.x+car.w-6,v.y+4,2,2);
   }
 }
-
 function drawTraffic(){
   for(const vcar of traffic){
     if(vcar.x<cam.x-40||vcar.x>cam.x+VW+40||vcar.y<cam.y-40||vcar.y>cam.y+VH+40) continue;
@@ -1203,42 +2399,48 @@ function drawTraffic(){
     }
   }
 }
-
 function drawPeds(t){
   for(const p of peds){
     if(p.x<cam.x-30||p.x>cam.x+VW+30||p.y<cam.y-30||p.y>cam.y+VH+30) continue;
     const v=worldToView(p.x,p.y);
     const x=v.x,y=v.y;
 
-    // shadow
     ctx.fillStyle="rgba(0,0,0,.18)";
     ctx.fillRect(x-1,y+11,12,2);
 
-    // hair
     let hair="#f2d27a";
     if(p.hair==="brown") hair="#c79a63";
     if(p.hair==="black") hair="#6b5a55";
+    if(p.hair==="white") hair="rgba(255,255,255,.75)";
     ctx.fillStyle=hair;
     ctx.fillRect(x+1,y+0,8,4);
     ctx.fillRect(x+0,y+3,10,3);
 
-    // face
     ctx.fillStyle="#ffd9c9";
     ctx.fillRect(x+2,y+5,6,4);
 
-    // eyes
     ctx.fillStyle="#67b7ff";
     ctx.fillRect(x+3,y+6,1,1);
     ctx.fillRect(x+6,y+6,1,1);
 
-    // shirt
     let shirt="rgba(138,46,255,.65)";
     if(p.shirt==="aqua") shirt="rgba(0,255,213,.55)";
     if(p.shirt==="sun") shirt="rgba(255,210,77,.55)";
     ctx.fillStyle=shirt;
     ctx.fillRect(x+2,y+9,6,3);
 
-    // wave (little arm)
+    // role badge / type
+    if(p.type==="robber"){
+      ctx.fillStyle="rgba(255,99,255,.55)";
+      ctx.fillRect(x-2,y+2,2,2);
+    }else if(p.type==="oldlady"){
+      ctx.fillStyle="rgba(255,210,77,.55)";
+      ctx.fillRect(x-2,y+2,2,2);
+    }else if(p.type==="performer"){
+      ctx.fillStyle="rgba(0,255,213,.45)";
+      ctx.fillRect(x-2,y+2,2,2);
+    }
+
     if(p.wave>0 && p.stunned<=0){
       const arm = Math.round(Math.sin((t+p.wave)*0.25)*1);
       ctx.fillStyle="rgba(255,255,255,.18)";
@@ -1247,23 +2449,23 @@ function drawPeds(t){
       ctx.fillRect(x+10, y+6+arm, 1, 2);
     }
 
-    // stunned overlay
+    // angry aura
+    if(p.angry>0){
+      p.angry--;
+      ctx.fillStyle="rgba(255,99,255,.12)";
+      ctx.fillRect(x-3,y-3,16,18);
+    }
+
     if(p.stunned>0){
       ctx.fillStyle="rgba(255,99,255,.16)";
       ctx.fillRect(x-2,y-2,14,16);
-      // little stars
       ctx.fillStyle="rgba(255,255,255,.35)";
       ctx.fillRect(x+2,y-4,2,1);
       ctx.fillRect(x+6,y-5,2,1);
     }
 
-    // dog + leash
     if(p.hasDog && p.dog){
       const dv=worldToView(p.dog.x,p.dog.y);
-      // leash
-      ctx.fillStyle="rgba(0,0,0,.20)";
-      ctx.fillRect(Math.min(x+1,dv.x+1), Math.min(y+10,dv.y+6), Math.abs((x+1)-(dv.x+1))+1, 1);
-      // dog sprite
       ctx.fillStyle="rgba(0,0,0,.18)";
       ctx.fillRect(dv.x-1,dv.y+7,10,2);
       ctx.fillStyle="rgba(255,170,60,.85)";
@@ -1276,7 +2478,6 @@ function drawPeds(t){
     }
   }
 }
-
 function drawShots(){
   for(const s of shots){
     if(s.x<cam.x-20||s.x>cam.x+VW+20||s.y<cam.y-20||s.y>cam.y+VH+20) continue;
@@ -1287,7 +2488,6 @@ function drawShots(){
     ctx.fillRect(v.x-1,v.y-1,4,4);
   }
 }
-
 function drawCops(t){
   for(const c of cops){
     if(c.x<cam.x-30||c.x>cam.x+VW+30||c.y<cam.y-30||c.y>cam.y+VH+30) continue;
@@ -1297,13 +2497,11 @@ function drawCops(t){
     ctx.fillStyle="rgba(0,0,0,.20)";
     ctx.fillRect(x-1,y+11,12,2);
 
-    // uniform
     ctx.fillStyle="rgba(255,255,255,.16)";
     ctx.fillRect(x+0,y+0,10,12);
     ctx.fillStyle="rgba(0,255,213,.22)";
     ctx.fillRect(x+2,y+9,6,3);
 
-    // siren blink
     const blink=((t+c.blink)%26)<10;
     ctx.fillStyle=blink ? "rgba(255,99,255,.70)" : "rgba(255,210,77,.60)";
     ctx.fillRect(x+2,y-2,6,2);
@@ -1314,7 +2512,6 @@ function drawCops(t){
     }
   }
 }
-
 function drawWantedOverlay(t){
   const w=state.street.wanted|0;
   if(w<=0) return;
@@ -1322,15 +2519,12 @@ function drawWantedOverlay(t){
   const blink=(t%30)<15;
   ctx.fillStyle=blink ? `rgba(255,99,255,${a})` : `rgba(0,255,213,${a})`;
   ctx.fillRect(0,0,VW,VH);
-
-  // subtle edge
   ctx.fillStyle="rgba(0,0,0,.12)";
   ctx.fillRect(0,0,VW,2);
   ctx.fillRect(0,VH-2,VW,2);
   ctx.fillRect(0,0,2,VH);
   ctx.fillRect(VW-2,0,2,VH);
 }
-
 function drawHiddenOverlay(t){
   if(!state.street.hidden) return;
   ctx.fillStyle="rgba(0,0,0,.45)";
@@ -1341,106 +2535,183 @@ function drawHiddenOverlay(t){
   ctx.fillStyle="rgba(255,255,255,.85)";
   ctx.fillText("HIDING… hold E to stay, release to exit", 18, 92);
 }
+function drawTripOverlay(t){
+  if(performance.now() > (state.street.tripUntil||0)) return;
+  const k = 0.10 + 0.06*Math.sin(t*0.12);
+  ctx.fillStyle=`rgba(138,46,255,${k})`;
+  ctx.fillRect(0,0,VW,VH);
+  ctx.fillStyle=`rgba(0,255,213,${k*0.6})`;
+  ctx.fillRect(0,0,VW,VH);
+  ctx.fillStyle="rgba(0,0,0,.08)";
+  for(let y=0;y<VH;y+=3) ctx.fillRect(0,y,VW,1);
+}
 
-/* ==========================================================
-   MINIMAP (top-right)
-   - shows buildings + audition star + player + cops
-   ========================================================== */
-function drawMinimap(){
-  const mw=84, mh=62;
+/* MINIMAP + BIG MAP */
+function drawMinimap(t){
+  const mw=92, mh=68;
   const x=VW-mw-6, y=6;
 
-  // frame
   drawRectBevel(x,y,mw,mh,"rgba(255,255,255,.16)");
   ctx.fillStyle="rgba(0,0,0,.45)";
   ctx.fillRect(x+2,y+2,mw-4,mh-4);
 
-  // map scale
   const sx=(mw-8)/WORLD.w;
   const sy=(mh-8)/WORLD.h;
 
-  // roads faint
   ctx.fillStyle="rgba(255,255,255,.08)";
   for(const r of roads){
     ctx.fillRect(x+4 + r.x*sx, y+4 + r.y*sy, r.w*sx, r.h*sy);
   }
-
-  // buildings
   for(const b of buildings){
     const bx=x+4 + b.x*sx;
     const by=y+4 + b.y*sy;
     ctx.fillStyle = (b.tag==="STAR") ? "rgba(255,210,77,.80)" : "rgba(255,255,255,.20)";
     ctx.fillRect(bx,by, Math.max(2,b.w*sx), Math.max(2,b.h*sy));
-    // star icon
-    if(b.tag==="STAR"){
-      ctx.fillStyle="rgba(255,210,77,1)";
-      ctx.fillRect(bx+2,by+2,2,2);
-    }
+  }
+  // pond
+  ctx.fillStyle="rgba(90,180,255,.28)";
+  ctx.fillRect(x+4 + pond.x*sx, y+4 + pond.y*sy, pond.w*sx, pond.h*sy);
+
+  if(state.waypoint){
+    ctx.fillStyle="rgba(255,99,255,.85)";
+    ctx.fillRect(x+4 + state.waypoint.x*sx, y+4 + state.waypoint.y*sy, 2, 2);
   }
 
-  // cops
   ctx.fillStyle="rgba(255,99,255,.70)";
   for(const c of cops){
-    const cx=x+4 + c.x*sx;
-    const cy=y+4 + c.y*sy;
-    ctx.fillRect(cx,cy,1,1);
+    ctx.fillRect(x+4 + c.x*sx, y+4 + c.y*sy, 1, 1);
   }
 
-  // player
   const pxW = state.street.inCar ? car.x : sophia.x;
   const pyW = state.street.inCar ? car.y : sophia.y;
   ctx.fillStyle="rgba(0,255,213,1)";
   ctx.fillRect(x+4 + pxW*sx, y+4 + pyW*sy, 2, 2);
+
+  if(lucas.called && lucas.active){
+    ctx.fillStyle="rgba(255,99,255,.75)";
+    ctx.fillRect(x+4 + lucas.x*sx, y+4 + lucas.y*sy, 2, 2);
+  }
+}
+function drawBigMap(t){
+  if(!mapOpen) return;
+
+  ctx.fillStyle="rgba(0,0,0,.58)";
+  ctx.fillRect(0,0,VW,VH);
+
+  const pad=10;
+  const w=VW-pad*2, h=VH-pad*2;
+  drawRectBevel(pad,pad,w,h,"rgba(255,255,255,.14)");
+  ctx.fillStyle="rgba(0,0,0,.55)";
+  ctx.fillRect(pad+2,pad+2,w-4,h-4);
+
+  const sx=(w-12)/WORLD.w;
+  const sy=(h-12)/WORLD.h;
+
+  ctx.fillStyle="rgba(255,255,255,.10)";
+  for(const r of roads){
+    ctx.fillRect(pad+6 + r.x*sx, pad+6 + r.y*sy, r.w*sx, r.h*sy);
+  }
+
+  for(const b of buildings){
+    const bx=pad+6 + b.x*sx;
+    const by=pad+6 + b.y*sy;
+    ctx.fillStyle = (b.tag==="STAR") ? "rgba(255,210,77,.90)" : "rgba(255,255,255,.22)";
+    ctx.fillRect(bx,by, Math.max(2,b.w*sx), Math.max(2,b.h*sy));
+  }
+
+  ctx.fillStyle="rgba(90,180,255,.25)";
+  ctx.fillRect(pad+6 + pond.x*sx, pad+6 + pond.y*sy, pond.w*sx, pond.h*sy);
+
+  if(state.waypoint){
+    ctx.fillStyle="rgba(255,99,255,.90)";
+    ctx.fillRect(pad+6 + state.waypoint.x*sx, pad+6 + state.waypoint.y*sy, 3, 3);
+  }
+
+  const pxW = state.street.inCar ? car.x : sophia.x;
+  const pyW = state.street.inCar ? car.y : sophia.y;
+  ctx.fillStyle="rgba(0,255,213,1)";
+  ctx.fillRect(pad+6 + pxW*sx, pad+6 + pyW*sy, 4, 4);
+
+  if(lucas.called && lucas.active){
+    ctx.fillStyle="rgba(255,99,255,.85)";
+    ctx.fillRect(pad+6 + lucas.x*sx, pad+6 + lucas.y*sy, 4, 4);
+  }
+
+  ctx.font="9px ui-monospace, monospace";
+  ctx.fillStyle="rgba(255,255,255,.90)";
+  ctx.fillText("MAP (press M)", pad+12, pad+18);
 }
 
 /* ==========================================================
    MAIN LOOP
    ========================================================== */
 let t=0;
+let last=performance.now();
+let autosaveAcc=0;
+
+syncJournal();
+maybeAutoWaypoint();
+
 function loop(){
+  const now=performance.now();
+  const dt = clamp((now-last)/1000, 0, 0.05);
+  last=now;
   t++;
 
-  handleButtons();
-  updateTraffic(t);
-  updatePeds(t);
-  updateShots();
-  updateCops(t);
-  updatePlayer(t);
-  updateCamera();
+  handleButtons(now);
+  bigMapClick();
 
-  // wanted cooldown
-  coolWanted();
+  updateTraffic(t,dt);
+  updatePeds(t,dt);
+  updateShots(dt);
+  updateCops(t,dt);
+  updatePlayer(t,dt);
+  updateLucas(t,dt);
+  updateCamera(dt);
 
-  // autosave
-  if(t%60===0){
+  coolWanted(dt);
+
+  autosaveAcc += dt;
+  if(autosaveAcc>1.0){
+    autosaveAcc=0;
     state.sophia.x=sophia.x; state.sophia.y=sophia.y;
     state.milo.x=milo.x; state.milo.y=milo.y;
     state.street.car={x:car.x,y:car.y,vx:car.vx,vy:car.vy};
+
+    state.lucas.called=lucas.called;
+    state.lucas.active=lucas.active;
+    state.lucas.x=lucas.x; state.lucas.y=lucas.y;
+    state.lucas.bond=lucas.bond;
+    state.lucas.mood=lucas.mood;
+
     saveState();
   }
 
-  // draw order: sky -> grass -> roads -> details -> entities -> overlays -> minimap
   drawBackground(t);
   drawGround(t);
   drawPark();
-  drawRoads();
+  drawPond(t);
+  drawRoads(t);
   drawTrees();
   drawBuildings();
   drawDumpsters();
-  drawSigns();
-  drawMushrooms();
+  drawProps(t);
+  drawSigns(t);
+  drawCoins(t);
+  drawMushrooms(t);
+  drawDuck(t);
 
   drawTraffic();
   drawCar(t);
   drawShots();
   drawPeds(t);
   drawCops(t);
+  drawLucas(t);
   drawMilo(t);
   drawSophia();
 
-  // hint bubble
   const z=nearestZone();
-  if(z && !state.street.hidden){
+  if(z && !state.street.hidden && !mapOpen && !dialog.on){
     const px = state.street.inCar ? car.x+car.w/2 : sophia.x+6;
     const py = state.street.inCar ? car.y-6 : sophia.y-10;
     const v=worldToView(px,py);
@@ -1449,17 +2720,13 @@ function loop(){
 
   drawWantedOverlay(t);
   drawHiddenOverlay(t);
-  drawMinimap();
+  drawTripOverlay(t);
+  drawMinimap(t);
+  drawBigMap(t);
 
   requestAnimationFrame(loop);
 }
 loop();
-
-/* ==========================================================
-   NOTE:
-   - Keys come from backyard gnome chase (your rule).
-   - This page respects state.hasKeys; doesn’t generate keys.
-   ========================================================== */
 </script>
 </body>
 </html>
