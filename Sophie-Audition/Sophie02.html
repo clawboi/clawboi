@@ -1,643 +1,447 @@
+<!-- Sophie02.html (BACKYARD / GNOME + MUSHROOM FIELD) -->
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Sophia's Audition 02 — Backyard</title>
-<style>
-:root{
-  --bg:#07070b; --fg:#fff;
-  --ui:rgba(255,255,255,.10); --ui2:rgba(255,255,255,.18);
-  --vio:#8a2eff;
-}
-html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
-.wrap{height:100%; display:grid; place-items:center;}
-canvas{
-  width:min(1400px, 100vw);
-  height:auto;
-  image-rendering:pixelated;
-  image-rendering:crisp-edges;
-  touch-action:none;
-  outline:none;
-}
-
-body::before{
-  content:"";
-  position:fixed;
-  inset:-20%;
-  background:
-    radial-gradient(circle at 18% 18%, rgba(138,46,255,.12), transparent 60%),
-    radial-gradient(circle at 82% 40%, rgba(0,255,213,.10), transparent 65%),
-    radial-gradient(circle at 50% 88%, rgba(255,60,140,.08), transparent 60%);
-  filter:blur(48px);
-  animation:drift 14s ease-in-out infinite;
-  pointer-events:none;
-}
-@keyframes drift{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(1.5%,-1.0%,0)}}
-
-.hud{
-  position:fixed; left:12px; right:12px; top:12px; z-index:5;
-  display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;
-  pointer-events:none;
-}
-.titleCard{
-  pointer-events:auto;
-  border:1px solid var(--ui2);
-  background:rgba(0,0,0,.42);
-  backdrop-filter: blur(8px);
-  border-radius:18px;
-  padding:10px 14px;
-  min-width:260px;
-}
-.titleCard .t{
-  font-weight:800;
-  letter-spacing:.16em;
-  text-transform:uppercase;
-  font-size:13px;
-}
-.titleCard .s{
-  margin-top:4px;
-  font-size:12px;
-  letter-spacing:.10em;
-  opacity:.85;
-}
-.pill{
-  pointer-events:auto;
-  border:1px solid var(--ui2);
-  background:rgba(0,0,0,.42);
-  backdrop-filter: blur(8px);
-  border-radius:999px;
-  padding:10px 12px;
-  font-size:12px;
-  letter-spacing:.14em;
-  text-transform:uppercase;
-  display:flex; gap:10px; align-items:center;
-  white-space:nowrap;
-}
-.hint{
-  pointer-events:auto;
-  flex:1 1 340px;
-  border:1px solid var(--ui2);
-  background:rgba(0,0,0,.42);
-  backdrop-filter: blur(8px);
-  border-radius:18px;
-  padding:10px 12px;
-  font-size:12px;
-  letter-spacing:.08em;
-  line-height:1.35;
-}
-.hint .k{display:inline-block; padding:2px 7px; border-radius:8px; border:1px solid var(--ui2); background:rgba(255,255,255,.06); font-weight:800}
-
-.toast{
-  position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
-  border:1px solid var(--ui2);
-  background:rgba(0,0,0,.60);
-  border-radius:14px;
-  padding:10px 12px;
-  font-size:12px;
-  letter-spacing:.08em;
-  opacity:0;
-  transition:.2s;
-  max-width:min(860px, calc(100vw - 24px));
-  text-align:center;
-}
-.toast.on{opacity:1}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SOPHIE / AUDITION — Backyard (Sophie02)</title>
+  <meta name="theme-color" content="#06070c" />
+  <style>
+    :root{
+      --bg:#06070c;
+      --ink:#f2f2ff;
+      --muted:rgba(242,242,255,.72);
+      --hair:rgba(255,255,255,.10);
+      --violet:#8A2EFF;
+    }
+    html,body{height:100%;margin:0;background:radial-gradient(900px 650px at 55% 35%, #111a2b 0%, #06070c 55%, #05040a 100%);overflow:hidden;font-family:ui-monospace, Menlo, Consolas, monospace;color:var(--ink)}
+    canvas{position:fixed;inset:0;display:block}
+    .hud{position:fixed;left:14px;top:12px;z-index:10;display:flex;gap:10px;flex-wrap:wrap;user-select:none}
+    .pill{border:1px solid var(--hair);background:rgba(0,0,0,.35);backdrop-filter: blur(8px);border-radius:999px;padding:8px 10px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;display:flex;gap:10px;align-items:center;box-shadow:0 0 20px rgba(138,46,255,.14)}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--violet);box-shadow:0 0 14px rgba(138,46,255,.9)}
+    .tip{position:fixed;right:14px;top:12px;z-index:10;width:min(420px, calc(100vw - 28px));border:1px solid var(--hair);background:rgba(0,0,0,.35);backdrop-filter: blur(8px);border-radius:16px;padding:10px 12px;font-size:12px;color:var(--muted)}
+    .centerToast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;pointer-events:none;opacity:0;transition:.25s;border:1px solid var(--hair);background:rgba(0,0,0,.45);backdrop-filter: blur(10px);border-radius:18px;padding:12px 14px;max-width:min(520px, calc(100vw - 36px));text-align:center;line-height:1.35;box-shadow:0 0 36px rgba(138,46,255,.12)}
+    .centerToast.show{opacity:1}
+    .kbd{display:inline-block;padding:2px 6px;border-radius:8px;border:1px solid var(--hair);background:rgba(255,255,255,.06);color:var(--ink);font-size:11px}
+  </style>
 </head>
 <body>
+<canvas id="c"></canvas>
 
 <div class="hud">
-  <div class="titleCard">
-    <div class="t">Sophia’s Audition</div>
-    <div class="s"><span id="status">Backyard</span> · Night air, secrets, keys 🗝️</div>
-  </div>
+  <div class="pill"><span class="dot"></span><b>SOPHIE02</b><span>BACKYARD</span></div>
+  <div class="pill">Key: <span id="keyState">NO</span></div>
+</div>
 
-  <div class="pill">Trip: <span id="trip">OFF</span></div>
-  <div class="pill">Milo: <span id="miloMood">following</span></div>
-  <div class="pill">Keys: <span id="keys">NO</span></div>
-
-  <div class="hint">
-    Move: <span class="k">WASD</span> · Interact: <span class="k">E</span> · Run: <span class="k">SHIFT</span> · Click/Tap = interact<br>
-    Bottom gate = Bedroom · Grapes = trip · Catch the gnome = keys
+<div class="tip" id="tip">
+  <b>Backyard</b> is a quiet spell: hammock breeze, mushrooms that whisper trouble, and a garden gnome that hoards secrets.
+  <div style="margin-top:6px">
+    Interact <span class="kbd">E</span> · Dance <span class="kbd">Z</span> · Jump <span class="kbd">Space</span> · Splits <span class="kbd">X</span> · Hide tips <span class="kbd">H</span>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
-<div class="wrap"><canvas id="c" width="768" height="432" tabindex="0"></canvas></div>
+<div class="centerToast" id="toast"></div>
 
 <script>
 (() => {
+  const STORE_KEY = "SOPHIA_AUDITION_SAVE_V1";
+  const defaultSave = { outfit:"violet", hasFrontDoorKey:false, lastRoom:"Sophie02.html" };
+  const loadSave = () => { try{ const raw=localStorage.getItem(STORE_KEY); return raw ? {...defaultSave, ...JSON.parse(raw)} : {...defaultSave}; }catch(e){ return {...defaultSave}; } };
+  const save = loadSave();
+  const commitSave = () => { save.lastRoom="Sophie02.html"; localStorage.setItem(STORE_KEY, JSON.stringify(save)); keyState.textContent = save.hasFrontDoorKey ? "YES" : "NO"; };
+  const keyState = document.getElementById("keyState");
+  const tip = document.getElementById("tip");
+  const toast = document.getElementById("toast");
+  function showToast(html, ms=1400){ toast.innerHTML=html; toast.classList.add("show"); clearTimeout(showToast._t); showToast._t=setTimeout(()=>toast.classList.remove("show"), ms); }
+  function go(href){ commitSave(); location.href = href; }
+
   const canvas = document.getElementById("c");
-  const ctx = canvas.getContext("2d", { alpha:false });
-  ctx.imageSmoothingEnabled = false;
+  const ctx = canvas.getContext("2d");
+  const DPR = Math.min(2, devicePixelRatio||1);
+  function resize(){ canvas.width=Math.floor(innerWidth*DPR); canvas.height=Math.floor(innerHeight*DPR); canvas.style.width=innerWidth+"px"; canvas.style.height=innerHeight+"px"; ctx.setTransform(DPR,0,0,DPR,0,0); }
+  addEventListener("resize", resize, {passive:true}); resize();
 
-  const statusEl = document.getElementById("status");
-  const keysEl = document.getElementById("keys");
-  const miloMoodEl = document.getElementById("miloMood");
-  const tripEl = document.getElementById("trip");
-  const toastEl = document.getElementById("toast");
-
-  const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
-
-  // robust load
-  let state;
-  try{ state = JSON.parse(localStorage.getItem(STORE_KEY) || "null") || null; }
-  catch(e){ state = null; }
-  if(!state || typeof state !== "object") state = {};
-  state = Object.assign({
-    hasKeys:false, slept:false, trip:false, puke:false,
-    poemLines:0, poems:[], guitarPlayed:0,
-    outfit:0,
-    lastRoom:"BACKYARD",
-    sophia:{x:280,y:220},
-    milo:{x:260,y:232}
-  }, state);
-
-  if(!state.sophia || typeof state.sophia.x!=="number" || typeof state.sophia.y!=="number") state.sophia={x:280,y:220};
-  if(!state.milo   || typeof state.milo.x!=="number"   || typeof state.milo.y!=="number")   state.milo={x:260,y:232};
-
-  function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
-
-  // update HUD
-  statusEl.textContent = "Backyard";
-  keysEl.textContent = state.hasKeys ? "YES" : "NO";
-  tripEl.textContent = state.trip ? "ON" : "OFF";
-  miloMoodEl.textContent = state.trip ? "playing" : "following";
-
-  function toast(msg){
-    toastEl.textContent = msg;
-    toastEl.classList.add("on");
-    clearTimeout(toast._t);
-    toast._t = setTimeout(()=>toastEl.classList.remove("on"), 1700);
-  }
-
-  /* ---------- controls ---------- */
-  const keysDown = new Set();
-  const held = { e:false };
-  const heldPtr = { down:false };
-
-  function keyName(e){ return (e.key || "").toLowerCase(); }
-  window.addEventListener("keydown", (e) => {
-    const k = keyName(e);
-    if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k)) e.preventDefault();
-    keysDown.add(k);
-  }, { passive:false });
-  window.addEventListener("keyup", (e) => keysDown.delete(keyName(e)));
-  window.addEventListener("pointerdown", () => canvas.focus(), { passive:true });
-
-  /* ---------- world + camera ---------- */
-  const VIEW_W = 320, VIEW_H = 180;
-  const WORLD_W = 720, WORLD_H = 420;
-
-  const SX = canvas.width / VIEW_W;
-  const SY = canvas.height / VIEW_H;
-
-  const cam = { x:0, y:0 };
-  const X = (x)=>Math.round((x - cam.x) * SX);
-  const Y = (y)=>Math.round((y - cam.y) * SY);
-  const Wp = (w)=>Math.round(w * SX);
-  const Hp = (h)=>Math.round(h * SY);
-
-  function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
-
-  /* ---------- geometry ---------- */
-  const WALL = 10;
-
-  // solid bounds walls (yard boundary)
-  const solids = [
-    [0,0,WORLD_W,WALL],[0,0,WALL,WORLD_H],[0,WORLD_H-WALL,WORLD_W,WALL],[WORLD_W-WALL,0,WALL,WORLD_H],
-  ];
-
-  // props (for visuals + collision)
-  const props = {
-    shed:   {x:520,y:90,w:140,h:88},
-    bench:  {x:180,y:120,w:80,h:24},
-    planter:{x:92,y:260,w:88,h:34},
-    stump:  {x:420,y:280,w:36,h:26},
-    grapes: {x:120,y:290,w:18,h:14},
-    gate:   {x:320,y:WORLD_H-24,w:80,h:14}, // bottom gate back to bedroom
+  const keys = new Set();
+  addEventListener("keydown", (e)=>{
+    const k=e.key.toLowerCase(); keys.add(k);
+    if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key)) e.preventDefault();
+    if(k==="h") tip.style.display = (tip.style.display==="none") ? "" : "none";
+    if(k==="z") player.dancing=!player.dancing;
+    if(k==="x") player.splitsT=0.6;
+    if(e.key===" ") player.jumpT=Math.max(player.jumpT,0.35);
+    if(k==="e") tryInteract();
+  }, {passive:false});
+  addEventListener("keyup",(e)=>keys.delete(e.key.toLowerCase()),{passive:true});
+  const down = (k)=>keys.has(k);
+  const axis = ()=> {
+    const left=down("a")||down("arrowleft");
+    const right=down("d")||down("arrowright");
+    const up=down("w")||down("arrowup");
+    const dn=down("s")||down("arrowdown");
+    return {x:(right?1:0)-(left?1:0), y:(dn?1:0)-(up?1:0)};
   };
 
-  // collision props (keep it navigable)
-  solids.push(
-    [props.shed.x, props.shed.y, props.shed.w, props.shed.h],
-    [props.bench.x, props.bench.y, props.bench.w, props.bench.h],
-    [props.planter.x, props.planter.y, props.planter.w, props.planter.h],
-    [props.stump.x, props.stump.y, props.stump.w, props.stump.h],
-  );
+  const world = {
+    w: 1400,
+    h: 900,
+    solids: [
+      // hammock zone support posts (simple)
+      {x: 160, y: 180, w: 140, h: 110, label:"Hammock", action: () => go("hammock.html")},
+      // ping pong table
+      {x: 980, y: 560, w: 220, h: 140, label:"Ping Pong", action: () => go("pingpong.html")},
+      // mushroom field blocker (still interactable)
+      {x: 520, y: 560, w: 340, h: 220, label:"Mushroom Field", action: eatMushroom},
+      // shrubs
+      {x: 1150, y: 140, w: 160, h: 160},
+      {x: 60, y: 680, w: 200, h: 160},
+    ],
+    doors: [
+      {x: 70, y: 380, w: 120, h: 140, label:"Back Inside", hint:"Bedroom (Sophie01.html)", action: () => go("Sophie01.html")}
+    ],
+    npcs: [
+      {x: 1080, y: 260, r: 18, label:"Garden Gnome", hint:"Trade a secret for a key", action: gnomeKey}
+    ]
+  };
 
-  const zones = [
-    {name:"GATE", rect:[props.gate.x, props.gate.y, props.gate.w, props.gate.h+10], action:()=>go("Sophie01.html")},
-    {name:"GRAPES", rect:[props.grapes.x-6, props.grapes.y-6, 30, 26], action:eatGrapes},
-  ];
+  const player = { x: 420, y: 420, r: 18, vx:0, vy:0, facing:{x:1,y:0}, dancing:false, jumpT:0, splitsT:0 };
+  const milo = { x: player.x-40, y: player.y+30, r: 14, purr:0 };
 
-  /* ---------- entities ---------- */
-  const sophia = { x: state.sophia.x, y: state.sophia.y, w:16, h:20, bob:0 };
-  const milo   = { x: state.milo.x,   y: state.milo.y,   bob:0 };
-
-  // if arriving from Bedroom, spawn near top-mid to feel like you stepped out
-  if(state.lastRoom === "BEDROOM"){
-    sophia.x = 340; sophia.y = 70;
-    milo.x = sophia.x-18; milo.y = sophia.y+12;
+  const cam = {x:0,y:0};
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  function collideCircleRect(cx,cy,cr, rx,ry,rw,rh){
+    const px=clamp(cx,rx,rx+rw), py=clamp(cy,ry,ry+rh);
+    const dx=cx-px, dy=cy-py;
+    return (dx*dx+dy*dy) < cr*cr;
   }
-  state.lastRoom = "BACKYARD";
-  save();
-
-  function insideSolid(px,py,pw,ph){
-    for(const s of solids){
-      if(px < s[0]+s[2] && px+pw > s[0] && py < s[1]+s[3] && py+ph > s[1]) return true;
-    }
-    return false;
-  }
-
-  if(insideSolid(sophia.x,sophia.y,sophia.w,sophia.h)){
-    sophia.x = 320; sophia.y = 200;
-  }
-
-  function moveWithSlide(dx,dy){
-    const steps = 3;
-    dx/=steps; dy/=steps;
-    for(let i=0;i<steps;i++){
-      if(!insideSolid(sophia.x+dx, sophia.y, sophia.w, sophia.h)) sophia.x += dx;
-      if(!insideSolid(sophia.x, sophia.y+dy, sophia.w, sophia.h)) sophia.y += dy;
-    }
-  }
-
-  function nearest(){
-    let best=null, bd=1e18;
-    const px = sophia.x + sophia.w/2;
-    const py = sophia.y + sophia.h/2;
-    const MAX = 70*70;
-    for(const z of zones){
-      const cx=z.rect[0]+z.rect[2]/2;
-      const cy=z.rect[1]+z.rect[3]/2;
-      const d=(cx-px)**2+(cy-py)**2;
-      if(d<bd && d<MAX){ bd=d; best=z; }
-    }
-    return best;
-  }
-
-  function interact(){
-    const z=nearest();
-    if(z) z.action();
-    else toast("Just night air…");
-  }
-
-  canvas.addEventListener("pointerdown", (e)=>{
-    e.preventDefault();
-    canvas.focus();
-    if(!heldPtr.down){ interact(); heldPtr.down=true; }
-  }, { passive:false });
-  window.addEventListener("pointerup", ()=>heldPtr.down=false, { passive:true });
-
-  /* ---------- gnome (keys) ---------- */
-  const gnome = { x: 260, y: 240, dir: 1, spd: 0.75, alive: !state.hasKeys, bob: 0 };
-
-  function catchGnome(){
-    if(!gnome.alive) return;
-    if(Math.abs(sophia.x-gnome.x)<14 && Math.abs(sophia.y-gnome.y)<14){
-      gnome.alive=false;
-      state.hasKeys=true;
-      keysEl.textContent="YES";
-      save();
-      toast("You caught the gnome… keys acquired. He evaporates.", 2000);
-    }
-  }
-
-  /* ---------- grapes (trip) ---------- */
-  function eatGrapes(){
-    if(state.trip){
-      toast("Already vibing…", 1200);
-      return;
-    }
-    state.trip = true;
-    tripEl.textContent="ON";
-    miloMoodEl.textContent="playing";
-    save();
-    toast("You eat the grapes. Reality loosens a button.", 1800);
-  }
-
-  /* ---------- draw helpers ---------- */
-  function rrect(px,py,pw,ph,r,fill,stroke){
-    const x=px, y=py, w=pw, h=ph;
-    r=Math.max(0,Math.min(r,Math.min(w,h)/2));
-    ctx.beginPath();
-    ctx.moveTo(x+r,y);
-    ctx.arcTo(x+w,y,x+w,y+h,r);
-    ctx.arcTo(x+w,y+h,x,y+h,r);
-    ctx.arcTo(x,y+h,x,y,r);
-    ctx.arcTo(x,y,x+w,y,r);
-    ctx.closePath();
-    if(fill){ ctx.fillStyle=fill; ctx.fill(); }
-    if(stroke){ ctx.strokeStyle=stroke; ctx.stroke(); }
-  }
-
-  function texture(px,py,pw,ph, step, a1, a2){
-    for(let y=0;y<ph;y+=step){
-      for(let x=0;x<pw;x+=step){
-        const on = ((x/step|0)+(y/step|0))%2===0;
-        ctx.fillStyle = on ? a1 : a2;
-        ctx.fillRect(px+x, py+y, step, step);
+  function resolveSolids(ent){
+    ent.x = clamp(ent.x, ent.r, world.w-ent.r);
+    ent.y = clamp(ent.y, ent.r, world.h-ent.r);
+    for(const s of world.solids){
+      if(collideCircleRect(ent.x,ent.y,ent.r, s.x,s.y,s.w,s.h)){
+        const left=ent.x-s.x, right=(s.x+s.w)-ent.x, top=ent.y-s.y, bottom=(s.y+s.h)-ent.y;
+        const minX=Math.min(left,right), minY=Math.min(top,bottom);
+        if(minX<minY) ent.x += (left<right)?-(ent.r):(ent.r);
+        else ent.y += (top<bottom)?-(ent.r):(ent.r);
+        ent.x = clamp(ent.x, ent.r, world.w-ent.r);
+        ent.y = clamp(ent.y, ent.r, world.h-ent.r);
       }
     }
   }
+  function updateCam(){
+    const tx=player.x-innerWidth/2, ty=player.y-innerHeight/2;
+    cam.x += (tx-cam.x)*0.08; cam.y += (ty-cam.y)*0.08;
+    cam.x = clamp(cam.x,0,world.w-innerWidth);
+    cam.y = clamp(cam.y,0,world.h-innerHeight);
+  }
 
-  /* ---------- background ---------- */
-  const motes = Array.from({length:34}, ()=>({
-    x: Math.random()*WORLD_W,
-    y: Math.random()*WORLD_H,
-    r: 1+Math.random()*2,
-    sp: 0.16+Math.random()*0.35
-  }));
+  function nearestInteract(){
+    let best=null;
+    const consider=(label,action,hint,cx,cy)=>{
+      const d=Math.hypot(player.x-cx, player.y-cy);
+      if(d<92 && (!best || d<best.d)) best={d,label,action,hint,cx,cy};
+    };
+    for(const d of world.doors) consider(d.label,d.action,d.hint, d.x+d.w/2, d.y+d.h/2);
+    for(const s of world.solids) if(s.label && s.action) consider(s.label,s.action,null, s.x+s.w/2, s.y+s.h/2);
+    for(const n of world.npcs) consider(n.label,n.action,n.hint,n.x,n.y);
+    return best;
+  }
+  function tryInteract(){
+    const n=nearestInteract();
+    if(!n){ showToast("Nothing to interact with.", 800); return; }
+    if(n.hint) showToast(`<b>${n.label}</b><br><span style="opacity:.8">${n.hint}</span>`, 800);
+    else showToast(`<b>${n.label}</b>`, 550);
+    setTimeout(()=>n.action(),120);
+  }
 
-  function bg(){
-    ctx.fillStyle="#07060b";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    // moon haze
-    const mx = X(120), my = Y(60);
-    const moon = ctx.createRadialGradient(mx,my, Wp(8), mx,my, Wp(180));
-    moon.addColorStop(0,"rgba(255,245,210,.18)");
-    moon.addColorStop(.55,"rgba(138,46,255,.08)");
-    moon.addColorStop(1,"rgba(0,0,0,0)");
-    ctx.fillStyle=moon;
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    // ground
-    const gy = Y(120);
-    ctx.fillStyle="#0f0c16";
-    ctx.fillRect(0, gy, canvas.width, canvas.height-gy);
-
-    // grass texture
-    for(let y=gy; y<canvas.height; y+=Hp(3)){
-      ctx.fillStyle="rgba(255,255,255,.03)";
-      ctx.fillRect(0, y, canvas.width, 1);
+  // ========= Backyard logic =========
+  let tripT = 0;
+  function eatMushroom(){
+    tripT = Math.max(tripT, 3.5);
+    showToast(`You taste the forest’s weird little joke… 🍄✨`, 1200);
+  }
+  function gnomeKey(){
+    if(save.hasFrontDoorKey){
+      showToast(`The gnome nods. “Already paid.”`, 1100);
+      return;
     }
-    for(let x=0; x<canvas.width; x+=Wp(10)){
-      ctx.fillStyle="rgba(0,0,0,.10)";
-      ctx.fillRect(x, gy, 1, canvas.height-gy);
+    save.hasFrontDoorKey = true;
+    commitSave();
+    showToast(`<b>KEY FOUND.</b><br>The gnome whispers: “Front door. Living room.” 🔑`, 1500);
+  }
+
+  // ========= Rendering =========
+  function outfitColor(name){
+    switch(name){
+      case "blue": return "#4aa6ff";
+      case "red": return "#ff4a6b";
+      case "green": return "#53ff86";
+      case "black": return "#1a1a22";
+      default: return "#8A2EFF";
+    }
+  }
+
+  function drawGrass(){
+    ctx.fillStyle="#060a0f";
+    ctx.fillRect(0,0,world.w,world.h);
+
+    // soft lawn
+    ctx.fillStyle="rgba(90,180,120,.10)";
+    for(let y=0;y<world.h;y+=46){
+      ctx.fillRect(0,y,world.w,36);
     }
 
-    // fence (top boundary inside world)
-    const fy = Y(22);
-    rrect(X(12), fy, Wp(VIEW_W-24), Hp(20), Wp(6), "#1c1626", "rgba(255,255,255,.10)");
-    for(let i=0;i<12;i++){
-      rrect(X(18+i*24), fy+Hp(2), Wp(12), Hp(16), Wp(4), "rgba(255,255,255,.03)", "rgba(0,0,0,.22)");
-    }
-
-    // trees silhouettes
-    for(let i=0;i<6;i++){
-      const tx = X(40 + i*120);
-      const ty = Y(52 + (i%2)*10);
-      ctx.fillStyle="rgba(0,0,0,.32)";
-      rrect(tx, ty, Wp(54), Hp(46), Wp(10), "rgba(0,0,0,.32)");
-      ctx.fillStyle="rgba(0,0,0,.28)";
-      rrect(tx+Wp(22), ty+Hp(34), Wp(10), Hp(28), Wp(5), "rgba(0,0,0,.28)");
-    }
-
-    // motes
-    for(const m of motes){
-      m.y -= m.sp;
-      m.x += Math.sin((m.y+m.r)*0.03)*0.18;
-      if(m.y < 0){ m.y = WORLD_H; m.x = Math.random()*WORLD_W; }
-      const px = X(m.x), py = Y(m.y);
-      if(px< -10 || px>canvas.width+10 || py< -10 || py>canvas.height+10) continue;
-      ctx.fillStyle="rgba(255,255,255,.06)";
-      ctx.fillRect(px,py, Math.max(1,Wp(m.r)), Math.max(1,Wp(m.r)));
+    // scattered fireflies
+    for(let i=0;i<120;i++){
+      const x=(i*97)%world.w, y=(i*173)%world.h;
+      ctx.fillStyle=`rgba(255,255,255,${0.04 + ((i%7)/7)*0.05})`;
+      ctx.fillRect(x, y, 1, 1);
     }
 
     // vignette
-    ctx.fillStyle="rgba(0,0,0,.24)";
-    ctx.fillRect(0,0,canvas.width,Hp(6));
-    ctx.fillRect(0,canvas.height-Hp(6),canvas.width,Hp(6));
-    ctx.fillRect(0,0,Wp(6),canvas.height);
-    ctx.fillRect(canvas.width-Wp(6),0,Wp(6),canvas.height);
+    const g=ctx.createRadialGradient(world.w/2,world.h/2,140, world.w/2,world.h/2, 980);
+    g.addColorStop(0,"rgba(0,0,0,0)");
+    g.addColorStop(1,"rgba(0,0,0,.62)");
+    ctx.fillStyle=g;
+    ctx.fillRect(0,0,world.w,world.h);
   }
 
-  function drawProps(){
-    // shed
-    rrect(X(props.shed.x), Y(props.shed.y), Wp(props.shed.w), Hp(props.shed.h), Wp(10), "#1b1427", "rgba(255,255,255,.10)");
-    texture(X(props.shed.x), Y(props.shed.y), Wp(props.shed.w), Hp(props.shed.h), Math.max(2,Wp(2)),
-            "rgba(255,255,255,.04)", "rgba(0,0,0,.06)");
-    rrect(X(props.shed.x+24), Y(props.shed.y+26), Wp(40), Hp(28), Wp(8), "#0d0b12", "rgba(138,46,255,.22)");
+  function drawObjectRect(x,y,w,h, tint){
+    ctx.fillStyle="rgba(0,0,0,.35)";
+    ctx.fillRect(x+10,y+10,w,h);
+    ctx.fillStyle=tint;
+    ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle="rgba(255,255,255,.14)";
+    ctx.lineWidth=2;
+    ctx.strokeRect(x,y,w,h);
+  }
 
-    // bench
-    rrect(X(props.bench.x), Y(props.bench.y), Wp(props.bench.w), Hp(props.bench.h), Wp(8), "#2a2240", "rgba(0,0,0,.35)");
-    texture(X(props.bench.x), Y(props.bench.y), Wp(props.bench.w), Hp(props.bench.h), Math.max(2,Wp(2)),
-            "rgba(255,255,255,.04)", "rgba(0,0,0,.05)");
+  function drawDoor(d){
+    ctx.fillStyle="rgba(138,46,255,.10)";
+    ctx.fillRect(d.x,d.y,d.w,d.h);
+    ctx.strokeStyle="rgba(255,255,255,.18)";
+    ctx.lineWidth=2;
+    ctx.strokeRect(d.x,d.y,d.w,d.h);
+    const g=ctx.createRadialGradient(d.x+d.w/2,d.y+d.h/2,10, d.x+d.w/2,d.y+d.h/2,120);
+    g.addColorStop(0,"rgba(138,46,255,.22)"); g.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=g; ctx.fillRect(d.x-80,d.y-80,d.w+160,d.h+160);
+  }
 
-    // planter
-    rrect(X(props.planter.x), Y(props.planter.y), Wp(props.planter.w), Hp(props.planter.h), Wp(10), "#2b1f32", "rgba(0,0,0,.35)");
-    rrect(X(props.planter.x+8), Y(props.planter.y+8), Wp(props.planter.w-16), Hp(10), Wp(7), "#0d0b12", "rgba(255,255,255,.08)");
-    // tiny weeds
-    for(let i=0;i<10;i++){
-      ctx.fillStyle="rgba(0,255,213,.12)";
-      ctx.fillRect(X(props.planter.x+10+i*7), Y(props.planter.y+6), Wp(1), Hp(6+(i%3)));
-    }
+  function drawGnome(n){
+    // tiny cursed-cute gnome
+    ctx.fillStyle="rgba(0,0,0,.35)";
+    ctx.beginPath(); ctx.ellipse(n.x, n.y+14, 16, 7, 0, 0, Math.PI*2); ctx.fill();
 
-    // stump
-    rrect(X(props.stump.x), Y(props.stump.y), Wp(props.stump.w), Hp(props.stump.h), Wp(10), "#3a2c57", "rgba(0,0,0,.35)");
-    texture(X(props.stump.x), Y(props.stump.y), Wp(props.stump.w), Hp(props.stump.h), Math.max(2,Wp(2)),
-            "rgba(255,255,255,.05)", "rgba(0,0,0,.06)");
+    ctx.fillStyle="rgba(255,255,255,.10)";
+    ctx.beginPath(); ctx.arc(n.x, n.y, 18, 0, Math.PI*2); ctx.fill();
 
-    // grapes (interaction item)
-    const gx = X(props.grapes.x), gy = Y(props.grapes.y);
-    rrect(gx, gy, Wp(18), Hp(14), Wp(6), state.trip ? "#6a2cff" : "#a84cff", "rgba(0,0,0,.35)");
-    for(let i=0;i<4;i++){
+    ctx.fillStyle="rgba(255,90,130,.35)";
+    ctx.beginPath(); ctx.arc(n.x, n.y-16, 16, 0, Math.PI*2); ctx.fill();
+
+    ctx.fillStyle="rgba(255,255,255,.22)";
+    ctx.font="11px ui-monospace, Menlo, monospace";
+    ctx.fillText("GNOME", n.x-22, n.y-26);
+  }
+
+  function drawMushrooms(){
+    // mushrooms sparkly patch
+    const x=540, y=580, w=300, h=180;
+    const glow=ctx.createRadialGradient(x+w/2,y+h/2,20, x+w/2,y+h/2, 240);
+    glow.addColorStop(0,"rgba(138,46,255,.22)");
+    glow.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=glow;
+    ctx.fillRect(x-80,y-80,w+160,h+160);
+
+    for(let i=0;i<38;i++){
+      const mx=x+(i*37)%w, my=y+(i*71)%h;
       ctx.fillStyle="rgba(255,255,255,.10)";
-      ctx.fillRect(gx+Wp(4+i*3), gy+Hp(4+(i%2)), Wp(2), Hp(2));
+      ctx.beginPath(); ctx.arc(mx,my,4,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="rgba(255,90,180,.14)";
+      ctx.beginPath(); ctx.arc(mx,my-6,6,0,Math.PI*2); ctx.fill();
     }
-
-    // gate (door)
-    rrect(X(props.gate.x), Y(props.gate.y), Wp(props.gate.w), Hp(props.gate.h), Wp(8), "#1c1626", "rgba(0,255,213,.22)");
-    rrect(X(props.gate.x+8), Y(props.gate.y+4), Wp(props.gate.w-16), Hp(3), Wp(4), "rgba(0,255,213,.10)", "rgba(0,0,0,.20)");
   }
 
-  /* ---------- sprites ---------- */
-  function drawSophia(){
-    const outfits=[
-      {dress:"#c2a3ff", bow:"#ffe1ff"},
-      {dress:"#99fff0", bow:"#e4fbff"},
-      {dress:"#ff8fbd", bow:"#ffe2ee"},
-      {dress:"#ffe28a", bow:"#fff2c7"}
-    ];
-    const o=outfits[state.outfit];
+  function drawCharacter(){
+    const col=outfitColor(save.outfit);
+    const bob=player.dancing?Math.sin(tt*10)*3:0;
+    const jump=player.jumpT>0?Math.sin((1-player.jumpT)*Math.PI)*12:0;
+    const splits=player.splitsT>0?(1-player.splitsT/0.6):0;
 
-    const bob = Math.sin(sophia.bob)*0.8;
-    const x = X(sophia.x);
-    const y = Y(sophia.y + bob);
+    const x=player.x, y=player.y - jump + bob;
 
-    ctx.fillStyle="rgba(0,0,0,.28)";
-    rrect(x+Wp(3), y+Hp(18), Wp(10), Hp(3), Wp(2), "rgba(0,0,0,.28)");
+    ctx.fillStyle="rgba(0,0,0,.35)";
+    ctx.beginPath(); ctx.ellipse(x, player.y+10, 18, 9, 0, 0, Math.PI*2); ctx.fill();
 
-    rrect(x+Wp(3), y+Hp(0), Wp(10), Hp(7), Wp(3), "#f2d27a");
-    ctx.fillStyle="#f2d27a";
-    ctx.fillRect(x+Wp(2), y+Hp(3), Wp(12), Hp(6));
-    ctx.fillRect(x+Wp(3), y+Hp(6), Wp(3), Hp(3));
-    ctx.fillRect(x+Wp(10),y+Hp(6), Wp(3), Hp(3));
+    const aura=ctx.createRadialGradient(x,y-22,6, x,y-22, 40);
+    aura.addColorStop(0,"rgba(180,140,255,.22)");
+    aura.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=aura; ctx.beginPath(); ctx.arc(x,y-18,40,0,Math.PI*2); ctx.fill();
 
-    rrect(x+Wp(4), y+Hp(7), Wp(10), Hp(9), Wp(3), "#ffd9c9");
+    ctx.fillStyle="rgba(255,245,235,.95)";
+    ctx.beginPath(); ctx.arc(x,y-18,12,0,Math.PI*2); ctx.fill();
 
-    rrect(x+Wp(6), y+Hp(10), Wp(3), Hp(3), Wp(1), "#1a0f2a");
-    rrect(x+Wp(11),y+Hp(10), Wp(3), Hp(3), Wp(1), "#1a0f2a");
+    ctx.fillStyle="rgba(20,20,30,.85)";
+    ctx.beginPath(); ctx.arc(x,y-22,14,0,Math.PI*2); ctx.fill();
 
-    ctx.fillStyle="#67b7ff";
-    ctx.fillRect(x+Wp(7), y+Hp(11), Wp(1), Hp(1));
-    ctx.fillRect(x+Wp(12),y+Hp(11), Wp(1), Hp(1));
+    ctx.fillStyle=col;
+    ctx.beginPath();
+    ctx.moveTo(x,y-6); ctx.lineTo(x-14,y+16); ctx.lineTo(x+14,y+16);
+    ctx.closePath(); ctx.fill();
 
-    ctx.fillStyle="rgba(255,120,160,.18)";
-    ctx.fillRect(x+Wp(5), y+Hp(14), Wp(2), Hp(1));
-    ctx.fillRect(x+Wp(13),y+Hp(14), Wp(2), Hp(1));
-
-    rrect(x+Wp(9), y+Hp(6), Wp(4), Hp(2), Wp(1), o.bow);
-
-    rrect(x+Wp(5), y+Hp(16), Wp(10), Hp(6), Wp(3), o.dress);
-    ctx.fillStyle="rgba(255,255,255,.20)";
-    ctx.fillRect(x+Wp(6), y+Hp(18), Wp(8), Hp(1));
+    ctx.strokeStyle="rgba(255,245,235,.85)";
+    ctx.lineWidth=4; ctx.lineCap="round";
+    ctx.beginPath();
+    if(splits>0){
+      ctx.moveTo(x,y+16); ctx.lineTo(x-18-10*splits,y+24);
+      ctx.moveTo(x,y+16); ctx.lineTo(x+18+10*splits,y+24);
+    }else{
+      ctx.moveTo(x-4,y+16); ctx.lineTo(x-6,y+26);
+      ctx.moveTo(x+4,y+16); ctx.lineTo(x+6,y+26);
+    }
+    ctx.stroke();
   }
 
   function drawMilo(){
-    const bob = Math.sin(milo.bob)*0.8;
-    const x = X(milo.x);
-    const y = Y(milo.y + bob);
+    milo.purr += 0.02;
+    const tail=Math.sin(milo.purr*4)*6;
 
-    ctx.fillStyle="rgba(0,0,0,.22)";
-    rrect(x+Wp(2), y+Hp(10), Wp(12), Hp(3), Wp(2), "rgba(0,0,0,.22)");
+    ctx.fillStyle="rgba(0,0,0,.28)";
+    ctx.beginPath(); ctx.ellipse(milo.x,milo.y+8,14,7,0,0,Math.PI*2); ctx.fill();
 
-    rrect(x+Wp(2), y+Hp(4), Wp(14), Hp(9), Wp(4), "#ececf6");
-    ctx.fillStyle="#1a0f2a";
-    ctx.fillRect(x+Wp(6), y+Hp(7), Wp(1), Hp(1));
-    ctx.fillRect(x+Wp(11),y+Hp(7), Wp(1), Hp(1));
+    ctx.fillStyle="rgba(255,255,255,.90)";
+    ctx.beginPath(); ctx.ellipse(milo.x,milo.y,12,9,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(milo.x+10,milo.y-6,7,0,Math.PI*2); ctx.fill();
 
-    ctx.fillStyle= state.trip ? "#ff4fa6" : "#1affd3";
-    ctx.fillRect(x+Wp(6), y+Hp(6), Wp(1), Hp(1));
-    ctx.fillRect(x+Wp(11),y+Hp(6), Wp(1), Hp(1));
+    ctx.beginPath();
+    ctx.moveTo(milo.x+6,milo.y-11); ctx.lineTo(milo.x+10,milo.y-18); ctx.lineTo(milo.x+14,milo.y-11);
+    ctx.closePath(); ctx.fill();
+
+    ctx.strokeStyle="rgba(255,255,255,.85)";
+    ctx.lineWidth=4; ctx.lineCap="round";
+    ctx.beginPath();
+    ctx.moveTo(milo.x-10,milo.y+2);
+    ctx.quadraticCurveTo(milo.x-24,milo.y-6, milo.x-16,milo.y-16+tail);
+    ctx.stroke();
+
+    ctx.fillStyle="rgba(30,30,40,.55)";
+    ctx.fillRect(milo.x+12,milo.y-8,2,2);
   }
 
-  function drawGnome(){
-    if(!gnome.alive) return;
-    const x = X(gnome.x);
-    const y = Y(gnome.y + Math.sin(gnome.bob)*1.2);
-
-    // shadow
-    ctx.fillStyle="rgba(0,0,0,.24)";
-    rrect(x+Wp(1), y+Hp(10), Wp(10), Hp(3), Wp(2), "rgba(0,0,0,.24)");
-
-    // body
-    rrect(x, y+Hp(4), Wp(12), Hp(10), Wp(4), "#2f6f6c", "rgba(0,0,0,.35)");
-    // hat
-    rrect(x+Wp(2), y, Wp(8), Hp(6), Wp(3), "#ff2e6e", "rgba(0,0,0,.35)");
-    // eyes glow
-    ctx.fillStyle="rgba(0,255,213,.20)";
-    ctx.fillRect(x+Wp(4), y+Hp(7), Wp(1), Hp(1));
-    ctx.fillRect(x+Wp(7), y+Hp(7), Wp(1), Hp(1));
-  }
-
-  function drawInteractHint(){
-    const z = nearest();
-    if(!z) return;
-    rrect(Wp(8), canvas.height-Hp(28), Wp(300), Hp(18), Wp(8), "rgba(0,0,0,.55)", "rgba(255,255,255,.20)");
-    ctx.fillStyle="rgba(255,255,255,.95)";
-    ctx.font = `${Math.max(10, Hp(10))}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-    ctx.fillText(`Press E or tap: ${z.name}`, Wp(16), canvas.height-Hp(15));
-  }
-
-  /* ---------- trip post fx ---------- */
-  function tripFX(){
-    if(!state.trip) return;
-    const t = performance.now()*0.0015;
+  function render(){
+    ctx.clearRect(0,0,innerWidth,innerHeight);
     ctx.save();
-    ctx.globalAlpha = 0.12;
-    ctx.fillStyle = "rgba(138,46,255,.55)";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.globalAlpha = 0.08;
-    ctx.fillStyle = "rgba(0,255,213,.55)";
-    ctx.fillRect(Math.sin(t)*Wp(2), Math.cos(t*0.9)*Hp(2), canvas.width, canvas.height);
-    ctx.restore();
+    ctx.translate(-cam.x, -cam.y);
 
-    // soft scanline shimmer
-    for(let y=0;y<canvas.height;y+=Hp(3)){
-      ctx.fillStyle = (y/Hp(3))%2 ? "rgba(0,0,0,.05)" : "rgba(255,255,255,.03)";
-      ctx.fillRect(0,y,canvas.width,1);
+    drawGrass();
+
+    // Objects
+    for(const s of world.solids){
+      let tint="rgba(255,255,255,.05)";
+      if(s.label==="Hammock") tint="rgba(160,210,255,.07)";
+      if(s.label==="Ping Pong") tint="rgba(255,255,255,.06)";
+      if(s.label==="Mushroom Field") tint="rgba(138,46,255,.06)";
+      drawObjectRect(s.x,s.y,s.w,s.h,tint);
+
+      if(s.label){
+        ctx.fillStyle="rgba(255,255,255,.22)";
+        ctx.font="11px ui-monospace, Menlo, monospace";
+        ctx.fillText(s.label, s.x+10, s.y+18);
+      }
     }
-  }
 
-  /* ---------- loop ---------- */
-  function go(f){
-    state.sophia.x = sophia.x; state.sophia.y = sophia.y;
-    state.milo.x = milo.x; state.milo.y = milo.y;
-    save();
-    location.href = f;
-  }
+    drawMushrooms();
 
-  function updateCamera(){
-    const targetX = (sophia.x + sophia.w/2) - VIEW_W/2;
-    const targetY = (sophia.y + sophia.h/2) - VIEW_H/2;
-    cam.x += (targetX - cam.x) * 0.10;
-    cam.y += (targetY - cam.y) * 0.10;
-    cam.x = clamp(cam.x, 0, WORLD_W - VIEW_W);
-    cam.y = clamp(cam.y, 0, WORLD_H - VIEW_H);
-  }
+    for(const d of world.doors) drawDoor(d);
+    for(const n of world.npcs) drawGnome(n);
 
-  function loop(){
-    const run = keysDown.has("shift");
-    const sp = run ? 2.5 : 1.75;
-
-    let dx = (keysDown.has("d")||keysDown.has("arrowright")?1:0) - (keysDown.has("a")||keysDown.has("arrowleft")?1:0);
-    let dy = (keysDown.has("s")||keysDown.has("arrowdown")?1:0) - (keysDown.has("w")||keysDown.has("arrowup")?1:0);
-    if(dx || dy){
-      const mag = Math.hypot(dx,dy) || 1;
-      dx = dx/mag * sp;
-      dy = dy/mag * sp;
-    }
-    moveWithSlide(dx,dy);
-    sophia.bob += 0.18;
-
-    // interact once
-    if(keysDown.has("e") && !held.e){ interact(); held.e=true; }
-    if(!keysDown.has("e")) held.e=false;
-
-    // gnome logic
-    if(gnome.alive){
-      gnome.bob += 0.10;
-      gnome.x += gnome.dir * gnome.spd;
-      if(gnome.x < 40 || gnome.x > WORLD_W-60) gnome.dir *= -1;
-      if(Math.random() < 0.012) gnome.dir *= -1;
-    }
-    catchGnome();
-
-    // Milo follow
-    const tx = sophia.x - 20;
-    const ty = sophia.y + 12;
-    milo.x += (tx - milo.x) * 0.065;
-    milo.y += (ty - milo.y) * 0.065;
-    milo.bob += 0.12;
-
-    // clamp to world bounds
-    sophia.x = clamp(sophia.x, 12, WORLD_W - 28);
-    sophia.y = clamp(sophia.y, 12, WORLD_H - 30);
-
-    updateCamera();
-
-    // save occasionally (lightweight)
-    state.sophia.x = sophia.x; state.sophia.y = sophia.y;
-    state.milo.x = milo.x; state.milo.y = milo.y;
-    save();
-
-    // draw
-    bg();
-    drawProps();
-    drawGnome();
     drawMilo();
-    drawSophia();
-    drawInteractHint();
-    tripFX();
+    drawCharacter();
 
-    requestAnimationFrame(loop);
+    // Interact prompt
+    const n=nearestInteract();
+    if(n){
+      ctx.strokeStyle="rgba(138,46,255,.45)";
+      ctx.lineWidth=2;
+      ctx.beginPath(); ctx.ellipse(player.x,player.y+8,28,14,0,0,Math.PI*2); ctx.stroke();
+
+      const text=`E · ${n.label}`;
+      ctx.font="12px ui-monospace, Menlo, monospace";
+      const m=ctx.measureText(text);
+      const px=player.x - m.width/2 - 10;
+      const py=player.y - 44;
+      ctx.fillStyle="rgba(0,0,0,.45)";
+      ctx.strokeStyle="rgba(255,255,255,.14)";
+      ctx.lineWidth=1;
+      ctx.beginPath(); roundRect(px,py,m.width+20,22,10); ctx.fill(); ctx.stroke();
+      ctx.fillStyle="rgba(255,255,255,.88)";
+      ctx.fillText(text, player.x - m.width/2, py+15);
+    }
+
+    // Trip overlay
+    if(tripT>0){
+      const wob = Math.sin(tt*10)*6;
+      ctx.globalAlpha = 0.15 + 0.12*Math.sin(tt*6);
+      ctx.fillStyle = "rgba(138,46,255,1)";
+      ctx.fillRect(0+wob, 0, world.w, world.h);
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = "rgba(0,255,210,1)";
+      ctx.fillRect(0, 0+wob, world.w, world.h);
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
   }
 
-  canvas.focus();
-  loop();
+  function roundRect(x,y,w,h,r){
+    const rr=Math.min(r,w/2,h/2);
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    ctx.closePath();
+  }
+
+  // ========= Loop =========
+  let last=performance.now();
+  let tt=0;
+  function step(now){
+    const dt=Math.min(0.033,(now-last)/1000);
+    last=now; tt+=dt;
+
+    const a=axis();
+    let sp=(down("shift")?220:150);
+    if(player.dancing) sp*=0.65;
+
+    const mag=Math.hypot(a.x,a.y)||1;
+    const ax=a.x/mag, ay=a.y/mag;
+
+    player.vx += (ax*sp - player.vx)*0.18;
+    player.vy += (ay*sp - player.vy)*0.18;
+    player.x += player.vx*dt; player.y += player.vy*dt;
+
+    if(Math.abs(ax)+Math.abs(ay)>0.01){ player.facing.x=ax; player.facing.y=ay; }
+
+    resolveSolids(player);
+
+    const followDist=46;
+    const tx=player.x - player.facing.x*followDist - 18;
+    const ty=player.y - player.facing.y*followDist + 14;
+    milo.x += (tx-milo.x)*0.08;
+    milo.y += (ty-milo.y)*0.08;
+    resolveSolids(milo);
+
+    player.jumpT=Math.max(0,player.jumpT-dt);
+    player.splitsT=Math.max(0,player.splitsT-dt);
+    tripT=Math.max(0,tripT-dt);
+
+    updateCam();
+    render();
+    requestAnimationFrame(step);
+  }
+
+  commitSave();
+  showToast(`The gnome knows something.`, 1400);
+  requestAnimationFrame(step);
 })();
 </script>
 </body>
