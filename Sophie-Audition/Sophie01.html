@@ -145,7 +145,7 @@ const solids=[
 
 /* ---------- zones ---------- */
 const zones=[
-{name:"DESK",rect:[44,52,78,26],action:()=>{poemBox.style.display="grid";}},
+{name:"DESK",rect:[44,52,78,26],action:()=>{ location.href="poetry.html"; }},
 {name:"BED",rect:[216,46,66,34],action:()=>{state.slept=true;save();toast("She sleeps. Audition gone.");}},
 {name:"GUITAR",rect:[48,122,32,26],action:()=>location.href="guitar.html"},
 {name:"CLOTHES",rect:[90,130,40,20],action:changeOutfit},
@@ -228,15 +228,37 @@ function bg(){
 ctx.fillStyle="#05050a";
 ctx.fillRect(0,0,W,H);
 
+/* ambient room glow */
 let g=ctx.createRadialGradient(80,60,10,80,60,160);
 g.addColorStop(0,"rgba(138,46,255,.2)");
+g.addColorStop(.6,"rgba(138,46,255,.06)");
 g.addColorStop(1,"transparent");
 ctx.fillStyle=g;
 ctx.fillRect(0,0,W,H);
 
+/* subtle cinematic lighting pass */
+let light = ctx.createRadialGradient(
+  sophia.x+5, sophia.y+5, 8,
+  sophia.x+5, sophia.y+5, 90
+);
+light.addColorStop(0,"rgba(255,255,255,.06)");
+light.addColorStop(.4,"rgba(255,255,255,.025)");
+light.addColorStop(1,"transparent");
+ctx.fillStyle=light;
+ctx.fillRect(0,0,W,H);
+
+/* floor scanlines (depth illusion) */
 for(let y=92;y<H-10;y++){
-ctx.fillStyle=`rgba(255,255,255,${y%6==0?.1:.05})`;
+ctx.fillStyle=`rgba(255,255,255,${y%6==0?.10:.045})`;
 ctx.fillRect(10,y,W-20,1);
+}
+
+/* vignette edges (cinematic framing) */
+ctx.fillStyle="rgba(0,0,0,.18)";
+ctx.fillRect(0,0,W,8);
+ctx.fillRect(0,H-8,W,8);
+ctx.fillRect(0,0,8,H);
+ctx.fillRect(W-8,0,8,H);
 }
 
 ctx.fillStyle="rgba(255,255,255,.06)";
