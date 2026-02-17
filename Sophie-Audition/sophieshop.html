@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Sophie's Shop</title>
+<style>
+  :root{--bg:#07070b;--fg:#fff;--ui:rgba(255,255,255,.14);--vio:#8a2eff;--aqua:#00ffd5;--hot:#ff63ff;}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  body::before{
+    content:"";position:fixed;inset:-20%;
+    background:
+      radial-gradient(circle at 18% 18%, rgba(138,46,255,.14), transparent 60%),
+      radial-gradient(circle at 72% 22%, rgba(0,255,213,.10), transparent 62%),
+      radial-gradient(circle at 50% 80%, rgba(255,99,255,.08), transparent 62%);
+    filter:blur(44px) saturate(1.12);
+    pointer-events:none;
+  }
+  .wrap{min-height:100%;display:grid;place-items:center;padding:18px;}
+  .card{
+    width:min(920px,100%);
+    border:1px solid var(--ui);
+    background:rgba(0,0,0,.45);
+    backdrop-filter: blur(10px);
+    border-radius:18px;
+    padding:16px;
+  }
+  h1{margin:0 0 10px 0;font-size:14px;letter-spacing:.22em;text-transform:uppercase;opacity:.95}
+  .sub{opacity:.72;font-size:12px;letter-spacing:.06em;line-height:1.35;margin-bottom:12px}
+  .row{
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.06);
+    border-radius:14px;
+    padding:12px;
+    display:flex;justify-content:space-between;gap:12px;align-items:center;
+    margin:10px 0;
+  }
+  button{
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.35);
+    color:#fff;border-radius:12px;
+    padding:10px 12px;
+    letter-spacing:.12em;text-transform:uppercase;font-size:11px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  button:hover{border-color:rgba(0,255,213,.28)}
+  .toast{
+    margin-top:10px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.55);
+    border-radius:14px;
+    padding:10px 12px;
+    font-size:12px;letter-spacing:.06em;opacity:.9;display:none;
+  }
+  .toast.on{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Sophie's Poetry + Acting Shop</h1>
+    <div class="sub">A tiny store that sells courage in different wrappers: words, exercises, and weird little rituals.</div>
+
+    <div class="row">
+      <div>
+        <div style="letter-spacing:.12em;text-transform:uppercase;font-size:12px">Buy “Audition Warm-Up”</div>
+        <div class="sub" style="margin:6px 0 0 0">Costs $3. Gives +1 mush and a “confidence ping”.</div>
+      </div>
+      <button id="warm">Buy</button>
+    </div>
+
+    <div class="row">
+      <div>
+        <div style="letter-spacing:.12em;text-transform:uppercase;font-size:12px">Write a poem page</div>
+        <div class="sub" style="margin:6px 0 0 0">Adds a poem line. Sometimes a customer tips you.</div>
+      </div>
+      <button id="write">Write</button>
+    </div>
+
+    <div class="row">
+      <div>
+        <div style="letter-spacing:.12em;text-transform:uppercase;font-size:12px">Talk to Lucas (if called)</div>
+        <div class="sub" style="margin:6px 0 0 0">If Lucas is following, bonding happens.</div>
+      </div>
+      <button id="lucas">Talk</button>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+      <button onclick="location.href='street.html'">Back to Street</button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<script>
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+function loadState(){ const r=localStorage.getItem(STORE_KEY); if(r){ try{return JSON.parse(r);}catch(e){} } return null; }
+function saveState(s){ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+const toastEl=document.getElementById("toast");
+function toast(msg){ toastEl.textContent=msg; toastEl.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>toastEl.classList.remove("on"),1400); }
+
+document.getElementById("warm").onclick=()=>{
+  const s=loadState(); if(!s) return toast("Open street first.");
+  s.cash = s.cash|0;
+  if(s.cash<3) return toast("Not enough cash.");
+  s.cash -= 3;
+  s.street = s.street || {};
+  s.street.mush = (s.street.mush|0) + 1;
+  // tiny “confidence ping”: reduce wanted by 1 if any
+  s.street.wanted = Math.max(0, (s.street.wanted|0) - 1);
+  saveState(s);
+  toast("Warm-up kit purchased. (+1 mush, heat -1)");
+};
+
+document.getElementById("write").onclick=()=>{
+  const s=loadState(); if(!s) return toast("Open street first.");
+  s.poemLines = (s.poemLines|0) + 1;
+  if(Math.random()<0.30){ s.cash = (s.cash|0) + 2; toast("A customer tips you $2 for the page."); }
+  else toast("You write. The page feels like a doorway.");
+  saveState(s);
+};
+
+document.getElementById("lucas").onclick=()=>{
+  const s=loadState(); if(!s) return toast("Open street first.");
+  if(!s.lucas || !s.lucas.called) return toast("Lucas hasn’t been called yet. Use the payphone.");
+  if(!s.lucas.active) return toast("Lucas isn’t currently following. Call him again.");
+  s.lucas.bond = (s.lucas.bond|0) + 2;
+  saveState(s);
+  toast("Lucas: “Proud of you.” (bond +2)");
+};
+</script>
+</body>
+</html>
