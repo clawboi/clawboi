@@ -1,717 +1,319 @@
-<!-- Sophie01.html  (BEDROOM / HUB) -->
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SOPHIE / AUDITION — Bedroom (Sophie01)</title>
-  <meta name="theme-color" content="#07060a" />
-  <style>
-    :root{
-      --bg:#07060a;
-      --ink:#f2f2ff;
-      --muted:rgba(242,242,255,.72);
-      --hair:rgba(255,255,255,.10);
-      --violet:#8A2EFF;
-      --ok:#7CFF6B;
-      --danger:#ff3b6b;
-    }
-    html,body{height:100%;margin:0;background:radial-gradient(900px 600px at 55% 40%, #1a1027 0%, #07060a 55%, #05040a 100%);overflow:hidden;font-family:ui-monospace, Menlo, Consolas, monospace;color:var(--ink)}
-    canvas{position:fixed;inset:0;display:block}
-    .hud{
-      position:fixed; left:14px; top:12px; z-index:10;
-      display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;
-      user-select:none;
-    }
-    .pill{
-      border:1px solid var(--hair);
-      background:rgba(0,0,0,.35);
-      backdrop-filter: blur(8px);
-      border-radius:999px;
-      padding:8px 10px;
-      font-size:12px;
-      letter-spacing:.12em;
-      text-transform:uppercase;
-      display:flex; gap:10px; align-items:center;
-      box-shadow:0 0 20px rgba(138,46,255,.14);
-    }
-    .pill b{letter-spacing:.16em}
-    .dot{width:8px;height:8px;border-radius:50%;background:var(--violet);box-shadow:0 0 14px rgba(138,46,255,.9)}
-    .tip{
-      position:fixed; right:14px; top:12px; z-index:10;
-      width:min(420px, calc(100vw - 28px));
-      border:1px solid var(--hair);
-      background:rgba(0,0,0,.35);
-      backdrop-filter: blur(8px);
-      border-radius:16px;
-      padding:10px 12px;
-      font-size:12px;
-      color:var(--muted);
-      box-shadow:0 0 24px rgba(0,0,0,.35);
-    }
-    .tip strong{color:var(--ink)}
-    .centerToast{
-      position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
-      z-index:20;
-      pointer-events:none;
-      opacity:0;
-      transition:.25s;
-      border:1px solid var(--hair);
-      background:rgba(0,0,0,.45);
-      backdrop-filter: blur(10px);
-      border-radius:18px;
-      padding:12px 14px;
-      max-width:min(520px, calc(100vw - 36px));
-      text-align:center;
-      line-height:1.35;
-      box-shadow:0 0 36px rgba(138,46,255,.12);
-    }
-    .centerToast.show{opacity:1}
-    .kbd{
-      display:inline-block; padding:2px 6px; border-radius:8px;
-      border:1px solid var(--hair); background:rgba(255,255,255,.06);
-      color:var(--ink); font-size:11px;
-    }
-    .small{font-size:11px;color:var(--muted)}
-  </style>
-</head>
-<body>
-  <canvas id="c"></canvas>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia's Audition 01 — Bedroom</title>
+<style>
+:root{ --bg:#07070b; --fg:#fff; --ui:rgba(255,255,255,.08); --ui2:rgba(255,255,255,.14); --vio:#8a2eff;}
+html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+.wrap{height:100%; display:grid; place-items:center;}
+canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
 
-  <div class="hud">
-    <div class="pill"><span class="dot"></span><b>SOPHIE01</b><span id="roomName">BEDROOM</span></div>
-    <div class="pill">Outfit: <span id="outfitName">VIOLET</span></div>
-    <div class="pill">Key: <span id="keyState">NO</span></div>
-  </div>
-
-  <div class="tip" id="tip">
-    <strong>Bedroom</strong> feels like varnished hush and moonlight.
-    <div class="small" style="margin-top:6px">
-      Move <span class="kbd">WASD</span> / <span class="kbd">↑↓←→</span> · Interact <span class="kbd">E</span> · Run <span class="kbd">Shift</span> · Dance <span class="kbd">Z</span> · Jump <span class="kbd">Space</span> · Splits <span class="kbd">X</span>
-      <br/>Doors: Backyard → <span class="kbd">E</span> at door · Living Room → <span class="kbd">E</span> at door
-    </div>
-  </div>
-
-  <div class="centerToast" id="toast"></div>
-
-<script>
-(() => {
-  // ========= SAVE =========
-const STORE_KEY = "SOPHIA_AUDITION_SAVE_V1";
-const OUTFITS = ["violet","blue","red","green","black"];
-
-const defaultSave = {
-  outfit: "violet",
-  hasFrontDoorKey: false,
-  lastRoom: "Sophie01.html",
-};
-
-function sanitizeSave(s){
-  // outfit must be a valid string from the allowed list
-  const outfit = (typeof s.outfit === "string") ? s.outfit.toLowerCase() : defaultSave.outfit;
-  s.outfit = OUTFITS.includes(outfit) ? outfit : defaultSave.outfit;
-
-  // key must be boolean
-  s.hasFrontDoorKey = !!s.hasFrontDoorKey;
-
-  // lastRoom must be string
-  s.lastRoom = (typeof s.lastRoom === "string" && s.lastRoom) ? s.lastRoom : defaultSave.lastRoom;
-
-  return s;
+body::before{
+content:"";
+position:fixed;
+inset:-20%;
+background:
+radial-gradient(circle at 20% 10%, rgba(138,46,255,.18), transparent 60%),
+radial-gradient(circle at 80% 40%, rgba(0,255,213,.12), transparent 65%);
+filter:blur(40px);
+animation:drift 12s ease-in-out infinite;
+pointer-events:none;
+}
+@keyframes drift{
+0%,100%{transform:translate3d(0,0,0)}
+50%{transform:translate3d(1.5%, -1.5%,0)}
 }
 
-const loadSave = () => {
-  try{
-    const raw = localStorage.getItem(STORE_KEY);
-    if(!raw) return {...defaultSave};
-    const parsed = JSON.parse(raw) || {};
-    return sanitizeSave({...defaultSave, ...parsed});
-  }catch(e){
-    return {...defaultSave};
-  }
-};
-
-const save = loadSave();
-
-const commitSave = () => {
-  save.lastRoom = "Sophie01.html";
-  // re-sanitize in case something changed during play
-  sanitizeSave(save);
-
-  localStorage.setItem(STORE_KEY, JSON.stringify(save));
-
-  // UI-safe rendering
-  const outfitStr = String(save.outfit || defaultSave.outfit).toUpperCase();
-  outfitName.textContent = outfitStr;
-  keyState.textContent = save.hasFrontDoorKey ? "YES" : "NO";
-};
-
-  // ========= CANVAS SETUP =========
-  const canvas = document.getElementById("c");
-  const ctx = canvas.getContext("2d");
-  const DPR = Math.min(2, window.devicePixelRatio || 1);
-
-  function resize(){
-    canvas.width = Math.floor(innerWidth * DPR);
-    canvas.height = Math.floor(innerHeight * DPR);
-    canvas.style.width = innerWidth + "px";
-    canvas.style.height = innerHeight + "px";
-    ctx.setTransform(DPR,0,0,DPR,0,0);
-  }
-  addEventListener("resize", resize, {passive:true});
-  resize();
-
-  // ========= UI =========
-  const toast = document.getElementById("toast");
-  const outfitName = document.getElementById("outfitName");
-  const keyState = document.getElementById("keyState");
-  const tip = document.getElementById("tip");
-
-  function showToast(html, ms=1400){
-    toast.innerHTML = html;
-    toast.classList.add("show");
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(()=>toast.classList.remove("show"), ms);
-  }
-
-  // ========= INPUT =========
-  const keys = new Set();
-  addEventListener("keydown", (e)=>{
-    const k = e.key.toLowerCase();
-    keys.add(k);
-    if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key)) e.preventDefault();
-
-    if(k === "h"){
-      tip.style.display = (tip.style.display === "none") ? "" : "none";
-    }
-    if(k === "z"){ player.dancing = !player.dancing; }
-    if(k === "x"){ player.splitsT = 0.6; }
-    if(e.key === " "){ player.jumpT = Math.max(player.jumpT, 0.35); }
-    if(k === "e"){ tryInteract(); }
-  }, {passive:false});
-  addEventListener("keyup", (e)=> keys.delete(e.key.toLowerCase()), {passive:true});
-
-  function down(k){ return keys.has(k); }
-  function axis(){
-    const left = down("a") || down("arrowleft");
-    const right = down("d") || down("arrowright");
-    const up = down("w") || down("arrowup");
-    const downk = down("s") || down("arrowdown");
-    return { x:(right?1:0) - (left?1:0), y:(downk?1:0) - (up?1:0) };
-  }
-
-  // ========= WORLD =========
-  // Top-down with soft "Zelda-ish" look: wood floor, chunky furniture rectangles with shading.
-  const world = {
-    w: 1200,
-    h: 800,
-    // Solid collisions
-    solids: [
-      // walls boundary (implicit)
-      // bed
-      {x: 760, y: 160, w: 280, h: 150, label:"Bed", action: () => go("bed.html")},
-      // wardrobe
-      {x: 160, y: 140, w: 180, h: 160, label:"Wardrobe", action: cycleOutfit},
-      // desk (poetry)
-      {x: 180, y: 470, w: 240, h: 120, label:"Poetry Desk", action: () => go("poetry.html")},
-      // guitar spot
-      {x: 560, y: 520, w: 120, h: 120, label:"Guitar", action: () => go("guitar.html")},
-    ],
-    // Doors (non-solid triggers)
-    doors: [
-      {x: 1070, y: 360, w: 90, h: 120, label:"To Backyard", hint:"Backyard (Sophie02.html)", action: () => go("Sophie02.html")},
-      {x: 580, y: 60, w: 120, h: 80, label:"To Living Room", hint:"Living Room (Sophie03.html)", action: () => go("Sophie03.html")},
-    ],
-    decor: [
-      {type:"window", x: 920, y: 40, w: 240, h: 90},
-      {type:"rug", x: 470, y: 300, w: 260, h: 220},
-      {type:"plant", x: 1030, y: 640, r: 26},
-      {type:"lamp", x: 90, y: 640, r: 22},
-    ]
-  };
-
-  // ========= PLAYER + MILO =========
-  const player = {
-    x: 520, y: 420,
-    r: 18,
-    vx: 0, vy: 0,
-    facing: {x:1,y:0},
-    dancing: false,
-    jumpT: 0,
-    splitsT: 0,
-  };
-
-  const milo = {
-    x: player.x - 40,
-    y: player.y + 30,
-    r: 14,
-    purr: 0,
-  };
-
-  function outfitColor(name){
-    switch(name){
-      case "blue": return "#4aa6ff";
-      case "red": return "#ff4a6b";
-      case "green": return "#53ff86";
-      case "black": return "#1a1a22";
-      default: return "#8A2EFF"; // violet
-    }
-  }
-
-  function cycleOutfit(){
-    const order = ["violet","blue","red","green","black"];
-    const idx = order.indexOf(save.outfit);
-    save.outfit = order[(idx + 1 + order.length) % order.length];
-    commitSave();
-    showToast(`Outfit changed to <b>${save.outfit.toUpperCase()}</b> ✨`, 1200);
-  }
-
-  function go(href){
-    commitSave();
-    location.href = href;
-  }
-
-  // ========= COLLISION =========
-  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-
-  function collideCircleRect(cx, cy, cr, rx, ry, rw, rh){
-    const px = clamp(cx, rx, rx+rw);
-    const py = clamp(cy, ry, ry+rh);
-    const dx = cx - px;
-    const dy = cy - py;
-    return (dx*dx + dy*dy) < (cr*cr);
-  }
-
-  function resolveSolids(ent){
-    // boundary
-    ent.x = clamp(ent.x, ent.r, world.w - ent.r);
-    ent.y = clamp(ent.y, ent.r, world.h - ent.r);
-
-    for(const s of world.solids){
-      if(collideCircleRect(ent.x, ent.y, ent.r, s.x, s.y, s.w, s.h)){
-        // push out by minimal axis
-        const left = ent.x - s.x;
-        const right = (s.x + s.w) - ent.x;
-        const top = ent.y - s.y;
-        const bottom = (s.y + s.h) - ent.y;
-
-        const minX = Math.min(left, right);
-        const minY = Math.min(top, bottom);
-
-        if(minX < minY){
-          ent.x += (left < right) ? - (ent.r) : (ent.r);
-        }else{
-          ent.y += (top < bottom) ? - (ent.r) : (ent.r);
-        }
-        // re-clamp
-        ent.x = clamp(ent.x, ent.r, world.w - ent.r);
-        ent.y = clamp(ent.y, ent.r, world.h - ent.r);
-      }
-    }
-  }
-
-  // ========= INTERACTION =========
-  function nearestInteract(){
-    // check doors + solids labeled
-    let best = null;
-    function consider(obj, x, y, w, h, label, action, hint){
-      const cx = x + w/2, cy = y + h/2;
-      const dx = (player.x - cx), dy = (player.y - cy);
-      const d = Math.hypot(dx, dy);
-      if(d < 90 && (!best || d < best.d)){
-        best = {d, label, action, hint, x,y,w,h};
-      }
-    }
-    for(const d of world.doors) consider(d, d.x,d.y,d.w,d.h, d.label, d.action, d.hint);
-    for(const s of world.solids) if(s.label && s.action) consider(s, s.x,s.y,s.w,s.h, s.label, s.action);
-    return best;
-  }
-
-  function tryInteract(){
-    const n = nearestInteract();
-    if(!n){ showToast(`Nothing to interact with.`, 800); return; }
-    // Little flavor
-    if(n.hint){
-      showToast(`<b>${n.label}</b><br><span class="small">Entering: ${n.hint}</span>`, 650);
-      setTimeout(()=> n.action(), 120);
-    }else{
-      showToast(`<b>${n.label}</b>`, 500);
-      setTimeout(()=> n.action(), 120);
-    }
-  }
-
-  // ========= CAMERA =========
-  const cam = {x:0,y:0};
-  function updateCam(){
-    const targetX = player.x - innerWidth/2;
-    const targetY = player.y - innerHeight/2;
-    cam.x += (targetX - cam.x) * 0.08;
-    cam.y += (targetY - cam.y) * 0.08;
-    cam.x = clamp(cam.x, 0, world.w - innerWidth);
-    cam.y = clamp(cam.y, 0, world.h - innerHeight);
-  }
-
-  // ========= RENDER HELPERS =========
-  function rnd(n){ return Math.random()*n; }
-  const woodNoise = (() => {
-    // lightweight wood grain bands
-    const bands = new Array(80).fill(0).map((_,i)=> ({
-      y: i*10 + rnd(6),
-      a: 0.04 + rnd(0.05)
-    }));
-    return {bands};
-  })();
-
-  function drawWoodFloor(){
-    // base
-    ctx.fillStyle = "#1a1020";
-    ctx.fillRect(0,0, world.w, world.h);
-
-    // planks
-    for(let y=0;y<world.h;y+=34){
-      const c = (y/34)%2===0 ? 0.12 : 0.08;
-      ctx.fillStyle = `rgba(210,170,120,${c})`;
-      ctx.fillRect(0, y, world.w, 28);
-    }
-
-    // grain bands
-    for(const b of woodNoise.bands){
-      ctx.fillStyle = `rgba(255,235,200,${b.a})`;
-      ctx.fillRect(0, b.y, world.w, 2);
-    }
-
-    // vignette
-    const g = ctx.createRadialGradient(world.w/2, world.h/2, 120, world.w/2, world.h/2, 860);
-    g.addColorStop(0, "rgba(0,0,0,0)");
-    g.addColorStop(1, "rgba(0,0,0,0.55)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0,0, world.w, world.h);
-  }
-
-  function drawRug(r){
-    const g = ctx.createRadialGradient(r.x+r.w*0.5, r.y+r.h*0.5, 20, r.x+r.w*0.5, r.y+r.h*0.5, Math.max(r.w,r.h)*0.7);
-    g.addColorStop(0, "rgba(138,46,255,.25)");
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(r.x, r.y, r.w, r.h);
-
-    ctx.strokeStyle = "rgba(255,255,255,.10)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(r.x+8, r.y+8, r.w-16, r.h-16);
-  }
-
-  function drawWindow(w){
-    ctx.fillStyle = "rgba(60,90,140,.14)";
-    ctx.fillRect(w.x, w.y, w.w, w.h);
-    ctx.strokeStyle = "rgba(255,255,255,.16)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(w.x, w.y, w.w, w.h);
-
-    // light rays
-    const rays = ctx.createLinearGradient(w.x, w.y+w.h, w.x, w.y+w.h+300);
-    rays.addColorStop(0, "rgba(190,210,255,.18)");
-    rays.addColorStop(1, "rgba(190,210,255,0)");
-    ctx.fillStyle = rays;
-    ctx.beginPath();
-    ctx.moveTo(w.x+20, w.y+w.h);
-    ctx.lineTo(w.x+w.w-40, w.y+w.h);
-    ctx.lineTo(w.x+w.w+200, w.y+w.h+320);
-    ctx.lineTo(w.x-120, w.y+w.h+320);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  function drawPlant(p){
-    ctx.fillStyle = "rgba(40,255,160,.10)";
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r*1.8, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,.12)";
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
-  }
-
-  function drawLamp(p){
-    ctx.fillStyle = "rgba(255,220,160,.08)";
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r*2.6, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,.10)";
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
-  }
-
-  function drawFurnitureRect(x,y,w,h, tint="rgba(255,255,255,.06)", edge="rgba(255,255,255,.14)"){
-    // shadow
-    ctx.fillStyle = "rgba(0,0,0,.35)";
-    ctx.fillRect(x+10, y+10, w, h);
-    // body
-    ctx.fillStyle = tint;
-    ctx.fillRect(x, y, w, h);
-    // top highlight
-    ctx.fillStyle = "rgba(255,255,255,.06)";
-    ctx.fillRect(x, y, w, 10);
-    // edges
-    ctx.strokeStyle = edge;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, w, h);
-  }
-
-  function drawDoor(d){
-    ctx.fillStyle = "rgba(138,46,255,.10)";
-    ctx.fillRect(d.x, d.y, d.w, d.h);
-    ctx.strokeStyle = "rgba(255,255,255,.18)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(d.x, d.y, d.w, d.h);
-
-    // subtle portal glow
-    const g = ctx.createRadialGradient(d.x+d.w/2, d.y+d.h/2, 10, d.x+d.w/2, d.y+d.h/2, 120);
-    g.addColorStop(0, "rgba(138,46,255,.20)");
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(d.x-80, d.y-80, d.w+160, d.h+160);
-  }
-
-  function drawCharacter(){
-    // Sophie: cute top-down "chibi-ish" with dress + hair glow.
-    const col = outfitColor(save.outfit);
-    const bob = player.dancing ? Math.sin(t*10)*3 : 0;
-    const jump = player.jumpT > 0 ? Math.sin((1-player.jumpT)*Math.PI) * 12 : 0;
-    const splits = player.splitsT > 0 ? (1 - player.splitsT/0.6) : 0;
-
-    const x = player.x;
-    const y = player.y - jump + bob;
-
-    // shadow
-    ctx.fillStyle = "rgba(0,0,0,.35)";
-    ctx.beginPath(); ctx.ellipse(x, player.y+10, 18, 9, 0, 0, Math.PI*2); ctx.fill();
-
-    // hair aura
-    const aura = ctx.createRadialGradient(x, y-22, 6, x, y-22, 40);
-    aura.addColorStop(0, "rgba(180,140,255,.22)");
-    aura.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = aura;
-    ctx.beginPath(); ctx.arc(x, y-18, 40, 0, Math.PI*2); ctx.fill();
-
-    // head
-    ctx.fillStyle = "rgba(255,245,235,.95)";
-    ctx.beginPath(); ctx.arc(x, y-18, 12, 0, Math.PI*2); ctx.fill();
-
-    // hair
-    ctx.fillStyle = "rgba(20,20,30,.85)";
-    ctx.beginPath();
-    ctx.arc(x, y-22, 14, 0, Math.PI*2);
-    ctx.fill();
-
-    // dress/body
-    ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.moveTo(x, y-6);
-    ctx.lineTo(x-14, y+16);
-    ctx.lineTo(x+14, y+16);
-    ctx.closePath();
-    ctx.fill();
-
-    // legs (splits!)
-    ctx.strokeStyle = "rgba(255,245,235,.85)";
-    ctx.lineWidth = 4;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    if(splits > 0){
-      ctx.moveTo(x, y+16);
-      ctx.lineTo(x-18 - 10*splits, y+24);
-      ctx.moveTo(x, y+16);
-      ctx.lineTo(x+18 + 10*splits, y+24);
-    }else{
-      ctx.moveTo(x-4, y+16);
-      ctx.lineTo(x-6, y+26);
-      ctx.moveTo(x+4, y+16);
-      ctx.lineTo(x+6, y+26);
-    }
-    ctx.stroke();
-
-    // tiny sparkle when dancing
-    if(player.dancing){
-      for(let i=0;i<2;i++){
-        const sx = x + Math.sin(t*7 + i*2.2)*22;
-        const sy = y - 24 + Math.cos(t*8 + i*3.1)*18;
-        ctx.fillStyle = "rgba(255,255,255,.55)";
-        ctx.fillRect(sx, sy, 2, 2);
-      }
-    }
-  }
-
-  function drawMilo(){
-    // Milo: soft white cat follower, with little tail flick.
-    milo.purr += 0.02;
-    const tail = Math.sin(milo.purr*4) * 6;
-
-    // shadow
-    ctx.fillStyle = "rgba(0,0,0,.28)";
-    ctx.beginPath(); ctx.ellipse(milo.x, milo.y+8, 14, 7, 0, 0, Math.PI*2); ctx.fill();
-
-    // body
-    ctx.fillStyle = "rgba(255,255,255,.90)";
-    ctx.beginPath(); ctx.ellipse(milo.x, milo.y, 12, 9, 0, 0, Math.PI*2); ctx.fill();
-
-    // head
-    ctx.beginPath(); ctx.arc(milo.x+10, milo.y-6, 7, 0, Math.PI*2); ctx.fill();
-
-    // ears
-    ctx.fillStyle = "rgba(255,255,255,.86)";
-    ctx.beginPath();
-    ctx.moveTo(milo.x+6, milo.y-11);
-    ctx.lineTo(milo.x+10, milo.y-18);
-    ctx.lineTo(milo.x+14, milo.y-11);
-    ctx.closePath(); ctx.fill();
-
-    // tail
-    ctx.strokeStyle = "rgba(255,255,255,.85)";
-    ctx.lineWidth = 4;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(milo.x-10, milo.y+2);
-    ctx.quadraticCurveTo(milo.x-24, milo.y-6, milo.x-16, milo.y-16 + tail);
-    ctx.stroke();
-
-    // eyes (tiny)
-    ctx.fillStyle = "rgba(30,30,40,.55)";
-    ctx.fillRect(milo.x+12, milo.y-8, 2, 2);
-  }
-
-  // ========= UPDATE LOOP =========
-  let last = performance.now();
-  let t = 0;
-
-  function step(now){
-    const dt = Math.min(0.033, (now - last)/1000);
-    last = now;
-    t += dt;
-
-    // Movement
-    const a = axis();
-    let sp = (down("shift") ? 220 : 150);
-    if(player.dancing) sp *= 0.65;
-
-    // normalize diagonal
-    const mag = Math.hypot(a.x,a.y) || 1;
-    const ax = a.x / mag;
-    const ay = a.y / mag;
-
-    player.vx += (ax*sp - player.vx) * 0.18;
-    player.vy += (ay*sp - player.vy) * 0.18;
-
-    player.x += player.vx * dt;
-    player.y += player.vy * dt;
-
-    if(Math.abs(ax)+Math.abs(ay) > 0.01){
-      player.facing.x = ax;
-      player.facing.y = ay;
-    }
-
-    resolveSolids(player);
-
-    // Milo follow (spring)
-    const followDist = 46;
-    const tx = player.x - player.facing.x*followDist - 18;
-    const ty = player.y - player.facing.y*followDist + 14;
-    milo.x += (tx - milo.x) * 0.08;
-    milo.y += (ty - milo.y) * 0.08;
-    resolveSolids(milo);
-
-    // timers
-    player.jumpT = Math.max(0, player.jumpT - dt);
-    player.splitsT = Math.max(0, player.splitsT - dt);
-
-    updateCam();
-    render();
-
-    requestAnimationFrame(step);
-  }
-
-  // ========= RENDER =========
-  function render(){
-    ctx.clearRect(0,0,innerWidth,innerHeight);
-
-    // world-space draw
-    ctx.save();
-    ctx.translate(-cam.x, -cam.y);
-
-    drawWoodFloor();
-
-    // decor first
-    for(const d of world.decor){
-      if(d.type==="window") drawWindow(d);
-      if(d.type==="rug") drawRug(d);
-      if(d.type==="plant") drawPlant(d);
-      if(d.type==="lamp") drawLamp(d);
-    }
-
-    // furniture
-    for(const s of world.solids){
-      let tint = "rgba(255,255,255,.06)";
-      if(s.label==="Bed") tint = "rgba(160,190,255,.08)";
-      if(s.label==="Wardrobe") tint = "rgba(255,255,255,.07)";
-      if(s.label==="Poetry Desk") tint = "rgba(255,230,180,.06)";
-      if(s.label==="Guitar") tint = "rgba(255,255,255,.05)";
-      drawFurnitureRect(s.x,s.y,s.w,s.h, tint);
-      // tiny label glyph
-      ctx.fillStyle = "rgba(255,255,255,.22)";
-      ctx.font = "11px ui-monospace, Menlo, monospace";
-      ctx.fillText(s.label, s.x+10, s.y+18);
-    }
-
-    // doors
-    for(const d of world.doors){
-      drawDoor(d);
-      ctx.fillStyle = "rgba(255,255,255,.24)";
-      ctx.font = "11px ui-monospace, Menlo, monospace";
-      ctx.fillText("DOOR", d.x+10, d.y+18);
-    }
-
-    // characters
-    drawMilo();
-    drawCharacter();
-
-    // interaction prompt
-    const n = nearestInteract();
-    if(n){
-      // ring
-      ctx.strokeStyle = "rgba(138,46,255,.45)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.ellipse(player.x, player.y+8, 28, 14, 0, 0, Math.PI*2);
-      ctx.stroke();
-
-      // floating prompt
-      ctx.fillStyle = "rgba(0,0,0,.45)";
-      ctx.strokeStyle = "rgba(255,255,255,.14)";
-      ctx.lineWidth = 1;
-      const text = `E · ${n.label}`;
-      ctx.font = "12px ui-monospace, Menlo, monospace";
-      const m = ctx.measureText(text);
-      const px = player.x - m.width/2 - 10;
-      const py = player.y - 44;
-      ctx.beginPath();
-      roundRect(px, py, m.width+20, 22, 10);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = "rgba(255,255,255,.88)";
-      ctx.fillText(text, player.x - m.width/2, py+15);
-    }
-
-    ctx.restore();
-  }
-
-  function roundRect(x,y,w,h,r){
-    const rr = Math.min(r, w/2, h/2);
-    ctx.moveTo(x+rr,y);
-    ctx.arcTo(x+w,y, x+w,y+h, rr);
-    ctx.arcTo(x+w,y+h, x,y+h, rr);
-    ctx.arcTo(x,y+h, x,y, rr);
-    ctx.arcTo(x,y, x+w,y, rr);
-    ctx.closePath();
-  }
-
-  // ========= INIT =========
-  commitSave();
-  showToast(`Find calm. Then find the key.`, 1500);
-  requestAnimationFrame(step);
-})();
+.hud{
+position:fixed; left:12px; right:12px; top:12px; z-index:5;
+display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;
+pointer-events:none;
+}
+.pill{
+pointer-events:auto;
+border:1px solid var(--ui2); background:rgba(0,0,0,.35);
+backdrop-filter: blur(8px);
+border-radius:999px; padding:10px 12px;
+font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+display:flex; gap:10px; align-items:center;
+}
+.pill b{letter-spacing:.22em}
+.hint{
+pointer-events:auto;
+flex:1 1 260px;
+border:1px solid var(--ui2); background:rgba(0,0,0,.35);
+backdrop-filter: blur(8px);
+border-radius:18px; padding:10px 12px;
+font-size:11px; letter-spacing:.10em; line-height:1.35;
+}
+.hint .k{display:inline-block; padding:2px 7px; border-radius:8px; border:1px solid var(--ui2); background:rgba(255,255,255,.06); font-weight:700}
+.toast{
+position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+border-radius:14px; padding:10px 12px;
+font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
+max-width:min(720px, calc(100vw - 24px)); text-align:center;
+}
+.toast.on{opacity:1}
+
+/* poem modal */
+#poemBox{
+position:fixed;
+inset:0;
+display:none;
+place-items:center;
+background:rgba(0,0,0,.6);
+z-index:9;
+}
+#poemBox textarea{
+width:300px;height:180px;
+background:#0b0b12;
+color:#fff;
+border:1px solid var(--ui2);
+padding:10px;
+font-family:monospace;
+}
+#poemBox button{
+margin-top:6px;
+background:var(--vio);
+border:none;
+color:white;
+padding:6px 14px;
+cursor:pointer;
+}
+
+</style>
+</head>
+<body>
+
+<div class="hud">
+<div class="pill"><b>SOPHIA</b> <span id="status">BEDROOM</span></div>
+<div class="pill">MILO: <span id="miloMood">following</span></div>
+<div class="pill">KEYS: <span id="keys">NO</span></div>
+<div class="hint">
+Move: <span class="k">WASD</span> · Interact: <span class="k">E</span> · Run: <span class="k">SHIFT</span><br>
+Desk = write poetry · Guitar = play · Clothes = change outfit · Bed = sleep · Doors lead out
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="poemBox">
+<div>
+<textarea id="poemInput" placeholder="Write poetry..."></textarea><br>
+<button onclick="savePoem()">Save Line</button>
+</div>
+</div>
+
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+
+<script>
+const canvas=c;
+const ctx=canvas.getContext("2d",{alpha:false});
+ctx.imageSmoothingEnabled=false;
+
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+
+let state=JSON.parse(localStorage.getItem(STORE_KEY)||`{
+"hasKeys":false,"slept":false,"trip":false,"puke":false,
+"poemLines":0,"poems":[],"guitarPlayed":0,
+"outfit":0,
+"lastRoom":"BEDROOM",
+"sophia":{"x":160,"y":120},
+"milo":{"x":148,"y":132}
+}`);
+
+function save(){localStorage.setItem(STORE_KEY,JSON.stringify(state));}
+
+const W=320,H=180;
+
+/* ---------- controls ---------- */
+const keysDown=new Set();
+onkeydown=e=>{keysDown.add(e.key.toLowerCase());}
+onkeyup=e=>keysDown.delete(e.key.toLowerCase());
+
+/* ---------- solids ---------- */
+const solids=[
+[0,0,W,10],[0,0,10,H],[0,H-10,W,10],[W-10,0,10,H],
+[38,48,90,34],
+[210,42,78,42],
+[52,118,22,30],
+[132,86,56,18],
+[90,130,40,20]
+];
+
+/* ---------- zones ---------- */
+const zones=[
+{name:"DESK",rect:[44,52,78,26],action:()=>{poemBox.style.display="grid";}},
+{name:"BED",rect:[216,46,66,34],action:()=>{state.slept=true;save();toast("She sleeps. Audition gone.");}},
+{name:"GUITAR",rect:[48,122,32,26],action:()=>location.href="guitar.html"},
+{name:"CLOTHES",rect:[90,130,40,20],action:changeOutfit},
+{name:"DOOR_LIVING",rect:[W-24,78,14,28],action:()=>go("Sophie03.html")},
+{name:"DOOR_YARD",rect:[154,H-20,34,10],action:()=>go("Sophie02.html")}
+];
+
+function changeOutfit(){
+state.outfit=(state.outfit+1)%4;
+save();
+toast("Outfit changed.");
+}
+
+/* ---------- poem ---------- */
+function savePoem(){
+const t=document.getElementById("poemInput");
+if(!t.value.trim())return;
+state.poems.push(t.value.trim());
+state.poemLines++;
+t.value="";
+save();
+poemBox.style.display="none";
+toast("Poetry saved.");
+}
+
+/* ---------- movement ---------- */
+const sophia={x:state.sophia.x,y:state.sophia.y,w:10,h:12};
+const milo={x:state.milo.x,y:state.milo.y};
+
+function col(x,y,w,h){
+for(const s of solids){
+if(x<s[0]+s[2]&&x+w>s[0]&&y<s[1]+s[3]&&y+h>s[1])return true;
+}
+return false;
+}
+function move(dx,dy){
+if(!col(sophia.x+dx,sophia.y,sophia.w,sophia.h))sophia.x+=dx;
+if(!col(sophia.x,sophia.y+dy,sophia.w,sophia.h))sophia.y+=dy;
+}
+
+/* ---------- interact ---------- */
+function nearest(){
+let best=null,bd=9999;
+for(const z of zones){
+let cx=z.rect[0]+z.rect[2]/2;
+let cy=z.rect[1]+z.rect[3]/2;
+let d=(cx-sophia.x)**2+(cy-sophia.y)**2;
+if(d<bd&&d<1400){bd=d;best=z;}
+}
+return best;
+}
+
+function interact(){
+let z=nearest();
+if(z)z.action();
+}
+
+/* ---------- toast ---------- */
+function toast(msg){
+toastEl.textContent=msg;
+toastEl.classList.add("on");
+setTimeout(()=>toastEl.classList.remove("on"),1500);
+}
+const toastEl=document.getElementById("toast");
+
+/* ---------- milo ---------- */
+function updateMilo(){
+let tx=sophia.x-12,ty=sophia.y+6;
+milo.x+= (tx-milo.x)*.05;
+milo.y+= (ty-milo.y)*.05;
+
+if(Math.random()<.002) meow();
+}
+function meow(){
+toast("Milo: meow (he wants outside)");
+}
+
+/* ---------- render ---------- */
+function bg(){
+ctx.fillStyle="#05050a";
+ctx.fillRect(0,0,W,H);
+
+let g=ctx.createRadialGradient(80,60,10,80,60,160);
+g.addColorStop(0,"rgba(138,46,255,.2)");
+g.addColorStop(1,"transparent");
+ctx.fillStyle=g;
+ctx.fillRect(0,0,W,H);
+
+for(let y=92;y<H-10;y++){
+ctx.fillStyle=`rgba(255,255,255,${y%6==0?.1:.05})`;
+ctx.fillRect(10,y,W-20,1);
+}
+
+ctx.fillStyle="rgba(255,255,255,.06)";
+ctx.fillRect(10,10,W-20,80);
+
+rect(38,48,90,34);
+rect(210,42,78,42);
+rect(52,118,22,30);
+rect(132,86,56,18);
+rect(90,130,40,20);
+}
+
+function rect(x,y,w,h){
+ctx.fillStyle="rgba(255,255,255,.07)";
+ctx.fillRect(x,y,w,h);
+}
+
+/* sophia sprite */
+function drawSophia(){
+let x=sophia.x,y=sophia.y;
+
+ctx.fillStyle="#f2d27a";
+ctx.fillRect(x+1,y,8,4);
+ctx.fillRect(x,y+3,10,3);
+
+ctx.fillStyle="#ffd9c9";
+ctx.fillRect(x+2,y+5,6,4);
+
+ctx.fillStyle="#67b7ff";
+ctx.fillRect(x+3,y+6,1,1);
+ctx.fillRect(x+6,y+6,1,1);
+
+const outfits=["#a64dff","#4dffcf","#ff4d88","#ffd24d"];
+ctx.fillStyle=outfits[state.outfit];
+ctx.fillRect(x+2,y+9,6,3);
+}
+
+function drawMilo(){
+let x=milo.x,y=milo.y;
+ctx.fillStyle="#d8d8d8";
+ctx.fillRect(x+1,y+2,6,5);
+ctx.fillRect(x+1,y+1,2,2);
+ctx.fillRect(x+5,y+1,2,2);
+ctx.fillStyle="#1affd3";
+ctx.fillRect(x+2,y+4,1,1);
+ctx.fillRect(x+5,y+4,1,1);
+}
+
+/* ---------- loop ---------- */
+function loop(){
+if(!state.slept){
+let sp=keysDown.has("shift")?1.4:.9;
+let dx=(keysDown.has("d")||keysDown.has("arrowright")?sp:0)-(keysDown.has("a")||keysDown.has("arrowleft")?sp:0);
+let dy=(keysDown.has("s")||keysDown.has("arrowdown")?sp:0)-(keysDown.has("w")||keysDown.has("arrowup")?sp:0);
+move(dx,dy);
+}
+
+if(keysDown.has("e")&&!loop.e){interact();loop.e=1;} 
+if(!keysDown.has("e"))loop.e=0;
+
+updateMilo();
+
+state.sophia.x=sophia.x;
+state.sophia.y=sophia.y;
+state.milo.x=milo.x;
+state.milo.y=milo.y;
+save();
+
+bg();
+drawMilo();
+drawSophia();
+
+requestAnimationFrame(loop);
+}
+loop();
+
+function go(f){save();location.href=f;}
 </script>
 </body>
 </html>
