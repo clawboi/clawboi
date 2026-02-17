@@ -248,6 +248,7 @@ const zones=[
 /* Clothes -> wardrobe overlay (not a new html) */
 {name:"CLOTHES",rect:[90,130,40,20],action:openWardrobe},
 /* doors */
+{name:"DOOR_BATH",rect:[0,78,14,28],action:()=>go("bathroom.html")},
 {name:"DOOR_LIVING",rect:[W-24,78,14,28],action:()=>go("Sophie03.html")},
 {name:"DOOR_YARD",rect:[154,H-20,34,10],action:()=>go("Sophie02.html")}
 ];
@@ -420,6 +421,12 @@ drawDesk(38,48,90,34);
 drawGuitarStand(52,118,22,30);
 drawShelf(132,86,56,18);
 drawCloset(90,130,40,20);
+
+// bathroom door hint strip (left wall)
+ctx.fillStyle="rgba(255,255,255,.04)";
+ctx.fillRect(0,74,10,40);
+ctx.fillStyle="rgba(138,46,255,.10)";
+ctx.fillRect(1,78,6,26);
 
 /* small rug accent */
 ctx.fillStyle="rgba(138,46,255,.07)";
