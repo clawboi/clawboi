@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Yoga</title>
+<style>
+  :root{--bg:#07070b;--fg:#fff;--ui:rgba(255,255,255,.14);--aqua:#00ffd5;--sun:#ffd24d;}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  body::before{
+    content:"";position:fixed;inset:-20%;
+    background:
+      radial-gradient(circle at 20% 18%, rgba(0,255,213,.14), transparent 60%),
+      radial-gradient(circle at 70% 22%, rgba(255,210,77,.10), transparent 62%),
+      radial-gradient(circle at 50% 80%, rgba(255,255,255,.05), transparent 62%);
+    filter:blur(44px) saturate(1.12);
+    pointer-events:none;
+  }
+  .wrap{min-height:100%;display:grid;place-items:center;padding:18px;}
+  .card{
+    width:min(840px,100%);
+    border:1px solid var(--ui);
+    background:rgba(0,0,0,.45);
+    backdrop-filter: blur(10px);
+    border-radius:18px;
+    padding:16px;
+  }
+  h1{margin:0 0 10px 0;font-size:14px;letter-spacing:.22em;text-transform:uppercase;opacity:.95}
+  .sub{opacity:.72;font-size:12px;letter-spacing:.06em;line-height:1.35;margin-bottom:12px}
+  .row{
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.06);
+    border-radius:14px;
+    padding:12px;
+    display:flex;justify-content:space-between;gap:12px;align-items:center;
+    margin:10px 0;
+  }
+  button{
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.35);
+    color:#fff;border-radius:12px;
+    padding:10px 12px;
+    letter-spacing:.12em;text-transform:uppercase;font-size:11px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  button:hover{border-color:rgba(0,255,213,.28)}
+  .toast{
+    margin-top:10px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.55);
+    border-radius:14px;
+    padding:10px 12px;
+    font-size:12px;letter-spacing:.06em;opacity:.9;display:none;
+  }
+  .toast.on{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Yoga Class</h1>
+    <div class="sub">A calm pocket in the park. People breathe like they’re polishing the air.</div>
+
+    <div class="row">
+      <div>
+        <div style="letter-spacing:.12em;text-transform:uppercase;font-size:12px">Join the class</div>
+        <div class="sub" style="margin:6px 0 0 0">Costs $1. Lowers “heat” vibes. Gives a tiny cash chance.</div>
+      </div>
+      <button id="join">Join</button>
+    </div>
+
+    <div class="row">
+      <div>
+        <div style="letter-spacing:.12em;text-transform:uppercase;font-size:12px">Talk to instructor</div>
+        <div class="sub" style="margin:6px 0 0 0">“Tension is just future movement.”</div>
+      </div>
+      <button id="talk">Talk</button>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+      <button onclick="location.href='street.html'">Back to Street</button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<script>
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+function loadState(){ const r=localStorage.getItem(STORE_KEY); if(r){ try{return JSON.parse(r);}catch(e){} } return null; }
+function saveState(s){ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+const toastEl=document.getElementById("toast");
+function toast(msg){ toastEl.textContent=msg; toastEl.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>toastEl.classList.remove("on"),1400); }
+
+document.getElementById("join").onclick=()=>{
+  const s=loadState(); if(!s) return toast("Open street first.");
+  s.cash = s.cash|0;
+  if(s.cash<1) return toast("You need $1.");
+  s.cash -= 1;
+  s.street = s.street || {};
+  s.street.wanted = Math.max(0, (s.street.wanted|0) - 1);
+  // small chance they tip you for “good energy”
+  if(Math.random()<0.25){ s.cash += 3; toast("Someone tips you $3 for ‘healing energy.’"); }
+  else toast("Breath steady. Heat lowers.");
+  saveState(s);
+};
+
+document.getElementById("talk").onclick=()=>{
+  toast("Instructor: “Show up as yourself. That’s the pose.”");
+};
+</script>
+</body>
+</html>
