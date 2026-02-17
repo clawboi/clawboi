@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>CatStore</title>
+<style>
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff; --aqua:#00ffd5;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%; display:grid; place-items:center;}
+  canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+  .hud{position:fixed; left:12px; right:12px; top:12px; z-index:7; display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;}
+  .pill{pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.35); backdrop-filter: blur(8px);
+    border-radius:999px; padding:10px 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase; display:flex; gap:10px; align-items:center; white-space:nowrap;}
+  .toast{position:fixed; left:50%; bottom:16px; transform:translateX(-50%); border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+    border-radius:14px; padding:10px 12px; font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s; max-width:min(860px, calc(100vw - 24px)); text-align:center; z-index:8;}
+  .toast.on{opacity:1}
+  .microhint{position:fixed; right:12px; bottom:12px; z-index:6; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.35);
+    backdrop-filter: blur(8px); border-radius:14px; padding:8px 10px; font-size:10px; letter-spacing:.12em; opacity:.88; pointer-events:none;}
+</style>
+</head>
+<body>
+<div class="hud">
+  <div class="pill"><b>CATSTORE</b> <span>MILO CUSTOM</span></div>
+  <div class="pill">COAT: <span id="coat">SILVER</span></div>
+  <div class="pill">EYES: <span id="eyes">AQUA</span></div>
+  <div class="pill">FUR: <span id="fur">SHORT</span></div>
+  <div class="pill">E: CHANGE · S: SAVE · ESC: EXIT</div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="microhint">Bare bones now. Later you can apply these colors to Milo sprite everywhere.</div>
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d',{alpha:false});
+ctx.imageSmoothingEnabled=false;
+
+const UI={
+  toast:document.getElementById('toast'),
+  coat:document.getElementById('coat'),
+  eyes:document.getElementById('eyes'),
+  fur:document.getElementById('fur'),
+};
+
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+function loadState(){
+  const r=localStorage.getItem(STORE_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return {};
+}
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+
+let state=loadState();
+state.miloCustom = state.miloCustom || { coat:"SILVER", eyes:"AQUA", fur:"SHORT" };
+saveState();
+
+function toast(msg,ms=1400){
+  UI.toast.textContent=msg;
+  UI.toast.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>UI.toast.classList.remove('on'),ms);
+}
+
+const coats=["SILVER","BLACK","WHITE","VIOLET-TINT"];
+const eyes=["AQUA","BLUE","GOLD","GREEN"];
+const furs=["SHORT","FLUFFY","SPIKY","SLICK"];
+
+function syncUI(){
+  UI.coat.textContent=state.miloCustom.coat;
+  UI.eyes.textContent=state.miloCustom.eyes;
+  UI.fur.textContent=state.miloCustom.fur;
+}
+syncUI();
+
+function nextField(){
+  // cycles one field at a time, rotating through coat/eyes/fur
+  nextField._i = (nextField._i||0) % 3;
+  if(nextField._i===0){
+    const idx=(coats.indexOf(state.miloCustom.coat)+1)%coats.length;
+    state.miloCustom.coat=coats[idx];
+    toast("Coat changed.", 900);
+  }else if(nextField._i===1){
+    const idx=(eyes.indexOf(state.miloCustom.eyes)+1)%eyes.length;
+    state.miloCustom.eyes=eyes[idx];
+    toast("Eyes changed.", 900);
+  }else{
+    const idx=(furs.indexOf(state.miloCustom.fur)+1)%furs.length;
+    state.miloCustom.fur=furs[idx];
+    toast("Fur style changed.", 900);
+  }
+  nextField._i++;
+  syncUI();
+}
+
+function commit(){
+  saveState();
+  toast("Saved Milo customization.", 1200);
+}
+
+/* input */
+const keysDown=new Set();
+addEventListener('keydown',(e)=>{
+  const k=e.key.toLowerCase();
+  if(["e","s","escape"].includes(k)) e.preventDefault();
+  keysDown.add(k);
+});
+addEventListener('keyup',(e)=>keysDown.delete(e.key.toLowerCase()));
+
+/* render Milo preview using saved colors */
+function colorForCoat(){
+  switch(state.miloCustom.coat){
+    case "BLACK": return "#7a7a7a";
+    case "WHITE": return "#e6e6e6";
+    case "VIOLET-TINT": return "#d9d1ff";
+    default: return "#cfcfcf"; // SILVER
+  }
+}
+function colorForEyes(){
+  switch(state.miloCustom.eyes){
+    case "BLUE": return "#67b7ff";
+    case "GOLD": return "#ffd36a";
+    case "GREEN": return "#72ff95";
+    default: return "#1affd3"; // AQUA
+  }
+}
+function drawBevel(x,y,w,h,fill){
+  ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(x,y,w,1);
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(x,y+h-1,w,1);
+  ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(x,y,1,h);
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(x+w-1,y,1,h);
+}
+function drawMiloPreview(t){
+  const x=150, y=92;
+  ctx.fillStyle="rgba(0,0,0,.40)"; ctx.fillRect(x-1,y+7,10,2);
+
+  const coat=colorForCoat();
+  const eye=colorForEyes();
+
+  // body
+  ctx.fillStyle=coat; ctx.fillRect(x+1,y+2,6,5);
+
+  // ears - change based on fur
+  ctx.fillStyle=coat;
+  if(state.miloCustom.fur==="FLUFFY"){
+    ctx.fillRect(x+0,y+1,3,3); ctx.fillRect(x+5,y+1,3,3);
+    ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(x+0,y+0,8,1);
+  }else if(state.miloCustom.fur==="SPIKY"){
+    ctx.fillRect(x+1,y+1,2,2); ctx.fillRect(x+5,y+1,2,2);
+    ctx.fillStyle="rgba(138,46,255,.12)"; ctx.fillRect(x+2,y+0,1,1); ctx.fillRect(x+4,y+0,1,1);
+  }else if(state.miloCustom.fur==="SLICK"){
+    ctx.fillRect(x+1,y+1,2,2); ctx.fillRect(x+5,y+1,2,2);
+    ctx.fillStyle="rgba(0,0,0,.10)"; ctx.fillRect(x+1,y+2,6,1);
+  }else{
+    ctx.fillRect(x+1,y+1,2,2); ctx.fillRect(x+5,y+1,2,2);
+  }
+
+  // eyes
+  ctx.fillStyle=eye; ctx.fillRect(x+2,y+4,1,1); ctx.fillRect(x+5,y+4,1,1);
+
+  // tail wag
+  const wag=Math.round(Math.sin(t*0.18)*1);
+  ctx.fillStyle=coat; ctx.fillRect(x+7,y+3+wag,1,3);
+}
+
+function draw(t){
+  ctx.fillStyle="#05050a"; ctx.fillRect(0,0,320,180);
+  const g=ctx.createRadialGradient(160,60,10,160,60,180);
+  g.addColorStop(0,"rgba(255,255,255,.08)");
+  g.addColorStop(0.5,"rgba(138,46,255,.10)");
+  g.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,320,180);
+
+  // showroom panel
+  drawBevel(36,28,248,120,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,0,0,.50)"; ctx.fillRect(44,36,232,104);
+
+  // labels
+  ctx.font="8px ui-monospace, monospace";
+  ctx.fillStyle="rgba(255,255,255,.75)";
+  ctx.fillText("MILO PREVIEW", 52, 52);
+  ctx.fillText("E: cycle fields · S: save · ESC: exit", 52, 64);
+
+  // preview box
+  drawBevel(118,76,84,48,"rgba(255,255,255,.05)");
+  drawMiloPreview(t);
+}
+
+/* loop */
+let t=0;
+function loop(){
+  t++;
+
+  if(keysDown.has("e")){
+    if(!loop._e){ loop._e=true; nextField(); }
+  } else loop._e=false;
+
+  if(keysDown.has("s")){
+    if(!loop._s){ loop._s=true; commit(); }
+  } else loop._s=false;
+
+  if(keysDown.has("escape")){
+    if(!loop._esc){ loop._esc=true; saveState(); location.href="street.html"; }
+  } else loop._esc=false;
+
+  draw(t);
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
