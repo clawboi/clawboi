@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Record Player — Choose a Track</title>
+<style>
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --aqua:#00ffd5; --vio:#8a2eff;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{min-height:100%; display:grid; place-items:center; padding:18px;}
+  .panel{
+    width:min(980px, calc(100vw - 24px));
+    border:1px solid var(--ui2);
+    background:rgba(0,0,0,.35);
+    border-radius:18px;
+    overflow:hidden;
+  }
+  .top{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:14px 14px;
+    border-bottom:1px solid rgba(255,255,255,.10);
+  }
+  .title{
+    font-size:12px; letter-spacing:.20em; text-transform:uppercase; opacity:.92;
+  }
+  .btn{
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.45);
+    color:var(--fg);
+    border-radius:999px;
+    padding:10px 12px;
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap:0;
+  }
+  .left{ padding:14px; border-right:1px solid rgba(255,255,255,.08); }
+  .right{ padding:14px; }
+  .list{
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .track{
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(0,0,0,.35);
+    border-radius:14px;
+    padding:12px;
+    display:flex; justify-content:space-between; gap:12px; align-items:center;
+  }
+  .track b{font-size:12px; letter-spacing:.08em;}
+  .track small{display:block; opacity:.7; margin-top:4px; letter-spacing:.08em;}
+  .track .actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;}
+  .chip{
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.45);
+    color:var(--fg);
+    border-radius:999px;
+    padding:8px 10px;
+    font-size:10px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .chip.on{ border-color: rgba(0,255,213,.30); box-shadow:0 0 0 1px rgba(0,255,213,.10) inset; }
+  canvas{ width:100%; height:auto; image-rendering:pixelated; border-radius:14px; border:1px solid rgba(255,255,255,.10); background:#040409; }
+  .meta{
+    margin-top:12px;
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:14px;
+    padding:12px;
+    background:rgba(0,0,0,.25);
+    font-size:12px;
+    letter-spacing:.06em;
+    opacity:.9;
+  }
+  .meta div{margin:6px 0;}
+  .hint{opacity:.7; font-size:11px; letter-spacing:.10em; margin-top:10px;}
+  @media (max-width: 860px){
+    .grid{grid-template-columns:1fr;}
+    .left{border-right:none; border-bottom:1px solid rgba(255,255,255,.08);}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <div class="top">
+      <div class="title">Record Player</div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn" id="stop">Stop</button>
+        <button class="btn" id="back">Back to Kitchen</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="left">
+        <div class="list" id="list"></div>
+        <div class="hint">Tip: Choose a track, then go back. Kitchen will resume it.</div>
+      </div>
+
+      <div class="right">
+        <canvas id="viz" width="320" height="180"></canvas>
+        <div class="meta">
+          <div>NOW: <span id="now">none</span></div>
+          <div>STATE: <span id="state">stopped</span></div>
+          <div>TIME: <span id="time">0:00</span></div>
+          <div class="hint">If autoplay blocks, press Play again after a click.</div>
+        </div>
+        <audio id="a" preload="auto" loop></audio>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const AUDIO_KEY="SOPHIA_AUDITION_AUDIO_V1";
+
+function loadAudio(){ const r=localStorage.getItem(AUDIO_KEY); if(r){try{return JSON.parse(r);}catch(e){}}
+  return { src:"", title:"", playing:false, t:0, vol:0.85 };
+}
+function saveAudio(a){ localStorage.setItem(AUDIO_KEY, JSON.stringify(a)); }
+
+const tracks=[
+  { title:"LoFi Rain Playlist", desc:"soft rain, soft brain", src:"audio/lofi-rain.mp3" },
+  { title:"Margarita Spin", desc:"glossy kitchen club", src:"audio/margarita-spin.mp3" },
+  { title:"Late Night Neon", desc:"drift mode engaged", src:"audio/late-night-neon.mp3" },
+  { title:"Quiet Vinyl", desc:"crackle + calm", src:"audio/quiet-vinyl.mp3" },
+];
+
+const list=document.getElementById("list");
+const a=document.getElementById("a");
+const nowEl=document.getElementById("now");
+const stateEl=document.getElementById("state");
+const timeEl=document.getElementById("time");
+const viz=document.getElementById("viz");
+const ctx=viz.getContext("2d");
+ctx.imageSmoothingEnabled=false;
+
+let audioState = loadAudio();
+let cur = audioState.src ? tracks.find(t=>t.src===audioState.src) : null;
+
+function fmtTime(s){
+  s=Math.max(0, s|0);
+  const m=(s/60)|0;
+  const ss=String(s%60).padStart(2,"0");
+  return `${m}:${ss}`;
+}
+
+function renderList(){
+  list.innerHTML="";
+  const activeSrc = (loadAudio().src||"");
+  for(const t of tracks){
+    const div=document.createElement("div");
+    div.className="track";
+    div.innerHTML=`
+      <div>
+        <b>${t.title}</b>
+        <small>${t.desc}</small>
+      </div>
+      <div class="actions">
+        <button class="chip ${activeSrc===t.src ? "on":""}" data-act="select">Select</button>
+        <button class="chip" data-act="play">Play</button>
+      </div>
+    `;
+    div.querySelectorAll("button").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const act=btn.getAttribute("data-act");
+        if(act==="select"){
+          audioState = loadAudio();
+          audioState.src=t.src;
+          audioState.title=t.title;
+          audioState.t=0;
+          audioState.playing=false;
+          saveAudio(audioState);
+          renderList();
+          updateMeta();
+        }
+        if(act==="play"){
+          audioState = loadAudio();
+          audioState.src=t.src;
+          audioState.title=t.title;
+          audioState.playing=true;
+          audioState.t=0;
+          saveAudio(audioState);
+          await playFromState(true);
+          renderList();
+        }
+      });
+    });
+    list.appendChild(div);
+  }
+}
+
+async function playFromState(forceStart=false){
+  audioState = loadAudio();
+  if(!audioState.src){
+    stateEl.textContent="stopped";
+    nowEl.textContent="none";
+    return;
+  }
+  a.src = audioState.src;
+  a.volume = Math.max(0, Math.min(1, audioState.vol ?? 0.85));
+  a.currentTime = forceStart ? 0 : (audioState.t||0);
+
+  try{
+    await a.play();
+    audioState.playing=true;
+    saveAudio(audioState);
+  }catch(e){
+    // autoplay blocked: user can press Play again
+  }
+  updateMeta();
+}
+
+function stop(){
+  a.pause();
+  a.currentTime=0;
+  audioState = loadAudio();
+  audioState.playing=false;
+  audioState.t=0;
+  saveAudio(audioState);
+  updateMeta();
+  renderList();
+}
+
+function updateMeta(){
+  const s=loadAudio();
+  nowEl.textContent = s.title || "none";
+  stateEl.textContent = s.playing ? "playing" : "stopped";
+  timeEl.textContent = fmtTime((a.currentTime||0));
+}
+setInterval(()=>{
+  if(!a.src) return updateMeta();
+  audioState = loadAudio();
+  audioState.t = a.currentTime || 0;
+  audioState.playing = !a.paused;
+  saveAudio(audioState);
+  updateMeta();
+}, 250);
+
+/* visualization: spinning “record” + pulse bars */
+function draw(){
+  ctx.fillStyle="#040409"; ctx.fillRect(0,0,320,180);
+
+  const s=loadAudio();
+  const playing = s.playing && !a.paused && a.src;
+
+  // record platter
+  const cx=160, cy=90;
+  const spin = playing ? (performance.now()*0.003) : 0;
+  for(let r=70;r>12;r-=6){
+    const alpha = 0.05 + (r%12===0?0.03:0);
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.beginPath();
+    ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  // label glow
+  ctx.fillStyle = playing ? "rgba(0,255,213,.10)" : "rgba(138,46,255,.06)";
+  ctx.beginPath(); ctx.arc(cx,cy,22,0,Math.PI*2); ctx.fill();
+
+  // needle
+  ctx.strokeStyle="rgba(255,255,255,.10)";
+  ctx.beginPath(); ctx.moveTo(250,40); ctx.lineTo(200,82); ctx.stroke();
+  ctx.fillStyle="rgba(255,255,255,.08)";
+  ctx.fillRect(246,36,10,10);
+
+  // pulse bars
+  const p = playing ? 1 : 0.2;
+  for(let i=0;i<24;i++){
+    const x=24 + i*12;
+    const h = (playing ? (10 + 22*Math.abs(Math.sin(spin + i*0.3))) : 6);
+    ctx.fillStyle = `rgba(0,255,213,${0.04 + 0.04*p})`;
+    ctx.fillRect(x,160-h,8,h);
+  }
+
+  // title text (pixelish)
+  ctx.font="10px ui-monospace, monospace";
+  ctx.fillStyle="rgba(255,255,255,.85)";
+  ctx.fillText(s.title ? s.title.slice(0,28) : "choose a track", 16, 22);
+
+  requestAnimationFrame(draw);
+}
+draw();
+
+/* buttons */
+document.getElementById("stop").addEventListener("click", stop);
+document.getElementById("back").addEventListener("click", ()=>location.href="Sophie04.html");
+
+renderList();
+updateMeta();
+if(loadAudio().playing) playFromState(false);
+</script>
+</body>
+</html>
