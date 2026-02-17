@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Weed Store</title>
+<style>
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff; --aqua:#00ffd5; }
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%; display:grid; place-items:center;}
+  canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+  .hud{position:fixed; left:12px; right:12px; top:12px; z-index:7; display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;}
+  .pill{pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.35); backdrop-filter: blur(8px);
+    border-radius:999px; padding:10px 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase; display:flex; gap:10px; align-items:center; white-space:nowrap;}
+  .toast{position:fixed; left:50%; bottom:16px; transform:translateX(-50%); border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+    border-radius:14px; padding:10px 12px; font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s; max-width:min(860px, calc(100vw - 24px)); text-align:center; z-index:8;}
+  .toast.on{opacity:1}
+  .microhint{position:fixed; right:12px; bottom:12px; z-index:6; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.35);
+    backdrop-filter: blur(8px); border-radius:14px; padding:8px 10px; font-size:10px; letter-spacing:.12em; opacity:.88; pointer-events:none;}
+</style>
+</head>
+<body>
+<div class="hud">
+  <div class="pill"><b>WEED STORE</b> <span>INTERIOR</span></div>
+  <div class="pill">CASH: <span id="cash">0</span></div>
+  <div class="pill">MUSHROOMS: <span id="ammo">0</span></div>
+  <div class="pill">WEED: <span id="weed">0</span></div>
+  <div class="pill">WANTED: <span id="wanted">0</span></div>
+  <div class="pill">E: INTERACT · Q: SMOKE · ESC: EXIT</div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="microhint">Zones: Counter (buy) · Back Door (Mystery Man) · Shelf (shoplift)</div>
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d',{alpha:false});
+ctx.imageSmoothingEnabled=false;
+
+const UI={
+  toast:document.getElementById('toast'),
+  cash:document.getElementById('cash'),
+  ammo:document.getElementById('ammo'),
+  weed:document.getElementById('weed'),
+  wanted:document.getElementById('wanted')
+};
+
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+function loadState(){
+  const r=localStorage.getItem(STORE_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return { street:{ammo:0,wanted:0}, wallet:{cash:0}, inventory:{weed:0, movies:[]}, sophia:{x:160,y:120}, milo:{x:148,y:132} };
+}
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+let state=loadState();
+state.wallet = state.wallet || {cash:0};
+state.inventory = state.inventory || {weed:0, movies:[]};
+state.street = state.street || {ammo:0,wanted:0,heat:0};
+if(typeof state.inventory.weed!=="number") state.inventory.weed=0;
+if(typeof state.wallet.cash!=="number") state.wallet.cash=0;
+if(typeof state.street.ammo!=="number") state.street.ammo=0;
+if(typeof state.street.wanted!=="number") state.street.wanted=0;
+saveState();
+
+function toast(msg,ms=1600){
+  UI.toast.textContent=msg;
+  UI.toast.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>UI.toast.classList.remove('on'),ms);
+}
+function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
+
+function syncUI(){
+  UI.cash.textContent=String(state.wallet.cash|0);
+  UI.ammo.textContent=String(state.street.ammo|0);
+  UI.weed.textContent=String(state.inventory.weed|0);
+  UI.wanted.textContent=String(state.street.wanted|0);
+}
+syncUI();
+
+/* input */
+const keysDown=new Set();
+addEventListener('keydown',(e)=>{
+  const k=e.key.toLowerCase();
+  if(["arrowup","arrowdown","arrowleft","arrowright"," ","shift","w","a","s","d","e","q","escape"].includes(k)) e.preventDefault();
+  keysDown.add(k);
+});
+addEventListener('keyup',(e)=>keysDown.delete(e.key.toLowerCase()));
+
+/* room layout */
+const W=canvas.width,H=canvas.height;
+const zones=[
+  {name:"COUNTER", rect:[40,52,150,28], action: buyMenu},
+  {name:"SHELF", rect:[210,40,80,46], action: shoplift},
+  {name:"BACK DOOR", rect:[280,120,30,40], action: goMystery},
+  {name:"EXIT", rect:[0,78,20,30], action: exit},
+];
+
+const sophia={x:150,y:120,w:10,h:12,speed:0.9,run:1.25};
+const milo={x:140,y:132,w:8,h:8};
+
+function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
+  return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
+}
+function nearestZone(){
+  const px=sophia.x+sophia.w/2, py=sophia.y+sophia.h/2;
+  let best=null, bd=9999;
+  for(const z of zones){
+    const [x,y,w,h]=z.rect;
+    const cx=x+w/2, cy=y+h/2;
+    const d=(cx-px)*(cx-px)+(cy-py)*(cy-py);
+    if(d<bd && d<1400){ bd=d; best=z; }
+  }
+  return best;
+}
+function interact(){ const z=nearestZone(); if(z) z.action(); }
+
+/* actions */
+let menuCooldown=0;
+
+function buyMenu(){
+  if(menuCooldown>0) return;
+  menuCooldown=20;
+
+  // ultra-simple rotating “choices”
+  const items=[
+    {name:"PRE-ROLL", cost:15, give:1},
+    {name:"GUMMY", cost:25, give:2},
+    {name:"FLOWER", cost:40, give:3},
+  ];
+  const pick=items[(Math.random()*items.length)|0];
+
+  if(state.wallet.cash < pick.cost){
+    toast(`${pick.name} costs $${pick.cost}. Not enough cash.`, 1700);
+    return;
+  }
+  state.wallet.cash -= pick.cost;
+  state.inventory.weed += pick.give;
+  saveState();
+  syncUI();
+  toast(`Bought ${pick.name} (+${pick.give} WEED).`, 1600);
+}
+
+function shoplift(){
+  // non-lethal “robbery”: increases wanted, gives weed
+  const got = 1 + ((Math.random()*2)|0);
+  state.inventory.weed += got;
+
+  // escalate wanted lightly
+  state.street.wanted = clamp((state.street.wanted|0) + 1, 0, 5);
+  state.street.heat = clamp((state.street.heat|0) + 420, 0, 2000);
+
+  saveState();
+  syncUI();
+  toast(`You swipe ${got} WEED. Camera blink. WANTED +1.`, 1900);
+}
+
+function goMystery(){
+  // Mystery Man: sell mushrooms for a NON-LETHAL “stun puff” tool in a separate page
+  saveState();
+  location.href="mysteryman.html";
+}
+
+let high=0;
+function smoke(){
+  if((state.inventory.weed|0)<=0) return toast("No weed to smoke.", 1300);
+  state.inventory.weed--;
+  high = 420; // frames
+  saveState();
+  syncUI();
+  toast("She smokes. The room tilts into neon syrup.", 2000);
+}
+
+function exit(){
+  saveState();
+  location.href="street.html";
+}
+
+/* rendering */
+function drawBevel(x,y,w,h,fill){
+  ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(x,y,w,1);
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(x,y+h-1,w,1);
+  ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(x,y,1,h);
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(x+w-1,y,1,h);
+}
+function drawHint(text,x,y){
+  const pad=3;
+  ctx.font="8px ui-monospace, monospace";
+  const m=ctx.measureText(text);
+  const w=Math.ceil(m.width)+pad*2, h=12;
+  ctx.fillStyle="rgba(0,0,0,.65)"; ctx.fillRect(x-w/2,y-h,w,h);
+  ctx.strokeStyle="rgba(255,255,255,.12)"; ctx.strokeRect(x-w/2+0.5,y-h+0.5,w-1,h-1);
+  ctx.fillStyle="rgba(255,255,255,.9)"; ctx.fillText(text,x-w/2+pad,y-4);
+}
+
+function drawSophia(x,y){
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(x-1,y+11,12,2);
+  ctx.fillStyle="#f2d27a"; ctx.fillRect(x+1,y+0,8,4); ctx.fillRect(x+0,y+3,10,3);
+  ctx.fillStyle="#ffd9c9"; ctx.fillRect(x+2,y+5,6,4);
+  ctx.fillStyle="#67b7ff"; ctx.fillRect(x+3,y+6,1,1); ctx.fillRect(x+6,y+6,1,1);
+  ctx.fillStyle="rgba(138,46,255,.55)"; ctx.fillRect(x+2,y+9,6,3);
+  ctx.fillStyle="rgba(255,255,255,.14)"; ctx.fillRect(x+3,y+10,4,1);
+}
+function drawMilo(x,y,t){
+  ctx.fillStyle="rgba(0,0,0,.40)"; ctx.fillRect(x-1,y+7,10,2);
+  ctx.fillStyle="#d8d8d8"; ctx.fillRect(x+1,y+2,6,5);
+  ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+1,y+1,2,2); ctx.fillRect(x+5,y+1,2,2);
+  ctx.fillStyle="#1affd3"; ctx.fillRect(x+2,y+4,1,1); ctx.fillRect(x+5,y+4,1,1);
+  const wag=Math.round(Math.sin(t*0.18)*1);
+  ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+7,y+3+wag,1,3);
+}
+
+function drawWorld(t){
+  ctx.fillStyle="#05050a"; ctx.fillRect(0,0,W,H);
+
+  // vibe lighting
+  const g=ctx.createRadialGradient(160,70,12,160,70,190);
+  g.addColorStop(0,"rgba(0,255,213,.06)");
+  g.addColorStop(0.6,"rgba(138,46,255,.08)");
+  g.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  // walls/floor
+  ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(10,10,W-20,78);
+  for(let y=92;y<H-10;y++){
+    ctx.fillStyle=`rgba(255,255,255,${(y%6===0)?0.10:0.05})`;
+    ctx.fillRect(10,y,W-20,1);
+  }
+
+  // counter
+  drawBevel(40,52,150,28,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(50,58,130,16);
+
+  // shelf
+  drawBevel(210,40,80,46,"rgba(255,255,255,.05)");
+  for(let i=0;i<6;i++){
+    ctx.fillStyle="rgba(138,46,255,.10)";
+    ctx.fillRect(216+i*12,46,8,10);
+    ctx.fillStyle="rgba(0,255,213,.08)";
+    ctx.fillRect(216+i*12,60,8,10);
+  }
+
+  // back door
+  drawBevel(280,120,30,40,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,255,213,.12)"; ctx.fillRect(284,124,22,10);
+
+  // exit (left)
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(0,78,20,30);
+
+  // HIGH EFFECT overlay (pure visual, no real-world instructions)
+  if(high>0){
+    const pulse = 0.07 + 0.04*Math.sin(t*0.18);
+    ctx.fillStyle=`rgba(138,46,255,${pulse})`; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=`rgba(0,255,213,${pulse*0.7})`; ctx.fillRect(0,0,W,H);
+    // “wobble” border
+    ctx.fillStyle="rgba(255,255,255,.05)";
+    ctx.fillRect(0, 0, W, 2);
+    ctx.fillRect(0, H-2, W, 2);
+    ctx.fillRect(0, 0, 2, H);
+    ctx.fillRect(W-2, 0, 2, H);
+    high--;
+  }
+
+  const z=nearestZone();
+  if(z) drawHint(z.name, sophia.x+6, sophia.y-10);
+}
+
+/* loop */
+let t=0;
+function loop(){
+  t++;
+
+  // move
+  const run=keysDown.has("shift");
+  const sp=sophia.speed*(run?sophia.run:1);
+  let dx=0,dy=0;
+  if(keysDown.has("w")||keysDown.has("arrowup")) dy-=sp;
+  if(keysDown.has("s")||keysDown.has("arrowdown")) dy+=sp;
+  if(keysDown.has("a")||keysDown.has("arrowleft")) dx-=sp;
+  if(keysDown.has("d")||keysDown.has("arrowright")) dx+=sp;
+  if(dx&&dy){dx*=0.72; dy*=0.72;}
+  sophia.x=clamp(sophia.x+dx, 12, W-12);
+  sophia.y=clamp(sophia.y+dy, 12, H-14);
+
+  // milo follow
+  const tx=sophia.x-10, ty=sophia.y+6;
+  milo.x += (tx-milo.x)*0.07;
+  milo.y += (ty-milo.y)*0.07;
+
+  // actions
+  if(keysDown.has("e")){
+    if(!loop._e){ loop._e=true; interact(); }
+  } else loop._e=false;
+
+  if(keysDown.has("q")){
+    if(!loop._q){ loop._q=true; smoke(); }
+  } else loop._q=false;
+
+  if(keysDown.has("escape")){
+    if(!loop._esc){ loop._esc=true; exit(); }
+  } else loop._esc=false;
+
+  if(menuCooldown>0) menuCooldown--;
+
+  drawWorld(t);
+  drawMilo(Math.round(milo.x), Math.round(milo.y), t);
+  drawSophia(Math.round(sophia.x), Math.round(sophia.y));
+
+  // save occasionally
+  if(t%90===0){ saveState(); }
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
