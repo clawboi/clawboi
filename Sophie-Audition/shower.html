@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia’s Audition — Shower</title>
+<style>
+:root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff; --cyan:#00ffd5;}
+html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; overflow:hidden;}
+canvas{position:fixed; inset:0; width:100%; height:100%;}
+.hud{position:fixed; left:12px; right:12px; top:12px; z-index:5; display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+.pill{
+  border:1px solid var(--ui2); background:rgba(0,0,0,.40); backdrop-filter: blur(10px);
+  border-radius:999px; padding:10px 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+}
+.row{position:fixed; left:12px; right:12px; bottom:12px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; z-index:6;}
+button,a.btn{
+  border:1px solid rgba(255,255,255,.16); background:rgba(0,0,0,.45); color:#fff;
+  padding:14px 16px; border-radius:16px; cursor:pointer; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+  backdrop-filter: blur(10px); text-decoration:none;
+}
+button.primary{background:rgba(0,255,213,.18); border-color:rgba(0,255,213,.28)}
+.toast{
+  position:fixed; left:50%; bottom:76px; transform:translateX(-50%);
+  border:1px solid var(--ui2); background:rgba(0,0,0,.55); border-radius:14px;
+  padding:10px 12px; font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
+  max-width:min(720px, calc(100vw - 24px)); text-align:center; z-index:6;
+}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="hud">
+  <div class="pill"><b>SHOWER</b></div>
+  <div class="pill">Tap to wash · iPhone audio unlocks on first tap</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="row">
+  <button class="primary" id="waterBtn">TOGGLE WATER</button>
+  <button id="soapBtn">SOAP</button>
+  <a class="btn" href="bathroom.html">BACK</a>
+</div>
+
+<script>
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+let state=JSON.parse(localStorage.getItem(STORE_KEY)||`{}`);
+function save(){localStorage.setItem(STORE_KEY,JSON.stringify(state));}
+
+const cv=document.getElementById("c");
+const ctx=cv.getContext("2d");
+let dpr,W,H;
+function resize(){
+  dpr=Math.max(1, Math.min(2, devicePixelRatio||1));
+  W=Math.floor(innerWidth*dpr); H=Math.floor(innerHeight*dpr);
+  cv.width=W; cv.height=H;
+  cv.style.width=innerWidth+"px"; cv.style.height=innerHeight+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener("resize",resize); resize();
+
+const toastEl=document.getElementById("toast");
+function toast(m){ toastEl.textContent=m; toastEl.classList.add("on"); setTimeout(()=>toastEl.classList.remove("on"),1400); }
+
+// iPhone-safe audio
+let AC, master, unlocked=false;
+function unlock(){
+  if(unlocked) return;
+  try{
+    AC = AC || new (AudioContext||webkitAudioContext)();
+    if(AC.state==="suspended") AC.resume();
+    master = AC.createGain(); master.gain.value=0.55; master.connect(AC.destination);
+    unlocked=true;
+  }catch(e){}
+}
+addEventListener("pointerdown", unlock, {passive:true});
+
+let waterOn=false;
+let soap=false;
+
+// water noise loop
+let waterSrc=null;
+function startWater(){
+  if(!unlocked||!AC||!master) return;
+  if(waterSrc) return;
+  const t=AC.currentTime;
+
+  // pink-ish noise
+  const len = Math.floor(AC.sampleRate*1.0);
+  const buf = AC.createBuffer(1,len,AC.sampleRate);
+  const data = buf.getChannelData(0);
+  let last=0;
+  for(let i=0;i<len;i++){
+    const n=(Math.random()*2-1);
+    last = (last*0.98) + (n*0.02);
+    data[i]=last*0.7;
+  }
+  const src = AC.createBufferSource();
+  src.buffer=buf; src.loop=true;
+
+  const bp=AC.createBiquadFilter();
+  bp.type="bandpass"; bp.frequency.value=900; bp.Q.value=0.9;
+
+  const g=AC.createGain();
+  g.gain.value=0.10;
+
+  src.connect(bp); bp.connect(g); g.connect(master);
+  src.start(t);
+  waterSrc={src,g};
+}
+function stopWater(){
+  if(!waterSrc) return;
+  try{ waterSrc.g.gain.value=0.0001; waterSrc.src.stop(); }catch(e){}
+  waterSrc=null;
+}
+
+// bubbles blip
+function blip(freq=740, dur=0.06, vol=0.07){
+  if(!unlocked||!AC||!master) return;
+  const t=AC.currentTime;
+  const o=AC.createOscillator();
+  const g=AC.createGain();
+  o.type="sine";
+  o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t+dur+0.02);
+}
+
+document.getElementById("waterBtn").onclick=()=>{
+  waterOn=!waterOn;
+  if(waterOn){ startWater(); toast("Water on."); }
+  else{ stopWater(); toast("Water off."); }
+};
+document.getElementById("soapBtn").onclick=()=>{
+  soap=!soap;
+  toast(soap ? "Soap: yes. (tap the screen)" : "Soap: no.");
+};
+
+let drops=[];
+let steam=[];
+function spawnDrop(){
+  drops.push({
+    x: innerWidth*0.55 + (Math.random()*2-1)*innerWidth*0.18,
+    y: innerHeight*0.12,
+    vy: 6 + Math.random()*6,
+    a: 0.25 + Math.random()*0.45
+  });
+}
+function spawnSteam(){
+  steam.push({
+    x: innerWidth*0.55 + (Math.random()*2-1)*innerWidth*0.18,
+    y: innerHeight*0.65 + Math.random()*40,
+    vx: (Math.random()*2-1)*0.5,
+    vy: -0.6 - Math.random()*1.2,
+    life: 1.6 + Math.random()*1.2
+  });
+}
+
+addEventListener("pointerdown", (e)=>{
+  unlock();
+  if(soap){
+    // bubble pop field + tiny sounds
+    for(let i=0;i<10;i++){
+      steam.push({
+        x:e.clientX+(Math.random()*2-1)*40,
+        y:e.clientY+(Math.random()*2-1)*30,
+        vx:(Math.random()*2-1)*0.8,
+        vy:-0.8-Math.random()*0.9,
+        life:1.1+Math.random()*0.8
+      });
+      if(Math.random()<0.45) blip(640+Math.random()*280, 0.05, 0.06);
+    }
+  }
+},{passive:true});
+
+let t0=performance.now();
+function loop(){
+  const t=(performance.now()-t0)/1000;
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+
+  // background: glass + tile glow
+  ctx.fillStyle="#05050a";
+  ctx.fillRect(0,0,innerWidth,innerHeight);
+
+  let g=ctx.createRadialGradient(innerWidth*0.6,innerHeight*0.45,20,innerWidth*0.6,innerHeight*0.45,innerWidth*0.9);
+  g.addColorStop(0,"rgba(0,255,213,.10)");
+  g.addColorStop(1,"transparent");
+  ctx.fillStyle=g; ctx.fillRect(0,0,innerWidth,innerHeight);
+
+  let g2=ctx.createRadialGradient(innerWidth*0.35,innerHeight*0.25,20,innerWidth*0.35,innerHeight*0.25,innerWidth*0.9);
+  g2.addColorStop(0,"rgba(138,46,255,.14)");
+  g2.addColorStop(1,"transparent");
+  ctx.fillStyle=g2; ctx.fillRect(0,0,innerWidth,innerHeight);
+
+  // shower frame
+  ctx.fillStyle="rgba(255,255,255,.06)";
+  ctx.fillRect(innerWidth*0.30, innerHeight*0.10, innerWidth*0.55, innerHeight*0.78);
+  ctx.fillStyle="rgba(255,255,255,.04)";
+  ctx.fillRect(innerWidth*0.32, innerHeight*0.12, innerWidth*0.51, innerHeight*0.74);
+
+  // Sophia silhouette behind frosted glass
+  const sx=innerWidth*0.58, sy=innerHeight*0.52;
+  ctx.globalAlpha=0.30;
+  ctx.fillStyle="rgba(255,255,255,.25)";
+  ctx.beginPath(); ctx.ellipse(sx, sy-70, 26, 22, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillRect(sx-18, sy-50, 36, 55);
+  ctx.globalAlpha=1;
+
+  // frosted glass texture
+  ctx.globalAlpha=0.40;
+  for(let i=0;i<220;i++){
+    const x=innerWidth*0.32 + Math.random()*innerWidth*0.51;
+    const y=innerHeight*0.12 + Math.random()*innerHeight*0.74;
+    ctx.fillStyle=`rgba(255,255,255,${0.02+Math.random()*0.03})`;
+    ctx.fillRect(x,y,2,2);
+  }
+  ctx.globalAlpha=1;
+
+  // water drops
+  if(waterOn){
+    if(Math.random()<0.45) spawnDrop();
+    if(Math.random()<0.25) spawnSteam();
+  }
+  drops.forEach(d=>{
+    d.y += d.vy;
+    d.vy += 0.18;
+    d.a *= 0.995;
+  });
+  drops = drops.filter(d=>d.y < innerHeight*0.90);
+
+  drops.forEach(d=>{
+    ctx.globalAlpha=d.a;
+    ctx.fillStyle="rgba(255,255,255,.65)";
+    ctx.fillRect(d.x, d.y, 2, 8);
+  });
+  ctx.globalAlpha=1;
+
+  // steam
+  if(waterOn && Math.random()<0.25) spawnSteam();
+  steam.forEach(s=>{
+    s.x += s.vx; s.y += s.vy;
+    s.life -= 1/60;
+  });
+  steam = steam.filter(s=>s.life>0);
+  steam.forEach(s=>{
+    ctx.globalAlpha=Math.max(0, Math.min(0.18, s.life*0.12));
+    ctx.fillStyle="rgba(255,255,255,.85)";
+    ctx.beginPath();
+    ctx.ellipse(s.x, s.y, 26, 14, 0, 0, Math.PI*2);
+    ctx.fill();
+  });
+  ctx.globalAlpha=1;
+
+  // title hint
+  ctx.fillStyle="rgba(255,255,255,.80)";
+  ctx.font="12px ui-monospace, Menlo, monospace";
+  ctx.fillText(waterOn ? "water: ON" : "water: OFF", 18, innerHeight-18);
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
