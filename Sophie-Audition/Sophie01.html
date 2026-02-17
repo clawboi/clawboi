@@ -416,6 +416,27 @@ body::before{
     ctx.fillStyle=g;
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
+    // --- WINDOW RAYS (storybook vibe) ---
+const t = performance.now()*0.001;
+const rayX = X(furn.window.x + furn.window.w/2);
+const rayY = Y(furn.window.y + furn.window.h/2);
+
+for(let i=0;i<6;i++){
+  const w = Wp(18 + i*6);
+  const h = Hp(90 + i*8);
+  const ox = Math.sin(t*0.8 + i)*Wp(6);
+  const oy = Math.cos(t*0.6 + i)*Hp(3);
+
+  ctx.save();
+  ctx.translate(rayX+ox, rayY+oy);
+  ctx.rotate(0.12 + Math.sin(t*0.35+i)*0.03);
+  ctx.globalAlpha = 0.10 - i*0.012;
+  ctx.fillStyle = "rgba(255,245,210,.55)";
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+ctx.globalAlpha = 1;
+
     // floor (solid wood-ish tile look)
     const floorY = 118;
     const fy = Y(floorY);
@@ -459,7 +480,7 @@ body::before{
   function drawFurniture(){
     // Solid palette (real RPG props)
     box3D(furn.desk.x, furn.desk.y, furn.desk.w, furn.desk.h, furn.desk.d,
-      "#6e4bb8", "#5b3aa3", "#4a2f86", "rgba(0,0,0,.35)"
+      "#4a3a6a", "#3a2c57", "#2d2146", "rgba(0,0,0,.35)"
     );
     // desk details
     rrect(X(furn.desk.x+14), Y(furn.desk.y+12), Wp(84), Hp(10), Wp(4), "#3a255f", "rgba(255,255,255,.10)");
@@ -467,7 +488,7 @@ body::before{
     rrect(X(furn.desk.x+23), Y(furn.desk.y - furn.desk.d + 9), Wp(18), Hp(7), Wp(3), "#3ee6d3", "rgba(255,255,255,.10)");
 
     box3D(furn.bed.x, furn.bed.y, furn.bed.w, furn.bed.h, furn.bed.d,
-      "#62d3c9", "#4fbdb3", "#3a9a92", "rgba(0,0,0,.35)"
+      "#3e8f8b", "#2f6f6c", "#234e4c", "rgba(0,0,0,.35)"
     );
     rrect(X(furn.bed.x+14), Y(furn.bed.y+12), Wp(44), Hp(16), Wp(7), "#efeef7", "rgba(0,0,0,.18)"); // pillow
     rrect(X(furn.bed.x+10), Y(furn.bed.y+34), Wp(furn.bed.w-20), Hp(16), Wp(8), "#ff86c3", "rgba(0,0,0,.18)"); // blanket
