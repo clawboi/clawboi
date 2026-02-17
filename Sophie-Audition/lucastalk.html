@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Lucas Talk — Kitchen Chat</title>
+<style>
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --aqua:#00ffd5; --vio:#8a2eff;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{min-height:100%; display:grid; place-items:center; padding:18px;}
+  .panel{
+    width:min(980px, calc(100vw - 24px));
+    border:1px solid var(--ui2);
+    background:rgba(0,0,0,.35);
+    border-radius:18px;
+    overflow:hidden;
+  }
+  .top{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:14px 14px;
+    border-bottom:1px solid rgba(255,255,255,.10);
+  }
+  .title{
+    font-size:12px; letter-spacing:.20em; text-transform:uppercase; opacity:.92;
+    display:flex; gap:10px; align-items:center;
+  }
+  .badge{
+    border:1px solid rgba(0,255,213,.22);
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:10px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    opacity:.9;
+    background:rgba(0,0,0,.35);
+  }
+  .btn{
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.45);
+    color:var(--fg);
+    border-radius:999px;
+    padding:10px 12px;
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .chat{
+    height:min(60vh, 520px);
+    overflow:auto;
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .bubble{
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(0,0,0,.35);
+    border-radius:14px;
+    padding:10px 12px;
+    max-width:85%;
+    font-size:13px;
+    letter-spacing:.03em;
+    line-height:1.3;
+  }
+  .me{ align-self:flex-end; border-color: rgba(138,46,255,.22); }
+  .lucas{ align-self:flex-start; border-color: rgba(0,255,213,.20); }
+  .row{
+    display:flex; gap:10px; padding:14px; border-top:1px solid rgba(255,255,255,.10);
+    flex-wrap:wrap;
+  }
+  input{
+    flex:1 1 320px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.45);
+    color:var(--fg);
+    border-radius:14px;
+    padding:12px 12px;
+    font-size:14px;
+    outline:none;
+  }
+  .chips{display:flex; gap:8px; flex-wrap:wrap; padding:0 14px 14px;}
+  .chip{
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.35);
+    color:var(--fg);
+    border-radius:999px;
+    padding:8px 10px;
+    font-size:10px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    cursor:pointer;
+    opacity:.92;
+  }
+  .hint{opacity:.7; font-size:11px; letter-spacing:.10em; padding:0 14px 14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <div class="top">
+      <div class="title">
+        Lucas Talk
+        <span class="badge" id="mode">Sober-ish</span>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn" id="clear">Clear</button>
+        <button class="btn" id="back">Back to Kitchen</button>
+      </div>
+    </div>
+
+    <div class="chat" id="chat"></div>
+
+    <div class="chips">
+      <button class="chip" data-say="Are we okay?">Are we okay?</button>
+      <button class="chip" data-say="Do you believe in me?">Do you believe in me?</button>
+      <button class="chip" data-say="Tell me something real.">Tell me something real.</button>
+      <button class="chip" data-say="Dance with me.">Dance with me.</button>
+      <button class="chip" data-say="What do you want right now?">What do you want?</button>
+      <button class="chip" data-say="We should find the gnome.">Find the gnome.</button>
+    </div>
+
+    <div class="row">
+      <input id="input" placeholder="Type anything... (Lucas will respond)" />
+      <button class="btn" id="send">Send</button>
+    </div>
+
+    <div class="hint">Lucas responses are rule-based (keywords + mood). It feels alive, but stays stable.</div>
+  </div>
+</div>
+
+<script>
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+const CHAT_KEY="SOPHIA_AUDITION_LUCAS_CHAT_V1";
+
+function loadState(){ const r=localStorage.getItem(STORE_KEY); if(r){try{return JSON.parse(r);}catch(e){}}
+  return { kitchen:{ margaritaDone:false, drunk:false }, lucas:{ mood:0, following:false, inKitchen:false } };
+}
+function saveState(s){ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+
+function loadChat(){ const r=localStorage.getItem(CHAT_KEY); if(r){try{return JSON.parse(r);}catch(e){}}
+  return [];
+}
+function saveChat(arr){ localStorage.setItem(CHAT_KEY, JSON.stringify(arr)); }
+
+let state = loadState();
+const chatEl=document.getElementById("chat");
+const input=document.getElementById("input");
+const mode=document.getElementById("mode");
+
+mode.textContent = state.kitchen?.drunk ? "Drunk Mode" : "Sober-ish";
+
+function addBubble(who, text){
+  const div=document.createElement("div");
+  div.className = "bubble " + (who==="me" ? "me":"lucas");
+  div.textContent = text;
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function seedIfEmpty(){
+  const hist=loadChat();
+  if(hist.length) return;
+  const intro = state.kitchen?.drunk
+    ? "Okay… we’re kinda floating. Say anything. I’m listening. 🥴"
+    : "What’s up? Say it straight. I’m here.";
+  const arr=[{who:"lucas", text:intro, t:Date.now()}];
+  saveChat(arr);
+}
+
+function normalize(s){ return (s||"").toLowerCase().trim(); }
+
+function lucasReply(msg){
+  const m=normalize(msg);
+  const drunk=!!state.kitchen?.drunk;
+  const mood = (state.lucas?.mood||0);
+
+  // keyword buckets
+  const has = (k)=>m.includes(k);
+
+  // “tone” variables
+  const warm = (mood>=3) ? 1 : 0;
+  const edge = (mood<=-2) ? 1 : 0;
+
+  // responses
+  if(!m) return drunk ? "Bro… type something real. My brain is soup." : "Say it.";
+  if(has("sorry") || has("apolog")) return drunk ? "You’re forgiven. Come here." : "Alright. We move on.";
+  if(has("love") || has("miss")) return drunk ? "I love you too. It’s embarrassing. Don’t tell anyone." : (warm ? "I got you." : "…yeah.");
+  if(has("okay") || has("are we ok")) return drunk ? "We’re okay. We’re just… wobbly." : (warm ? "Yeah. We’re okay." : "We will be.");
+  if(has("audition") || has("acting") || has("nervous")) return drunk
+    ? "You’re gonna crush it. Even if you don’t. You still crush it."
+    : "Breathe. Show up. Do the work. Don’t spiral.";
+  if(has("gnome") || has("key")) return drunk
+    ? "The gnome has the key… obviously. Why would the world be normal?"
+    : "If the key’s outside, we check the yard. Window first.";
+  if(has("dance")) return drunk
+    ? "Yes. Dance. If we dance long enough, reality gets confused."
+    : "Fine. But no weird moves.";
+  if(has("kissing") || has("kiss")) return drunk
+    ? "Come here. Don’t make it a whole movie."
+    : (warm ? "…maybe." : "Not right now.");
+  if(has("why") && has("computer")) return drunk
+    ? "I was trapped in the screen. Like a bug. It happens."
+    : (warm ? "I zone out sometimes. I’m trying." : "I was busy.");
+  if(has("help") || has("please")) return drunk
+    ? "I’m helping. Look. I’m standing up. Big growth."
+    : "Tell me what you need.";
+  if(has("hurt") || has("mad") || has("angry")) return drunk
+    ? "Don’t be mad. I’m soft inside. Just… bad at showing it."
+    : (warm ? "I hear you. That’s fair." : "Okay. Say it clean.");
+  if(has("what do you want")) return drunk
+    ? "I want you to stop disappearing inside your head."
+    : (warm ? "I want you safe." : "I want peace.");
+
+  // fallback: echo-ish with flavor
+  const variants = drunk ? [
+    "That’s wild. But I get it. Keep going.",
+    "Say it again slower. My thoughts are skating.",
+    "Okay… yeah. That’s real. I’m here.",
+    "I hear you. Like… actually."
+  ] : [
+    "I hear you. Keep talking.",
+    "Okay. What’s the next part?",
+    "Yeah. And how do you feel about it?",
+    "Got it. What do you want me to do?"
+  ];
+
+  // tiny mood influence
+  if(edge) return drunk ? "You’re poking the bear… but I’m too tipsy to bite." : "Careful. But I’m listening.";
+  return variants[(Math.random()*variants.length)|0];
+}
+
+function render(){
+  chatEl.innerHTML="";
+  const hist=loadChat();
+  for(const m of hist) addBubble(m.who, m.text);
+}
+
+function pushMsg(who, text){
+  const hist=loadChat();
+  hist.push({who, text, t:Date.now()});
+  saveChat(hist);
+}
+
+function send(){
+  const msg=input.value;
+  input.value="";
+  pushMsg("me", msg);
+  render();
+
+  const reply = lucasReply(msg);
+
+  // slight delay for vibe
+  setTimeout(()=>{
+    pushMsg("lucas", reply);
+    render();
+  }, 260 + Math.random()*220);
+}
+
+seedIfEmpty();
+render();
+
+document.getElementById("send").addEventListener("click", send);
+input.addEventListener("keydown", (e)=>{ if(e.key==="Enter") send(); });
+
+document.querySelectorAll("[data-say]").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    input.value = b.getAttribute("data-say");
+    send();
+  });
+});
+
+document.getElementById("back").addEventListener("click", ()=>location.href="Sophie04.html");
+document.getElementById("clear").addEventListener("click", ()=>{
+  localStorage.removeItem(CHAT_KEY);
+  seedIfEmpty();
+  render();
+});
+</script>
+</body>
+</html>
