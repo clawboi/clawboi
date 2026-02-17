@@ -97,29 +97,54 @@
 <script>
 (() => {
   // ========= SAVE =========
-  const STORE_KEY = "SOPHIA_AUDITION_SAVE_V1";
-  const defaultSave = {
-    outfit: "violet",  // violet | blue | red | green | black
-    hasFrontDoorKey: false,
-    lastRoom: "Sophie01.html",
-  };
-  const loadSave = () => {
-    try{
-      const raw = localStorage.getItem(STORE_KEY);
-      if(!raw) return {...defaultSave};
-      const s = JSON.parse(raw);
-      return {...defaultSave, ...s};
-    }catch(e){
-      return {...defaultSave};
-    }
-  };
-  const save = loadSave();
-  const commitSave = () => {
-    save.lastRoom = "Sophie01.html";
-    localStorage.setItem(STORE_KEY, JSON.stringify(save));
-    outfitName.textContent = save.outfit.toUpperCase();
-    keyState.textContent = save.hasFrontDoorKey ? "YES" : "NO";
-  };
+const STORE_KEY = "SOPHIA_AUDITION_SAVE_V1";
+const OUTFITS = ["violet","blue","red","green","black"];
+
+const defaultSave = {
+  outfit: "violet",
+  hasFrontDoorKey: false,
+  lastRoom: "Sophie01.html",
+};
+
+function sanitizeSave(s){
+  // outfit must be a valid string from the allowed list
+  const outfit = (typeof s.outfit === "string") ? s.outfit.toLowerCase() : defaultSave.outfit;
+  s.outfit = OUTFITS.includes(outfit) ? outfit : defaultSave.outfit;
+
+  // key must be boolean
+  s.hasFrontDoorKey = !!s.hasFrontDoorKey;
+
+  // lastRoom must be string
+  s.lastRoom = (typeof s.lastRoom === "string" && s.lastRoom) ? s.lastRoom : defaultSave.lastRoom;
+
+  return s;
+}
+
+const loadSave = () => {
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return {...defaultSave};
+    const parsed = JSON.parse(raw) || {};
+    return sanitizeSave({...defaultSave, ...parsed});
+  }catch(e){
+    return {...defaultSave};
+  }
+};
+
+const save = loadSave();
+
+const commitSave = () => {
+  save.lastRoom = "Sophie01.html";
+  // re-sanitize in case something changed during play
+  sanitizeSave(save);
+
+  localStorage.setItem(STORE_KEY, JSON.stringify(save));
+
+  // UI-safe rendering
+  const outfitStr = String(save.outfit || defaultSave.outfit).toUpperCase();
+  outfitName.textContent = outfitStr;
+  keyState.textContent = save.hasFrontDoorKey ? "YES" : "NO";
+};
 
   // ========= CANVAS SETUP =========
   const canvas = document.getElementById("c");
