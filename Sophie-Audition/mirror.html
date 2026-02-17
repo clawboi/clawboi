@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia’s Audition — Mirror</title>
+<style>
+:root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff; --cyan:#00ffd5;}
+html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; overflow:hidden;}
+canvas{position:fixed; inset:0; width:100%; height:100%;}
+body::before{
+  content:""; position:fixed; inset:-20%;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(138,46,255,.16), transparent 60%),
+    radial-gradient(circle at 70% 55%, rgba(0,255,213,.10), transparent 65%);
+  filter:blur(50px); animation:drift 14s ease-in-out infinite; pointer-events:none;
+}
+@keyframes drift{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(1.3%,-1.1%,0)}}
+
+.hud{position:fixed; left:12px; right:12px; top:12px; z-index:5; display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+.pill{
+  border:1px solid var(--ui2); background:rgba(0,0,0,.40); backdrop-filter: blur(10px);
+  border-radius:999px; padding:10px 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+}
+.row{position:fixed; left:12px; right:12px; bottom:12px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; z-index:6;}
+button,a.btn{
+  border:1px solid rgba(255,255,255,.16); background:rgba(0,0,0,.45); color:#fff;
+  padding:14px 16px; border-radius:16px; cursor:pointer;
+  font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+  backdrop-filter: blur(10px); text-decoration:none;
+}
+button.primary{background:rgba(138,46,255,.72); border-color:transparent}
+.toast{
+  position:fixed; left:50%; bottom:76px; transform:translateX(-50%);
+  border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+  border-radius:14px; padding:10px 12px;
+  font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
+  max-width:min(720px, calc(100vw - 24px)); text-align:center; z-index:6;
+}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="hud">
+  <div class="pill"><b>MIRROR</b></div>
+  <div class="pill">Tap screen to unlock audio on iPhone</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="row">
+  <button class="primary" id="focusBtn">FOCUS</button>
+  <button id="wipeBtn">WIPE STEAM</button>
+  <a class="btn" href="bathroom.html">BACK</a>
+</div>
+
+<script>
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+let state=JSON.parse(localStorage.getItem(STORE_KEY)||`{"dressColor":"#a64dff","shoeColor":"#ffffff"}`);
+function save(){localStorage.setItem(STORE_KEY,JSON.stringify(state));}
+
+const cv=document.getElementById("c");
+const ctx=cv.getContext("2d");
+
+let dpr=1;
+function resize(){
+  dpr=Math.max(1, Math.min(2, devicePixelRatio||1));
+  cv.width=Math.floor(innerWidth*dpr);
+  cv.height=Math.floor(innerHeight*dpr);
+  cv.style.width=innerWidth+"px";
+  cv.style.height=innerHeight+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener("resize",resize); resize();
+
+const toastEl=document.getElementById("toast");
+function toast(m){ toastEl.textContent=m; toastEl.classList.add("on"); setTimeout(()=>toastEl.classList.remove("on"),1300); }
+
+// iPhone-safe audio unlock + chime
+let AC, master, unlocked=false;
+function unlock(){
+  if(unlocked) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==="suspended") AC.resume();
+    master = AC.createGain(); master.gain.value=0.55; master.connect(AC.destination);
+    unlocked=true;
+  }catch(e){}
+}
+addEventListener("pointerdown", unlock, {passive:true});
+
+function chime(freq=740, dur=0.22, vol=0.12){
+  if(!unlocked||!AC||!master) return;
+  const t=AC.currentTime;
+  const o=AC.createOscillator();
+  const g=AC.createGain();
+  o.type="sine";
+  o.frequency.setValueAtTime(freq, t);
+  o.frequency.exponentialRampToValueAtTime(freq*0.72, t+dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t+dur+0.03);
+}
+
+function glassTap(){
+  if(!unlocked||!AC||!master) return;
+  const t=AC.currentTime;
+  const o=AC.createOscillator();
+  const g=AC.createGain();
+  o.type="triangle";
+  o.frequency.setValueAtTime(1200, t);
+  o.frequency.exponentialRampToValueAtTime(420, t+0.06);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.10, t+0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+0.09);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t+0.10);
+}
+
+let focus=0;      // 0..1
+let wiped=0;      // 0..1 steam wiped
+let whispers=0;   // momentary text flicker
+
+document.getElementById("focusBtn").onclick=()=>{
+  unlock();
+  focus=Math.min(1, focus+0.34);
+  whispers=1;
+  chime(740,0.22,0.12);
+  toast(focus>=1 ? "You lock eyes with yourself." : "Focus deepens…");
+};
+document.getElementById("wipeBtn").onclick=()=>{
+  unlock();
+  wiped=Math.min(1, wiped+0.40);
+  glassTap();
+  toast(wiped>=1 ? "The glass is clear." : "Wiping steam…");
+};
+
+addEventListener("pointerdown",(e)=>{
+  unlock();
+  // a little wipe gesture anywhere
+  wiped=Math.min(1, wiped+0.06);
+  if(Math.random()<0.25) glassTap();
+},{passive:true});
+
+function drawSophiaFace(cx,cy,scale,flip=false){
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.scale((flip?-1:1)*scale, scale);
+
+  // hair
+  ctx.fillStyle="rgba(242,210,122,.92)";
+  ctx.beginPath(); ctx.ellipse(0,-10,52,38,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="rgba(0,0,0,.35)";
+  ctx.beginPath(); ctx.ellipse(0,-16,54,40,0,0,Math.PI*2); ctx.fill();
+
+  // face
+  ctx.fillStyle="rgba(255,217,201,.95)";
+  ctx.beginPath(); ctx.ellipse(0,10,46,54,0,0,Math.PI*2); ctx.fill();
+
+  // eyes
+  ctx.fillStyle="rgba(103,183,255,.90)";
+  ctx.beginPath(); ctx.ellipse(-16,0,6,4,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( 16,0,6,4,0,0,Math.PI*2); ctx.fill();
+
+  // pupils
+  ctx.fillStyle="rgba(0,0,0,.55)";
+  ctx.beginPath(); ctx.ellipse(-16,0,2.2,2.2,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( 16,0,2.2,2.2,0,0,Math.PI*2); ctx.fill();
+
+  // lips
+  ctx.fillStyle="rgba(255,77,136,.25)";
+  ctx.beginPath(); ctx.ellipse(0,30,14,6,0,0,Math.PI*2); ctx.fill();
+
+  ctx.restore();
+}
+
+let t0=performance.now();
+function loop(){
+  const t=(performance.now()-t0)/1000;
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+
+  // room darkness
+  ctx.fillStyle="#05050a";
+  ctx.fillRect(0,0,innerWidth,innerHeight);
+
+  // mirror frame
+  const mx=innerWidth*0.5, my=innerHeight*0.48;
+  const mw=Math.min(innerWidth*0.72, 720);
+  const mh=Math.min(innerHeight*0.78, 860);
+
+  // glow behind mirror
+  let glow=ctx.createRadialGradient(mx,my,20,mx,my,mw*0.9);
+  glow.addColorStop(0, "rgba(138,46,255,.18)");
+  glow.addColorStop(1, "transparent");
+  ctx.fillStyle=glow; ctx.fillRect(0,0,innerWidth,innerHeight);
+
+  // frame
+  ctx.fillStyle="rgba(255,255,255,.06)";
+  ctx.fillRect(mx-mw/2-10, my-mh/2-10, mw+20, mh+20);
+  ctx.fillStyle="rgba(0,0,0,.50)";
+  ctx.fillRect(mx-mw/2, my-mh/2, mw, mh);
+
+  // glass base
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(mx-mw/2, my-mh/2, mw, mh);
+  ctx.clip();
+
+  // subtle reflection gradient
+  let g=ctx.createLinearGradient(mx-mw/2,my-mh/2,mx+mw/2,my+mh/2);
+  g.addColorStop(0,"rgba(255,255,255,.06)");
+  g.addColorStop(1,"rgba(255,255,255,.02)");
+  ctx.fillStyle=g;
+  ctx.fillRect(mx-mw/2, my-mh/2, mw, mh);
+
+  // Sophia reflection (closer as focus increases)
+  const z = 0.65 + focus*0.45;
+  const wig = Math.sin(t*0.8)*2;
+  drawSophiaFace(mx+wig, my+20, z, true);
+
+  // distortion layer (less distortion as focus increases)
+  const dist = (1-focus)*0.22;
+  ctx.globalAlpha = 0.30 + dist;
+  ctx.fillStyle="rgba(0,0,0,.12)";
+  for(let i=0;i<70;i++){
+    const y=my-mh/2 + (i/70)*mh;
+    const off = Math.sin(t*1.8 + i*0.25)*10*dist;
+    ctx.fillRect(mx-mw/2 + off, y, mw, 1);
+  }
+  ctx.globalAlpha=1;
+
+  // steam/fog (reduced by wiped)
+  const fog = Math.max(0, 1-wiped);
+  ctx.globalAlpha = 0.25*fog;
+  ctx.fillStyle="rgba(255,255,255,.9)";
+  for(let i=0;i<20;i++){
+    const x=mx-mw/2 + (Math.random()*mw);
+    const y=my-mh/2 + (Math.random()*mh);
+    ctx.beginPath();
+    ctx.ellipse(x, y, 60+Math.random()*120, 20+Math.random()*60, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  // tiny “message” flicker at high focus
+  if(focus>0.66 && Math.random()<0.03){
+    whispers=1;
+  }
+  if(whispers>0){
+    ctx.globalAlpha = 0.22 + 0.25*focus;
+    ctx.fillStyle="rgba(255,255,255,.85)";
+    ctx.font="12px ui-monospace, Menlo, monospace";
+    const msg = (focus>=1) ? "YOU ARE HERE." : "DO YOU RECOGNIZE ME?";
+    ctx.fillText(msg, mx-mw/2+18, my-mh/2+26);
+    ctx.globalAlpha=1;
+    whispers -= 0.06;
+  }
+
+  ctx.restore();
+
+  // hint overlay
+  ctx.fillStyle="rgba(255,255,255,.70)";
+  ctx.font="12px ui-monospace, Menlo, monospace";
+  ctx.fillText("focus: "+Math.round(focus*100)+"% · wipe: "+Math.round(wiped*100)+"%", 18, innerHeight-18);
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
