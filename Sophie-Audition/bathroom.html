@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia’s Audition — Bathroom</title>
+<style>
+:root{ --bg:#07070b; --fg:#fff; --ui:rgba(255,255,255,.08); --ui2:rgba(255,255,255,.14); --vio:#8a2eff; --cyan:#00ffd5;}
+html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+.wrap{height:100%; display:grid; place-items:center;}
+canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+body::before{
+content:""; position:fixed; inset:-20%;
+background:
+radial-gradient(circle at 25% 20%, rgba(138,46,255,.16), transparent 60%),
+radial-gradient(circle at 75% 55%, rgba(0,255,213,.10), transparent 65%);
+filter:blur(48px); animation:drift 14s ease-in-out infinite; pointer-events:none;
+}
+@keyframes drift{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(1.4%,-1.0%,0)}}
+
+.hud{
+position:fixed; left:12px; right:12px; top:12px; z-index:5;
+display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;
+pointer-events:none;
+}
+.pill,.hint{
+pointer-events:auto;
+border:1px solid var(--ui2); background:rgba(0,0,0,.35);
+backdrop-filter: blur(8px);
+border-radius:999px; padding:10px 12px;
+font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+display:flex; gap:10px; align-items:center;
+}
+.hint{
+flex:1 1 280px;
+border-radius:18px;
+letter-spacing:.10em;
+line-height:1.35;
+text-transform:none;
+}
+.hint .k{display:inline-block; padding:2px 7px; border-radius:8px; border:1px solid var(--ui2); background:rgba(255,255,255,.06); font-weight:700}
+.toast{
+position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+border-radius:14px; padding:10px 12px;
+font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
+max-width:min(720px, calc(100vw - 24px)); text-align:center; z-index:6;
+}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="pill"><b>SOPHIA</b> <span>BATHROOM</span></div>
+  <div class="pill">MILO: <span id="miloMood">sniffing</span></div>
+  <div class="hint">
+    Move: <span class="k">WASD</span> · Interact: <span class="k">E</span> · Run: <span class="k">SHIFT</span><br>
+    Shower · Mirror · Toilet · Milo Bath · Door back to Bedroom
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+
+<script>
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+let state=JSON.parse(localStorage.getItem(STORE_KEY)||`{
+"hasKeys":false,"slept":false,"trip":false,"puke":false,
+"poemLines":0,"poems":[],"guitarPlayed":0,
+"outfit":0,"dressColor":"#a64dff","shoeColor":"#ffffff",
+"lastRoom":"BATHROOM","character":"SOPHIA",
+"sophia":{"x":160,"y":120},"milo":{"x":148,"y":132}
+}`);
+function save(){localStorage.setItem(STORE_KEY,JSON.stringify(state));}
+
+const canvas=c;
+const ctx=canvas.getContext("2d",{alpha:false});
+ctx.imageSmoothingEnabled=false;
+const W=320,H=180;
+
+const keysDown=new Set();
+onkeydown=e=>keysDown.add(e.key.toLowerCase());
+onkeyup=e=>keysDown.delete(e.key.toLowerCase());
+
+const toastEl=document.getElementById("toast");
+function toast(msg){
+  toastEl.textContent=msg;
+  toastEl.classList.add("on");
+  setTimeout(()=>toastEl.classList.remove("on"),1400);
+}
+
+const sophia={x:state.sophia.x||158,y:state.sophia.y||128,w:10,h:12};
+const milo={x:state.milo.x||148,y:state.milo.y||132};
+
+function go(f){ state.lastRoom="BATHROOM"; save(); location.href=f; }
+
+const solids=[
+  [0,0,W,10],[0,0,10,H],[0,H-10,W,10],[W-10,0,10,H],
+  // vanity
+  [48,38,92,28],
+  // toilet block
+  [220,62,44,26],
+  // tub block
+  [208,116,78,42],
+  // hamper
+  [52,118,28,26]
+];
+
+const zones=[
+  {name:"DOOR_BACK", rect:[6,78,12,26], label:"Bedroom", action:()=>go("Sophie01.html")},
+  {name:"SHOWER", rect:[W-34,112,24,46], label:"Shower", action:()=>go("shower.html")},
+  {name:"MIRROR", rect:[68,22,60,14], label:"Mirror", action:()=>go("mirror.html")},
+  {name:"TOILET", rect:[224,54,34,22], label:"Use Toilet", action:()=>go("toilet.html")},
+  {name:"MILO_BATH", rect:[52,118,28,26], label:"Bathe Milo", action:()=>go("bath.html")}
+];
+
+function col(x,y,w,h){
+  for(const s of solids){
+    if(x<s[0]+s[2]&&x+w>s[0]&&y<s[1]+s[3]&&y+h>s[1]) return true;
+  }
+  return false;
+}
+function move(dx,dy){
+  if(!col(sophia.x+dx,sophia.y,sophia.w,sophia.h)) sophia.x+=dx;
+  if(!col(sophia.x,sophia.y+dy,sophia.w,sophia.h)) sophia.y+=dy;
+}
+
+function nearest(){
+  let best=null,bd=9999;
+  for(const z of zones){
+    const cx=z.rect[0]+z.rect[2]/2;
+    const cy=z.rect[1]+z.rect[3]/2;
+    const d=(cx-sophia.x)**2+(cy-sophia.y)**2;
+    if(d<bd && d<1600){ bd=d; best=z; }
+  }
+  return best;
+}
+function interact(){
+  const z=nearest();
+  if(z) z.action();
+}
+
+function drawBg(){
+  ctx.fillStyle="#05050a";
+  ctx.fillRect(0,0,W,H);
+
+  // cool tile glow
+  let g=ctx.createRadialGradient(120,40,10,120,40,160);
+  g.addColorStop(0,"rgba(138,46,255,.18)");
+  g.addColorStop(1,"transparent");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  let g2=ctx.createRadialGradient(260,120,10,260,120,160);
+  g2.addColorStop(0,"rgba(0,255,213,.10)");
+  g2.addColorStop(1,"transparent");
+  ctx.fillStyle=g2; ctx.fillRect(0,0,W,H);
+
+  // tile pattern
+  for(let y=12;y<H-10;y++){
+    for(let x=12;x<W-10;x++){
+      if((x+y)%18===0){
+        ctx.fillStyle="rgba(255,255,255,.02)";
+        ctx.fillRect(x,y,10,10);
+      }
+    }
+  }
+
+  // vanity + mirror
+  ctx.fillStyle="rgba(255,255,255,.06)";
+  ctx.fillRect(48,38,92,28);
+  ctx.fillStyle="rgba(255,255,255,.10)";
+  ctx.fillRect(54,44,80,4);
+
+  // mirror strip
+  ctx.fillStyle="rgba(255,255,255,.07)";
+  ctx.fillRect(68,22,60,14);
+  ctx.fillStyle="rgba(138,46,255,.10)";
+  ctx.fillRect(70,24,56,10);
+
+  // toilet
+  ctx.fillStyle="rgba(255,255,255,.06)";
+  ctx.fillRect(220,62,44,26);
+  ctx.fillStyle="rgba(255,255,255,.09)";
+  ctx.fillRect(228,66,28,10);
+
+  // tub/shower area
+  ctx.fillStyle="rgba(255,255,255,.05)";
+  ctx.fillRect(208,116,78,42);
+  ctx.fillStyle="rgba(0,255,213,.06)";
+  ctx.fillRect(212,120,70,34);
+
+  // hamper (milo bath)
+  ctx.fillStyle="rgba(255,255,255,.05)";
+  ctx.fillRect(52,118,28,26);
+  ctx.fillStyle="rgba(138,46,255,.06)";
+  ctx.fillRect(55,121,22,20);
+
+  // doorway glow
+  ctx.fillStyle="rgba(255,255,255,.05)";
+  ctx.fillRect(0,74,12,36);
+  ctx.fillStyle="rgba(138,46,255,.10)";
+  ctx.fillRect(2,78,6,26);
+
+  // vignette
+  ctx.fillStyle="rgba(0,0,0,.20)";
+  ctx.fillRect(0,0,W,12);
+  ctx.fillRect(0,H-12,W,12);
+  ctx.fillRect(0,0,12,H);
+  ctx.fillRect(W-12,0,12,H);
+}
+
+function drawSophia(){
+  let x=sophia.x,y=sophia.y;
+  ctx.fillStyle="#f2d27a"; ctx.fillRect(x+1,y,8,4); ctx.fillRect(x,y+3,10,3);
+  ctx.fillStyle="#ffd9c9"; ctx.fillRect(x+2,y+5,6,4);
+  ctx.fillStyle="#67b7ff"; ctx.fillRect(x+3,y+6,1,1); ctx.fillRect(x+6,y+6,1,1);
+
+  const dress=state.dressColor||"#a64dff";
+  const shoes=state.shoeColor||"#ffffff";
+  ctx.fillStyle=dress; ctx.fillRect(x+2,y+9,6,3);
+  ctx.fillStyle=shoes; ctx.fillRect(x+2,y+12,2,1); ctx.fillRect(x+6,y+12,2,1);
+}
+
+function drawMilo(){
+  let x=milo.x,y=milo.y;
+  ctx.fillStyle="#d8d8d8"; ctx.fillRect(x+1,y+2,6,5);
+  ctx.fillRect(x+1,y+1,2,2); ctx.fillRect(x+5,y+1,2,2);
+  ctx.fillStyle="#1affd3"; ctx.fillRect(x+2,y+4,1,1); ctx.fillRect(x+5,y+4,1,1);
+}
+
+function drawInteractHint(){
+  const z=nearest();
+  if(!z) return;
+  const x = z.rect[0]+z.rect[2]/2;
+  const y = z.rect[1]-6;
+  ctx.fillStyle="rgba(0,0,0,.55)";
+  ctx.fillRect(x-42,y-10,84,16);
+  ctx.strokeStyle="rgba(255,255,255,.18)";
+  ctx.strokeRect(x-42,y-10,84,16);
+  ctx.fillStyle="rgba(255,255,255,.85)";
+  ctx.font="10px ui-monospace, Menlo, monospace";
+  ctx.fillText("E  "+z.label, x-38, y+2);
+}
+
+function updateMilo(){
+  let tx=sophia.x-12, ty=sophia.y+6;
+  milo.x += (tx - milo.x)*0.05;
+  milo.y += (ty - milo.y)*0.05;
+}
+
+function loop(){
+  let sp=keysDown.has("shift")?1.4:.9;
+  let dx=(keysDown.has("d")||keysDown.has("arrowright")?sp:0)-(keysDown.has("a")||keysDown.has("arrowleft")?sp:0);
+  let dy=(keysDown.has("s")||keysDown.has("arrowdown")?sp:0)-(keysDown.has("w")||keysDown.has("arrowup")?sp:0);
+  move(dx,dy);
+
+  if(keysDown.has("e")&&!loop.e){ interact(); loop.e=1; }
+  if(!keysDown.has("e")) loop.e=0;
+
+  updateMilo();
+
+  state.sophia.x=sophia.x; state.sophia.y=sophia.y;
+  state.milo.x=milo.x; state.milo.y=milo.y;
+  save();
+
+  drawBg();
+  drawMilo();
+  drawSophia();
+  drawInteractHint();
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
