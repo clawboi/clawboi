@@ -113,8 +113,8 @@ body::before{
     "poemLines":0,"poems":[],"guitarPlayed":0,
     "outfit":0,
     "lastRoom":"BEDROOM",
-    "sophia":{"x":220,"y":190},
-    "milo":{"x":190,"y":205}
+    "sophia":{"x":60,"y":200},
+    "milo":{"50":190,"y":215}
   }`);
 
   function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
@@ -208,6 +208,11 @@ body::before{
   /* ---------- entities ---------- */
   // Bigger sprite but still fits around furniture
   const sophia = { x: state.sophia.x, y: state.sophia.y, w:S(14), h:T(18) };
+  // spawn safety fix
+if(col(sophia.x, sophia.y, sophia.w, sophia.h)){
+  sophia.x = S(60);
+  sophia.y = T(150);
+}
   const milo   = { x: state.milo.x,   y: state.milo.y };
 
   // Safety: if saved position is inside a solid (old versions), reset to safe spot
