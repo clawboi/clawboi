@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia's Audition — Grocery Store</title>
+<style>
+  :root{
+    --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14);
+    --vio:#8a2eff; --aqua:#00ffd5; --hot:#ff63ff; --sun:#ffd24d;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%;display:grid;place-items:center;}
+  canvas{width:min(980px, 100vw);height:auto;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;}
+  .hud{
+    position:fixed;left:12px;right:12px;top:12px;z-index:6;
+    display:flex;gap:10px;flex-wrap:wrap;pointer-events:none;
+  }
+  .pill{
+    pointer-events:auto;border:1px solid var(--ui2);background:rgba(0,0,0,.32);
+    backdrop-filter: blur(8px);
+    border-radius:999px;padding:10px 12px;font-size:11px;
+    letter-spacing:.18em;text-transform:uppercase;display:flex;gap:10px;align-items:center;
+  }
+  .pill b{letter-spacing:.22em}
+  .toast{
+    position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+    border:1px solid var(--ui2);background:rgba(0,0,0,.55);
+    border-radius:14px;padding:10px 12px;font-size:12px;letter-spacing:.08em;
+    opacity:0;transition:.2s;max-width:min(920px, calc(100vw - 24px));text-align:center;z-index:7;
+  }
+  .toast.on{opacity:1}
+  body::before{
+    content:"";position:fixed;inset:-20%;pointer-events:none;
+    background:
+      radial-gradient(circle at 20% 18%, rgba(255,210,77,.14), transparent 58%),
+      radial-gradient(circle at 78% 22%, rgba(0,255,213,.12), transparent 62%),
+      radial-gradient(circle at 40% 85%, rgba(138,46,255,.12), transparent 62%);
+    filter:blur(44px) saturate(1.12);
+  }
+</style>
+</head>
+<body>
+  <div class="hud">
+    <div class="pill"><b>SOPHIA</b> <span id="status">GROCERY</span></div>
+    <div class="pill">CASH: $<span id="cash">0</span></div>
+    <div class="pill">MUSH: <span id="mush">0</span></div>
+    <div class="pill">BAG: <span id="bag">EMPTY</span></div>
+    <div class="pill">Move: WASD · Run: SHIFT · Interact: E · Back: B</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d',{alpha:false});
+ctx.imageSmoothingEnabled=false;
+
+const UI={
+  toast:document.getElementById('toast'),
+  cash:document.getElementById('cash'),
+  mush:document.getElementById('mush'),
+  bag:document.getElementById('bag'),
+};
+function toast(msg,ms=1400){
+  UI.toast.textContent=msg; UI.toast.classList.add('on');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>UI.toast.classList.remove('on'),ms);
+}
+
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+function loadState(){
+  const r=localStorage.getItem(STORE_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return { cash:0, street:{mush:0}, grocery:{snacks:0, water:0}, sophia:{x:150,y:190}, milo:{x:130,y:205}, lastRoom:"GROCERY" };
+}
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+let state=loadState();
+state.street=state.street||{mush:0};
+state.grocery=state.grocery||{snacks:0, water:0};
+
+UI.cash.textContent=state.cash|0;
+UI.mush.textContent=state.street.mush|0;
+function syncBag(){
+  const s=state.grocery.snacks|0, w=state.grocery.water|0;
+  UI.bag.textContent = (s+w)<=0 ? "EMPTY" : (`SNACKS:${s} · WATER:${w}`);
+}
+syncBag();
+
+const keysDown=new Set();
+addEventListener('keydown',(e)=>{
+  const k=e.key.toLowerCase();
+  if(["arrowup","arrowdown","arrowleft","arrowright","shift","w","a","s","d","e","b"].includes(k)) e.preventDefault();
+  keysDown.add(k);
+});
+addEventListener('keyup',(e)=>keysDown.delete(e.key.toLowerCase()));
+
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const dist2=(ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by; return dx*dx+dy*dy;}
+function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
+  return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
+}
+function drawRectBevel(x,y,w,h,fill){
+  ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(x,y,w,1);
+  ctx.fillStyle="rgba(0,0,0,.40)"; ctx.fillRect(x,y+h-1,w,1);
+  ctx.fillStyle="rgba(255,255,255,.07)"; ctx.fillRect(x,y,1,h);
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(x+w-1,y,1,h);
+}
+function drawHintBubble(text,x,y){
+  const pad=3;
+  ctx.font="8px ui-monospace, monospace";
+  const m=ctx.measureText(text);
+  const w=Math.ceil(m.width)+pad*2, h=12;
+  ctx.fillStyle="rgba(0,0,0,.70)";
+  ctx.fillRect(x-w/2,y-h,w,h);
+  ctx.strokeStyle="rgba(255,255,255,.16)";
+  ctx.strokeRect(x-w/2+0.5,y-h+0.5,w-1,h-1);
+  ctx.fillStyle="rgba(255,255,255,.92)";
+  ctx.fillText(text,x-w/2+pad,y-4);
+}
+
+const WORLD={w:700,h:420};
+const sophia={x:state.sophia?.x||160,y:state.sophia?.y||300,w:10,h:12, speed:70, run:110};
+const milo={x:state.milo?.x||140,y:state.milo?.y||315,w:8,h:8};
+const cam={x:0,y:0};
+
+const solids=[];
+function addSolid(x,y,w,h){solids.push([x,y,w,h]);}
+addSolid(-50,-50,WORLD.w+100,50);
+addSolid(-50,WORLD.h,WORLD.w+100,50);
+addSolid(-50,-50,50,WORLD.h+100);
+addSolid(WORLD.w,-50,50,WORLD.h+100);
+// shell
+addSolid(60,60,580,14);
+addSolid(60,60,14,300);
+addSolid(626,60,14,300);
+addSolid(60,346,580,14);
+// aisles
+for(let i=0;i<4;i++){
+  addSolid(140+i*120,120,60,170);
+}
+// checkout
+addSolid(420,300,160,18);
+addSolid(560,280,60,38);
+
+function collides(x,y,w,h){
+  for(const s of solids){ if(rectsOverlap(x,y,w,h,s[0],s[1],s[2],s[3])) return true; }
+  return false;
+}
+function tryMove(ent,dx,dy){
+  const nx=ent.x+dx, ny=ent.y+dy;
+  if(!collides(nx,ent.y,ent.w,ent.h)) ent.x=nx;
+  if(!collides(ent.x,ny,ent.w,ent.h)) ent.y=ny;
+  ent.x=clamp(ent.x,0,WORLD.w-ent.w);
+  ent.y=clamp(ent.y,0,WORLD.h-ent.h);
+}
+
+function goBack(){
+  state.sophia={x:sophia.x,y:sophia.y};
+  state.milo={x:milo.x,y:milo.y};
+  state.lastRoom="GROCERY";
+  saveState();
+  location.href="street.html";
+}
+
+const zones=[
+  {name:"AISLE: SNACK ($2)", x:140,y:120,w:60,h:170, act:()=>buy("snack")},
+  {name:"AISLE: WATER ($2)", x:260,y:120,w:60,h:170, act:()=>buy("water")},
+  {name:"AISLE: BONUS ($3)", x:380,y:120,w:60,h:170, act:()=>buy("bonus")},
+  {name:"AISLE: RANDOM ($1)", x:500,y:120,w:60,h:170, act:()=>buy("random")},
+  {name:"CHECKOUT (PAY)", x:420,y:292,w:160,h:28, act:()=>checkout()},
+];
+
+function buy(kind){
+  if(kind==="snack"){
+    if(state.cash<2) return toast("Need $2.",1100);
+    state.cash-=2; state.grocery.snacks++; UI.cash.textContent=state.cash|0; syncBag();
+    toast("Snack added to bag.",1200); saveState(); return;
+  }
+  if(kind==="water"){
+    if(state.cash<2) return toast("Need $2.",1100);
+    state.cash-=2; state.grocery.water++; UI.cash.textContent=state.cash|0; syncBag();
+    toast("Water added to bag.",1200); saveState(); return;
+  }
+  if(kind==="bonus"){
+    if(state.cash<3) return toast("Need $3.",1100);
+    state.cash-=3; UI.cash.textContent=state.cash|0;
+    if(Math.random()<0.55){ state.street.mush++; UI.mush.textContent=state.street.mush|0; toast("Found a mushroom in the bonus bin (+1).",1500); }
+    else toast("Bonus bin: glittery disappointment.",1400);
+    saveState(); return;
+  }
+  if(kind==="random"){
+    if(state.cash<1) return toast("Need $1.",1100);
+    state.cash-=1; UI.cash.textContent=state.cash|0;
+    if(Math.random()<0.35){ state.cash+=3; UI.cash.textContent=state.cash|0; toast("Coupon win. +$3.",1400); }
+    else toast("Random aisle: you purchase… air.",1200);
+    saveState(); return;
+  }
+}
+
+function checkout(){
+  const total=(state.grocery.snacks|0)+(state.grocery.water|0);
+  if(total<=0) return toast("Nothing in bag.",1100);
+  toast("Cashier: “Have a nice day.”",1400);
+  // tiny reward for being normal
+  if(Math.random()<0.3){ state.street.mush++; UI.mush.textContent=state.street.mush|0; toast("Receipt has a tiny mushroom doodle (+1 mush).",1600); }
+  saveState();
+}
+
+function nearestZone(){
+  const px=sophia.x+sophia.w/2, py=sophia.y+sophia.h/2;
+  let best=null,bd=1e12;
+  for(const z of zones){
+    const cx=z.x+z.w/2, cy=z.y+z.h/2;
+    const d=dist2(px,py,cx,cy);
+    if(d<bd && d<2800){ best=z; bd=d; }
+  }
+  return best;
+}
+
+function drawSophia(x,y){
+  ctx.fillStyle="rgba(0,0,0,.22)"; ctx.fillRect(x-1,y+11,12,2);
+  ctx.fillStyle="#f2d27a"; ctx.fillRect(x+1,y+0,8,4); ctx.fillRect(x+0,y+3,10,3);
+  ctx.fillStyle="#ffd9c9"; ctx.fillRect(x+2,y+5,6,4);
+  ctx.fillStyle="#67b7ff"; ctx.fillRect(x+3,y+6,1,1); ctx.fillRect(x+6,y+6,1,1);
+  ctx.fillStyle="rgba(138,46,255,.70)"; ctx.fillRect(x+2,y+9,6,3);
+  ctx.fillStyle="rgba(255,255,255,.18)"; ctx.fillRect(x+3,y+10,4,1);
+}
+function drawMilo(x,y){
+  ctx.fillStyle="rgba(0,0,0,.20)"; ctx.fillRect(x-1,y+7,10,2);
+  ctx.fillStyle="#d8d8d8"; ctx.fillRect(x+1,y+2,6,5);
+  ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+1,y+1,2,2); ctx.fillRect(x+5,y+1,2,2);
+  ctx.fillStyle="#1affd3"; ctx.fillRect(x+2,y+4,1,1); ctx.fillRect(x+5,y+4,1,1);
+  ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+7,y+3,1,3);
+}
+
+let last=performance.now(), t=0;
+let eWas=false, bWas=false;
+
+function loop(){
+  const now=performance.now();
+  const dt=Math.max(0, Math.min(0.05, (now-last)/1000));
+  last=now; t++;
+
+  // movement
+  const run=keysDown.has("shift");
+  const sp=(run?sophia.run:sophia.speed);
+  let dx=0,dy=0;
+  if(keysDown.has("w")||keysDown.has("arrowup")) dy-=sp*dt;
+  if(keysDown.has("s")||keysDown.has("arrowdown")) dy+=sp*dt;
+  if(keysDown.has("a")||keysDown.has("arrowleft")) dx-=sp*dt;
+  if(keysDown.has("d")||keysDown.has("arrowright")) dx+=sp*dt;
+  if(dx&&dy){dx*=0.72;dy*=0.72;}
+  if(dx||dy) tryMove(sophia,dx,dy);
+
+  // milo follow
+  const tx=sophia.x-10, ty=sophia.y+6;
+  milo.x += (tx-milo.x)*0.09*(dt*60);
+  milo.y += (ty-milo.y)*0.09*(dt*60);
+
+  const e=keysDown.has("e");
+  if(e && !eWas){
+    const z=nearestZone();
+    if(z) z.act();
+    else toast("Just aisles breathing quietly.",1200);
+  }
+  eWas=e;
+
+  const b=keysDown.has("b");
+  if(b && !bWas) goBack();
+  bWas=b;
+
+  // camera
+  cam.x += ((sophia.x-160) - cam.x)*0.14*(dt*60);
+  cam.y += ((sophia.y-90) - cam.y)*0.14*(dt*60);
+  cam.x=clamp(cam.x,0,WORLD.w-320);
+  cam.y=clamp(cam.y,0,WORLD.h-180);
+
+  // draw
+  ctx.fillStyle="rgba(245,245,250,1)";
+  ctx.fillRect(0,0,320,180);
+  ctx.fillStyle="rgba(0,0,0,.06)";
+  for(let y=0;y<180;y+=9) ctx.fillRect(0,y,320,1);
+
+  const ox=-cam.x, oy=-cam.y;
+  drawRectBevel(60+ox,60+oy,580,300,"rgba(255,255,255,.16)");
+  ctx.fillStyle="rgba(0,0,0,.18)"; ctx.fillRect(62+ox,62+oy,576,296);
+
+  // aisles
+  const labels=["SNACK","WATER","BONUS","RANDOM"];
+  for(let i=0;i<4;i++){
+    drawRectBevel(140+i*120+ox,120+oy,60,170,"rgba(255,255,255,.12)");
+    ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(142+i*120+ox,122+oy,56,166);
+    ctx.font="8px ui-monospace, monospace";
+    ctx.fillStyle="rgba(255,255,255,.82)";
+    ctx.fillText(labels[i], 146+i*120+ox, 134+oy);
+  }
+
+  // checkout
+  drawRectBevel(420+ox,300+oy,160,18,"rgba(255,210,77,.12)");
+  drawRectBevel(560+ox,280+oy,60,38,"rgba(0,255,213,.10)");
+  ctx.font="8px ui-monospace, monospace";
+  ctx.fillStyle="rgba(255,255,255,.82)";
+  ctx.fillText("CHECKOUT", 456+ox, 312+oy);
+
+  // sprites
+  drawMilo(Math.round(milo.x+ox), Math.round(milo.y+oy));
+  drawSophia(Math.round(sophia.x+ox), Math.round(sophia.y+oy));
+
+  const z=nearestZone();
+  if(z) drawHintBubble(z.name, Math.round(sophia.x+6+ox), Math.round(sophia.y-10+oy));
+
+  // autosave
+  if((t%30)===0){
+    state.sophia={x:sophia.x,y:sophia.y};
+    state.milo={x:milo.x,y:milo.y};
+    saveState();
+  }
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
