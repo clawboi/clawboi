@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Sophia's Audition 01 — Bedroom</title>
+<title>Sophia's Audition — Bedroom</title>
 <style>
 :root{
   --bg:#07070b; --fg:#fff;
-  --ui:rgba(255,255,255,.08); --ui2:rgba(255,255,255,.14);
+  --ui:rgba(255,255,255,.10); --ui2:rgba(255,255,255,.18);
   --vio:#8a2eff;
 }
 html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
 .wrap{height:100%; display:grid; place-items:center;}
 canvas{
-  width:min(1180px, 100vw);
+  width:min(1400px, 100vw);
   height:auto;
   image-rendering:pixelated;
   image-rendering:crisp-edges;
@@ -40,56 +40,77 @@ body::before{
   display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;
   pointer-events:none;
 }
+.titleCard{
+  pointer-events:auto;
+  border:1px solid var(--ui2);
+  background:rgba(0,0,0,.42);
+  backdrop-filter: blur(8px);
+  border-radius:18px;
+  padding:10px 14px;
+  min-width:260px;
+}
+.titleCard .t{
+  font-weight:800;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  font-size:13px;
+}
+.titleCard .s{
+  margin-top:4px;
+  font-size:12px;
+  letter-spacing:.10em;
+  opacity:.85;
+}
 .pill{
   pointer-events:auto;
   border:1px solid var(--ui2);
-  background:rgba(0,0,0,.35);
+  background:rgba(0,0,0,.42);
   backdrop-filter: blur(8px);
   border-radius:999px;
   padding:10px 12px;
-  font-size:11px;
-  letter-spacing:.18em;
+  font-size:12px;
+  letter-spacing:.14em;
   text-transform:uppercase;
   display:flex; gap:10px; align-items:center;
+  white-space:nowrap;
 }
-.pill b{letter-spacing:.22em}
 .hint{
   pointer-events:auto;
-  flex:1 1 260px;
+  flex:1 1 340px;
   border:1px solid var(--ui2);
-  background:rgba(0,0,0,.35);
+  background:rgba(0,0,0,.42);
   backdrop-filter: blur(8px);
   border-radius:18px;
   padding:10px 12px;
-  font-size:11px;
-  letter-spacing:.10em;
+  font-size:12px;
+  letter-spacing:.08em;
   line-height:1.35;
 }
-.hint .k{display:inline-block; padding:2px 7px; border-radius:8px; border:1px solid var(--ui2); background:rgba(255,255,255,.06); font-weight:700}
+.hint .k{display:inline-block; padding:2px 7px; border-radius:8px; border:1px solid var(--ui2); background:rgba(255,255,255,.06); font-weight:800}
 
 .toast{
   position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
   border:1px solid var(--ui2);
-  background:rgba(0,0,0,.55);
+  background:rgba(0,0,0,.60);
   border-radius:14px;
   padding:10px 12px;
   font-size:12px;
   letter-spacing:.08em;
   opacity:0;
   transition:.2s;
-  max-width:min(760px, calc(100vw - 24px));
+  max-width:min(860px, calc(100vw - 24px));
   text-align:center;
 }
 .toast.on{opacity:1}
 
 /* poem modal */
-#poemBox{position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.6); z-index:9;}
+#poemBox{position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.65); z-index:9;}
 #poemBox textarea{
-  width:340px;height:200px;
+  width:360px;height:210px;
   background:#0b0b12;
   color:#fff;
   border:1px solid var(--ui2);
-  padding:10px;
+  padding:12px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
   border-radius:14px;
 }
@@ -99,9 +120,14 @@ body::before{
 <body>
 
 <div class="hud">
-  <div class="pill"><b>SOPHIA</b> <span id="status">BEDROOM</span></div>
-  <div class="pill">MILO: <span id="miloMood">following</span></div>
-  <div class="pill">KEYS: <span id="keys">NO</span></div>
+  <div class="titleCard">
+    <div class="t">Sophia’s Audition</div>
+    <div class="s"><span id="status">Bedroom</span> · Explore, interact, vibe ✨</div>
+  </div>
+
+  <div class="pill">Milo: <span id="miloMood">following</span></div>
+  <div class="pill">Keys: <span id="keys">NO</span></div>
+
   <div class="hint">
     Move: <span class="k">WASD</span> · Interact: <span class="k">E</span> · Run: <span class="k">SHIFT</span> · Click/Tap = interact<br>
     Desk = write poetry · Guitar = play · Clothes = change outfit · Bed = sleep · Doors lead out
@@ -117,7 +143,8 @@ body::before{
   </div>
 </div>
 
-<div class="wrap"><canvas id="c" width="512" height="288" tabindex="0"></canvas></div>
+<!-- Bigger viewport (screen) -->
+<div class="wrap"><canvas id="c" width="768" height="432" tabindex="0"></canvas></div>
 
 <script>
 (() => {
@@ -135,37 +162,26 @@ body::before{
 
   const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
 
-  // Robust load (survives older broken JSON)
+  // robust load
   let state;
-  try{
-    state = JSON.parse(localStorage.getItem(STORE_KEY) || "null") || null;
-  }catch(e){ state = null; }
-  if(!state || typeof state !== "object"){
-    state = {};
-  }
-  // defaults + patch
+  try{ state = JSON.parse(localStorage.getItem(STORE_KEY) || "null") || null; }
+  catch(e){ state = null; }
+  if(!state || typeof state !== "object") state = {};
   state = Object.assign({
     hasKeys:false, slept:false, trip:false, puke:false,
     poemLines:0, poems:[], guitarPlayed:0,
     outfit:0,
     lastRoom:"BEDROOM",
-    sophia:{x:120,y:190},
-    milo:{x:92,y:205}
+    sophia:{x:170,y:210},
+    milo:{x:150,y:226}
   }, state);
 
-  // Patch broken nested objects
-  if(!state.sophia || typeof state.sophia.x !== "number" || typeof state.sophia.y !== "number"){
-    state.sophia = {x:120,y:190};
-  }
-  if(!state.milo || typeof state.milo.x !== "number" || typeof state.milo.y !== "number"){
-    state.milo = {x:92,y:205};
-  }
+  if(!state.sophia || typeof state.sophia.x!=="number" || typeof state.sophia.y!=="number") state.sophia={x:170,y:210};
+  if(!state.milo   || typeof state.milo.x!=="number"   || typeof state.milo.y!=="number")   state.milo={x:150,y:226};
 
   function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
-  const W = canvas.width, H = canvas.height;
-
-  statusEl.textContent = "BEDROOM";
+  statusEl.textContent = "Bedroom";
   keysEl.textContent = state.hasKeys ? "YES" : "NO";
   miloMoodEl.textContent = "following";
 
@@ -183,16 +199,30 @@ body::before{
   }, { passive:false });
 
   window.addEventListener("keyup", (e) => keysDown.delete(keyName(e)));
-
   window.addEventListener("pointerdown", () => canvas.focus(), { passive:true });
 
-  /* ---------- style helpers ---------- */
+  /* ---------- world + camera ---------- */
+  // Viewport units (design grid)
+  const VIEW_W = 320, VIEW_H = 180;
+
+  // Bigger WORLD (more space to move)
+  const WORLD_W = 560, WORLD_H = 340;
+
+  // Scale from design grid to canvas pixels
+  const SX = canvas.width / VIEW_W;
+  const SY = canvas.height / VIEW_H;
+
+  const X = (x)=>Math.round((x - cam.x) * SX);
+  const Y = (y)=>Math.round((y - cam.y) * SY);
+  const Wp = (w)=>Math.round(w * SX);
+  const Hp = (h)=>Math.round(h * SY);
+
   function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
 
   function toast(msg){
     toastEl.textContent = msg;
     toastEl.classList.add("on");
-    setTimeout(()=>toastEl.classList.remove("on"), 1500);
+    setTimeout(()=>toastEl.classList.remove("on"), 1600);
   }
 
   /* ---------- poem modal ---------- */
@@ -209,30 +239,22 @@ body::before{
   poemSaveBtn.addEventListener("click", savePoem);
   window.savePoem = savePoem;
 
-  /* ---------- ROOM ---------- */
-  // Layout in "design units" (Graal-ish): we’ll scale to canvas
-  const BASE_W = 320, BASE_H = 180;
-  const SX = W/BASE_W, SY = H/BASE_H;
-  const S = (x)=>Math.round(x*SX);
-  const T = (y)=>Math.round(y*SY);
-  const SW = (w)=>Math.round(w*SX);
-  const SH = (h)=>Math.round(h*SY);
+  /* ---------- geometry ---------- */
+  const WALL = 10;
 
-  const WALL = T(10);
-
-  // 2.5D furniture boxes (x,y,w,h,depth) in design units
+  // Furniture in WORLD coords (solid, not see-through)
   const furn = {
-    desk:    { x:S(34),  y:T(46),  w:SW(100), h:SH(34), d:T(9)  },
-    bed:     { x:S(206), y:T(40),  w:SW(86),  h:SH(48), d:T(11) },
-    guitar:  { x:S(48),  y:T(118), w:SW(26),  h:SH(34), d:T(7)  },
-    dresser: { x:S(128), y:T(84),  w:SW(64),  h:SH(20), d:T(8)  },
-    clothes: { x:S(92),  y:T(132), w:SW(46),  h:SH(22), d:T(6)  },
-    table:   { x:S(188), y:T(96),  w:SW(26),  h:SH(18), d:T(7)  } // cute side table
+    desk:    { x:70,  y:70,  w:120, h:38, d:10 },
+    bed:     { x:360, y:56,  w:150, h:72, d:12 },
+    guitar:  { x:88,  y:235, w:32,  h:52, d:8  },
+    dresser: { x:230, y:128, w:88,  h:26, d:10 },
+    clothes: { x:170, y:260, w:62,  h:28, d:8  },
+    table:   { x:330, y:164, w:38,  h:26, d:9  },
+    window:  { x:120, y:26,  w:74,  h:36 }
   };
 
-  // solids (use "footprints")
   const solids = [
-    [0,0,W,WALL],[0,0,S(10),H],[0,H-WALL,W,WALL],[W-S(10),0,S(10),H],
+    [0,0,WORLD_W,WALL],[0,0,WALL,WORLD_H],[0,WORLD_H-WALL,WORLD_W,WALL],[WORLD_W-WALL,0,WALL,WORLD_H],
     [furn.desk.x, furn.desk.y, furn.desk.w, furn.desk.h],
     [furn.bed.x, furn.bed.y, furn.bed.w, furn.bed.h],
     [furn.guitar.x, furn.guitar.y, furn.guitar.w, furn.guitar.h],
@@ -242,12 +264,12 @@ body::before{
   ];
 
   const zones = [
-    {name:"DESK", rect:[S(44),T(52),SW(78),SH(26)], action:()=>location.href="poetry.html"},
-    {name:"BED", rect:[S(216),T(46),SW(66),SH(34)], action:()=>{ state.slept=true; save(); toast("She sleeps… audition fades 😴"); }},
-    {name:"GUITAR", rect:[S(48),T(122),SW(32),SH(26)], action:()=>location.href="guitar.html"},
-    {name:"CLOTHES", rect:[S(92),T(132),SW(46),SH(22)], action:changeOutfit},
-    {name:"DOOR_LIVING", rect:[W-S(26),T(74),S(18),SH(34)], action:()=>go("Sophie03.html")},
-    {name:"DOOR_YARD", rect:[S(146),H-T(22),SW(44),T(12)], action:()=>go("Sophie02.html")}
+    {name:"DESK", rect:[furn.desk.x+10,furn.desk.y+8, 80, 22], action:()=>location.href="poetry.html"},
+    {name:"BED", rect:[furn.bed.x+12,furn.bed.y+10, 110, 42], action:()=>{ state.slept=true; save(); toast("She sleeps… audition fades 😴"); }},
+    {name:"GUITAR", rect:[furn.guitar.x-6,furn.guitar.y+8, 46, 30], action:()=>location.href="guitar.html"},
+    {name:"CLOTHES", rect:[furn.clothes.x,furn.clothes.y, furn.clothes.w, furn.clothes.h], action:changeOutfit},
+    {name:"DOOR_LIVING", rect:[WORLD_W-20, 126, 12, 36], action:()=>go("Sophie03.html")},
+    {name:"DOOR_YARD", rect:[270, WORLD_H-18, 54, 10], action:()=>go("Sophie02.html")}
   ];
 
   function changeOutfit(){
@@ -264,17 +286,18 @@ body::before{
   }
 
   /* ---------- entities ---------- */
-  const sophia = { x: state.sophia.x, y: state.sophia.y, w:S(16), h:T(20), vx:0, vy:0, bob:0 };
+  const sophia = { x: state.sophia.x, y: state.sophia.y, w:16, h:20, bob:0 };
   const milo   = { x: state.milo.x,   y: state.milo.y,   bob:0 };
 
-  // Spawn safety: if save put her inside furniture, relocate
+  // camera
+  const cam = { x:0, y:0 };
+
+  // spawn safety
   if(insideSolid(sophia.x,sophia.y,sophia.w,sophia.h)){
-    sophia.x = S(70);
-    sophia.y = T(140);
+    sophia.x = 120; sophia.y = 200;
   }
 
   function moveWithSlide(dx,dy){
-    // slide along walls nicely
     const steps = 3;
     dx/=steps; dy/=steps;
     for(let i=0;i<steps;i++){
@@ -288,7 +311,7 @@ body::before{
     let best=null, bd=1e18;
     const px = sophia.x + sophia.w/2;
     const py = sophia.y + sophia.h/2;
-    const MAX = (S(52)*S(52));
+    const MAX = 60*60;
     for(const z of zones){
       const cx=z.rect[0]+z.rect[2]/2;
       const cy=z.rect[1]+z.rect[3]/2;
@@ -311,8 +334,9 @@ body::before{
   }, { passive:false });
   window.addEventListener("pointerup", ()=>heldPtr.down=false, { passive:true });
 
-  /* ---------- render helpers ---------- */
-  function rrect(x,y,w,h,r,fill,stroke){
+  /* ---------- draw helpers ---------- */
+  function rrect(px,py,pw,ph,r,fill,stroke){
+    const x=px, y=py, w=pw, h=ph;
     r=Math.max(0,Math.min(r,Math.min(w,h)/2));
     ctx.beginPath();
     ctx.moveTo(x+r,y);
@@ -325,179 +349,166 @@ body::before{
     if(stroke){ ctx.strokeStyle=stroke; ctx.stroke(); }
   }
 
-  function box3D(x,y,w,h,d, cTop,cFront,cSide, outline){
-    // shadow
-    ctx.fillStyle="rgba(0,0,0,.22)";
-    rrect(x+S(2), y+h-S(1), w-S(4), S(4), S(2), "rgba(0,0,0,.22)");
-
-    // top
-    ctx.fillStyle=cTop;
-    rrect(x, y-d, w, d, S(4), cTop);
-
-    // side (right)
-    ctx.fillStyle=cSide;
-    rrect(x+w-d, y-d, d, h, S(3), cSide);
-
-    // front
-    rrect(x, y, w, h, S(5), cFront);
-
-    // glossy highlight
-    ctx.fillStyle="rgba(255,255,255,.08)";
-    rrect(x+S(2), y+S(2), w-S(10), S(6), S(3), "rgba(255,255,255,.07)");
-
-    if(outline){
-      ctx.strokeStyle=outline;
-      ctx.strokeRect(x+.5,y+.5,w,h);
+  // Tiny texture overlay (checker + speckle), keeps furniture "solid" but detailed
+  function texture(px,py,pw,ph, step, a1, a2){
+    for(let y=0;y<ph;y+=step){
+      for(let x=0;x<pw;x+=step){
+        const on = ((x/step|0)+(y/step|0))%2===0;
+        ctx.fillStyle = on ? a1 : a2;
+        ctx.fillRect(px+x, py+y, step, step);
+      }
     }
   }
 
-  /* ---------- background: cute + warm + “storybook” ---------- */
-  const motes = Array.from({length:22}, (_,i)=>({
-    x: Math.random()*W,
-    y: Math.random()*H,
-    r: S(1)+Math.random()*S(2),
-    sp: 0.15+Math.random()*0.35
+  function box3D(wx,wy,ww,wh,wd, colTop, colFront, colSide, edge){
+    const x = X(wx), y = Y(wy), w = Wp(ww), h = Hp(wh), d = Hp(wd);
+
+    // floor shadow
+    ctx.fillStyle="rgba(0,0,0,.28)";
+    rrect(x+Wp(2), y+h-Hp(2), w-Wp(4), Hp(5), Wp(2), "rgba(0,0,0,.28)");
+
+    // top
+    rrect(x, y-d, w, d, Wp(4), colTop);
+    texture(x, y-d, w, d, Math.max(2, Wp(2)), "rgba(255,255,255,.06)", "rgba(0,0,0,.03)");
+
+    // side
+    rrect(x+w-d, y-d, d, h, Wp(3), colSide);
+    texture(x+w-d, y-d, d, h, Math.max(2, Wp(2)), "rgba(255,255,255,.05)", "rgba(0,0,0,.04)");
+
+    // front
+    rrect(x, y, w, h, Wp(5), colFront);
+    texture(x, y, w, h, Math.max(2, Wp(2)), "rgba(255,255,255,.05)", "rgba(0,0,0,.03)");
+
+    // highlight strip
+    ctx.fillStyle="rgba(255,255,255,.10)";
+    rrect(x+Wp(2), y+Hp(2), w-Wp(10), Hp(6), Wp(3), "rgba(255,255,255,.08)");
+
+    // outline
+    ctx.strokeStyle=edge;
+    ctx.strokeRect(x+.5, y+.5, w, h);
+  }
+
+  /* ---------- background ---------- */
+  const motes = Array.from({length:28}, ()=>({
+    x: Math.random()*WORLD_W,
+    y: Math.random()*WORLD_H,
+    r: 1+Math.random()*2,
+    sp: 0.18+Math.random()*0.38
   }));
 
   function bg(){
     // base
-    ctx.fillStyle="#07060b";
-    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle="#0b0810";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // window light (top-left)
-    const win = ctx.createRadialGradient(S(80),T(40),S(10), S(80),T(40), S(220));
-    win.addColorStop(0,"rgba(255,245,220,.18)");
-    win.addColorStop(.6,"rgba(255,200,235,.08)");
-    win.addColorStop(1,"rgba(0,0,0,0)");
-    ctx.fillStyle=win;
-    ctx.fillRect(0,0,W,H);
+    // walls area
+    rrect(X(8),Y(8),Wp(VIEW_W-16),Hp(110),Wp(8), "#181224", "rgba(255,255,255,.10)");
 
-    // wall panel
-    rrect(S(10),T(10),W-S(20),T(118),S(12),"rgba(255,255,255,.035)","rgba(255,255,255,.09)");
+    // window frame
+    const win = furn.window;
+    rrect(X(win.x),Y(win.y),Wp(win.w),Hp(win.h),Wp(6), "#2a2240", "rgba(255,255,255,.16)");
+    // window glow spill
+    const gx = X(win.x+win.w/2), gy = Y(win.y+win.h/2);
+    const g = ctx.createRadialGradient(gx,gy, Wp(6), gx,gy, Wp(150));
+    g.addColorStop(0,"rgba(255,245,210,.22)");
+    g.addColorStop(.55,"rgba(255,200,235,.10)");
+    g.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=g;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // little wall decorations
-    rrect(S(26),T(26),S(44),T(28),S(8),"rgba(255,170,255,.05)","rgba(255,170,255,.10)"); // picture frame
-    rrect(S(76),T(30),S(26),T(16),S(7),"rgba(170,255,245,.04)","rgba(170,255,245,.10)");
+    // floor (solid wood-ish tile look)
+    const floorY = 118;
+    const fy = Y(floorY);
+    ctx.fillStyle="#1a1327";
+    ctx.fillRect(0, fy, canvas.width, canvas.height - fy);
 
-    // floor gradient (depth!)
-    const floorY = T(120);
-    for(let y=floorY;y<H-T(8);y++){
-      const t = (y-floorY)/Math.max(1,(H-T(8)-floorY));
-      const a = 0.035 + t*0.06;      // brighter toward bottom
-      const b = 0.02 + (1-t)*0.03;   // darker toward top
-      ctx.fillStyle=`rgba(255,255,255,${(y%2===0)?a:b})`;
-      ctx.fillRect(S(8),y,W-S(16),1);
+    // planks
+    for(let y=fy; y<canvas.height; y+=Hp(4)){
+      ctx.fillStyle="rgba(255,255,255,.04)";
+      ctx.fillRect(0, y, canvas.width, 1);
+    }
+    for(let x=0; x<canvas.width; x+=Wp(18)){
+      ctx.fillStyle="rgba(0,0,0,.10)";
+      ctx.fillRect(x, fy, 1, canvas.height - fy);
     }
 
     // rug
-    rrect(S(118),T(138),SW(100),SH(52),S(12),"rgba(255,255,255,.045)","rgba(255,255,255,.10)");
-    rrect(S(126),T(146),SW(84),SH(36),S(10),"rgba(255,170,255,.035)","rgba(255,170,255,.08)");
+    rrect(X(210),Y(205),Wp(150),Hp(84),Wp(10), "#2a2040", "rgba(255,255,255,.14)");
+    texture(X(210),Y(205),Wp(150),Hp(84),Math.max(2,Wp(2)),"rgba(255,170,255,.06)","rgba(0,0,0,.05)");
+    rrect(X(224),Y(218),Wp(122),Hp(56),Wp(9), "#3a2b58", "rgba(255,170,255,.16)");
 
-    // dust motes (ghibli air)
+    // motes (ghibli air)
     for(const m of motes){
       m.y -= m.sp;
-      m.x += Math.sin((m.y+m.r)*0.02)*0.25;
-      if(m.y < -S(10)){ m.y = H+S(10); m.x = Math.random()*W; }
-      ctx.fillStyle="rgba(255,255,255,.06)";
-      rrect(m.x,m.y,m.r,m.r,S(2),"rgba(255,255,255,.06)");
+      m.x += Math.sin((m.y+m.r)*0.03)*0.20;
+      if(m.y < 0){ m.y = WORLD_H; m.x = Math.random()*WORLD_W; }
+      const px = X(m.x), py = Y(m.y);
+      if(px< -10 || px>canvas.width+10 || py< -10 || py>canvas.height+10) continue;
+      ctx.fillStyle="rgba(255,255,255,.07)";
+      ctx.fillRect(px,py, Math.max(1,Wp(m.r)), Math.max(1,Wp(m.r)));
     }
 
     // vignette
-    ctx.fillStyle="rgba(0,0,0,.20)";
-    ctx.fillRect(0,0,W,S(6));
-    ctx.fillRect(0,H-S(6),W,S(6));
-    ctx.fillRect(0,0,S(6),H);
-    ctx.fillRect(W-S(6),0,S(6),H);
+    ctx.fillStyle="rgba(0,0,0,.22)";
+    ctx.fillRect(0,0,canvas.width,Hp(6));
+    ctx.fillRect(0,canvas.height-Hp(6),canvas.width,Hp(6));
+    ctx.fillRect(0,0,Wp(6),canvas.height);
+    ctx.fillRect(canvas.width-Wp(6),0,Wp(6),canvas.height);
   }
 
   function drawFurniture(){
-    // desk
-    const D = furn.desk;
-    box3D(D.x,D.y,D.w,D.h,D.d,
-      "rgba(205,185,255,.15)",
-      "rgba(205,185,255,.085)",
-      "rgba(150,130,205,.11)",
-      "rgba(255,255,255,.11)"
+    // Solid palette (real RPG props)
+    box3D(furn.desk.x, furn.desk.y, furn.desk.w, furn.desk.h, furn.desk.d,
+      "#6e4bb8", "#5b3aa3", "#4a2f86", "rgba(0,0,0,.35)"
     );
-    // desk legs
-    ctx.fillStyle="rgba(0,0,0,.18)";
-    ctx.fillRect(D.x+S(8), D.y+D.h-S(4), S(4), S(8));
-    ctx.fillRect(D.x+D.w-S(12), D.y+D.h-S(4), S(4), S(8));
+    // desk details
+    rrect(X(furn.desk.x+14), Y(furn.desk.y+12), Wp(84), Hp(10), Wp(4), "#3a255f", "rgba(255,255,255,.10)");
+    rrect(X(furn.desk.x+18), Y(furn.desk.y - furn.desk.d + 4), Wp(30), Hp(16), Wp(5), "#1b1427", "rgba(255,255,255,.14)"); // monitor
+    rrect(X(furn.desk.x+23), Y(furn.desk.y - furn.desk.d + 9), Wp(18), Hp(7), Wp(3), "#3ee6d3", "rgba(255,255,255,.10)");
 
-    // monitor
-    rrect(D.x+S(16), D.y-D.d+T(5), SW(22), T(12), S(5), "rgba(0,0,0,.32)","rgba(255,255,255,.13)");
-    rrect(D.x+S(22), D.y-D.d+T(9), SW(10), T(5), S(3), "rgba(170,255,245,.10)");
-
-    // bed
-    const B = furn.bed;
-    box3D(B.x,B.y,B.w,B.h,B.d,
-      "rgba(170,255,245,.13)",
-      "rgba(170,255,245,.07)",
-      "rgba(110,190,180,.11)",
-      "rgba(255,255,255,.11)"
+    box3D(furn.bed.x, furn.bed.y, furn.bed.w, furn.bed.h, furn.bed.d,
+      "#62d3c9", "#4fbdb3", "#3a9a92", "rgba(0,0,0,.35)"
     );
-    // pillow + blanket
-    rrect(B.x+S(10), B.y+T(8), SW(28), T(12), S(7), "rgba(255,255,255,.10)","rgba(255,255,255,.13)");
-    rrect(B.x+S(9),  B.y+T(24), B.w-S(18), T(12), S(7), "rgba(255,170,255,.06)","rgba(255,170,255,.11)");
+    rrect(X(furn.bed.x+14), Y(furn.bed.y+12), Wp(44), Hp(16), Wp(7), "#efeef7", "rgba(0,0,0,.18)"); // pillow
+    rrect(X(furn.bed.x+10), Y(furn.bed.y+34), Wp(furn.bed.w-20), Hp(16), Wp(8), "#ff86c3", "rgba(0,0,0,.18)"); // blanket
+    texture(X(furn.bed.x+10), Y(furn.bed.y+34), Wp(furn.bed.w-20), Hp(16), Math.max(2,Wp(2)), "rgba(255,255,255,.06)", "rgba(0,0,0,.05)");
 
-    // dresser
-    const R = furn.dresser;
-    box3D(R.x,R.y,R.w,R.h,R.d,
-      "rgba(255,230,180,.11)",
-      "rgba(255,230,180,.065)",
-      "rgba(200,160,110,.10)",
-      "rgba(255,255,255,.11)"
+    box3D(furn.dresser.x, furn.dresser.y, furn.dresser.w, furn.dresser.h, furn.dresser.d,
+      "#d59a51", "#c4873e", "#9c6a2f", "rgba(0,0,0,.35)"
     );
     for(let i=0;i<2;i++){
-      rrect(R.x+S(8), R.y+T(4+i*8), R.w-S(16), T(7), S(5), "rgba(0,0,0,.10)","rgba(255,255,255,.07)");
-      ctx.fillStyle="rgba(255,255,255,.14)";
-      rrect(R.x+R.w-S(18), R.y+T(6+i*8), S(6), T(3), S(2), "rgba(255,255,255,.12)");
+      rrect(X(furn.dresser.x+10), Y(furn.dresser.y+6+i*10), Wp(furn.dresser.w-20), Hp(8), Wp(4), "#7a4f22", "rgba(255,255,255,.10)");
+      rrect(X(furn.dresser.x+furn.dresser.w-18), Y(furn.dresser.y+8+i*10), Wp(6), Hp(4), Wp(2), "#ffe8b8", "rgba(0,0,0,.18)");
     }
 
-    // clothes pile
-    const C = furn.clothes;
-    box3D(C.x,C.y,C.w,C.h,C.d,
-      "rgba(255,190,230,.12)",
-      "rgba(255,190,230,.07)",
-      "rgba(200,120,180,.10)",
-      "rgba(255,255,255,.11)"
+    box3D(furn.clothes.x, furn.clothes.y, furn.clothes.w, furn.clothes.h, furn.clothes.d,
+      "#ff8fbd", "#ff6fb0", "#c24f85", "rgba(0,0,0,.35)"
     );
 
-    // guitar stand
-    const G = furn.guitar;
-    box3D(G.x,G.y,G.w,G.h,G.d,
-      "rgba(255,255,255,.08)",
-      "rgba(255,255,255,.05)",
-      "rgba(255,255,255,.07)",
-      "rgba(255,255,255,.11)"
+    box3D(furn.guitar.x, furn.guitar.y, furn.guitar.w, furn.guitar.h, furn.guitar.d,
+      "#e7e5f2", "#cfcbe6", "#b0abc9", "rgba(0,0,0,.35)"
     );
-    // tiny guitar silhouette
-    ctx.fillStyle="rgba(255,170,255,.10)";
-    rrect(G.x+S(10), G.y+T(6), S(6), T(16), S(3), "rgba(255,170,255,.10)");
+    // cute guitar silhouette
+    rrect(X(furn.guitar.x+10), Y(furn.guitar.y+10), Wp(8), Hp(24), Wp(3), "#b98bff", "rgba(0,0,0,.20)");
 
-    // side table
-    const TBL = furn.table;
-    box3D(TBL.x,TBL.y,TBL.w,TBL.h,TBL.d,
-      "rgba(255,255,255,.09)",
-      "rgba(255,255,255,.05)",
-      "rgba(255,255,255,.07)",
-      "rgba(255,255,255,.10)"
+    box3D(furn.table.x, furn.table.y, furn.table.w, furn.table.h, furn.table.d,
+      "#e9f0f7", "#d7e2ef", "#b7c4d6", "rgba(0,0,0,.35)"
     );
-    // lamp glow
-    const lamp = ctx.createRadialGradient(TBL.x+S(10),TBL.y-TBL.d+S(4),S(2), TBL.x+S(10),TBL.y-TBL.d+S(4), S(60));
-    lamp.addColorStop(0,"rgba(255,245,220,.18)");
+    // lamp
+    rrect(X(furn.table.x+10), Y(furn.table.y - furn.table.d + 4), Wp(8), Hp(10), Wp(3), "#fff2c7", "rgba(0,0,0,.18)");
+    const lamp = ctx.createRadialGradient(X(furn.table.x+14), Y(furn.table.y - furn.table.d + 8), Wp(4), X(furn.table.x+14), Y(furn.table.y - furn.table.d + 8), Wp(110));
+    lamp.addColorStop(0,"rgba(255,245,210,.22)");
     lamp.addColorStop(1,"rgba(0,0,0,0)");
     ctx.fillStyle=lamp;
-    ctx.fillRect(0,0,W,H);
+    ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // door glows
-    rrect(W-S(28),T(72),S(20),SH(38),S(8),"rgba(0,255,213,.07)","rgba(0,255,213,.16)");
-    rrect(S(140),H-T(24),SW(56),T(14),S(8),"rgba(0,255,213,.07)","rgba(0,255,213,.16)");
+    // doors (solid)
+    rrect(X(WORLD_W-22), Y(124), Wp(14), Hp(40), Wp(6), "#2a2240", "rgba(0,255,213,.22)");
+    rrect(X(270), Y(WORLD_H-20), Wp(56), Hp(12), Wp(6), "#2a2240", "rgba(0,255,213,.22)");
   }
 
   /* ---------- sprites ---------- */
   function drawSophia(){
-    const x=Math.round(sophia.x), y=Math.round(sophia.y + Math.sin(sophia.bob)*T(1));
     const outfits=[
       {dress:"#c2a3ff", bow:"#ffe1ff"},
       {dress:"#99fff0", bow:"#e4fbff"},
@@ -506,92 +517,105 @@ body::before{
     ];
     const o=outfits[state.outfit];
 
+    const bob = Math.sin(sophia.bob)*0.8;
+    const x = X(sophia.x);
+    const y = Y(sophia.y + bob);
+
     // shadow
-    ctx.fillStyle="rgba(0,0,0,.24)";
-    rrect(x+S(3), y+T(18), S(10), T(3), S(2), "rgba(0,0,0,.24)");
+    ctx.fillStyle="rgba(0,0,0,.26)";
+    rrect(x+Wp(3), y+Hp(18), Wp(10), Hp(3), Wp(2), "rgba(0,0,0,.26)");
 
     // hair
+    rrect(x+Wp(3), y+Hp(0), Wp(10), Hp(7), Wp(3), "#f2d27a");
     ctx.fillStyle="#f2d27a";
-    rrect(x+S(3), y+T(0), S(10), T(7), S(3), "#f2d27a");
-    ctx.fillRect(x+S(2), y+T(3), S(12), T(6));
-    ctx.fillRect(x+S(3), y+T(6), S(3), T(3));
-    ctx.fillRect(x+S(10), y+T(6), S(3), T(3));
+    ctx.fillRect(x+Wp(2), y+Hp(3), Wp(12), Hp(6));
+    ctx.fillRect(x+Wp(3), y+Hp(6), Wp(3), Hp(3));
+    ctx.fillRect(x+Wp(10),y+Hp(6), Wp(3), Hp(3));
 
     // face
-    ctx.fillStyle="#ffd9c9";
-    rrect(x+S(4), y+T(7), S(10), T(9), S(3), "#ffd9c9");
+    rrect(x+Wp(4), y+Hp(7), Wp(10), Hp(9), Wp(3), "#ffd9c9");
 
     // eyes
-    ctx.fillStyle="#1a0f2a";
-    rrect(x+S(6), y+T(10), S(3), T(3), S(1), "#1a0f2a");
-    rrect(x+S(11),y+T(10), S(3), T(3), S(1), "#1a0f2a");
+    rrect(x+Wp(6), y+Hp(10), Wp(3), Hp(3), Wp(1), "#1a0f2a");
+    rrect(x+Wp(11),y+Hp(10), Wp(3), Hp(3), Wp(1), "#1a0f2a");
     ctx.fillStyle="#67b7ff";
-    ctx.fillRect(x+S(7), y+T(11), S(1), T(1));
-    ctx.fillRect(x+S(12),y+T(11), S(1), T(1));
+    ctx.fillRect(x+Wp(7), y+Hp(11), Wp(1), Hp(1));
+    ctx.fillRect(x+Wp(12),y+Hp(11), Wp(1), Hp(1));
 
     // blush
     ctx.fillStyle="rgba(255,120,160,.20)";
-    ctx.fillRect(x+S(5), y+T(14), S(2), T(1));
-    ctx.fillRect(x+S(13),y+T(14), S(2), T(1));
+    ctx.fillRect(x+Wp(5), y+Hp(14), Wp(2), Hp(1));
+    ctx.fillRect(x+Wp(13),y+Hp(14), Wp(2), Hp(1));
 
     // bow
-    ctx.fillStyle=o.bow;
-    rrect(x+S(9), y+T(6), S(4), T(2), S(1), o.bow);
+    rrect(x+Wp(9), y+Hp(6), Wp(4), Hp(2), Wp(1), o.bow);
 
     // dress
-    ctx.fillStyle=o.dress;
-    rrect(x+S(5), y+T(16), S(10), T(6), S(3), o.dress);
+    rrect(x+Wp(5), y+Hp(16), Wp(10), Hp(6), Wp(3), o.dress);
     ctx.fillStyle="rgba(255,255,255,.22)";
-    ctx.fillRect(x+S(6), y+T(18), S(8), T(1));
+    ctx.fillRect(x+Wp(6), y+Hp(18), Wp(8), Hp(1));
   }
 
   function drawMilo(){
-    const x=Math.round(milo.x), y=Math.round(milo.y + Math.sin(milo.bob)*T(1));
+    const bob = Math.sin(milo.bob)*0.8;
+    const x = X(milo.x);
+    const y = Y(milo.y + bob);
 
     ctx.fillStyle="rgba(0,0,0,.22)";
-    rrect(x+S(2), y+T(10), S(12), T(3), S(2), "rgba(0,0,0,.22)");
+    rrect(x+Wp(2), y+Hp(10), Wp(12), Hp(3), Wp(2), "rgba(0,0,0,.22)");
 
+    rrect(x+Wp(2), y+Hp(4), Wp(14), Hp(9), Wp(4), "#ececf6");
     ctx.fillStyle="#ececf6";
-    rrect(x+S(2), y+T(4), S(14), T(9), S(4), "#ececf6");
-    ctx.fillRect(x+S(3), y+T(3), S(4), T(3));
-    ctx.fillRect(x+S(11),y+T(3), S(4), T(3));
+    ctx.fillRect(x+Wp(3), y+Hp(3), Wp(4), Hp(3));
+    ctx.fillRect(x+Wp(11),y+Hp(3), Wp(4), Hp(3));
 
     ctx.fillStyle="#1a0f2a";
-    ctx.fillRect(x+S(6), y+T(7), S(1), T(1));
-    ctx.fillRect(x+S(11),y+T(7), S(1), T(1));
+    ctx.fillRect(x+Wp(6), y+Hp(7), Wp(1), Hp(1));
+    ctx.fillRect(x+Wp(11),y+Hp(7), Wp(1), Hp(1));
     ctx.fillStyle="#1affd3";
-    ctx.fillRect(x+S(6), y+T(6), S(1), T(1));
-    ctx.fillRect(x+S(11),y+T(6), S(1), T(1));
+    ctx.fillRect(x+Wp(6), y+Hp(6), Wp(1), Hp(1));
+    ctx.fillRect(x+Wp(11),y+Hp(6), Wp(1), Hp(1));
 
     ctx.fillStyle="rgba(255,120,160,.30)";
-    ctx.fillRect(x+S(8), y+T(9), S(2), T(1));
+    ctx.fillRect(x+Wp(8), y+Hp(9), Wp(2), Hp(1));
   }
 
   function drawInteractHint(){
     const z=nearest();
     if(!z) return;
-    rrect(S(12), H-T(30), S(250), T(18), S(9), "rgba(0,0,0,.48)", "rgba(255,255,255,.18)");
+    rrect(Wp(8), canvas.height-Hp(28), Wp(280), Hp(18), Wp(8), "rgba(0,0,0,.55)", "rgba(255,255,255,.20)");
     ctx.fillStyle="rgba(255,255,255,.95)";
-    ctx.font = `${T(10)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-    ctx.fillText(`Press E or tap: ${z.name}`, S(22), H-T(18));
+    ctx.font = `${Math.max(10, Hp(10))}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.fillText(`Press E or tap: ${z.name}`, Wp(16), canvas.height-Hp(15));
   }
 
   /* ---------- loop ---------- */
   function go(f){ save(); location.href=f; }
 
+  function updateCamera(){
+    // follow Sophia, clamp to world bounds
+    const targetX = (sophia.x + sophia.w/2) - VIEW_W/2;
+    const targetY = (sophia.y + sophia.h/2) - VIEW_H/2;
+    cam.x += (targetX - cam.x) * 0.10;
+    cam.y += (targetY - cam.y) * 0.10;
+    cam.x = clamp(cam.x, 0, WORLD_W - VIEW_W);
+    cam.y = clamp(cam.y, 0, WORLD_H - VIEW_H);
+  }
+
   function loop(){
     if(!state.slept){
       const run = keysDown.has("shift");
-      const sp = run ? 2.2 : 1.55;
+      const sp = run ? 2.4 : 1.7;
 
-      // diagonal normalize
       let dx = (keysDown.has("d")||keysDown.has("arrowright")?1:0) - (keysDown.has("a")||keysDown.has("arrowleft")?1:0);
       let dy = (keysDown.has("s")||keysDown.has("arrowdown")?1:0) - (keysDown.has("w")||keysDown.has("arrowup")?1:0);
+
       if(dx || dy){
         const mag = Math.hypot(dx,dy) || 1;
         dx = dx/mag * sp;
         dy = dy/mag * sp;
       }
+
       moveWithSlide(dx,dy);
       sophia.bob += 0.18;
     } else {
@@ -603,19 +627,21 @@ body::before{
     if(!keysDown.has("e")) held.e=false;
 
     // Milo follow
-    const tx = sophia.x - S(20);
-    const ty = sophia.y + T(12);
-    milo.x += (tx - milo.x) * .065;
-    milo.y += (ty - milo.y) * .065;
+    const tx = sophia.x - 20;
+    const ty = sophia.y + 12;
+    milo.x += (tx - milo.x) * 0.065;
+    milo.y += (ty - milo.y) * 0.065;
     milo.bob += 0.12;
 
-    // clamp to room bounds a bit (prevents edge weirdness)
-    sophia.x = clamp(sophia.x, S(12), W - S(22));
-    sophia.y = clamp(sophia.y, T(12), H - T(26));
+    // clamp to world bounds
+    sophia.x = clamp(sophia.x, 12, WORLD_W - 28);
+    sophia.y = clamp(sophia.y, 12, WORLD_H - 30);
+
+    updateCamera();
 
     // save
     state.sophia.x = sophia.x; state.sophia.y = sophia.y;
-    state.milo.x = milo.x;     state.milo.y = milo.y;
+    state.milo.x   = milo.x;   state.milo.y   = milo.y;
     save();
 
     // draw
