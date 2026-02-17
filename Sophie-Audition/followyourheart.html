@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Follow Your Heart</title>
+<style>
+  :root{--bg:#07070b;--fg:#fff;--ui:rgba(255,255,255,.14);--vio:#8a2eff;--aqua:#00ffd5;--sun:#ffd24d;}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  body::before{
+    content:"";position:fixed;inset:-20%;
+    background:
+      radial-gradient(circle at 18% 18%, rgba(255,210,77,.16), transparent 60%),
+      radial-gradient(circle at 72% 22%, rgba(255,99,255,.10), transparent 62%),
+      radial-gradient(circle at 50% 80%, rgba(0,255,213,.10), transparent 62%);
+    filter:blur(44px) saturate(1.12);
+    pointer-events:none;
+  }
+  .wrap{min-height:100%;display:grid;place-items:center;padding:18px;}
+  .card{
+    width:min(880px,100%);
+    border:1px solid var(--ui);
+    background:rgba(0,0,0,.45);
+    backdrop-filter: blur(10px);
+    border-radius:18px;
+    padding:16px;
+  }
+  h1{margin:0 0 10px 0;font-size:14px;letter-spacing:.22em;text-transform:uppercase;opacity:.95}
+  .sub{opacity:.72;font-size:12px;letter-spacing:.06em;line-height:1.35;margin-bottom:12px}
+  .grid{display:grid;gap:10px;grid-template-columns:1fr; }
+  .row{
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.06);
+    border-radius:14px;
+    padding:12px;
+    display:flex;justify-content:space-between;gap:12px;align-items:center;
+  }
+  button{
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.35);
+    color:#fff;border-radius:12px;
+    padding:10px 12px;
+    letter-spacing:.12em;text-transform:uppercase;font-size:11px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  button:hover{border-color:rgba(0,255,213,.28)}
+  .toast{
+    margin-top:10px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.55);
+    border-radius:14px;
+    padding:10px 12px;
+    font-size:12px;letter-spacing:.06em;opacity:.9;display:none;
+  }
+  .toast.on{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Follow Your Heart</h1>
+    <div class="sub">A small restaurant tucked between the canyon-route and the valley streets. Warm light. Quiet bravery.</div>
+
+    <div class="grid">
+      <div class="row">
+        <div>
+          <div style="letter-spacing:.12em;text-transform:uppercase;font-size:12px">Soup of the Day</div>
+          <div class="sub" style="margin:6px 0 0 0">Costs $4. Heals your vibes. (Small speed calm.)</div>
+        </div>
+        <button id="soup">Buy</button>
+      </div>
+
+      <div class="row">
+        <div>
+          <div style="letter-spacing:.12em;text-transform:uppercase;font-size:12px">Write a quick line</div>
+          <div class="sub" style="margin:6px 0 0 0">Sophia scribbles a poem line. (Saves + tiny cash chance.)</div>
+        </div>
+        <button id="poem">Write</button>
+      </div>
+
+      <div class="row">
+        <div>
+          <div style="letter-spacing:.12em;text-transform:uppercase;font-size:12px">Talk to the cook</div>
+          <div class="sub" style="margin:6px 0 0 0">“Follow your heart, but bring a map.”</div>
+        </div>
+        <button id="talk">Talk</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+      <button onclick="location.href='street.html'">Back to Street</button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<script>
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+function loadState(){ const r=localStorage.getItem(STORE_KEY); if(r){ try{return JSON.parse(r);}catch(e){} } return null; }
+function saveState(s){ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+const toastEl=document.getElementById("toast");
+function toast(msg){ toastEl.textContent=msg; toastEl.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>toastEl.classList.remove("on"),1400); }
+
+document.getElementById("soup").onclick=()=>{
+  const s=loadState(); if(!s) return toast("Open street first.");
+  s.cash = s.cash|0;
+  if(s.cash<4) return toast("Not enough cash for soup.");
+  s.cash -= 4;
+  // reward: small mush + calm (we store as street buff time)
+  s.street = s.street || {};
+  s.street.mush = (s.street.mush|0) + 1;
+  s.street.tripUntil = Math.max(s.street.tripUntil||0, performance.now()+4000); // tiny “warm glow”
+  saveState(s);
+  toast("Soup warms the timeline. (+1 mush)");
+};
+
+document.getElementById("poem").onclick=()=>{
+  const s=loadState(); if(!s) return toast("Open street first.");
+  s.poemLines = (s.poemLines|0) + 1;
+  // tiny chance of tip
+  if(Math.random()<0.35){ s.cash = (s.cash|0) + 2; toast("A stranger tips you $2 for the line."); }
+  else toast("You write a line. It feels like a key you can’t see yet.");
+  saveState(s);
+};
+
+document.getElementById("talk").onclick=()=>{
+  toast("Cook: “City’s loud. Your heart’s louder if you listen.”");
+};
+</script>
+</body>
+</html>
