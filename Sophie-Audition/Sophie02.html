@@ -92,12 +92,20 @@ const solids = [
   // shrubs blocks
   [30,56,60,18],
   [230,62,62,18],
+  // pingpong table (solid)
+  [88,118,78,22],
+  // hammock posts (solid-ish frame)
+  [196,92,64,28],
   // mushroom patch block (still passable but used for zone)
 ];
 
 const zones = [
   {name:"MUSHROOMS", rect:[120,72,76,40], action: eatMushroom},
   {name:"DOOR_BEDROOM", rect:[148,H-20,34,10], action: ()=>go("Sophie01.html")},
+  // NEW: hammock
+  {name:"HAMMOCK", rect:[196,92,64,28], action: enterHammock},
+  // NEW: pingpong vs milo
+  {name:"PINGPONG", rect:[88,118,78,22], action: startPingpong},
 ];
 
 const sophia = {x: state.sophia.x, y: state.sophia.y, w:10,h:12, speed:0.85, run:1.35};
@@ -138,6 +146,99 @@ function eatMushroom(){
   UI.trip.textContent = state.trip ? "ON" : "OFF";
   UI.miloMood.textContent = state.trip ? "playing" : "following";
   toast(state.trip ? "Mushroom eaten. Reality gets… soft." : "Trip fades. Backyard returns.", 1700);
+}
+
+/* NEW: hammock travel */
+function enterHammock(){
+  toast(state.trip ? "She melts into the hammock. The sky opens." : "She sits on the hammock. The night feels huge.", 1700);
+  // preserve exact engine/state, just jump to a new html
+  go("hammock.html");
+}
+
+/* NEW: pingpong mini */
+let pingpongActive=false;
+let pp={ sx:0, sy:0, mx:0, my:0, bx:0, by:0, vx:0, vy:0, s:0, m:0, over:0, hit:0 };
+
+function startPingpong(){
+  if(pingpongActive) return toast("Pingpong already in session.", 1200);
+  pingpongActive=true;
+  pp={
+    sx:sophia.x, sy:sophia.y,
+    mx:milo.x, my:milo.y,
+    bx:127, by:129, vx:(Math.random()<0.5?-1:1)*1.2, vy:-0.7,
+    s:0, m:0, over:0, hit:0
+  };
+  toast("PINGPONG vs MILO. Press E to return. (Try not to lose to a cat.)", 2200);
+}
+
+/* pingpong update */
+function updatePingpong(t){
+  // field over the pingpong table
+  // paddles move with sophia/milo positions mapped to table edges
+  const table={x:88,y:118,w:78,h:22};
+  const left=table.x+4, right=table.x+table.w-6;
+  const top=table.y+4, bottom=table.y+table.h-4;
+
+  // Sophia paddle: follow Sophia's y position but clamp
+  let py = sophia.y + 6;
+  py = Math.max(top, Math.min(bottom, py));
+  // Milo paddle: follow ball slightly delayed + jitter when tripping
+  let my = pp.by + (state.trip ? Math.sin(t*0.12)*3 : 0);
+  my = Math.max(top, Math.min(bottom, my));
+
+  // Move ball
+  pp.bx += pp.vx;
+  pp.by += pp.vy;
+
+  // Bounce top/bottom
+  if(pp.by<top){pp.by=top; pp.vy*=-1;}
+  if(pp.by>bottom){pp.by=bottom; pp.vy*=-1;}
+
+  // Paddle collision
+  // Sophia side (left)
+  if(pp.bx<=left+1){
+    const d = Math.abs(pp.by - py);
+    if(d<=5){
+      pp.bx=left+1;
+      pp.vx = Math.abs(pp.vx) + 0.08;
+      pp.vy += (pp.by - py)*0.06;
+      pp.hit++;
+      if(pp.hit%4===0) toast("Sophia: *tap* (Milo narrows his eyes)", 900);
+    }else{
+      pp.m++;
+      serveBall(1);
+      toast("Milo scores. (meow of victory)", 1200);
+    }
+  }
+  // Milo side (right)
+  if(pp.bx>=right-1){
+    const d = Math.abs(pp.by - my);
+    if(d<=5){
+      pp.bx=right-1;
+      pp.vx = -Math.abs(pp.vx) - 0.06;
+      pp.vy += (pp.by - my)*0.06;
+      pp.hit++;
+      if(pp.hit%4===0) toast("Milo returns it with a paw. disrespectful.", 900);
+    }else{
+      pp.s++;
+      serveBall(-1);
+      toast("Sophia scores. Milo pretends he let it happen.", 1200);
+    }
+  }
+
+  // End condition
+  if(pp.s>=5 || pp.m>=5){
+    pp.over=1;
+    pingpongActive=false;
+    toast(pp.s>pp.m ? "WIN: Sophia defeats Milo at pingpong. Milo demands a rematch." : "LOSS: Milo wins. He is now the athlete of the house.", 2400);
+  }
+}
+function serveBall(dir){
+  const table={x:88,y:118,w:78,h:22};
+  pp.bx=table.x+table.w/2;
+  pp.by=table.y+table.h/2;
+  pp.vx=dir*(1.2+Math.random()*0.2);
+  pp.vy=(Math.random()*1.2-0.6);
 }
 
 function go(file){
@@ -224,11 +325,69 @@ function drawWorld(t){
     ctx.fillRect(mx+1,my-2,4,2);
   }
 
+  // NEW: pingpong table
+  drawRectBevel(88,118,78,22,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(92,122,70,14);
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(127,122,1,14); // net line illusion
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(92,129,70,1); // center court
+  // tiny net
+  ctx.fillStyle="rgba(255,255,255,.12)"; ctx.fillRect(126,126,3,5);
+
+  // NEW: hammock area
+  drawRectBevel(196,92,64,28,"rgba(255,255,255,.04)");
+  // posts
+  ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(198,94,3,24);
+  ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(255,94,3,24);
+  // hammock curve
+  for(let i=0;i<46;i++){
+    const x=203+i;
+    const y=105 + Math.round(Math.sin((i/46)*Math.PI)*5);
+    ctx.fillStyle="rgba(138,46,255,.10)";
+    ctx.fillRect(x,y,1,2);
+  }
+
   // door back to bedroom
   ctx.fillStyle="rgba(255,255,255,.10)";
   ctx.fillRect(148,H-20,34,10);
   ctx.fillStyle="rgba(0,0,0,.55)";
   ctx.fillRect(150,H-18,30,6);
+
+  // pingpong overlay (draw ball + scores) if active
+  if(pingpongActive){
+    // subtle focus wash
+    ctx.fillStyle="rgba(0,0,0,.20)";
+    ctx.fillRect(0,0,W,H);
+
+    // redraw table on top (keeps it crisp)
+    drawRectBevel(88,118,78,22,"rgba(255,255,255,.06)");
+    ctx.fillStyle="rgba(0,0,0,.50)"; ctx.fillRect(92,122,70,14);
+    ctx.fillStyle="rgba(255,255,255,.11)"; ctx.fillRect(127,122,1,14);
+    ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(92,129,70,1);
+    ctx.fillStyle="rgba(255,255,255,.14)"; ctx.fillRect(126,126,3,5);
+
+    // paddles
+    const table={x:88,y:118,w:78,h:22};
+    const top=table.y+4, bottom=table.y+table.h-4;
+    let py = Math.max(top, Math.min(bottom, sophia.y+6));
+    let my = Math.max(top, Math.min(bottom, pp.by + (state.trip ? Math.sin(t*0.12)*3 : 0)));
+
+    ctx.fillStyle="rgba(138,46,255,.55)";
+    ctx.fillRect(table.x+4, py-4, 2, 8);
+
+    ctx.fillStyle="rgba(0,255,213,.55)";
+    ctx.fillRect(table.x+table.w-6, my-4, 2, 8);
+
+    // ball
+    ctx.fillStyle="rgba(255,255,255,.85)";
+    ctx.fillRect(Math.round(pp.bx), Math.round(pp.by), 2, 2);
+
+    // score text
+    ctx.font="8px ui-monospace, monospace";
+    ctx.fillStyle="rgba(255,255,255,.9)";
+    ctx.fillText(`SOPHIA ${pp.s}  -  ${pp.m} MILO`, 94, 116);
+    ctx.fillStyle="rgba(255,255,255,.55)";
+    ctx.fillText(`(E to quit)`, 232, 116);
+  }
 
   // hint
   const z=nearestZone();
@@ -250,6 +409,12 @@ function drawWorld(t){
 let t=0;
 function loop(){
   t++;
+
+  // pingpong gets priority and runs as a “mini overlay”
+  if(pingpongActive){
+    updatePingpong(t);
+  }
+
   const run = keysDown.has("shift");
   const sp = sophia.speed*(run?sophia.run:1);
 
@@ -274,7 +439,15 @@ function loop(){
   }
 
   if(keysDown.has("e")){
-    if(!loop._eWasDown) interact();
+    if(!loop._eWasDown){
+      // if pingpong active, E quits mini-game first (as requested “exit whenever”)
+      if(pingpongActive){
+        pingpongActive=false;
+        toast("Pingpong paused. Milo licks his paw like he won anyway.", 1600);
+      }else{
+        interact();
+      }
+    }
     loop._eWasDown=true;
   } else loop._eWasDown=false;
 
@@ -294,4 +467,3 @@ loop();
 </script>
 </body>
 </html>
-
