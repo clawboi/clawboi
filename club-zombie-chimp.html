@@ -67,7 +67,7 @@
 
 <div class="hint">
   <b>Move</b> WASD · <b>Aim/Shoot</b> Mouse · <b>Punch</b> Space · <b>Swap</b> 1/2/3 ·
-  <b>Dash</b> Shift · <b>Skill</b> Q · <b>Pause</b> P · <b>Continue</b> C (between waves) · <b>Interact</b> E · <b>Restart</b> Enter
+  <b>Dash</b> Shift · <b>Skill</b> Q · <b>Pause</b> P · <b>Continue</b> C (between waves) · <b>Interact</b> E · <b>Restart</b> Enter · <b>Mute</b> M
 </div>
 
 <script>
@@ -88,7 +88,6 @@
   const lerp = (a,b,t)=>a+(b-a)*t;
   const dist2 = (ax,ay,bx,by)=>{ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; };
   const hypot = (x,y)=>Math.hypot(x,y);
-  const easeOut = (t)=> 1 - Math.pow(1-t, 3);
   const sat = (t)=>clamp(t,0,1);
 
   // Fixed timestep
@@ -115,7 +114,8 @@
     slot2:["2","Digit2"],
     slot3:["3","Digit3"],
     enter:["enter","Enter"],
-    esc:["escape","Escape"]
+    esc:["escape","Escape"],
+    mute:["m","KeyM"]
   };
   const hasAny = (set, arr)=>{ for(const a of arr){ if(set.has(a)) return true; } return false; };
   const isDown = (name)=> hasAny(keys, ACTION[name]||[]);
@@ -165,6 +165,7 @@
   // ======== Audio (WebAudio SFX) ========
   const Audio = (() => {
     let ac=null, master=null, noiseBuf=null, ready=false;
+    let muted = false;
 
     function mkNoiseBuffer(){
       const len = ac.sampleRate * 1.0;
@@ -172,7 +173,6 @@
       const data = buf.getChannelData(0);
       let x = 0;
       for(let i=0;i<len;i++){
-        // simple filtered-ish noise
         x = x*0.97 + (Math.random()*2-1)*0.03;
         data[i] = x;
       }
@@ -184,17 +184,31 @@
       try{
         ac = new (window.AudioContext || window.webkitAudioContext)();
         master = ac.createGain();
-        master.gain.value = 0.28; // global volume
+        master.gain.value = 0.34;
         master.connect(ac.destination);
         noiseBuf = mkNoiseBuffer();
         ready = true;
+        // apply persisted mute
+        muted = (localStorage.getItem("club_chimp_mute_v1") === "1");
+        master.gain.value = muted ? 0.0001 : 0.34;
       }catch(e){
         ready = false;
       }
     }
 
+    function setMuted(m){
+      muted = !!m;
+      localStorage.setItem("club_chimp_mute_v1", muted ? "1" : "0");
+      if(ready && master){
+        master.gain.value = muted ? 0.0001 : 0.34;
+      }
+    }
+    function toggleMute(){ setMuted(!muted); }
+    function isMuted(){ return muted; }
+    function isReady(){ return ready; }
+
     function tone({freq=220, type="sine", dur=0.08, gain=0.12, bend=0, pan=0}){
-      if(!ready) return;
+      if(!ready || muted) return;
       const t0 = ac.currentTime;
       const o = ac.createOscillator();
       const g0 = ac.createGain();
@@ -224,7 +238,7 @@
     }
 
     function noise({dur=0.10, gain=0.12, hp=800, pan=0}){
-      if(!ready) return;
+      if(!ready || muted) return;
       const t0 = ac.currentTime;
       const src = ac.createBufferSource();
       src.buffer = noiseBuf;
@@ -256,16 +270,15 @@
 
     // SFX palette
     function shoot(kind=0, pan=0){
-      // kind 0: light, 1: heavy, 2: laser
       if(kind===2){
-        tone({freq: 820, type:"sawtooth", dur:0.05, gain:0.10, bend:0.55, pan});
-        tone({freq: 420, type:"triangle", dur:0.05, gain:0.06, bend:0.72, pan});
+        tone({freq: 820, type:"sawtooth", dur:0.05, gain:0.11, bend:0.55, pan});
+        tone({freq: 420, type:"triangle", dur:0.05, gain:0.07, bend:0.72, pan});
       }else if(kind===1){
-        noise({dur:0.06, gain:0.12, hp:600, pan});
-        tone({freq: 130, type:"square", dur:0.07, gain:0.08, bend:0.75, pan});
+        noise({dur:0.06, gain:0.13, hp:600, pan});
+        tone({freq: 130, type:"square", dur:0.07, gain:0.09, bend:0.75, pan});
       }else{
-        noise({dur:0.05, gain:0.08, hp:900, pan});
-        tone({freq: 220, type:"square", dur:0.05, gain:0.05, bend:0.72, pan});
+        noise({dur:0.05, gain:0.09, hp:900, pan});
+        tone({freq: 220, type:"square", dur:0.05, gain:0.06, bend:0.72, pan});
       }
     }
     function hit(pan=0){
@@ -273,7 +286,7 @@
       tone({freq: 160, type:"triangle", dur:0.05, gain:0.04, bend:0.55, pan});
     }
     function explode(pan=0){
-      noise({dur:0.22, gain:0.18, hp:250, pan});
+      noise({dur:0.22, gain:0.17, hp:250, pan});
       tone({freq: 70, type:"sine", dur:0.22, gain:0.10, bend:0.55, pan});
       tone({freq: 120, type:"square", dur:0.12, gain:0.06, bend:0.72, pan});
     }
@@ -287,24 +300,24 @@
       noise({dur:0.12, gain:0.08, hp:1100, pan});
     }
     function pickup(pan=0){
-      tone({freq: 660, type:"sine", dur:0.06, gain:0.06, bend:1.4, pan});
-      tone({freq: 990, type:"triangle", dur:0.07, gain:0.05, bend:1.25, pan});
+      tone({freq: 660, type:"sine", dur:0.06, gain:0.07, bend:1.4, pan});
+      tone({freq: 990, type:"triangle", dur:0.07, gain:0.06, bend:1.25, pan});
     }
     function death(pan=0){
       noise({dur:0.28, gain:0.16, hp:450, pan});
       tone({freq: 160, type:"sawtooth", dur:0.20, gain:0.08, bend:0.35, pan});
     }
     function bossRoar(pan=0){
-      noise({dur:0.30, gain:0.14, hp:220, pan});
-      tone({freq: 90, type:"square", dur:0.28, gain:0.07, bend:0.55, pan});
+      noise({dur:0.28, gain:0.12, hp:220, pan});
+      tone({freq: 90, type:"square", dur:0.24, gain:0.06, bend:0.55, pan});
     }
 
-    return { init, shoot, hit, explode, dash, pulse, pickup, death, bossRoar };
+    return { init, shoot, hit, explode, dash, pulse, pickup, death, bossRoar, toggleMute, isMuted, isReady, setMuted };
   })();
 
   // ======== State ========
-  const STATE = { BUNKER:1, PLAY:2, DEAD:3 };
-  let state = STATE.BUNKER;
+  const STATE = { TITLE:0, BUNKER:1, PLAY:2, DEAD:3 };
+  let state = STATE.TITLE;
   let paused = false;
 
   // Fullscreen handling
@@ -326,17 +339,21 @@
   });
 
   // High score
-  const HS_KEY = "club_chimp_zombie_highscore_v5";
+  const HS_KEY = "club_chimp_zombie_highscore_v6";
   let highScore = Number(localStorage.getItem(HS_KEY) || 0);
+
+  // Keys unlock (persistent)
+  const KEY_UNLOCK = "club_decay_keys_v1";
+  let keysUnlocked = Number(localStorage.getItem(KEY_UNLOCK) || 0);
 
   // ======== FX ========
   let shake = 0;
-  let flash = 0; // screen flash for explosions
+  let flash = 0;
   const sparks = [];
   const floats = [];
   const trails = [];
-  const rings = []; // shockwaves
-  const blood = []; // persistent floor splats
+  const rings = [];
+  const blood = [];
 
   const particles = (x,y,count,spread,speed,life,colA,colB)=>{
     for(let i=0;i<count;i++){
@@ -367,14 +384,12 @@
         drip: rand(0.0, 0.25)
       });
     }
-    // cap
-    if(blood.length > 540){
-      blood.splice(0, blood.length - 540);
+    if(blood.length > 520){
+      blood.splice(0, blood.length - 520);
     }
   }
 
   // ======== Big Map + Camera ========
-  // (slightly smaller map so it feels tighter / less “huge map syndrome”)
   const MAP_W = 980;
   const MAP_H = 640;
   const camera = { x: 0, y: 0 };
@@ -442,7 +457,6 @@
     g.fillStyle = "rgba(0,0,0,0.35)";
     g.fillRect(x-6, y+8, 12, 3);
 
-    // slight “frenzy glow”
     if(frenzyT > 0){
       const a = 0.10 + 0.18*Math.sin(frame*0.25);
       g.fillStyle = `rgba(0,255,213,${a})`;
@@ -543,7 +557,6 @@
   function drawArenaBackdrop(){
     g.drawImage(floorCache, camera.x, camera.y, W, H, 0, 0, W, H);
 
-    // blood splats (world-space)
     const ox = camera.x, oy = camera.y;
     for(const b of blood){
       const x = Math.floor(b.x - ox);
@@ -560,6 +573,7 @@
       }
     }
 
+    // subtle vignette + top strip
     g.fillStyle = "rgba(0,0,0,0.16)";
     g.fillRect(0,0,W,H);
     g.fillStyle = "rgba(0,0,0,0.22)";
@@ -585,25 +599,30 @@
 
   // ======== Weapons ========
   const WEAPONS = [
-    { id:"pistol", name:"Pistol",  color:"#00ffd5",  fireRate: 7.5,  spread: 0.03,  speed: 260, dmg: 34,  pellets:1, recoil:0.75, price:0,  sfx:0 },
-    { id:"smg",    name:"SMG",     color:"#7CFF6B",  fireRate: 15.0, spread: 0.07,  speed: 270, dmg: 15,  pellets:1, recoil:0.45, price:90, sfx:0 },
-    { id:"ar",     name:"AR",      color:"#5aa7ff",  fireRate: 10.5, spread: 0.04,  speed: 290, dmg: 26,  pellets:1, recoil:0.6,  price:140,sfx:0 },
-    { id:"burst",  name:"Burst",   color:"#ffd24a",  fireRate: 4.0,  spread: 0.03,  speed: 310, dmg: 20,  pellets:3, burstGap:0.06, recoil:1.0, price:170,sfx:0 },
-    { id:"shotgun",name:"Shotgun", color:"#ff3b6b",  fireRate: 1.7,  spread: 0.22,  speed: 230, dmg: 22,  pellets:7, recoil:2.4, price:160,sfx:1 },
-    { id:"sniper", name:"Sniper",  color:"#e8e8ff",  fireRate: 1.1,  spread: 0.005, speed: 420, dmg: 120, pellets:1, recoil:3.2, price:260,sfx:1, crit:0.12 },
-    { id:"laser",  name:"Laser",   color:"#b300ff",  fireRate: 11.0, spread: 0.01,  speed: 380, dmg: 28,  pellets:1, recoil:0.35, pierce:true, price:220,sfx:2 },
-    { id:"rail",   name:"Railgun", color:"#00ffd5",  fireRate: 0.85, spread: 0.0,   speed: 520, dmg: 210, pellets:1, recoil:4.0, pierce:true, price:420,sfx:1, crit:0.18 },
-    { id:"rocket", name:"Rocket",  color:"#ff3b6b",  fireRate: 0.9,  spread: 0.02,  speed: 170, dmg: 80,  pellets:1, recoil:2.6, splash:30, price:330,sfx:1, boom:true },
-    { id:"flame",  name:"Flame",   color:"#ffd24a",  fireRate: 22.0, spread: 0.14,  speed: 160, dmg: 9,   pellets:1, recoil:0.18, dot:2.2, price:250,sfx:0 },
-    { id:"hammer", name:"Hammer",  color:"#ffd24a",  melee:true, dmg: 95, cooldown: 0.44, reach: 16, price:120,sfx:1 }
+    { id:"pistol", name:"Pistol",  color:"#00ffd5",  fireRate: 8.8,  spread: 0.03,  speed: 280, dmg: 38,  pellets:1, recoil:0.45, price:0,  sfx:0 },
+    { id:"smg",    name:"SMG",     color:"#7CFF6B",  fireRate: 16.5, spread: 0.07,  speed: 285, dmg: 16,  pellets:1, recoil:0.28, price:85, sfx:0 },
+    { id:"ar",     name:"AR",      color:"#5aa7ff",  fireRate: 11.5, spread: 0.04,  speed: 305, dmg: 28,  pellets:1, recoil:0.34, price:135,sfx:0 },
+    { id:"burst",  name:"Burst",   color:"#ffd24a",  fireRate: 4.4,  spread: 0.03,  speed: 320, dmg: 22,  pellets:3, burstGap:0.06, recoil:0.55, price:165,sfx:0 },
+    { id:"shotgun",name:"Shotgun", color:"#ff3b6b",  fireRate: 1.85, spread: 0.22,  speed: 240, dmg: 23,  pellets:7, recoil:0.95, price:155,sfx:1 },
+    { id:"sniper", name:"Sniper",  color:"#e8e8ff",  fireRate: 1.18, spread: 0.005, speed: 460, dmg: 128, pellets:1, recoil:1.25, price:250,sfx:1, crit:0.14 },
+    { id:"laser",  name:"Laser",   color:"#b300ff",  fireRate: 12.5, spread: 0.01,  speed: 420, dmg: 30,  pellets:1, recoil:0.22, pierce:true, price:210,sfx:2 },
+    { id:"rail",   name:"Railgun", color:"#00ffd5",  fireRate: 0.95, spread: 0.0,   speed: 560, dmg: 220, pellets:1, recoil:1.55, pierce:true, price:410,sfx:1, crit:0.20 },
+    { id:"rocket", name:"Rocket",  color:"#ff3b6b",  fireRate: 0.95, spread: 0.02,  speed: 180, dmg: 82,  pellets:1, recoil:1.10, splash:34, price:320,sfx:1, boom:true },
+    { id:"flame",  name:"Flame",   color:"#ffd24a",  fireRate: 24.0, spread: 0.14,  speed: 170, dmg: 9,   pellets:1, recoil:0.10, dot:2.4, price:240,sfx:0 },
+    { id:"hammer", name:"Hammer",  color:"#ffd24a",  melee:true, dmg: 98, cooldown: 0.44, reach: 16, price:110,sfx:1 },
+
+    // Key row (unlocks via Keys)
+    { id:"nova",   name:"Nova Cannon",  color:"#ff3b6b", fireRate: 0.85, spread: 0.01, speed: 250, dmg: 98, pellets:1, recoil:1.25, splash:58, price:520, sfx:1, boom:true, key:1 },
+    { id:"chain",  name:"Chain Laser",  color:"#b300ff", fireRate: 9.5,  spread: 0.01, speed: 460, dmg: 22, pellets:1, recoil:0.18, pierce:true, chain:2, price:480, sfx:2, key:1 },
+    { id:"pike",   name:"Violet Pike",  color:"#00ffd5", fireRate: 1.2,  spread: 0.00, speed: 540, dmg: 160, pellets:1, recoil:1.35, pierce:true, lineSplash:22, price:560, sfx:1, crit:0.16, key:2 }
   ];
   const byId = Object.fromEntries(WEAPONS.map(w=>[w.id,w]));
 
   // ======== Skills (Q) ========
   const SKILLS = [
-    { id:"pulse",   name:"Pulse",   desc:"Damage + slow in a ring", cd:6.5 },
-    { id:"grenade", name:"Grenade", desc:"Big explosion projectile", cd:5.8 },
-    { id:"rally",   name:"Rally",   desc:"Heal + frenzy fire-rate", cd:8.5 }
+    { id:"pulse",   name:"Pulse",   desc:"Damage + slow in a ring", cd:6.0 },
+    { id:"grenade", name:"Grenade", desc:"Big explosion projectile", cd:5.4 },
+    { id:"rally",   name:"Rally",   desc:"Heal + frenzy fire-rate", cd:8.2 }
   ];
   const skillById = Object.fromEntries(SKILLS.map(s=>[s.id,s]));
 
@@ -630,8 +649,8 @@
     dashVY: 0,
     skillCD: 0,
     skillId: "pulse",
-    frenzyT: 0,        // from Rally
-    mercyT: 0          // soft “don’t spiral” window
+    frenzyT: 0,
+    mercyT: 0
   };
 
   const bullets = [];
@@ -651,30 +670,40 @@
     }
   }
 
-  // ======== Difficulty Director (fairer Wave 5) ========
+  // key drop between waves
+  const drops = []; // {x,y,kind:"key",picked:false}
+  function spawnKeyDrop(force=false){
+    if(force || Math.random() < 0.12){
+      const x = rand(arena.x0+60, arena.x1-60);
+      const y = rand(arena.y0+60, arena.y1-60);
+      drops.push({x,y,kind:"key",picked:false, t:0});
+    }
+  }
+
+  // ======== Difficulty Director ========
   const director = {
     intensity: 0,
     spawnJitter: 0,
     tick(dt){
-      const waveBoost = (wave.n-1) * 0.070;
-      const timeBoost = Math.min(1.0, player.timeAlive / 200) * 0.42;
-
-      // mercy: if you just got chunked, ease pressure slightly for a moment
+      const waveBoost = (wave.n-1) * 0.060;
+      const timeBoost = Math.min(1.0, player.timeAlive / 220) * 0.38;
       const mercy = player.mercyT > 0 ? 0.22 : 0;
-
-      this.intensity = clamp(0.15 + waveBoost + timeBoost - mercy, 0, 2.0);
-      this.spawnJitter = 0.10 + this.intensity*0.12;
+      this.intensity = clamp(0.14 + waveBoost + timeBoost - mercy, 0, 2.0);
+      this.spawnJitter = 0.08 + this.intensity*0.10;
     },
     hpMul(){
-      // slightly softer scaling than before
-      return 1.0 + this.intensity*0.28;
+      return 1.0 + this.intensity*0.24;
     },
     spdMul(){
-      return 1.0 + this.intensity*0.16;
+      return 1.0 + this.intensity*0.14;
     },
     eliteChance(){
-      const base = clamp((wave.n - 2) / 16, 0, 0.28);
-      return clamp(base + this.intensity*0.05, 0, 0.38);
+      const base = clamp((wave.n - 3) / 18, 0, 0.22);
+      return clamp(base + this.intensity*0.04, 0, 0.30);
+    },
+    aliveCap(){
+      // controls “way too many” feel
+      return clamp(16 + Math.floor(wave.n*2.2), 16, 42);
     }
   };
 
@@ -686,6 +715,7 @@
     trails.length = 0;
     rings.length = 0;
     crates.length = 0;
+    drops.length = 0;
     boss = null;
     bossesDefeated = 0;
     shake = 0;
@@ -717,7 +747,10 @@
     updateCamera();
   }
 
-  // ======== Bunker (3-slot selection + Q skill select) ========
+  // ======== Title + Bunker ========
+  let titleT = 0;
+
+  // Bunker selection
   let bunkerCursor = 0;
   let bunkerSlots = ["pistol","shotgun","hammer"];
   let bunkerSlotFocus = 0;
@@ -740,7 +773,8 @@
     spawned: 0,
     spawnCD: 0,
     shopPhase: "OPEN",
-    restLock: 0.35
+    restLock: 0.25,
+    bossAddBudget: 0
   };
 
   let shopOpen = false;
@@ -748,13 +782,16 @@
   function waveInit(){
     wave.n = 1;
     wave.phase = "REST";
-    wave.timer = 1.2;
+    wave.timer = 0.9;
     wave.toSpawn = 0;
     wave.spawned = 0;
     wave.spawnCD = 0;
     wave.shopPhase = "OPEN";
-    wave.restLock = 0.35;
+    wave.restLock = 0.25;
+    wave.bossAddBudget = 0;
     spawnCrates();
+    drops.length = 0;
+    spawnKeyDrop(false);
     shopOpen = true;
   }
 
@@ -762,39 +799,52 @@
     wave.phase = "FIGHT";
     wave.spawned = 0;
 
-    const base = 6 + Math.floor(wave.n * 1.85);
-    wave.toSpawn = clamp(base, 6, 34);
+    // fixed amount per wave, gentle growth
+    const raw = 7 + Math.floor(wave.n * 1.35);
+    let cap = 26;
+    if(wave.n >= 10) cap = 30;
+    if(wave.n >= 15) cap = 34;
 
-    // a touch easier early, slightly ramps later
-    wave.spawnCD = clamp(0.235 - (wave.n*0.0038), 0.11, 0.235);
+    // boss waves: slightly fewer normal spawns (so it feels cleaner)
+    const bossWave = [5,10,15].includes(wave.n);
+    wave.toSpawn = clamp(bossWave ? Math.floor(raw*0.82) : raw, 7, cap);
+
+    // spawn pacing, but never endless
+    wave.spawnCD = clamp(0.26 - (wave.n*0.0042), 0.12, 0.26);
+
+    // boss adds are limited (no runaway pile)
+    wave.bossAddBudget = bossWave ? clamp(2 + Math.floor(wave.n*0.12), 2, 5) : 0;
 
     shopOpen = false;
     wave.shopPhase = "CLOSED";
 
-    particles(player.x, player.y, 18, 1.6, 70, 0.26, "#00ffd5", "#b300ff");
-    shake = Math.max(shake, 2);
+    particles(player.x, player.y, 16, 1.4, 65, 0.24, "#00ffd5", "#b300ff");
+    shake = Math.max(shake, 1.2);
     Audio.pickup(0);
   }
 
   function endWave(){
     wave.phase = "REST";
-    wave.timer = 1.4;
+    wave.timer = 0.85;
     wave.n++;
     wave.shopPhase = "OPEN";
-    wave.restLock = 0.35;
+    wave.restLock = 0.25;
 
     spawnCrates();
+    drops.length = 0;
+    spawnKeyDrop(false);
     shopOpen = true;
   }
 
   // ======== Shop ========
-  const SHOP_EXCLUSIVE = ["ar","burst","sniper","laser","rocket","flame","rail","smg"];
+  const SHOP_EXCLUSIVE = ["ar","burst","sniper","laser","rocket","flame","rail","smg","nova","chain","pike"];
   let shopCursor = 0;
   let shopSlotFocus = 0;
 
   function canBuy(id){
     const w = byId[id];
     if(!w) return false;
+    if(w.key && keysUnlocked < w.key) return false;
     if(player.selected.includes(id)) return false;
     return player.cash >= (w.price||0);
   }
@@ -811,13 +861,15 @@
     player.selected[slot] = id;
     player.slot = slot;
 
-    particles(player.x, player.y, 22, 1.4, 85, 0.30, "#00ffd5", "#b300ff");
-    shake = Math.max(shake, 3);
+    particles(player.x, player.y, 18, 1.3, 80, 0.28, "#00ffd5", "#b300ff");
+    shake = Math.max(shake, 1.6);
     Audio.pickup((slot-1)*0.15);
   }
 
   // ======== Spawning ========
   function spawnZombie(elite=false){
+    if(zombies.length >= director.aliveCap()) return;
+
     const side = randi(0,3);
     let x,y;
     if(side===0){ x = arena.x0-10; y = rand(arena.y0, arena.y1); }
@@ -825,7 +877,7 @@
     if(side===2){ x = rand(arena.x0, arena.x1); y = arena.y0-10; }
     if(side===3){ x = rand(arena.x0, arena.x1); y = arena.y1+10; }
 
-    const hpBase = elite ? (92 + wave.n*5.5) : (58 + wave.n*3.6);
+    const hpBase = elite ? (92 + wave.n*4.8) : (58 + wave.n*3.1);
     const spdBase = elite ? rand(19,29) : rand(14,23);
 
     const hp = Math.floor(hpBase * director.hpMul());
@@ -850,35 +902,96 @@
 
     const kind = bossesDefeated;
 
-    // IMPORTANT: wave 5 boss was too rude. This makes Boss I noticeably fairer.
-    const waveEase = (wave.n===5) ? 0.84 : 1.0;
+    // boss is smoother, less “stop”
+    const waveEase = (wave.n===5) ? 0.82 : 1.0;
+    const maxHp = Math.floor((1040 + wave.n*125 + kind*210) * waveEase * (1.0 + director.intensity*0.12));
+    const spd = (15.0 + kind*1.7) * (1.0 + director.intensity*0.04);
 
-    const maxHp = Math.floor((1120 + wave.n*135 + kind*220) * waveEase * (1.0 + director.intensity*0.14));
-    const spd = (15.5 + kind*1.8) * (1.0 + director.intensity*0.05);
-
-    boss = { x,y, hp:maxHp, maxHp, spd, t:0, atkCD: 1.35, kind, slow:0 };
-    particles(x,y,70,1.6,75,0.75,"#ff3b6b","#b300ff");
-    addRing(x,y, 6, 0.45, "rgba(255,59,107,0.55)");
-    shake = 6;
-    flash = Math.max(flash, 0.18);
+    boss = { x,y, hp:maxHp, maxHp, spd, t:0, atkCD: 1.45, kind, slow:0 };
+    particles(x,y,56,1.5,72,0.70,"#ff3b6b","#b300ff");
+    addRing(x,y, 6, 0.40, "rgba(255,59,107,0.50)");
+    shake = Math.max(shake, 2.6);
+    flash = Math.max(flash, 0.10);
     Audio.bossRoar(0);
   }
 
   // ======== Combat Helpers ========
   function screenPanFromWorld(wx){
-    const sx = (wx - camera.x) / W; // 0..1
+    const sx = (wx - camera.x) / W;
     return clamp((sx - 0.5) * 1.2, -0.9, 0.9);
   }
 
   function boomFX(x,y,rad,col){
-    addRing(x,y, rad*0.35, 0.38, col);
-    addRing(x,y, rad*0.18, 0.22, "rgba(255,255,255,0.22)");
-    particles(x,y, 46, 2.4, 120, 0.65, col, "rgba(232,232,255,0.55)");
-    particles(x,y, 22, 1.8, 80, 0.55, "rgba(255,59,107,0.65)", col);
-    addBlood(x,y, 10, true);
-    shake = Math.max(shake, 10);
-    flash = Math.max(flash, 0.24);
+    addRing(x,y, rad*0.35, 0.34, col);
+    addRing(x,y, rad*0.18, 0.20, "rgba(255,255,255,0.20)");
+    particles(x,y, 36, 2.1, 110, 0.60, col, "rgba(232,232,255,0.55)");
+    particles(x,y, 18, 1.6, 76, 0.50, "rgba(255,59,107,0.60)", col);
+    addBlood(x,y, 8, true);
+    shake = Math.max(shake, 3.4);
+    flash = Math.max(flash, 0.18);
     Audio.explode(screenPanFromWorld(x));
+  }
+
+  function applySplash(x,y,rad,dmg,col){
+    const r2 = rad*rad;
+    let hits = 0;
+    for(const z of zombies){
+      if(dist2(x,y,z.x,z.y) <= r2){
+        z.hp -= Math.floor(dmg*0.78);
+        z.bleed = Math.max(z.bleed, 0.10);
+        hits++;
+        particles(z.x,z.y,6,0.9,52,0.16,col,"rgba(232,232,255,0.45)");
+        addBlood(z.x,z.y, 2, false);
+      }
+    }
+    if(boss && dist2(x,y,boss.x,boss.y) <= (rad+18)*(rad+18)){
+      boss.hp -= Math.floor(dmg*0.45);
+      hits++;
+      particles(boss.x,boss.y,10,1.0,60,0.18,col,"#ff3b6b");
+      addBlood(boss.x,boss.y, 2, false);
+    }
+    return hits;
+  }
+
+  function applyLineSplash(x,y,rad,dmg,col){
+    const r2 = rad*rad;
+    let hits = 0;
+    for(const z of zombies){
+      if(dist2(x,y,z.x,z.y) <= r2){
+        z.hp -= Math.floor(dmg*0.50);
+        z.slow = Math.max(z.slow, 0.55);
+        hits++;
+        particles(z.x,z.y,6,1.0,58,0.16,col,"rgba(232,232,255,0.45)");
+      }
+    }
+    if(hits>0){
+      addRing(x,y, 5, 0.18, "rgba(0,255,213,0.35)");
+    }
+    return hits;
+  }
+
+  function chainFromHit(x,y,already,chainsLeft,dmg,col){
+    if(chainsLeft<=0) return;
+    // find nearest not already hit
+    let best = null;
+    let bestD = 9999999;
+    for(const z of zombies){
+      if(already.has(z)) continue;
+      const d = dist2(x,y,z.x,z.y);
+      if(d < bestD){
+        bestD = d;
+        best = z;
+      }
+    }
+    if(best && bestD < (78*78)){
+      already.add(best);
+      best.hp -= Math.floor(dmg*0.80);
+      best.slow = Math.max(best.slow, 0.75);
+      particles(best.x,best.y,10,1.2,70,0.20,col,"rgba(232,232,255,0.45)");
+      addRing(best.x,best.y, 6, 0.18, "rgba(179,0,255,0.30)");
+      Audio.hit(screenPanFromWorld(best.x));
+      chainFromHit(best.x,best.y,already,chainsLeft-1,dmg,col);
+    }
   }
 
   function shootWeapon(w, ang){
@@ -898,7 +1011,9 @@
         splash: w.splash || 0,
         dot: w.dot || 0,
         kind: w.id,
-        crit: w.crit || 0
+        crit: w.crit || 0,
+        chain: w.chain || 0,
+        lineSplash: w.lineSplash || 0
       });
     };
 
@@ -915,33 +1030,12 @@
       }
     }
 
-    particles(ox+Math.cos(ang)*7, oy+Math.sin(ang)*7, 6, 0.6, 52, 0.22, w.color, "rgba(232,232,255,0.55)");
-    shake = Math.max(shake, w.recoil || 0.6);
+    particles(ox+Math.cos(ang)*7, oy+Math.sin(ang)*7, 5, 0.6, 46, 0.20, w.color, "rgba(232,232,255,0.55)");
+    // lower “stomp” feel (less shake per shot)
+    shake = Math.max(shake, Math.min(1.8, (w.recoil || 0.6)));
 
-    // SFX
     const pan = screenPanFromWorld(ox);
     Audio.shoot(w.sfx||0, pan);
-  }
-
-  function applySplash(x,y,rad,dmg,col){
-    const r2 = rad*rad;
-    let hits = 0;
-    for(const z of zombies){
-      if(dist2(x,y,z.x,z.y) <= r2){
-        z.hp -= Math.floor(dmg*0.75);
-        z.bleed = Math.max(z.bleed, 0.10);
-        hits++;
-        particles(z.x,z.y,8,0.9,55,0.18,col,"rgba(232,232,255,0.45)");
-        addBlood(z.x,z.y, 2, false);
-      }
-    }
-    if(boss && dist2(x,y,boss.x,boss.y) <= (rad+18)*(rad+18)){
-      boss.hp -= Math.floor(dmg*0.45);
-      hits++;
-      particles(boss.x,boss.y,12,1.1,65,0.22,col,"#ff3b6b");
-      addBlood(boss.x,boss.y, 3, false);
-    }
-    return hits;
   }
 
   function meleeHit(w, ang){
@@ -955,10 +1049,10 @@
         z.hp -= w.dmg;
         z.bleed = Math.max(z.bleed, 0.18);
         hitAny = true;
-        particles(z.x,z.y,16,1.2,60,0.30,"#ffd24a","#ff3b6b");
-        addBlood(z.x,z.y, 5, true);
+        particles(z.x,z.y,14,1.2,56,0.26,"#ffd24a","#ff3b6b");
+        addBlood(z.x,z.y, 4, true);
         floats.push({x:z.x,y:z.y-6,vx:rand(-8,8),vy:rand(-18,-10),life:0.65,text:`-${w.dmg}`,col:"#ffd24a"});
-        shake = Math.max(shake, 3.6);
+        shake = Math.max(shake, 1.9);
         Audio.hit(screenPanFromWorld(z.x));
       }
     }
@@ -966,27 +1060,25 @@
     if(boss && dist2(hx,hy,boss.x,boss.y) < (26*26)){
       boss.hp -= w.dmg;
       hitAny = true;
-      particles(boss.x,boss.y,20,1.5,70,0.36,"#ffd24a","#b300ff");
-      addBlood(boss.x,boss.y, 7, true);
+      particles(boss.x,boss.y,18,1.4,64,0.30,"#ffd24a","#b300ff");
+      addBlood(boss.x,boss.y, 5, true);
       floats.push({x:boss.x,y:boss.y-18,vx:rand(-10,10),vy:rand(-20,-12),life:0.75,text:`-${w.dmg}`,col:"#ffd24a"});
-      shake = Math.max(shake, 5.6);
+      shake = Math.max(shake, 2.4);
       Audio.hit(screenPanFromWorld(boss.x));
     }
 
-    particles(player.x+Math.cos(ang)*10, player.y+Math.sin(ang)*10, hitAny?10:6, 1.0, 42, 0.20, "#ffd24a", "rgba(255,255,255,0.40)");
+    particles(player.x+Math.cos(ang)*10, player.y+Math.sin(ang)*10, hitAny?9:5, 1.0, 40, 0.18, "#ffd24a", "rgba(255,255,255,0.40)");
   }
 
   function hurtPlayer(amount){
     if(player.invuln > 0) return;
     player.hp -= amount;
     player.invuln = 0.55;
-
-    // mercy window: lowers intensity briefly so bad luck doesn’t chain-kill you
     player.mercyT = Math.max(player.mercyT, 0.90);
 
-    shake = Math.max(shake, 6);
-    particles(player.x, player.y, 28, 1.6, 70, 0.50, "#ff3b6b", "#b300ff");
-    addRing(player.x, player.y, 6, 0.25, "rgba(255,59,107,0.45)");
+    shake = Math.max(shake, 2.6);
+    particles(player.x, player.y, 22, 1.4, 62, 0.45, "#ff3b6b", "#b300ff");
+    addRing(player.x, player.y, 6, 0.22, "rgba(255,59,107,0.40)");
     Audio.hit(0);
   }
 
@@ -1004,43 +1096,31 @@
 
       for(const z of zombies){
         if(dist2(player.x,player.y,z.x,z.y) <= r2){
-          z.hp -= 24;
-          z.slow = Math.max(z.slow, 1.35);
+          z.hp -= 26;
+          z.slow = Math.max(z.slow, 1.25);
           z.bleed = Math.max(z.bleed, 0.08);
           hits++;
-          particles(z.x,z.y,10,1.0,60,0.22,"#00ffd5","#e8e8ff");
+          particles(z.x,z.y,9,1.0,56,0.20,"#00ffd5","#e8e8ff");
           addBlood(z.x,z.y, 1, false);
         }
       }
       if(boss && dist2(player.x,player.y,boss.x,boss.y) <= (rad+14)*(rad+14)){
-        boss.hp -= 34;
-        boss.slow = Math.max(boss.slow, 1.05);
+        boss.hp -= 36;
+        boss.slow = Math.max(boss.slow, 1.00);
         hits++;
-        particles(boss.x,boss.y,16,1.2,70,0.26,"#00ffd5","#b300ff");
+        particles(boss.x,boss.y,14,1.2,64,0.24,"#00ffd5","#b300ff");
       }
 
-      addRing(player.x, player.y, 8, 0.35, "rgba(0,255,213,0.55)");
-      addRing(player.x, player.y, 16, 0.48, "rgba(179,0,255,0.18)");
-      for(let i=0;i<52;i++){
-        const a = (i/52)*Math.PI*2;
-        sparks.push({
-          x: player.x + Math.cos(a)*rad,
-          y: player.y + Math.sin(a)*rad,
-          vx: Math.cos(a)*42,
-          vy: Math.sin(a)*42,
-          life: 0.35,
-          col: "rgba(0,255,213,0.65)"
-        });
-      }
+      addRing(player.x, player.y, 8, 0.32, "rgba(0,255,213,0.52)");
+      addRing(player.x, player.y, 16, 0.44, "rgba(179,0,255,0.16)");
 
       floats.push({x:player.x,y:player.y-18,vx:0,vy:-18,life:0.9,text: hits>0 ? "PULSE" : "PULSE (MISS)", col:"#00ffd5"});
-      shake = Math.max(shake, 4);
+      shake = Math.max(shake, 1.6);
       Audio.pulse(0);
       return;
     }
 
     if(skill.id === "grenade"){
-      // lob a slow explosive projectile toward aim
       const aimWorldX = camera.x + mouse.x;
       const aimWorldY = camera.y + mouse.y;
       const ang = Math.atan2(aimWorldY - player.y, aimWorldX - player.x);
@@ -1050,19 +1130,21 @@
         y: player.y + Math.sin(ang)*10,
         vx: Math.cos(ang)*220,
         vy: Math.sin(ang)*220,
-        dmg: 60,
+        dmg: 62,
         life: 0.85,
         col: "#ff3b6b",
         pierce:false,
         splash: 46,
         dot:0,
         kind:"grenade",
-        crit:0
+        crit:0,
+        chain:0,
+        lineSplash:0
       });
 
-      particles(player.x, player.y, 18, 1.4, 82, 0.25, "#ff3b6b", "#b300ff");
-      addRing(player.x, player.y, 6, 0.25, "rgba(255,59,107,0.35)");
-      shake = Math.max(shake, 3);
+      particles(player.x, player.y, 16, 1.3, 76, 0.22, "#ff3b6b", "#b300ff");
+      addRing(player.x, player.y, 6, 0.22, "rgba(255,59,107,0.32)");
+      shake = Math.max(shake, 1.4);
       Audio.shoot(1, 0);
       return;
     }
@@ -1070,13 +1152,13 @@
     if(skill.id === "rally"){
       const heal = 22;
       player.hp = clamp(player.hp + heal, 0, 100);
-      player.frenzyT = Math.max(player.frenzyT, 4.4);
+      player.frenzyT = Math.max(player.frenzyT, 4.6);
       player.invuln = Math.max(player.invuln, 0.22);
 
-      particles(player.x, player.y, 42, 2.0, 95, 0.55, "#7CFF6B", "#00ffd5");
-      addRing(player.x, player.y, 10, 0.40, "rgba(124,255,107,0.40)");
+      particles(player.x, player.y, 36, 1.8, 88, 0.50, "#7CFF6B", "#00ffd5");
+      addRing(player.x, player.y, 10, 0.36, "rgba(124,255,107,0.38)");
       floats.push({x:player.x,y:player.y-18,vx:0,vy:-18,life:1.0,text:`RALLY +${heal}HP`,col:"#7CFF6B"});
-      shake = Math.max(shake, 4);
+      shake = Math.max(shake, 1.6);
       Audio.pickup(0);
       return;
     }
@@ -1105,16 +1187,16 @@
     }
 
     player.dashing = 0.14;
-    player.dashCD = 0.85;
+    player.dashCD = 0.80;
     player.invuln = Math.max(player.invuln, 0.18);
 
     const power = 260;
     player.dashVX = mx*power;
     player.dashVY = my*power;
 
-    particles(player.x, player.y, 22, 1.4, 85, 0.25, "#00ffd5", "#b300ff");
-    addRing(player.x, player.y, 6, 0.22, "rgba(0,255,213,0.35)");
-    shake = Math.max(shake, 3);
+    particles(player.x, player.y, 18, 1.3, 78, 0.22, "#00ffd5", "#b300ff");
+    addRing(player.x, player.y, 6, 0.20, "rgba(0,255,213,0.30)");
+    shake = Math.max(shake, 1.4);
     Audio.dash(0);
   }
 
@@ -1127,10 +1209,30 @@
 
   // ======== Update ========
   function update(dt){
+    // Global mute
+    if(wasPressed("mute")){
+      Audio.toggleMute();
+      consume("mute");
+      particles(MAP_W/2, MAP_H/2, 8, 1.0, 60, 0.18, "#00ffd5", "#b300ff");
+      if(!Audio.isMuted()) Audio.pickup(0);
+    }
+
     // Pause toggle
     if(wasPressed("pause") && state === STATE.PLAY){
       paused = !paused;
       consume("pause");
+    }
+
+    // Title
+    if(state === STATE.TITLE){
+      titleT += dt;
+      if(wasPressed("enter") || wasPressed("interact") || wasPressed("punch")){
+        state = STATE.BUNKER;
+        bunkerInit();
+        Audio.pickup(0);
+      }
+      pressed.clear();
+      return;
     }
 
     if(paused){
@@ -1167,7 +1269,7 @@
     player.invuln = Math.max(0, player.invuln - dt);
     player.frenzyT = Math.max(0, player.frenzyT - dt);
     player.mercyT = Math.max(0, player.mercyT - dt);
-    flash = Math.max(0, flash - dt*2.4);
+    flash = Math.max(0, flash - dt*2.6);
 
     // FX
     for(let i=sparks.length-1;i>=0;i--){
@@ -1208,14 +1310,14 @@
 
     // ===== BUNKER =====
     if(state === STATE.BUNKER){
-      if(wasPressed("down")) bunkerCursor = (bunkerCursor+1) % WEAPONS.length;
-      if(wasPressed("up")) bunkerCursor = (bunkerCursor-1+WEAPONS.length) % WEAPONS.length;
+      const visible = WEAPONS.filter(w => !w.key || keysUnlocked >= w.key);
+      if(wasPressed("down")) bunkerCursor = (bunkerCursor+1) % visible.length;
+      if(wasPressed("up")) bunkerCursor = (bunkerCursor-1+visible.length) % visible.length;
 
       if(wasPressed("slot1")) bunkerSlotFocus = 0;
       if(wasPressed("slot2")) bunkerSlotFocus = 1;
       if(wasPressed("slot3")) bunkerSlotFocus = 2;
 
-      // Q cycles skill in bunker (this is the “choose Q skill”)
       if(wasPressed("skill")){
         bunkerSkillCursor = (bunkerSkillCursor + 1) % SKILLS.length;
         player.skillId = SKILLS[bunkerSkillCursor].id;
@@ -1223,15 +1325,13 @@
         Audio.pickup(0);
       }
 
-      // Enter/E: equip selected weapon to focused slot
       if(wasPressed("enter") || wasPressed("interact")){
-        const id = WEAPONS[bunkerCursor].id;
+        const id = visible[bunkerCursor].id;
         bunkerSlots[bunkerSlotFocus] = id;
         particles(MAP_W/2, MAP_H/2, 10, 1.2, 65, 0.20, "#00ffd5", "#b300ff");
         Audio.pickup((bunkerSlotFocus-1)*0.2);
       }
 
-      // Space: deploy
       if(wasPressed("punch")){
         player.selected = bunkerSlots.slice(0,3);
         resetRun();
@@ -1260,7 +1360,6 @@
 
     // ===== PLAY =====
     if(state === STATE.PLAY){
-      // ESC behavior: close shop if open, else toggle fullscreen
       if(wasPressed("esc")){
         const now = performance.now();
         if(now - fs.lastEsc > 220){
@@ -1283,6 +1382,9 @@
         wave.restLock = Math.max(0, wave.restLock - dt);
         if(wave.shopPhase === "OPEN") shopOpen = true;
 
+        // key drops drift
+        for(const d of drops){ d.t += dt; }
+
         if(shopOpen){
           if(wasPressed("down")) shopCursor = (shopCursor+1) % SHOP_EXCLUSIVE.length;
           if(wasPressed("up")) shopCursor = (shopCursor-1+SHOP_EXCLUSIVE.length) % SHOP_EXCLUSIVE.length;
@@ -1304,27 +1406,44 @@
           pressed.clear();
           return;
         } else {
-          // Open crates with E
+          // Open crates + pick up keys with E
           if(wasPressed("interact")){
+            // keys
+            for(const d of drops){
+              if(d.picked) continue;
+              if(d.kind==="key" && dist2(d.x,d.y,player.x,player.y) < (16*16)){
+                d.picked = true;
+                keysUnlocked += 1;
+                localStorage.setItem(KEY_UNLOCK, String(keysUnlocked));
+                floats.push({x:d.x,y:d.y-10,vx:rand(-10,10),vy:rand(-26,-16),life:1.0,text:`KEY +1`,col:"#b300ff"});
+                particles(d.x,d.y,26,1.8,90,0.36,"#b300ff","#00ffd5");
+                addRing(d.x,d.y, 8, 0.26, "rgba(179,0,255,0.45)");
+                shake = Math.max(shake, 1.6);
+                Audio.pickup(screenPanFromWorld(d.x));
+                break;
+              }
+            }
+
+            // crates
             for(const c of crates){
               if(c.open) continue;
               if(dist2(c.x,c.y,player.x,player.y) < (16*16)){
                 c.open = true;
                 if(c.kind === "cash"){
-                  const gain = 65 + Math.floor(wave.n*12);
+                  const gain = 62 + Math.floor(wave.n*11);
                   player.cash += gain;
                   player.score += gain * 0.75;
                   floats.push({x:c.x,y:c.y-10,vx:rand(-10,10),vy:rand(-24,-14),life:0.9,text:`+${gain}$`,col:"#00ffd5"});
-                  particles(c.x,c.y,20,1.6,80,0.30,"#00ffd5","#b300ff");
+                  particles(c.x,c.y,18,1.5,76,0.28,"#00ffd5","#b300ff");
                   Audio.pickup(screenPanFromWorld(c.x));
                 } else {
-                  const heal = 16 + Math.floor(wave.n*1.5);
+                  const heal = 16 + Math.floor(wave.n*1.4);
                   player.hp = clamp(player.hp + heal, 0, 100);
                   floats.push({x:c.x,y:c.y-10,vx:rand(-10,10),vy:rand(-24,-14),life:0.9,text:`+${heal}HP`,col:"#7CFF6B"});
-                  particles(c.x,c.y,18,1.4,75,0.28,"#7CFF6B","#00ffd5");
+                  particles(c.x,c.y,16,1.3,70,0.26,"#7CFF6B","#00ffd5");
                   Audio.pickup(screenPanFromWorld(c.x));
                 }
-                shake = Math.max(shake, 2);
+                shake = Math.max(shake, 1.2);
                 break;
               }
             }
@@ -1404,9 +1523,11 @@
             splash:0,
             dot:0,
             kind:"burst",
-            crit:0
+            crit:0,
+            chain:0,
+            lineSplash:0
           });
-          particles(player.x+Math.cos(a)*7, player.y-2+Math.sin(a)*7, 4, 0.6, 45, 0.20, byId.burst.color, "rgba(232,232,255,0.50)");
+          particles(player.x+Math.cos(a)*7, player.y-2+Math.sin(a)*7, 4, 0.6, 45, 0.18, byId.burst.color, "rgba(232,232,255,0.50)");
           Audio.shoot(0, 0);
           player.burstLeft--;
         }
@@ -1416,12 +1537,16 @@
       player.shootCD = Math.max(0, player.shootCD - dt);
       player.meleeCD = Math.max(0, player.meleeCD - dt);
 
-      // wave logic
+      // wave logic (fixed budget, no endless)
       if(wave.phase === "FIGHT"){
         wave.spawnCD -= dt;
+
         const spawnNow = (wave.spawned < wave.toSpawn && wave.spawnCD <= 0);
         if(spawnNow){
-          wave.spawnCD = clamp(0.225 - director.intensity*0.05 + rand(-director.spawnJitter, director.spawnJitter)*0.02, 0.095, 0.25);
+          wave.spawnCD = clamp(
+            0.26 - director.intensity*0.05 + rand(-director.spawnJitter, director.spawnJitter)*0.02,
+            0.12, 0.30
+          );
           const eliteChance = director.eliteChance();
           spawnZombie(Math.random() < eliteChance);
           wave.spawned++;
@@ -1434,7 +1559,7 @@
         }
       }
 
-      // combat allowed
+      // combat
       const canCombat = (wave.phase !== "REST") || mouse.down || wasPressed("punch");
       if(canCombat){
         if(weapon.melee){
@@ -1443,8 +1568,7 @@
             meleeHit(weapon, ang);
           }
         }else{
-          // rally frenzy: boosts rate a bit
-          const frenzyMul = player.frenzyT > 0 ? 1.25 : 1.0;
+          const frenzyMul = player.frenzyT > 0 ? 1.28 : 1.0;
           const rate = (weapon.fireRate || 6) * frenzyMul;
 
           if(mouse.down && player.shootCD <= 0){
@@ -1453,7 +1577,7 @@
           }
           if(wasPressed("punch") && player.meleeCD <= 0){
             player.meleeCD = 0.42;
-            meleeHit({dmg:30, reach:12}, ang);
+            meleeHit({dmg:32, reach:12}, ang);
           }
         }
       }
@@ -1465,9 +1589,9 @@
         b.x += b.vx*dt;
         b.y += b.vy*dt;
 
-        // grenade and rocket detonate at end of life
-        if((b.kind==="grenade" || b.kind==="rocket") && b.life <= 0.02){
-          boomFX(b.x,b.y, (b.kind==="grenade") ? 54 : 44, "rgba(255,59,107,0.65)");
+        if((b.kind==="grenade" || b.kind==="rocket" || b.kind==="nova") && b.life <= 0.02){
+          const rr = (b.kind==="grenade") ? 54 : (b.kind==="nova" ? 70 : 44);
+          boomFX(b.x,b.y, rr, "rgba(255,59,107,0.65)");
           applySplash(b.x,b.y, (b.kind==="grenade") ? 52 : (b.splash||30), b.dmg, b.col);
           bullets.splice(i,1);
           continue;
@@ -1478,8 +1602,7 @@
           continue;
         }
 
-        // subtle trail for lasers/rail
-        if((b.kind==="laser" || b.kind==="rail") && Math.random()<0.35){
+        if((b.kind==="laser" || b.kind==="rail" || b.kind==="chain" || b.kind==="pike") && Math.random()<0.32){
           sparks.push({x:b.x,y:b.y,vx:rand(-8,8),vy:rand(-8,8),life:0.10,col:"rgba(232,232,255,0.25)"});
         }
 
@@ -1488,7 +1611,6 @@
         for(let j=zombies.length-1;j>=0;j--){
           const z = zombies[j];
           if(dist2(b.x,b.y,z.x,z.y) < (7*7)){
-            // crit chance: sniper/rail occasional extra “pop”
             const isCrit = (b.crit && Math.random() < b.crit);
             const dmg = isCrit ? Math.floor(b.dmg*1.45) : b.dmg;
 
@@ -1496,19 +1618,25 @@
             if(b.dot) z.burn = Math.max(z.burn, b.dot);
             z.bleed = Math.max(z.bleed, isCrit ? 0.22 : 0.10);
 
-            particles(b.x,b.y, isCrit?14:8, 0.9, isCrit?80:52, 0.22, b.col, "rgba(232,232,255,0.45)");
-            addBlood(z.x,z.y, isCrit?6:2, isCrit);
+            particles(b.x,b.y, isCrit?12:7, 0.9, isCrit?78:50, 0.20, b.col, "rgba(232,232,255,0.45)");
+            addBlood(z.x,z.y, isCrit?5:2, isCrit);
             Audio.hit(screenPanFromWorld(z.x));
 
             if(b.splash){
-              const hits = applySplash(b.x,b.y,b.splash,dmg,b.col);
-              if(hits>0) boomFX(b.x,b.y, b.splash*1.2, `rgba(255,59,107,0.45)`);
+              applySplash(b.x,b.y,b.splash,dmg,b.col);
+              boomFX(b.x,b.y, b.splash*1.05, `rgba(255,59,107,0.42)`);
+            }
+            if(b.lineSplash){
+              applyLineSplash(b.x,b.y,b.lineSplash,dmg,b.col);
+            }
+            if(b.chain){
+              const already = new Set([z]);
+              chainFromHit(z.x,z.y,already,b.chain,dmg,b.col);
             }
 
-            // extra “pop” for crits (tiny micro-explosion feel)
             if(isCrit){
-              addRing(z.x,z.y, 6, 0.22, "rgba(255,59,107,0.55)");
-              shake = Math.max(shake, 2.6);
+              addRing(z.x,z.y, 6, 0.20, "rgba(255,59,107,0.50)");
+              shake = Math.max(shake, 1.5);
             }
 
             if(!b.pierce){
@@ -1519,15 +1647,13 @@
               zombies.splice(j,1);
               const reward = z.elite ? 44 : 26;
               player.score += reward;
-              player.cash += Math.floor(reward * 0.85);
+              player.cash += Math.floor(reward * 0.90);
 
-              // kill burst
-              particles(z.x,z.y,22,1.2,70,0.50,"#00ffd5","#b300ff");
-              addBlood(z.x,z.y, 10, true);
+              particles(z.x,z.y,18,1.1,62,0.46,"#00ffd5","#b300ff");
+              addBlood(z.x,z.y, 8, true);
 
-              // mini “gib” style without changing art: just extra sparks
-              if(Math.random()<0.45){
-                particles(z.x,z.y,14,1.6,90,0.35,"rgba(255,59,107,0.65)","rgba(232,232,255,0.25)");
+              if(Math.random()<0.40){
+                particles(z.x,z.y,12,1.5,82,0.30,"rgba(255,59,107,0.65)","rgba(232,232,255,0.25)");
               }
             }
 
@@ -1543,13 +1669,20 @@
           const dmg = isCrit ? Math.floor(b.dmg*1.25) : b.dmg;
 
           boss.hp -= dmg;
-          particles(b.x,b.y, isCrit?18:12, 1.0, isCrit?85:62, 0.22, b.col, "rgba(255,255,255,0.35)");
-          addBlood(boss.x,boss.y, isCrit?6:2, isCrit);
+          particles(b.x,b.y, isCrit?16:10, 1.0, isCrit?82:58, 0.20, b.col, "rgba(255,255,255,0.35)");
+          addBlood(boss.x,boss.y, isCrit?5:2, isCrit);
           Audio.hit(screenPanFromWorld(boss.x));
 
           if(b.splash){
             applySplash(b.x,b.y,b.splash,dmg,b.col);
-            boomFX(b.x,b.y, b.splash*1.1, `rgba(255,59,107,0.45)`);
+            boomFX(b.x,b.y, b.splash*1.0, `rgba(255,59,107,0.42)`);
+          }
+          if(b.lineSplash){
+            applyLineSplash(b.x,b.y,b.lineSplash,dmg,b.col);
+          }
+          if(b.chain){
+            const already = new Set();
+            chainFromHit(boss.x,boss.y,already,Math.max(1, b.chain-1),dmg,b.col);
           }
 
           if(!b.pierce) bullets.splice(i,1);
@@ -1566,7 +1699,7 @@
           z.burn = Math.max(0, z.burn - dt);
           if(Math.random() < 0.22){
             z.hp -= 2;
-            particles(z.x,z.y,1,0.2,18,0.12,"rgba(255,210,74,0.45)","rgba(255,59,107,0.35)");
+            particles(z.x,z.y,1,0.2,18,0.10,"rgba(255,210,74,0.45)","rgba(255,59,107,0.35)");
           }
         }
         if(z.bleed > 0){
@@ -1597,7 +1730,7 @@
         }
       }
 
-      // boss
+      // boss (limited adds, less “stomp” shake)
       if(boss){
         boss.t += 1;
 
@@ -1607,66 +1740,73 @@
         const a = Math.atan2(player.y - boss.y, player.x - boss.x);
         const hpP = boss.hp / boss.maxHp;
 
-        const drift = (boss.kind===1) ? (Math.sin(boss.t*0.05)*12) : (Math.sin(boss.t*0.04)*7);
-        const spdBoost = hpP < 0.6 ? 1.20 : 1.0; // slightly gentler
+        const drift = (boss.kind===1) ? (Math.sin(boss.t*0.05)*10) : (Math.sin(boss.t*0.04)*6);
+        const spdBoost = hpP < 0.55 ? 1.15 : 1.0;
         boss.x += (Math.cos(a)*boss.spd*spdBoost*slowMul + drift)*dt;
         boss.y += (Math.sin(a)*boss.spd*spdBoost*slowMul - drift)*dt;
 
         boss.x = clamp(boss.x, arena.x0+18, arena.x1-18);
         boss.y = clamp(boss.y, arena.y0+20, arena.y1-18);
 
-        // attacks (tuned: Boss I less spammy at wave 5)
         boss.atkCD -= dt;
         if(boss.atkCD <= 0){
-          const wave5Ease = (wave.n===5 && boss.kind===0) ? 1.20 : 1.0;
-          boss.atkCD = wave5Ease * (
-              (boss.kind===0) ? (hpP < 0.5 ? 0.92 : 1.10)
-            : (boss.kind===1) ? (hpP < 0.5 ? 1.00 : 1.20)
-            :                 (hpP < 0.5 ? 0.95 : 1.15)
-          );
+          // less spam, less screen abuse
+          boss.atkCD =
+              (boss.kind===0) ? (hpP < 0.5 ? 1.05 : 1.25)
+            : (boss.kind===1) ? (hpP < 0.5 ? 1.10 : 1.35)
+            :                 (hpP < 0.5 ? 1.05 : 1.30);
 
-          particles(boss.x,boss.y,52,2.0,90,0.55,
+          particles(boss.x,boss.y,40,1.7,82,0.48,
             boss.kind===2 ? "#00ffd5" : "#ff3b6b",
             boss.kind===1 ? "#b300ff" : "#00ffd5"
           );
-          addRing(boss.x,boss.y, 10, 0.35, "rgba(255,255,255,0.10)");
-          shake = Math.max(shake, 8);
-          flash = Math.max(flash, 0.10);
+          addRing(boss.x,boss.y, 10, 0.28, "rgba(255,255,255,0.10)");
+          shake = Math.max(shake, 2.4);
+          flash = Math.max(flash, 0.08);
 
           const d = Math.sqrt(dist2(boss.x,boss.y,player.x,player.y));
 
+          // hits you if close, but not constant “stomp”
           if(boss.kind===0){
-            if(d < 40) hurtPlayer(hpP < 0.5 ? 18 : 14);
-            // fewer adds early (especially on wave 5)
-            const adds = (wave.n===5) ? (hpP<0.5?2:1) : (hpP<0.5?3:2);
-            for(let k=0;k<adds;k++) spawnZombie(Math.random()<0.28);
+            if(d < 40) hurtPlayer(hpP < 0.5 ? 16 : 13);
           } else if(boss.kind===1){
-            if(d < 54) hurtPlayer(hpP < 0.5 ? 14 : 11);
-            for(let k=0;k<(hpP<0.5?2:2);k++) spawnZombie(Math.random()<0.42);
+            if(d < 54) hurtPlayer(hpP < 0.5 ? 13 : 10);
           } else {
             if(d < 70){
-              hurtPlayer(hpP < 0.5 ? 12 : 10);
+              hurtPlayer(hpP < 0.5 ? 12 : 9);
               player.dashCD = Math.max(player.dashCD, 0.35);
             }
-            for(let k=0;k<(hpP<0.5?4:3);k++) spawnZombie(Math.random()<0.26);
+          }
+
+          // limited adds total per boss wave
+          if(wave.bossAddBudget > 0){
+            const aliveRoom = Math.max(0, director.aliveCap() - zombies.length);
+            const want = (hpP < 0.5) ? 1 : 1;
+            const add = Math.min(want, wave.bossAddBudget, aliveRoom);
+            for(let k=0;k<add;k++) spawnZombie(Math.random()<0.26);
+            wave.bossAddBudget -= add;
           }
         }
 
         if(dist2(boss.x,boss.y,player.x,player.y) < (22*22)){
-          hurtPlayer(16);
+          hurtPlayer(14);
         }
 
         if(boss.hp <= 0){
           player.score += 900;
-          player.cash += 340;
+          player.cash += 360;
           boomFX(boss.x,boss.y, 86, "rgba(179,0,255,0.55)");
           boss = null;
           bossesDefeated++;
 
+          // guaranteed key drop on boss kill
+          drops.push({x:player.x+rand(-20,20), y:player.y+rand(-20,20), kind:"key", picked:false, t:0});
+          Audio.pickup(0);
+
           wave.phase = "REST";
-          wave.timer = 1.2;
+          wave.timer = 0.75;
           wave.shopPhase = "OPEN";
-          wave.restLock = 0.35;
+          wave.restLock = 0.20;
           spawnCrates();
           shopOpen = true;
         }
@@ -1692,9 +1832,55 @@
   function render(){
     const sx = shake>0 ? randi(-shake, shake) : 0;
     const sy = shake>0 ? randi(-shake, shake) : 0;
-    shake = Math.max(0, shake - 0.35);
+    shake = Math.max(0, shake - 0.55); // quicker decay, less stomp-feel
 
     updateCamera();
+
+    // ===== TITLE =====
+    if(state === STATE.TITLE){
+      g.fillStyle = "#050214";
+      g.fillRect(0,0,W,H);
+
+      // star/noise sparkle
+      for(let i=0;i<130;i++){
+        const x = (Math.sin(titleT*0.7 + i*13.7)*0.5+0.5)*W;
+        const y = (Math.cos(titleT*0.55 + i*9.3)*0.5+0.5)*H;
+        const tw = (Math.sin(titleT*2.3 + i)*0.5+0.5);
+        g.fillStyle = `rgba(232,232,255,${0.06+tw*0.10})`;
+        g.fillRect(x|0,y|0,1,1);
+      }
+
+      // header panels
+      g.fillStyle = "rgba(179,0,255,0.20)";
+      g.fillRect(0,0,W,62);
+      g.fillStyle = "rgba(0,255,213,0.10)";
+      g.fillRect(0,62,W,10);
+
+      // scanlines
+      g.fillStyle = "rgba(0,0,0,0.10)";
+      for(let y=0;y<H;y+=2) g.fillRect(0,y,W,1);
+
+      drawText("CLUB DECAY", 34, 40, 2.6, "#e8e8ff");
+      drawText("CHIMP VS ZOMBIES", 56, 58, 1.2, "rgba(0,255,213,0.92)");
+
+      const pulse = 0.55 + 0.45*Math.sin(titleT*3.0);
+      g.fillStyle = `rgba(179,0,255,${0.10 + pulse*0.12})`;
+      g.fillRect(22, 78, W-44, 64);
+      g.strokeStyle = "rgba(0,255,213,0.25)";
+      g.strokeRect(22, 78, W-44, 64);
+
+      drawText("ENTER / E / SPACE", 66, 102, 1.2, "#00ffd5");
+      drawText("START", 132, 120, 1.6, "#e8e8ff");
+
+      drawText("Press any key/click to enable audio", 36, 152, 0.95, "rgba(232,232,255,0.72)");
+      drawText(`M toggles mute: ${Audio.isMuted() ? "ON" : "OFF"}`, 72, 166, 0.95, "rgba(232,232,255,0.62)");
+      drawText(`Keys unlocked: ${keysUnlocked}`, 214, 166, 0.95, "rgba(179,0,255,0.85)");
+
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(world, 0, 0, W, H, 0, 0, canvas.width, canvas.height);
+      return;
+    }
+
     drawArenaBackdrop();
 
     g.save();
@@ -1705,66 +1891,88 @@
       g.fillStyle = "#050214";
       g.fillRect(0,0,W,H);
 
-      g.fillStyle = "rgba(179,0,255,0.18)";
-      g.fillRect(0,0,W,54);
-      g.fillStyle = "rgba(0,255,213,0.10)";
-      g.fillRect(0,54,W,10);
+      // luxe bunker frame
+      g.fillStyle = "rgba(0,0,0,0.55)";
+      g.fillRect(10,10,W-20,H-20);
+      g.strokeStyle = "rgba(179,0,255,0.55)";
+      g.strokeRect(10.5,10.5,W-21,H-21);
+      g.strokeStyle = "rgba(0,255,213,0.18)";
+      g.strokeRect(13.5,13.5,W-27,H-27);
 
-      g.fillStyle = "rgba(255,255,255,0.03)";
-      for(let i=-H;i<W;i+=10){
-        g.fillRect(i, 0, 3, H);
+      // ambient shimmer
+      for(let i=0;i<80;i++){
+        const x = (Math.random()*W)|0;
+        const y = (Math.random()*H)|0;
+        g.fillStyle = Math.random()<0.5 ? "rgba(179,0,255,0.04)" : "rgba(0,255,213,0.03)";
+        g.fillRect(x,y,1,1);
       }
 
-      drawText("CLUB DECAY", 18, 20, 2.2, "#e8e8ff");
-      drawText("CHIMP VS ZOMBIES", 18, 38, 1.25, "rgba(0,255,213,0.92)");
-      drawText("BUNKER LOADOUT", 18, 56, 1.0, "rgba(232,232,255,0.78)");
-      drawText("W/S select · 1/2/3 choose slot · E/ENTER equip · SPACE deploy", 18, 70, 0.92, "rgba(232,232,255,0.62)");
-      drawText("Q cycles SKILL", 214, 70, 0.92, "rgba(232,232,255,0.62)");
+      drawText("CLUB DECAY", 22, 28, 2.2, "#e8e8ff");
+      drawText("BUNKER LOADOUT", 22, 44, 1.05, "rgba(0,255,213,0.90)");
+      drawText("W/S select · 1/2/3 choose slot · E/ENTER equip · SPACE deploy", 22, 58, 0.90, "rgba(232,232,255,0.62)");
+      drawText(`KEYS: ${keysUnlocked}  (Bosses drop keys)`, 210, 58, 0.90, "rgba(179,0,255,0.80)");
+      drawText("Q cycles SKILL", 22, 70, 0.90, "rgba(232,232,255,0.62)");
+      drawText(`M mute: ${Audio.isMuted() ? "ON" : "OFF"}`, 220, 70, 0.90, "rgba(232,232,255,0.55)");
 
-      const startY = 92;
-      for(let i=0;i<WEAPONS.length;i++){
-        const w = WEAPONS[i];
-        const y = startY + i*12;
-        if(y > H-46) break;
+      const visible = WEAPONS.filter(w => !w.key || keysUnlocked >= w.key);
+      const startY = 86;
+      const showMax = 7; // cleaner bunker list
+      let page = Math.floor(bunkerCursor / showMax);
+      let s0 = page*showMax;
+      let s1 = Math.min(visible.length, s0 + showMax);
+
+      for(let i=s0;i<s1;i++){
+        const w = visible[i];
+        const row = i - s0;
+        const y = startY + row*12;
 
         const cur = (i===bunkerCursor);
         if(cur){
           g.fillStyle = "rgba(0,255,213,0.10)";
-          g.fillRect(12, y-9, W-24, 11);
-          g.fillStyle = "rgba(179,0,255,0.15)";
-          g.fillRect(12, y-9, 6, 11);
+          g.fillRect(18, y-9, W-36, 11);
+          g.fillStyle = "rgba(179,0,255,0.16)";
+          g.fillRect(18, y-9, 6, 11);
         }
 
         g.fillStyle = "rgba(255,255,255,0.06)";
-        g.fillRect(16, y-8, 10, 10);
+        g.fillRect(22, y-8, 10, 10);
         g.fillStyle = w.color;
-        g.fillRect(18, y-6, 6, 6);
+        g.fillRect(24, y-6, 6, 6);
 
-        drawText(w.name.toUpperCase(), 34, y, 1.0, w.color);
-        const meta = w.melee ? `MELEE dmg:${w.dmg}` : `dmg:${w.dmg} rate:${w.fireRate.toFixed(1)}`;
-        drawText(meta, 182, y, 0.85, "rgba(232,232,255,0.55)");
+        drawText(w.name.toUpperCase(), 40, y, 1.0, w.color);
+        const meta = w.melee ? `MELEE dmg:${w.dmg}` : `dmg:${w.dmg} rate:${(w.fireRate||0).toFixed(1)}`;
+        const tag = w.key ? `KEY-${w.key}` : "";
+        drawText(meta, 178, y, 0.85, "rgba(232,232,255,0.55)");
+        if(tag) drawText(tag, 282, y, 0.85, "rgba(179,0,255,0.80)");
+      }
+
+      // page hint
+      if(visible.length > showMax){
+        drawText(`LIST ${page+1}/${Math.ceil(visible.length/showMax)}`, 244, 86, 0.85, "rgba(232,232,255,0.45)");
       }
 
       // slots bar
-      g.fillStyle = "rgba(0,0,0,0.38)";
-      g.fillRect(0,H-34,W,34);
+      g.fillStyle = "rgba(0,0,0,0.55)";
+      g.fillRect(12,H-40,W-24,30);
+      g.strokeStyle = "rgba(255,255,255,0.10)";
+      g.strokeRect(12.5,H-40.5,W-25,30);
 
-      drawText("SLOTS:", 12, H-18, 0.95, "rgba(232,232,255,0.82)");
+      drawText("SLOTS:", 18, H-22, 0.95, "rgba(232,232,255,0.82)");
       for(let i=0;i<3;i++){
         const id = bunkerSlots[i];
         const w = byId[id] || byId.pistol;
-        const x = 64+i*86;
-        g.fillStyle = (i===bunkerSlotFocus) ? "rgba(179,0,255,0.35)" : "rgba(255,255,255,0.07)";
-        g.fillRect(x, H-28, 80, 14);
+        const x = 68+i*82;
+        g.fillStyle = (i===bunkerSlotFocus) ? "rgba(179,0,255,0.36)" : "rgba(255,255,255,0.08)";
+        g.fillRect(x, H-32, 76, 14);
         g.fillStyle = w.color;
-        g.fillRect(x+3, H-25, 8, 8);
-        drawText(`${i+1}:${w.name}`, x+14, H-16, 0.85, "#e8e8ff");
+        g.fillRect(x+3, H-29, 8, 8);
+        drawText(`${i+1}:${w.name}`, x+14, H-20, 0.85, "#e8e8ff");
       }
 
       const sk = skillById[player.skillId] || skillById.pulse;
       g.fillStyle = "rgba(255,255,255,0.06)";
-      g.fillRect(12, H-14, W-24, 12);
-      drawText(`Q SKILL: ${sk.name.toUpperCase()} · ${sk.desc}`, 16, H-4, 0.9, "rgba(232,232,255,0.78)");
+      g.fillRect(14, H-14, W-28, 12);
+      drawText(`Q SKILL: ${sk.name.toUpperCase()} · ${sk.desc}`, 18, H-4, 0.9, "rgba(232,232,255,0.78)");
 
       g.restore();
       ctx.imageSmoothingEnabled = false;
@@ -1779,9 +1987,9 @@
     for(const t of trails){
       const x = Math.floor(t.x - ox), y = Math.floor(t.y - oy);
       if(x<-10||x>W+10||y<-10||y>H+10) continue;
-      g.fillStyle = `rgba(179,0,255,${0.18*(t.life/0.22)})`;
+      g.fillStyle = `rgba(179,0,255,${0.16*(t.life/0.22)})`;
       g.fillRect(x-4,y-4,8,8);
-      g.fillStyle = `rgba(0,255,213,${0.14*(t.life/0.22)})`;
+      g.fillStyle = `rgba(0,255,213,${0.12*(t.life/0.22)})`;
       g.fillRect(x-2,y-2,4,4);
     }
 
@@ -1795,13 +2003,27 @@
       g.fillRect(x-3,y-3,6,6);
     }
 
+    // drops (keys)
+    for(const d of drops){
+      if(d.picked) continue;
+      const x = Math.floor(d.x - ox), y = Math.floor(d.y - oy);
+      if(x<-12||x>W+12||y<-12||y>H+12) continue;
+      const bob = Math.floor(Math.sin((d.t||0)*6)*2);
+      g.fillStyle = "rgba(179,0,255,0.30)";
+      g.fillRect(x-5, y-7+bob, 10, 14);
+      g.fillStyle = "rgba(0,255,213,0.22)";
+      g.fillRect(x-3, y-5+bob, 6, 10);
+      g.fillStyle = "#e8e8ff";
+      g.fillRect(x-1, y-1+bob, 2, 2);
+    }
+
     // bullets
     for(const b of bullets){
       const sxp = Math.floor(b.x - ox);
       const syp = Math.floor(b.y - oy);
       if(sxp<-3 || sxp>W+3 || syp<-3 || syp>H+3) continue;
       g.fillStyle = b.col;
-      const sz = (b.kind==="grenade") ? 4 : (b.kind==="rocket" ? 3 : 3);
+      const sz = (b.kind==="grenade" || b.kind==="nova") ? 4 : (b.kind==="rocket" ? 3 : 3);
       g.fillRect(sxp-1, syp-1, sz, sz);
       g.fillStyle = "rgba(255,255,255,0.18)";
       g.fillRect(sxp, syp, 1, 1);
@@ -1824,10 +2046,8 @@
       const x = r.x - ox, y = r.y - oy;
       if(x<-120||x>W+120||y<-120||y>H+120) continue;
       const a = sat(r.life/r.max);
-      g.strokeStyle = r.col.replace(")", `,${0.65*a})`).replace("rgba(", "rgba(");
-      // fallback if user passed rgba already: just use it
+      g.globalAlpha = 0.62*a;
       g.strokeStyle = r.col;
-      g.globalAlpha = 0.65*a;
       g.beginPath();
       g.arc(x, y, r.rad, 0, Math.PI*2);
       g.stroke();
@@ -1865,11 +2085,13 @@
     drawText(`SCORE ${Math.floor(player.score)}`, 8, 12, 1.0, "#e8e8ff");
     drawText(`CASH ${Math.floor(player.cash)}$`, 110, 12, 1.0, "rgba(0,255,213,0.90)");
     drawText(`HI ${highScore}`, 232, 12, 1.0, "rgba(232,232,255,0.70)");
+    drawText(`KEYS ${keysUnlocked}`, 274, 12, 0.9, "rgba(179,0,255,0.80)");
+
     drawText(`WAVE ${wave.n} ${wave.phase==="REST"?"(REST)":wave.phase==="FIGHT"?"(FIGHT)":"(CLEAR)"}`, 8, 24, 0.9, "rgba(232,232,255,0.70)");
-    drawText(`DASH ${player.dashCD>0?player.dashCD.toFixed(1):"OK"}`, 206, 24, 0.9, "rgba(232,232,255,0.62)");
+    drawText(`DASH ${player.dashCD>0?player.dashCD.toFixed(1):"OK"}`, 160, 24, 0.9, "rgba(232,232,255,0.62)");
 
     const sk = skillById[player.skillId] || skillById.pulse;
-    drawText(`Q ${sk.name.toUpperCase()} ${player.skillCD>0?player.skillCD.toFixed(0):"READY"}`, 264, 24, 0.9, "rgba(232,232,255,0.62)");
+    drawText(`Q ${sk.name.toUpperCase()} ${player.skillCD>0?player.skillCD.toFixed(0):"READY"}`, 236, 24, 0.9, "rgba(232,232,255,0.62)");
 
     const hpP = clamp(player.hp/100, 0, 1);
     g.fillStyle = "rgba(255,255,255,0.10)";
@@ -1881,7 +2103,7 @@
     drawText(`HP`, 164, 41, 0.9, "rgba(232,232,255,0.78)");
 
     if(player.frenzyT > 0){
-      const p = sat(player.frenzyT/4.4);
+      const p = sat(player.frenzyT/4.6);
       g.fillStyle = "rgba(0,255,213,0.12)";
       g.fillRect(178, 34, 134*p, 8);
       drawText("FRENZY", 178, 41, 0.9, "rgba(0,255,213,0.85)");
@@ -1949,7 +2171,7 @@
       g.fillRect(44, 62, 232, 56);
       drawText("REST ROUND", 112, 80, 1.3, "#00ffd5");
       drawText("Shop auto-opens. C starts wave.", 64, 96, 1.0, "rgba(232,232,255,0.78)");
-      drawText("Crates: E · Close shop: ESC", 70, 108, 1.0, "rgba(232,232,255,0.72)");
+      drawText("Crates/Keys: E · Close shop: ESC", 56, 108, 1.0, "rgba(232,232,255,0.72)");
       const nxtBoss = bossesDefeated>=3 ? "NO MORE BOSSES" : `BOSS AT WAVE ${[5,10,15][bossesDefeated]}`;
       drawText(nxtBoss, 96, 120, 0.95, "rgba(232,232,255,0.55)");
     }
@@ -1980,10 +2202,13 @@
       for(let i=0;i<SHOP_EXCLUSIVE.length;i++){
         const id = SHOP_EXCLUSIVE[i];
         const w = byId[id];
-        const yy = startY + i*12;
+        const yy = startY + i*10;
+        if(yy > H-12) break;
+
         const cur = (i===shopCursor);
         const owned = player.selected.includes(id);
         const afford = canBuy(id);
+        const gated = (w && w.key && keysUnlocked < w.key);
 
         if(cur){
           g.fillStyle = "rgba(179,0,255,0.20)";
@@ -1996,10 +2221,14 @@
         g.fillRect(22, yy-6, 6, 6);
 
         drawText(w.name.toUpperCase(), 36, yy, 1.0, w.color);
-        drawText(`${w.price}$`, 200, yy, 1.0, "rgba(232,232,255,0.80)");
+        drawText(`${w.price}$`, 190, yy, 1.0, "rgba(232,232,255,0.80)");
 
-        const tag = owned ? "OWNED" : (afford ? "BUY" : "LOCKED");
-        const col = owned ? "rgba(232,232,255,0.5)" : (afford ? "#7CFF6B" : "#ff3b6b");
+        let tag = owned ? "OWNED" : (afford ? "BUY" : "LOCKED");
+        let col = owned ? "rgba(232,232,255,0.5)" : (afford ? "#7CFF6B" : "#ff3b6b");
+        if(gated){
+          tag = `KEY-${w.key}`;
+          col = "rgba(179,0,255,0.85)";
+        }
         drawText(tag, 252, yy, 1.0, col);
       }
     }
@@ -2021,11 +2250,10 @@
       drawText("Press P to resume", 104, 108, 1.0, "rgba(232,232,255,0.75)");
     }
 
-    // explosion flash overlay
     if(flash > 0.001){
-      g.fillStyle = `rgba(255,255,255,${flash*0.35})`;
+      g.fillStyle = `rgba(255,255,255,${flash*0.28})`;
       g.fillRect(0,0,W,H);
-      g.fillStyle = `rgba(179,0,255,${flash*0.20})`;
+      g.fillStyle = `rgba(179,0,255,${flash*0.16})`;
       g.fillRect(0,0,W,H);
     }
 
