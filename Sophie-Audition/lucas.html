@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Lucas</title>
+<style>
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --aqua:#00ffd5; --vio:#8a2eff;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%; display:grid; place-items:center;}
+  canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+  .hud{position:fixed; left:12px; right:12px; top:12px; z-index:5; display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;}
+  .pill{pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.35); backdrop-filter: blur(8px);
+    border-radius:999px; padding:10px 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase; display:flex; gap:10px; align-items:center;}
+  .toast{position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    border:1px solid var(--ui2); background:rgba(0,0,0,.55); border-radius:14px; padding:10px 12px;
+    font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s; max-width:min(760px, calc(100vw - 24px)); text-align:center; z-index:6;}
+  .toast.on{opacity:1}
+  .microhint{position:fixed; right:12px; bottom:12px; z-index:4; border:1px solid rgba(255,255,255,.10);
+    background:rgba(0,0,0,.35); backdrop-filter: blur(8px); border-radius:14px; padding:8px 10px; font-size:10px; letter-spacing:.12em; opacity:.85; pointer-events:none;}
+  .exit{position:fixed; left:12px; bottom:12px; z-index:7; pointer-events:auto; border:1px solid rgba(255,255,255,.18);
+    background:rgba(0,0,0,.45); backdrop-filter: blur(8px); border-radius:14px; padding:10px 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase; cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="hud">
+  <div class="pill"><b>LUCAS</b> <span id="stateLabel">LOCKED IN</span></div>
+  <div class="pill">TIME: <span id="time">10:00</span></div>
+  <div class="pill">ROUND: <span id="round">1</span>/5</div>
+  <div class="pill">MOOD: <span id="mood">0</span></div>
+</div>
+<div class="toast" id="toast"></div>
+<button class="exit" id="exitBtn">EXIT → LIVING ROOM</button>
+<div class="microhint">Choose: A / B / C · Exit: E</div>
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+
+<script>
+const c=document.getElementById("c");
+const ctx=c.getContext("2d",{alpha:false});
+ctx.imageSmoothingEnabled=false;
+
+const UI={
+  toast:document.getElementById("toast"),
+  time:document.getElementById("time"),
+  stateLabel:document.getElementById("stateLabel"),
+  round:document.getElementById("round"),
+  mood:document.getElementById("mood"),
+  exitBtn:document.getElementById("exitBtn"),
+};
+
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+const RUN_KEY="SOPHIA_AUDITION_RUN_V1";
+const DURATION_MS=10*60*1000;
+
+function loadState(){
+  const r=localStorage.getItem(STORE_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return {trip:false, lucas:{ mood:0, following:false, attempts:0, unlocked:false }};
+}
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+function loadRun(){
+  const r=localStorage.getItem(RUN_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return { startTime:0, durationMs:DURATION_MS, active:false, ended:false };
+}
+function saveRun(run){ localStorage.setItem(RUN_KEY, JSON.stringify(run)); }
+
+let state=loadState();
+state.lucas = state.lucas || { mood:0, following:false, attempts:0, unlocked:false };
+state.lucasPuzzle = state.lucasPuzzle || { seed: (state.lucasPuzzle?.seed ?? ((Math.random()*1e9)|0)), round:1, wins:0, losses:0, done:false };
+saveState();
+
+function toast(msg,ms=1600){
+  UI.toast.textContent=msg;
+  UI.toast.classList.add("on");
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>UI.toast.classList.remove("on"),ms);
+}
+
+/* timer */
+function fmt(ms){
+  ms=Math.max(0, ms|0);
+  const s=Math.ceil(ms/1000);
+  const m=(s/60)|0;
+  const ss=String(s%60).padStart(2,"0");
+  return `${m}:${ss}`;
+}
+function timeLeftMs(){
+  const run=loadRun();
+  if(!run.active || run.ended) return run.durationMs;
+  return (run.startTime + run.durationMs - Date.now());
+}
+function tickTimer(){
+  const left=timeLeftMs();
+  UI.time.textContent=fmt(left);
+  if(left<=0){
+    const run=loadRun();
+    run.ended=true; run.active=false;
+    saveRun(run);
+    toast("TIME UP. Audition missed.", 1800);
+    setTimeout(()=>location.href="Sophie00.html", 700);
+  }
+}
+setInterval(tickTimer,250);
+tickTimer();
+
+/* input */
+const keysDown=new Set();
+addEventListener("keydown",(e)=>{
+  const k=e.key.toLowerCase();
+  if(["a","b","c","e"].includes(k)) e.preventDefault();
+  keysDown.add(k);
+});
+addEventListener("keyup",(e)=>keysDown.delete(e.key.toLowerCase()));
+
+const W=c.width,H=c.height;
+function bevel(x,y,w,h,fill){
+  ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(x,y,w,1);
+  ctx.fillStyle="rgba(0,0,0,.40)"; ctx.fillRect(x,y+h-1,w,1);
+  ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(x,y,1,h);
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(x+w-1,y,1,h);
+}
+
+/* deterministic-ish prompt generator from seed */
+function mulberry32(a){ return function(){ let t=a+=0x6D2B79F5; t=Math.imul(t^t>>>15,t|1); t^=t+Math.imul(t^t>>>7,t|61); return ((t^t>>>14)>>>0)/4294967296; } }
+const rng = mulberry32(state.lucasPuzzle.seed|0);
+
+const rounds = [
+  {
+    prompt:"Lucas is zoned in. The screen glow has him. What do you do?",
+    A:{txt:"A) Touch his shoulder softly. Whisper: 'two minutes. then we go.'", delta:+2},
+    B:{txt:"B) Yank the chair back hard.", delta:-2},
+    C:{txt:"C) Turn off the router like a villain.", delta:-3},
+    correct:"a",
+    win:"His shoulders unclench. He hears you.",
+    lose:"He tightens up. More locked in."
+  },
+  {
+    prompt:"He sighs without looking away. Next move?",
+    A:{txt:"A) Say: 'I’m nervous. I need you. Please.'", delta:+3},
+    B:{txt:"B) Start yelling about auditions like a siren.", delta:-2},
+    C:{txt:"C) Throw a pillow at the monitor.", delta:-2},
+    correct:"a",
+    win:"He pauses. The game sound dips. Real life leaks in.",
+    lose:"He tunnels deeper. The chair becomes armor."
+  },
+  {
+    prompt:"He glances at you for half a second. That’s a crack. Use it.",
+    A:{txt:"A) Kiss his cheek. Small. No pressure.", delta:+2},
+    B:{txt:"B) Slap the desk. Demand attention.", delta:-2},
+    C:{txt:"C) Pretend you’re fine and walk away.", delta:-1},
+    correct:"a",
+    win:"He blinks. Like he forgot he could blink.",
+    lose:"The crack seals. He pretends you’re background noise."
+  },
+  {
+    prompt:"He’s listening now… but still seated. What line lands?",
+    A:{txt:"A) 'Help me beat the clock. Then you can beat your boss.'", delta:+2},
+    B:{txt:"B) 'You care more about pixels than me.'", delta:-2},
+    C:{txt:"C) 'If you don’t get up I’m leaving without you.'", delta:-1},
+    correct:"a",
+    win:"He smirks. Competition wakes him up.",
+    lose:"He turns cold. Defensive. Quiet."
+  },
+  {
+    prompt:"Final push. He’s one decision away from standing.",
+    A:{txt:"A) Hold out your hand. No words. Just a hand.", delta:+3},
+    B:{txt:"B) Hit the power button on the PC.", delta:-3},
+    C:{txt:"C) Tell Milo to attack him.", delta:-1},
+    correct:"a",
+    win:"He takes your hand. Stands up. Done.",
+    lose:"He sits heavier. Like gravity won."
+  },
+];
+
+// optional shuffle-like effect but keeps “correct = A” vibe
+function getRoundData(n){
+  const base = rounds[n-1];
+  return base;
+}
+
+let t=0;
+let round = Math.max(1, Math.min(5, state.lucasPuzzle.round|0));
+let mood = state.lucas.mood|0;
+
+UI.mood.textContent=String(mood);
+UI.round.textContent=String(round);
+UI.stateLabel.textContent = state.lucas.following ? "FOLLOWING" : (state.lucas.unlocked ? "UP" : "LOCKED IN");
+
+let current = getRoundData(round);
+let locked=false;
+let lastChoice=0;
+
+function applyChoice(letter){
+  if(locked) return;
+  locked=true;
+
+  state.lucas.attempts = (state.lucas.attempts|0) + 1;
+
+  const opt = current[letter.toUpperCase()];
+  mood += opt.delta;
+  state.lucas.mood = mood;
+  UI.mood.textContent=String(mood);
+
+  const baseChance = 0.20; // your “20% vibe”
+  const moodBonus = Math.max(0, Math.min(0.18, mood*0.02)); // mood helps
+  const rollWin = (Math.random() < (baseChance + moodBonus));
+
+  const correct = (letter===current.correct);
+  const win = correct || rollWin;
+
+  toast(opt.txt, 1400);
+
+  setTimeout(()=>{
+    toast(win ? current.win : current.lose, 1600);
+
+    if(win){
+      state.lucasPuzzle.wins=(state.lucasPuzzle.wins|0)+1;
+      round++;
+      state.lucasPuzzle.round = round;
+
+      // success condition: win 3+ rounds OR finish all 5
+      const hardWin = (state.lucasPuzzle.wins>=3) || (round>=6) || (mood>=6);
+
+      if(hardWin){
+        state.lucas.following=true;
+        state.lucas.unlocked=true;
+        state.lucasPuzzle.done=true;
+        saveState();
+        UI.stateLabel.textContent="FOLLOWING";
+        toast("Lucas stands up. \"Alright. I'm coming.\" He follows you now.", 2200);
+      }else{
+        saveState();
+        UI.round.textContent=String(Math.min(5, round));
+        current = getRoundData(Math.min(5, round));
+      }
+    }else{
+      state.lucasPuzzle.losses=(state.lucasPuzzle.losses|0)+1;
+      // small penalty: repeat same round but not forever, add pity chance
+      if((state.lucasPuzzle.losses>=3 && Math.random()<0.20) || mood>=6){
+        state.lucas.following=true;
+        state.lucas.unlocked=true;
+        state.lucasPuzzle.done=true;
+        saveState();
+        UI.stateLabel.textContent="FOLLOWING";
+        toast("Lucas exhales. \"Okay... okay.\" He stands up. He follows you now.", 2200);
+      }else{
+        saveState();
+      }
+    }
+
+    locked=false;
+  }, 900);
+}
+
+function goBack(){
+  saveState();
+  location.href="Sophie03.html";
+}
+UI.exitBtn.addEventListener("click", goBack);
+
+function draw(){
+  ctx.fillStyle="#05050a"; ctx.fillRect(0,0,W,H);
+
+  // desk glow
+  const g=ctx.createRadialGradient(260,110,8,260,110,140);
+  g.addColorStop(0,"rgba(0,255,213,.12)");
+  g.addColorStop(0.5,"rgba(138,46,255,.10)");
+  g.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  // room slab
+  bevel(18,18,284,144,"rgba(255,255,255,.04)");
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(24,24,272,132);
+
+  // lucas desk + chair
+  bevel(196,88,96,58,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,0,0,.50)";
+  ctx.fillRect(202,94,84,36);
+  ctx.fillStyle="rgba(0,255,213,.10)";
+  ctx.fillRect(206,98,36,12); // monitor glow
+
+  // Lucas sprite
+  const lx=232, ly=112;
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(lx-2,ly+16,26,3);
+  // hair brown
+  ctx.fillStyle="#5a3b22"; ctx.fillRect(lx,ly,18,7); ctx.fillRect(lx-1,ly+6,20,3);
+  // face
+  ctx.fillStyle="#ffd9c9"; ctx.fillRect(lx+3,ly+9,12,8);
+  // eyes
+  const blink = Math.sin(t*0.12) > 0.97;
+  ctx.fillStyle="#3b2a1c";
+  if(blink){ ctx.fillRect(lx+5,ly+12,8,1); }
+  else { ctx.fillRect(lx+5,ly+12,1,1); ctx.fillRect(lx+12,ly+12,1,1); }
+  // shirt
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(lx+4,ly+18,10,10);
+
+  // dialogue panel
+  bevel(28,28,164,64,"rgba(255,255,255,.06)");
+  ctx.fillStyle="rgba(0,0,0,.55)"; ctx.fillRect(34,34,152,52);
+  ctx.font="8px ui-monospace, monospace";
+  ctx.fillStyle="rgba(255,255,255,.92)";
+  ctx.fillText("LUCAS INTERACTION", 38, 44);
+  ctx.fillStyle="rgba(255,255,255,.70)";
+  ctx.fillText(`ROUND ${Math.min(5, round)}/5`, 38, 56);
+
+  // prompt text (wrapped-ish)
+  const p = getRoundData(Math.min(5, round)).prompt;
+  drawWrap(p, 38, 68, 146);
+
+  // choice cards
+  const data = getRoundData(Math.min(5, round));
+  drawChoiceCard("A", data.A.txt, 28, 98, 288, 18);
+  drawChoiceCard("B", data.B.txt, 28, 120, 288, 18);
+  drawChoiceCard("C", data.C.txt, 28, 142, 288, 18);
+
+  // trip overlay (mild)
+  if(state.trip){
+    ctx.fillStyle=`rgba(255,99,255,${0.06+0.05*Math.sin(t*0.06)})`;
+    ctx.fillRect(0,0,W,H);
+    for(let y=0;y<H;y+=3){
+      ctx.fillStyle=`rgba(0,255,213,${0.02+0.02*Math.sin(t*0.12+y*0.2)})`;
+      ctx.fillRect(0,y,W,1);
+    }
+  }
+}
+
+function drawChoiceCard(letter, text, x, y, w, h){
+  bevel(x,y,w,h,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,0,0,.55)";
+  ctx.fillRect(x+2,y+2,w-4,h-4);
+  ctx.font="8px ui-monospace, monospace";
+  ctx.fillStyle="rgba(0,255,213,.65)";
+  ctx.fillText(letter, x+8, y+12);
+  ctx.fillStyle="rgba(255,255,255,.78)";
+  // truncate to fit
+  ctx.fillText(text.slice(0, 56), x+20, y+12);
+}
+
+function drawWrap(text, x, y, maxW){
+  ctx.font="8px ui-monospace, monospace";
+  ctx.fillStyle="rgba(255,255,255,.78)";
+  const words=text.split(" ");
+  let line="", yy=y;
+  for(const w of words){
+    const test = line ? (line+" "+w) : w;
+    if(ctx.measureText(test).width > maxW){
+      ctx.fillText(line, x, yy);
+      yy += 10;
+      line = w;
+    }else{
+      line = test;
+    }
+  }
+  if(line) ctx.fillText(line, x, yy);
+}
+
+function loop(){
+  t++;
+
+  // exit
+  if(keysDown.has("e")){
+    if(!loop._e) goBack();
+    loop._e=true;
+  } else loop._e=false;
+
+  // already following? quick message
+  if(state.lucas.following && !loop._followToast){
+    toast("Lucas is already up. (He’s following you in the living room now.)", 1700);
+    loop._followToast=true;
+  }
+
+  // choice keys
+  const hit = ["a","b","c"].find(k=>keysDown.has(k));
+  if(hit){
+    if(!lastChoice){
+      applyChoice(hit);
+    }
+    lastChoice=hit;
+  }else{
+    lastChoice=0;
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+toast("Choose A/B/C. Get him up. Keep it real. Keep it fast.", 1800);
+loop();
+</script>
+</body>
+</html>
