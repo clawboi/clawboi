@@ -3,62 +3,49 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Sophia's Audition — Street (Open City)</title>
+<title>Sophia's Audition — Street (Day City)</title>
 <style>
   :root{
     --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14);
     --vio:#8a2eff; --aqua:#00ffd5; --hot:#ff63ff; --sun:#ffd24d;
   }
-  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
   .wrap{height:100%; display:grid; place-items:center;}
   canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
   .hud{
-    position:fixed; left:12px; right:12px; top:12px; z-index:5;
+    position:fixed; left:12px; right:12px; top:12px; z-index:6;
     display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;
   }
   .pill{
-    pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.35);
+    pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.32);
     backdrop-filter: blur(8px);
     border-radius:999px; padding:10px 12px;
     font-size:11px; letter-spacing:.18em; text-transform:uppercase;
     display:flex; gap:10px; align-items:center;
   }
-  .hint{
-    pointer-events:auto;
-    flex:1 1 320px;
-    border:1px solid var(--ui2); background:rgba(0,0,0,.35);
-    backdrop-filter: blur(8px);
-    border-radius:18px; padding:10px 12px;
-    font-size:11px; letter-spacing:.10em; line-height:1.35;
-  }
-  .hint .k{display:inline-block; padding:2px 7px; border-radius:8px; border:1px solid var(--ui2); background:rgba(255,255,255,.06); font-weight:700}
+  .pill b{letter-spacing:.22em}
   .toast{
     position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
     border:1px solid var(--ui2); background:rgba(0,0,0,.55);
     border-radius:14px; padding:10px 12px;
     font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
-    max-width:min(820px, calc(100vw - 24px)); text-align:center;
-    z-index:6;
+    max-width:min(920px, calc(100vw - 24px)); text-align:center;
+    z-index:7;
   }
   .toast.on{opacity:1}
 
-  /* soft neon atmosphere (same family as the house pages, brighter) */
+  /* Day glow layer */
   body::before{
     content:"";
-    position:fixed;
-    inset:-20%;
+    position:fixed; inset:-20%;
     background:
-      radial-gradient(circle at 18% 12%, rgba(255,210,77,.16), transparent 58%),
+      radial-gradient(circle at 20% 18%, rgba(255,210,77,.22), transparent 58%),
       radial-gradient(circle at 78% 22%, rgba(0,255,213,.14), transparent 62%),
-      radial-gradient(circle at 48% 92%, rgba(138,46,255,.18), transparent 62%),
-      radial-gradient(circle at 88% 78%, rgba(255,99,255,.10), transparent 65%);
-    filter:blur(44px) saturate(1.15);
-    animation: drift 14s ease-in-out infinite;
+      radial-gradient(circle at 40% 85%, rgba(138,46,255,.10), transparent 62%),
+      radial-gradient(circle at 90% 75%, rgba(255,99,255,.08), transparent 65%);
+    filter:blur(44px) saturate(1.08);
     pointer-events:none;
-  }
-  @keyframes drift{
-    0%,100%{transform:translate3d(0,0,0)}
-    50%{transform:translate3d(1.2%, -1.2%,0)}
   }
 </style>
 </head>
@@ -66,14 +53,11 @@
   <div class="hud">
     <div class="pill"><b>SOPHIA</b> <span id="status">STREET</span></div>
     <div class="pill">MODE: <span id="mode">ON FOOT</span></div>
-    <div class="pill">MUSHROOMS: <span id="mush">0</span></div>
-    <div class="pill">WANTED: <span id="wanted">0</span></div>
+    <div class="pill">TIME: <span id="time">10:00</span></div>
+    <div class="pill">MUSH: <span id="mush">0</span></div>
+    <div class="pill">WANTED: <span id="wanted">0</span>★</div>
     <div class="pill">KEYS: <span id="keys">NO</span></div>
-    <div class="hint">
-      Move: <span class="k">WASD</span> · Run/Boost: <span class="k">SHIFT</span> · Interact: <span class="k">E</span> · Throw Mushroom: <span class="k">SPACE</span><br>
-      Enter/Exit Car: stand near it + <span class="k">E</span> · Hide: near dumpster + hold <span class="k">E</span><br>
-      Goal: reach <b>STARR BUILDING</b> → <b>audition.html</b> (north-east district)
-    </div>
+    <div class="pill">Move: WASD · Run/Boost: SHIFT · Interact: E · Throw: SPACE</div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -81,230 +65,285 @@
 
 <script>
 /* ==========================================================
-   SOPHIA STREET — open city (single-file)
-   - On-foot + car driving
-   - NPCs + mushrooms + "wanted" + cops chase
-   - Dumpsters for hiding + cooldown
-   - Building portals (links) for later pages
-   - Same engine vibe: 320x180 pixel canvas, bevel UI, toast, zones
+   STREET.HTML (DAY CITY)
+   - Friendly pedestrians + dogs + waving
+   - Cars on streets
+   - Driveable car (E to enter/exit)
+   - Mushrooms collect + throw (SPACE) stun
+   - Cops + 0-5 wanted stars + line-of-sight + forget timer
+   - Minimap with STAR audition target + building markers
+   - Same save key + timer key as your house scenes
    ========================================================== */
 
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d", { alpha:false });
-ctx.imageSmoothingEnabled = false;
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d',{alpha:false});
+ctx.imageSmoothingEnabled=false;
 
-const UI = {
-  status: document.getElementById("status"),
-  mode: document.getElementById("mode"),
-  mush: document.getElementById("mush"),
-  wanted: document.getElementById("wanted"),
-  keys: document.getElementById("keys"),
-  toast: document.getElementById("toast"),
+const UI={
+  status:document.getElementById('status'),
+  mode:document.getElementById('mode'),
+  time:document.getElementById('time'),
+  mush:document.getElementById('mush'),
+  wanted:document.getElementById('wanted'),
+  keys:document.getElementById('keys'),
+  toast:document.getElementById('toast'),
 };
 
-const STORE_KEY = "SOPHIA_AUDITION_SAVE_V1";
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+const RUN_KEY="SOPHIA_AUDITION_RUN_V1";
+const DURATION_MS=10*60*1000;
 
-/* ---------- state ---------- */
 function loadState(){
-  const raw = localStorage.getItem(STORE_KEY);
-  if(raw){ try{ return JSON.parse(raw); }catch(e){} }
+  const r=localStorage.getItem(STORE_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
   return {
     hasKeys:false, slept:false, trip:false, puke:false,
-    poemLines:0, poems:[], guitarPlayed:0,
-    outfit:0,
+    poemLines:0, guitarPlayed:0,
     lastRoom:"STREET",
-    sophia:{x:320, y:520},
-    milo:{x:300, y:540},
-    street:{
-      mushrooms:0,
-      wanted:0,
-      inCar:false,
-      hidden:false,
-      car:{x:360,y:560, vx:0, vy:0},
-      seenTimer:0,
-      lastThrow:0,
-      egg:{found:false}
-    }
+    sophia:{x:380,y:920}, milo:{x:360,y:940},
+    street:{ mush:0, wanted:0, inCar:false, hidden:false, seen:0,
+      car:{x:420,y:940,vx:0,vy:0}, lastThrow:0 }
   };
 }
-let state = loadState();
-state.lastRoom = "STREET";
-state.street = state.street || { mushrooms:0, wanted:0, inCar:false, hidden:false, car:{x:360,y:560,vx:0,vy:0}, seenTimer:0, lastThrow:0, egg:{found:false} };
-
 function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
+function loadRun(){
+  const r=localStorage.getItem(RUN_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return { startTime:0, durationMs:DURATION_MS, active:false, ended:false };
+}
+function saveRun(run){ localStorage.setItem(RUN_KEY, JSON.stringify(run)); }
+
+let state=loadState();
+state.lastRoom="STREET";
+state.street = state.street || { mush:0, wanted:0, inCar:false, hidden:false, seen:0, car:{x:420,y:940,vx:0,vy:0}, lastThrow:0 };
+if(!state.street.car) state.street.car={x:420,y:940,vx:0,vy:0};
+
 UI.keys.textContent = state.hasKeys ? "YES" : "NO";
-UI.mush.textContent = (state.street.mushrooms|0);
+UI.mush.textContent = (state.street.mush|0);
 UI.wanted.textContent = (state.street.wanted|0);
 UI.mode.textContent = state.street.inCar ? "IN CAR" : "ON FOOT";
 
 /* ---------- toast ---------- */
-function toast(msg, ms=1500){
-  UI.toast.textContent = msg;
-  UI.toast.classList.add("on");
+function toast(msg,ms=1500){
+  UI.toast.textContent=msg;
+  UI.toast.classList.add('on');
   clearTimeout(toast._t);
-  toast._t = setTimeout(()=>UI.toast.classList.remove("on"), ms);
+  toast._t=setTimeout(()=>UI.toast.classList.remove('on'),ms);
 }
 
+/* ---------- timer (same as your living room) ---------- */
+function fmt(ms){
+  ms=Math.max(0, ms|0);
+  const s=Math.ceil(ms/1000);
+  const m=(s/60)|0;
+  const ss=String(s%60).padStart(2,"0");
+  return `${m}:${ss}`;
+}
+function timeLeftMs(){
+  const run=loadRun();
+  if(!run.active || run.ended) return run.durationMs;
+  return (run.startTime + run.durationMs - Date.now());
+}
+function tickTimer(){
+  const left=timeLeftMs();
+  UI.time.textContent=fmt(left);
+  if(left<=0){
+    const run=loadRun();
+    run.ended=true; run.active=false;
+    saveRun(run);
+    toast("TIME UP. Audition missed.", 1800);
+    setTimeout(()=>location.href="Sophie00.html", 900);
+  }
+}
+setInterval(tickTimer, 250);
+tickTimer();
+
 /* ---------- input ---------- */
-const keysDown = new Set();
-addEventListener("keydown",(e)=>{
-  const k = e.key.toLowerCase();
+const keysDown=new Set();
+addEventListener('keydown',(e)=>{
+  const k=e.key.toLowerCase();
   if(["arrowup","arrowdown","arrowleft","arrowright"," ","shift","w","a","s","d","e"].includes(k)) e.preventDefault();
   keysDown.add(k);
 });
-addEventListener("keyup",(e)=> keysDown.delete(e.key.toLowerCase()));
+addEventListener('keyup',(e)=>keysDown.delete(e.key.toLowerCase()));
 
-/* ---------- world + camera ---------- */
-const VW = canvas.width, VH = canvas.height;
-
-// Big world (camera follows player/car)
-const WORLD = { w: 2200, h: 1400 };
-
-// Camera
-const cam = { x:0, y:0 };
-
-// Helpful math
-const clamp = (v,min,max)=> Math.max(min, Math.min(max,v));
-const rand = (a,b)=> a + Math.random()*(b-a);
-
+/* ---------- math helpers ---------- */
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rand=(a,b)=>a+Math.random()*(b-a);
+const dist2=(ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by; return dx*dx+dy*dy;}
 function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
   return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
 }
-function dist2(ax,ay,bx,by){
-  const dx=ax-bx, dy=ay-by;
-  return dx*dx + dy*dy;
-}
 
 /* ==========================================================
-   CITY LAYOUT (hand-crafted blocks + bright details)
+   WORLD
    ========================================================== */
+const VW=canvas.width, VH=canvas.height;
 
-// Roads and blocks are mostly visuals; "solids" are collision walls.
-const solids = [];
+// Bigger + more “open world”
+const WORLD={ w: 2600, h: 1800 };
 
-// Helper: add solid rect
-function addSolid(x,y,w,h){ solids.push([x,y,w,h]); }
+// Camera
+const cam={x:0,y:0};
 
-// City boundaries
-addSolid(-50,-50, WORLD.w+100, 50);
-addSolid(-50, WORLD.h, WORLD.w+100, 50);
-addSolid(-50,-50, 50, WORLD.h+100);
-addSolid(WORLD.w, -50, 50, WORLD.h+100);
-
-// Blocks: buildings/city chunks (collision)
-const buildings = [
-  // HOME block (south-west)
-  {name:"HOME", x:120, y:1080, w:220, h:160, link:"Sophie03.html", glow:"vio"},
-  {name:"BACKYARD", x:360, y:1120, w:160, h:120, link:"Sophie02.html", glow:"aqua"},
-
-  // GROCERY
-  {name:"GROCERY", x:520, y:940, w:220, h:150, link:"grocery-store.html", glow:"sun"},
-  // BLOCKBUSTER
-  {name:"BLOCKBUSTER", x:780, y:980, w:240, h:160, link:"blockbuster.html", glow:"vio"},
-  // CAT STORE
-  {name:"CAT STORE", x:1050, y:960, w:210, h:140, link:"catstore.html", glow:"hot"},
-  // WEED SHOP
-  {name:"WEED SHOP", x:1290, y:980, w:210, h:140, link:"weedshop.html", glow:"aqua"},
-
-  // STARR BUILDING (audition) north-east
-  {name:"STARR", x:1710, y:250, w:320, h:260, link:"audition.html", glow:"sun"},
+// Road network (gray) + sidewalks + grass.
+// We’ll define road rectangles and treat building blocks as solids.
+const roads = [
+  // big east-west main
+  {x:0,y:980,w:WORLD.w,h:140},
+  // north-south boulevard to STARR
+  {x:1740,y:0,w:170,h:WORLD.h},
+  // neighborhood roads
+  {x:360,y:1220,w:820,h:120},
+  {x:1180,y:1160,w:820,h:120},
+  {x:520,y:620,w:980,h:110},
+  {x:980,y:760,w:850,h:110},
+  {x:2200,y:640,w:260,h:110},
 ];
 
-// Add solids for buildings, but leave "door zones" as interact rectangles (no solid gap needed in this style)
-for(const b of buildings){
-  addSolid(b.x, b.y, b.w, b.h);
+// Sidewalk strips around roads (visual only)
+function isOnRoad(x,y){
+  for(const r of roads){
+    if(x>=r.x && x<=r.x+r.w && y>=r.y && y<=r.y+r.h) return true;
+  }
+  return false;
 }
 
-// Decorative obstacles: planter islands, statues, medians
-const decorSolids = [
-  [620,720,120,40],
-  [1040,740,140,36],
-  [1460,760,160,40],
-  [1640,880,180,36],
-  [420,660,90,32],
-  [1880,630,120,46],
+// Solids for buildings + big park fences + “no-drive” blocks
+const solids=[];
+const addSolid=(x,y,w,h)=>solids.push([x,y,w,h]);
+
+// World bounds
+addSolid(-80,-80,WORLD.w+160,80);
+addSolid(-80,WORLD.h,WORLD.w+160,80);
+addSolid(-80,-80,80,WORLD.h+160);
+addSolid(WORLD.w,-80,80,WORLD.h+160);
+
+// Buildings (enterable markers)
+const buildings=[
+  {name:"HOME", x:180, y:1420, w:260, h:220, link:"Sophie03.html", tag:"HOME"},
+  {name:"GROCERY", x:560, y:1280, w:300, h:220, link:"grocery-store.html", tag:"GROC"},
+  {name:"BLOCKBUSTER", x:920, y:1300, w:330, h:240, link:"blockbuster.html", tag:"BLCK"},
+  {name:"CAT STORE", x:1320, y:1280, w:280, h:220, link:"catstore.html", tag:"CAT"},
+  {name:"WEED SHOP", x:1620, y:1280, w:280, h:220, link:"weedshop.html", tag:"WEED"},
+  {name:"STARR", x:2050, y:180, w:420, h:320, link:"audition.html", tag:"STAR"},
 ];
-decorSolids.forEach(d=>addSolid(...d));
 
-// Alleys (narrow walls)
-addSolid(920,680,18,260);
-addSolid(940,680,80,18);
-addSolid(940,922,80,18);
+// Build solids for buildings
+for(const b of buildings) addSolid(b.x,b.y,b.w,b.h);
 
-// Park fences
-addSolid(260,360,320,18);
-addSolid(260,378,18,200);
-addSolid(562,378,18,200);
-addSolid(260,578,320,18);
+// Park (big green square with fence)
+const park={x:280,y:220,w:560,h:340};
+addSolid(park.x,park.y,park.w,18);
+addSolid(park.x,park.y+park.h-18,park.w,18);
+addSolid(park.x,park.y,18,park.h);
+addSolid(park.x+park.w-18,park.y,18,park.h);
+
+/* Street signs (decor + little “corner” landmarks) */
+const signs=[];
+function addSign(x,y,text){
+  signs.push({x,y,text});
+}
+addSign(520,930,"PALM AVE");
+addSign(950,930,"VIOLET ST");
+addSign(1740,930,"BOULEVARD");
+addSign(2050,930,"STARR WAY");
+addSign(1180,1120,"MILO LN");
+addSign(1320,760,"SUNSET RD");
+
+/* Dumpsters for hiding */
+const dumpsters=[
+  {x:820,y:1180,w:36,h:20},
+  {x:1540,y:1180,w:36,h:20},
+  {x:1960,y:930,w:36,h:20},
+  {x:600,y:760,w:36,h:20},
+  {x:2380,y:740,w:36,h:20},
+];
+
+/* Trees */
+const trees=[];
+for(let i=0;i<220;i++){
+  const x=rand(40,WORLD.w-40), y=rand(40,WORLD.h-40);
+  // keep trees off roads a bit
+  if(isOnRoad(x,y)) continue;
+  if(x>park.x && x<park.x+park.w && y>park.y && y<park.y+park.h) continue;
+  trees.push({x,y,s:rand(0.8,1.8), tint:(Math.random()<0.5?"aqua":"sun")});
+}
+
+/* Mushrooms to collect */
+const mushWorld=[];
+for(let i=0;i<120;i++){
+  let x=rand(80,WORLD.w-80), y=rand(80,WORLD.h-80);
+  if(isOnRoad(x,y)) { y+=160; }
+  mushWorld.push({x,y,alive:true,kind:(Math.random()<0.10?"gold":"vio")});
+}
 
 /* ==========================================================
    ENTITIES
    ========================================================== */
 
-// Player on foot
-const sophia = { x: state.sophia.x, y: state.sophia.y, w:10, h:12, speed:0.92, run:1.45 };
+// Sophia on foot
+const sophia={x:state.sophia.x, y:state.sophia.y, w:10,h:12, speed:0.95, run:1.45};
 
-// Milo
-const milo = { x: state.milo.x, y: state.milo.y, w:8, h:8 };
+// Milo follower (on foot only)
+const milo={x:state.milo.x, y:state.milo.y, w:8,h:8};
 
-// Car (drivable)
-const car = {
-  x: state.street.car?.x ?? 360,
-  y: state.street.car?.y ?? 560,
+// Drivable car
+const car={
+  x: state.street.car.x, y: state.street.car.y,
   w: 18, h: 10,
-  vx: state.street.car?.vx ?? 0,
-  vy: state.street.car?.vy ?? 0,
-  dir: 0, // direction for visuals only
-  boost: 1.0,
+  vx: state.street.car.vx||0, vy: state.street.car.vy||0
 };
 
-// NPCs
-const NPC_COUNT = 22;
-const npcs = [];
-for(let i=0;i<NPC_COUNT;i++){
-  npcs.push({
-    x: rand(220, WORLD.w-220),
-    y: rand(220, WORLD.h-220),
-    vx: rand(-0.25,0.25),
-    vy: rand(-0.25,0.25),
-    mood: (Math.random()<0.6) ? "chill" : "busy",
-    hit: 0,
-    color: (Math.random()<0.33) ? "aqua" : (Math.random()<0.5 ? "vio" : "sun"),
+// Friendly pedestrians (look like Sophia style, varied)
+const PCOUNT=34;
+const peds=[];
+for(let i=0;i<PCOUNT;i++){
+  let x=rand(120,WORLD.w-120), y=rand(160,WORLD.h-160);
+  // bias toward sidewalks (near roads but not inside them)
+  if(!isOnRoad(x,y)){
+    // ok
+  }else{
+    // push off road
+    y += (Math.random()<0.5?-90:90);
+  }
+  const hair = (Math.random()<0.33?"blonde":(Math.random()<0.5?"brown":"black"));
+  const shirt = (Math.random()<0.33?"vio":(Math.random()<0.5?"aqua":"sun"));
+  const hasDog = Math.random()<0.22;
+  peds.push({
+    x,y,w:10,h:12,
+    vx:rand(-0.25,0.25), vy:rand(-0.25,0.25),
+    hair, shirt, hasDog,
+    dog: hasDog ? {x:x-12,y:y+6, vx:0,vy:0} : null,
+    wave:0,
+    stunned:0,
   });
 }
 
-// Mushrooms in world (collect)
-const mushrooms = [];
-for(let i=0;i<46;i++){
-  mushrooms.push({
-    x: rand(180, WORLD.w-180),
-    y: rand(180, WORLD.h-180),
-    alive: true,
-    kind: (Math.random()<0.12) ? "gold" : "vio",
+// Traffic cars (AI vehicles)
+const TCOUNT=16;
+const traffic=[];
+for(let i=0;i<TCOUNT;i++){
+  // spawn on roads
+  const r=roads[(Math.random()*roads.length)|0];
+  const x=rand(r.x+20, r.x+r.w-40);
+  const y=rand(r.y+20, r.y+r.h-20);
+  const dir = (Math.random()<0.5) ? "east" : "west";
+  traffic.push({
+    x,y,w:18,h:10,
+    vx: dir==="east" ? rand(0.4,0.9) : rand(-0.9,-0.4),
+    vy: 0,
+    color: (Math.random()<0.33?"vio":(Math.random()<0.5?"aqua":"sun")),
+    beep: 0,
   });
-}
-
-// Dumpsters (hide)
-const dumpsters = [
-  {x: 640, y: 860, w: 34, h: 18},
-  {x: 980, y: 920, w: 34, h: 18},
-  {x: 1500, y: 910, w: 34, h: 18},
-  {x: 1660, y: 740, w: 34, h: 18},
-  {x: 360, y: 740, w: 34, h: 18},
-];
-
-// Trees (decor)
-const trees = [];
-for(let i=0;i<70;i++){
-  trees.push({x: rand(80, WORLD.w-80), y: rand(80, WORLD.h-80), s: rand(0.8, 1.6), hue: (Math.random()<0.5 ? "aqua":"sun")});
 }
 
 // Projectiles (thrown mushrooms)
-const shots = [];
+const shots=[];
 
-// Cops (spawn when wanted)
-const cops = [];
+// Cops (spawn with wanted)
+const cops=[];
 
 /* ==========================================================
    COLLISION
@@ -316,273 +355,557 @@ function collides(x,y,w,h){
   }
   return false;
 }
-
 function tryMove(ent,dx,dy){
-  const nx = ent.x + dx, ny = ent.y + dy;
-  if(!collides(nx, ent.y, ent.w, ent.h)) ent.x = nx;
-  if(!collides(ent.x, ny, ent.w, ent.h)) ent.y = ny;
-  ent.x = clamp(ent.x, 0, WORLD.w-ent.w);
-  ent.y = clamp(ent.y, 0, WORLD.h-ent.h);
+  const nx=ent.x+dx, ny=ent.y+dy;
+  if(!collides(nx,ent.y,ent.w,ent.h)) ent.x=nx;
+  if(!collides(ent.x,ny,ent.w,ent.h)) ent.y=ny;
+  ent.x=clamp(ent.x,0,WORLD.w-ent.w);
+  ent.y=clamp(ent.y,0,WORLD.h-ent.h);
 }
-
 function tryMoveCar(dx,dy){
-  // car collision uses its rect
-  const nx = car.x + dx, ny = car.y + dy;
-  if(!collides(nx, car.y, car.w, car.h)) car.x = nx; else car.vx *= -0.25;
-  if(!collides(car.x, ny, car.w, car.h)) car.y = ny; else car.vy *= -0.25;
-  car.x = clamp(car.x, 0, WORLD.w-car.w);
-  car.y = clamp(car.y, 0, WORLD.h-car.h);
+  const nx=car.x+dx, ny=car.y+dy;
+  if(!collides(nx,car.y,car.w,car.h)) car.x=nx; else car.vx*=-0.35;
+  if(!collides(car.x,ny,car.w,car.h)) car.y=ny; else car.vy*=-0.35;
+  car.x=clamp(car.x,0,WORLD.w-car.w);
+  car.y=clamp(car.y,0,WORLD.h-car.h);
 }
 
 /* ==========================================================
    ZONES (buildings, car, dumpsters)
    ========================================================== */
 
+function buildingDoorRect(b){
+  // door strip at bottom center
+  return [b.x + b.w/2 - 22, b.y + b.h - 10, 44, 10];
+}
+
 function nearestZone(){
-  const px = (state.street.inCar ? car.x+car.w/2 : sophia.x+sophia.w/2);
-  const py = (state.street.inCar ? car.y+car.h/2 : sophia.y+sophia.h/2);
+  const px = state.street.inCar ? car.x+car.w/2 : sophia.x+sophia.w/2;
+  const py = state.street.inCar ? car.y+car.h/2 : sophia.y+sophia.h/2;
 
-  let best=null, bd=999999;
+  let best=null, bd=1e12;
 
-  // Door zones for buildings: small strip at bottom of each building
+  // buildings
   for(const b of buildings){
-    const z = {name: (b.name==="STARR" ? "STARR BUILDING" : b.name), rect:[b.x + b.w/2 - 20, b.y + b.h - 10, 40, 10], action: ()=>go(b.link)};
-    const [x,y,w,h] = z.rect;
-    const cx=x+w/2, cy=y+h/2;
-    const d = dist2(px,py,cx,cy);
-    if(d<bd && d<1800){ bd=d; best=z; }
-  }
-
-  // Car enter/exit zone (only when on foot)
-  if(!state.street.inCar){
-    const z = {name:"CAR", rect:[car.x-6, car.y-6, car.w+12, car.h+12], action: toggleCar};
-    const [x,y,w,h] = z.rect;
-    const cx=x+w/2, cy=y+h/2;
-    const d = dist2(px,py,cx,cy);
-    if(d<bd && d<1800){ bd=d; best=z; }
-  }else{
-    // In-car: allow exit anywhere but safer if stopped
-    const z = {name:"EXIT CAR", rect:[car.x-6, car.y-6, car.w+12, car.h+12], action: toggleCar};
-    const [x,y,w,h]=z.rect;
-    const cx=x+w/2, cy=y+h/2;
+    const rect=buildingDoorRect(b);
+    const cx=rect[0]+rect[2]/2, cy=rect[1]+rect[3]/2;
     const d=dist2(px,py,cx,cy);
-    if(d<bd && d<1800){ bd=d; best=z; }
+    if(d<bd && d<2200){
+      best={name:(b.name==="STARR"?"STARR BUILDING":"ENTER "+b.name), rect, action:()=>go(b.link)};
+      bd=d;
+    }
   }
 
-  // Dumpster hide zone (works only on foot)
+  // car enter/exit
+  const carRect=[car.x-8,car.y-8,car.w+16,car.h+16];
+  {
+    const cx=carRect[0]+carRect[2]/2, cy=carRect[1]+carRect[3]/2;
+    const d=dist2(px,py,cx,cy);
+    if(d<bd && d<2200){
+      best={name: state.street.inCar ? "EXIT CAR" : "ENTER CAR", rect:carRect, action:toggleCar};
+      bd=d;
+    }
+  }
+
+  // dumpsters (hide)
   if(!state.street.inCar){
     for(const dmp of dumpsters){
-      const z = {name:"DUMPSTER", rect:[dmp.x,dmp.y,dmp.w,dmp.h], action: startHide};
       const cx=dmp.x+dmp.w/2, cy=dmp.y+dmp.h/2;
-      const d = dist2(px,py,cx,cy);
-      if(d<bd && d<1500){ bd=d; best=z; }
+      const d=dist2(px,py,cx,cy);
+      if(d<bd && d<1800){
+        best={name:"DUMPSTER (HIDE)", rect:[dmp.x,dmp.y,dmp.w,dmp.h], action:startHide};
+        bd=d;
+      }
     }
   }
 
   return best;
 }
 
-function interactPress(){
-  const z = nearestZone();
+function interact(){
+  const z=nearestZone();
   if(z) z.action();
 }
 
 /* ==========================================================
-   CORE MECHANICS
+   GAMEPLAY: Car, Hide, Mushrooms, Wanted, Cops
    ========================================================== */
 
 function toggleCar(){
+  if(state.street.hidden) return toast("Not while hiding.", 1200);
+
   if(!state.street.inCar){
-    // enter car only if near and not hidden
-    if(state.street.hidden) return toast("Not while hiding. (Sophia holds her breath.)", 1400);
-    state.street.inCar = true;
-    UI.mode.textContent = "IN CAR";
-    toast("She slides into the car. Milo becomes co-pilot.", 1600);
-
-    // snap Sophia to car (so exit feels clean)
-    sophia.x = car.x + 4; sophia.y = car.y + 2;
+    // only enter if close
+    const d=dist2(sophia.x,sophia.y,car.x,car.y);
+    if(d>1200) return toast("Get closer to the car.", 1100);
+    state.street.inCar=true;
+    UI.mode.textContent="IN CAR";
+    toast("She hops in. Seatbelt? optional. vibes? mandatory.", 1600);
+    // snap sophia/milo onto car position
+    sophia.x=car.x+4; sophia.y=car.y+2;
+    milo.x=car.x+car.w-10; milo.y=car.y+2;
   }else{
-    // exit car: require slow speed
-    const sp = Math.hypot(car.vx, car.vy);
-    if(sp > 2.2) return toast("Too fast to jump out. (Your knees disagree.)", 1400);
-    state.street.inCar = false;
-    UI.mode.textContent = "ON FOOT";
-    toast("Back on foot. City noise returns.", 1400);
-
-    // place Sophia beside car
-    sophia.x = clamp(car.x - 14, 0, WORLD.w-sophia.w);
-    sophia.y = clamp(car.y + 2, 0, WORLD.h-sophia.h);
+    const sp=Math.hypot(car.vx,car.vy);
+    if(sp>2.3) return toast("Too fast to jump out.", 1200);
+    state.street.inCar=false;
+    UI.mode.textContent="ON FOOT";
+    toast("Back on foot.", 1200);
+    sophia.x=clamp(car.x-14,0,WORLD.w-sophia.w);
+    sophia.y=clamp(car.y+2,0,WORLD.h-sophia.h);
   }
   saveState();
 }
 
-let hideHold = 0;
+let hideHold=0;
 function startHide(){
-  if(state.street.wanted<=0) return toast("She checks the dumpster. (It checks back.)", 1300);
+  if(state.street.wanted<=0) return toast("She checks the dumpster. (It is… not friendly.)", 1400);
   toast("Hold E to hide…", 1100);
-  hideHold = 1; // start counting in loop while E is held
+  hideHold=1;
 }
-
 function enterHidden(){
-  state.street.hidden = true;
-  state.street.seenTimer = 0;
-  toast("She hides. The world muffles. Milo goes statue-mode.", 1700);
+  state.street.hidden=true;
+  state.street.seen=0;
+  toast("Hiding. City audio goes muffled.", 1500);
   saveState();
 }
 function exitHidden(){
-  state.street.hidden = false;
-  toast("She slips out. Please be quiet, shoes.", 1400);
+  state.street.hidden=false;
+  toast("Out of hiding.", 1200);
   saveState();
 }
 
-/* ---------- mushroom collecting ---------- */
+/* Mushrooms collect */
 function collectMushrooms(){
-  const px = (state.street.inCar ? car.x+car.w/2 : sophia.x+sophia.w/2);
-  const py = (state.street.inCar ? car.y+car.h/2 : sophia.y+sophia.h/2);
+  const px = state.street.inCar ? car.x+car.w/2 : sophia.x+sophia.w/2;
+  const py = state.street.inCar ? car.y+car.h/2 : sophia.y+sophia.h/2;
 
-  for(const m of mushrooms){
+  for(const m of mushWorld){
     if(!m.alive) continue;
     if(dist2(px,py,m.x,m.y) < 14*14){
       m.alive=false;
-      state.street.mushrooms = (state.street.mushrooms|0) + (m.kind==="gold" ? 2 : 1);
-      UI.mush.textContent = state.street.mushrooms;
-      toast(m.kind==="gold" ? "GOLD MUSHROOM (+2). The city winks." : "Mushroom collected (+1).", 1200);
-
-      // tiny easter egg: collect 10 without wanted
-      if(!state.street.egg.found && state.street.mushrooms>=10 && state.street.wanted===0){
-        state.street.egg.found = true;
-        toast("Easter egg: ‘CALM HANDS’ unlocked. (Wanted cooldown faster.)", 2000);
-      }
-
+      state.street.mush += (m.kind==="gold"?2:1);
+      UI.mush.textContent=state.street.mush;
+      toast(m.kind==="gold" ? "GOLD MUSHROOM (+2)" : "Mushroom collected (+1)", 1200);
       saveState();
     }
   }
 }
 
-/* ---------- throwing mushrooms ---------- */
+/* Throw mushroom projectile (SPACE) */
 function canThrow(){
-  const now = performance.now();
+  const now=performance.now();
   if(now - state.street.lastThrow < 220) return false;
-  if((state.street.mushrooms|0) <= 0) return false;
+  if(state.street.mush<=0) return false;
   return true;
 }
-
 function throwMushroom(){
-  if(state.street.inCar) return toast("Not while driving. (One hand on wheel.)", 1200);
-  if(state.street.hidden) return toast("Not while hiding. (Mushroom stays pocketed.)", 1200);
+  if(state.street.inCar) return toast("Not while driving.", 900);
+  if(state.street.hidden) return toast("Not while hiding.", 900);
   if(!canThrow()) return;
 
-  state.street.lastThrow = performance.now();
-  state.street.mushrooms--;
-  UI.mush.textContent = state.street.mushrooms;
+  state.street.lastThrow=performance.now();
+  state.street.mush--;
+  UI.mush.textContent=state.street.mush;
 
-  // aim direction from movement keys (fallback: toward nearest npc)
+  // aim from movement keys, else forward-ish
   let ax=0, ay=0;
   if(keysDown.has("w")||keysDown.has("arrowup")) ay-=1;
   if(keysDown.has("s")||keysDown.has("arrowdown")) ay+=1;
   if(keysDown.has("a")||keysDown.has("arrowleft")) ax-=1;
   if(keysDown.has("d")||keysDown.has("arrowright")) ax+=1;
-  if(ax===0 && ay===0){
-    // toward nearest npc
-    let best=null, bd=999999;
-    for(const n of npcs){
-      const d=dist2(n.x,n.y,sophia.x,sophia.y);
-      if(d<bd){bd=d;best=n;}
-    }
-    if(best){
-      ax = (best.x - sophia.x);
-      ay = (best.y - sophia.y);
-    }else ax=1;
-  }
-  const mag = Math.hypot(ax,ay) || 1;
+  if(ax===0 && ay===0){ ax=1; } // default right
+  const mag=Math.hypot(ax,ay)||1;
   ax/=mag; ay/=mag;
 
-  shots.push({
-    x: sophia.x+5,
-    y: sophia.y+6,
-    vx: ax*2.9,
-    vy: ay*2.9,
-    life: 120,
-  });
-
-  toast("Mushroom thrown.", 900);
+  shots.push({x:sophia.x+5,y:sophia.y+6,vx:ax*3.0,vy:ay*3.0,life:120});
   saveState();
 }
 
-/* ---------- wanted + cops ---------- */
+/* Wanted system */
 function setWanted(w){
-  state.street.wanted = clamp(w|0, 0, 5);
-  UI.wanted.textContent = state.street.wanted;
+  state.street.wanted=clamp(w|0,0,5);
+  UI.wanted.textContent=state.street.wanted;
   saveState();
 }
-
-function escalateWanted(){
-  const w = (state.street.wanted|0);
-  if(w===0) toast("People scream. Sirens think about it.", 1400);
-  setWanted(w+1);
-
-  // spawn cops proportional to wanted
+function bumpWanted(amt=1){
+  const before=state.street.wanted|0;
+  setWanted(before+amt);
+  if(before===0) toast("People panic. Somewhere: sirens wake up.", 1500);
   spawnCops();
 }
+function markSeen(){
+  state.street.seen=0;
+}
+function coolWanted(){
+  if(state.street.wanted<=0) return;
+  // unseen timer climbs; faster if hidden
+  const step = state.street.hidden ? 2.5 : 1.0;
+  state.street.seen += step;
 
-function spawnCops(){
-  const target = 1 + state.street.wanted*2;
-  while(cops.length < target){
-    // spawn from edges
-    const edge = (Math.random()*4)|0;
-    let x=0,y=0;
-    if(edge===0){ x=rand(0,WORLD.w); y=10; }
-    if(edge===1){ x=rand(0,WORLD.w); y=WORLD.h-20; }
-    if(edge===2){ x=10; y=rand(0,WORLD.h); }
-    if(edge===3){ x=WORLD.w-20; y=rand(0,WORLD.h); }
-
-    cops.push({
-      x, y, w:10, h:12,
-      vx:0, vy:0,
-      lose:0,
-      blink:rand(0,999),
-    });
+  // decay each ~8 seconds of not being seen
+  if(state.street.seen > 480){
+    state.street.seen=0;
+    setWanted(state.street.wanted-1);
+    toast("Heat drops. The city forgets a little.", 1300);
+    if(state.street.wanted<=1) cops.splice(0, Math.max(0,cops.length-2));
   }
 }
 
-function coolWanted(){
-  // wanted decays if not seen for a bit
-  if(state.street.wanted<=0) return;
-  // calm hands easter egg: faster decay
-  const calm = state.street.egg.found ? 1.35 : 1.0;
-  state.street.seenTimer += 1*calm;
-  // every ~7 seconds unseen -> reduce 1
-  if(state.street.seenTimer > 420){
-    state.street.seenTimer = 0;
-    setWanted(state.street.wanted - 1);
-    toast("Heat drops. The city exhales.", 1300);
-    // trim cops if low wanted
-    if(state.street.wanted<=1){
-      cops.splice(0, Math.max(0, cops.length-3));
+/* Cops */
+function spawnCops(){
+  const target = 1 + state.street.wanted*2;
+  while(cops.length<target){
+    const edge=(Math.random()*4)|0;
+    let x=0,y=0;
+    if(edge===0){x=rand(0,WORLD.w); y=10;}
+    if(edge===1){x=rand(0,WORLD.w); y=WORLD.h-20;}
+    if(edge===2){x=10; y=rand(0,WORLD.h);}
+    if(edge===3){x=WORLD.w-20; y=rand(0,WORLD.h);}
+    cops.push({x,y,w:10,h:12, lose:0, stunned:0, blink:(Math.random()*999)|0});
+  }
+}
+
+/* "Line of sight" simplified (distance + no hide + not behind building box) */
+function blockedByBuilding(ax,ay,bx,by){
+  // super-lightweight: sample along the line a few steps and see if inside any building solid
+  const steps=6;
+  for(let i=1;i<steps;i++){
+    const t=i/steps;
+    const x=ax+(bx-ax)*t;
+    const y=ay+(by-ay)*t;
+    // only check building solids (not fences) by testing overlap with building rectangles
+    for(const b of buildings){
+      if(x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h) return true;
+    }
+  }
+  return false;
+}
+
+function updateCops(t){
+  if(state.street.wanted<=0){ cops.length=0; return; }
+
+  const tx = state.street.inCar ? car.x+car.w/2 : sophia.x+sophia.w/2;
+  const ty = state.street.inCar ? car.y+car.h/2 : sophia.y+sophia.h/2;
+
+  for(const c of cops){
+    if(c.stunned>0){ c.stunned--; continue; }
+
+    const dx=tx-(c.x+5), dy=ty-(c.y+6);
+    const d=Math.hypot(dx,dy)||1;
+
+    // seen check
+    const inRange = (!state.street.hidden && d<260) || (state.street.hidden && d<60);
+    const blocked = blockedByBuilding(c.x+5,c.y+6, tx,ty);
+    const seen = inRange && !blocked;
+
+    if(seen){ c.lose=0; markSeen(); }
+    else c.lose++;
+
+    // if hiding and cops lose for a bit, they search around
+    let sp=0.95 + 0.18*state.street.wanted;
+    let vx=0,vy=0;
+    if(state.street.hidden && c.lose>100){
+      vx=Math.sin((t+c.blink)*0.03)*0.35;
+      vy=Math.cos((t+c.blink)*0.04)*0.35;
+    }else{
+      vx=(dx/d)*sp;
+      vy=(dy/d)*sp;
+    }
+
+    const nx=c.x+vx, ny=c.y+vy;
+    if(!collides(nx,c.y,c.w,c.h)) c.x=nx;
+    if(!collides(c.x,ny,c.w,c.h)) c.y=ny;
+
+    // collision “catch”
+    if(!state.street.hidden){
+      if(state.street.inCar){
+        if(rectsOverlap(c.x,c.y,c.w,c.h, car.x,car.y,car.w,car.h)){
+          toast("Cop bumps your bumper. Siren does a little scream.", 1200);
+          car.vx*=-0.5; car.vy*=-0.5;
+          if(Math.random()<0.18) bumpWanted(1);
+        }
+      }else{
+        if(rectsOverlap(c.x,c.y,c.w,c.h, sophia.x,sophia.y,sophia.w,sophia.h)){
+          toast("Caught. They lecture you about public mushroom safety.", 1400);
+          if(state.street.mush>0){ state.street.mush--; UI.mush.textContent=state.street.mush; }
+          // push away
+          sophia.x=clamp(sophia.x - dx*0.02,0,WORLD.w-sophia.w);
+          sophia.y=clamp(sophia.y - dy*0.02,0,WORLD.h-sophia.h);
+          markSeen();
+        }
+      }
     }
   }
 }
 
-function markSeen(){
-  state.street.seenTimer = 0;
+/* ==========================================================
+   Pedestrians + Dogs + Traffic
+   ========================================================== */
+
+function updatePeds(t){
+  for(const p of peds){
+    if(p.stunned>0){ p.stunned--; continue; }
+
+    // gentle sidewalk wandering: prefer not-road
+    if(Math.random()<0.02){
+      p.vx += rand(-0.10,0.10);
+      p.vy += rand(-0.10,0.10);
+    }
+    p.vx=clamp(p.vx,-0.40,0.40);
+    p.vy=clamp(p.vy,-0.40,0.40);
+
+    let nx=p.x+p.vx, ny=p.y+p.vy;
+
+    // keep off roads: if they drift onto road, push back
+    if(isOnRoad(nx,ny)){
+      ny += (Math.random()<0.5 ? -1 : 1)*1.6;
+      nx += (Math.random()<0.5 ? -1 : 1)*0.8;
+    }
+
+    // collide with buildings
+    if(!collides(nx,p.y,p.w,p.h)) p.x=nx; else p.vx*=-0.8;
+    if(!collides(p.x,ny,p.w,p.h)) p.y=ny; else p.vy*=-0.8;
+
+    p.x=clamp(p.x,0,WORLD.w-p.w);
+    p.y=clamp(p.y,0,WORLD.h-p.h);
+
+    // wave if Sophia passes and not wanted
+    if(state.street.wanted===0 && !state.street.inCar && dist2(p.x,p.y,sophia.x,sophia.y)<90*90){
+      p.wave = Math.min(60, p.wave+2);
+    }else{
+      p.wave = Math.max(0, p.wave-1);
+    }
+
+    // dog follow
+    if(p.hasDog && p.dog){
+      const dx=(p.x-12)-p.dog.x;
+      const dy=(p.y+6)-p.dog.y;
+      p.dog.x += dx*0.06;
+      p.dog.y += dy*0.06;
+    }
+  }
+}
+
+function updateTraffic(t){
+  for(const v of traffic){
+    // move primarily along x; bounce if hit solids/buildings
+    let nx=v.x+v.vx, ny=v.y+v.vy;
+
+    // stay on roads: if leaving road, nudge back
+    if(!isOnRoad(nx+v.w/2, ny+v.h/2)){
+      // flip direction
+      v.vx *= -1;
+      nx=v.x+v.vx;
+    }
+
+    // collision with buildings
+    if(collides(nx, v.y, v.w, v.h)){ v.vx*=-1; nx=v.x+v.vx; }
+    if(collides(v.x, ny, v.w, v.h)){ v.vy*=-1; ny=v.y+v.vy; }
+
+    v.x=clamp(nx,0,WORLD.w-v.w);
+    v.y=clamp(ny,0,WORLD.h-v.h);
+
+    // little “beep” if Sophia in car too close
+    if(state.street.inCar && dist2(v.x,v.y,car.x,car.y)<60*60 && Math.random()<0.01){
+      v.beep=40;
+      toast("BEEP! (traffic car is offended)", 900);
+    }
+    if(v.beep>0) v.beep--;
+  }
 }
 
 /* ==========================================================
-   NAVIGATION
+   Projectiles: stun pedestrians/cops if hit
    ========================================================== */
 
+function updateShots(){
+  for(let i=shots.length-1;i>=0;i--){
+    const s=shots[i];
+    s.x+=s.vx; s.y+=s.vy;
+    s.life--;
+
+    if(collides(s.x,s.y,2,2)){ shots.splice(i,1); continue; }
+
+    // hit pedestrian
+    for(const p of peds){
+      if(p.stunned>0) continue;
+      if(rectsOverlap(s.x,s.y,2,2, p.x,p.y,p.w,p.h)){
+        p.stunned=120;
+        shots.splice(i,1);
+
+        // If cop can see this, wanted goes up. Otherwise, people just freak out (small chance still increases)
+        if(anyCopSeesPoint(p.x+5,p.y+6)) bumpWanted(1);
+        else if(Math.random()<0.25) bumpWanted(1);
+
+        toast("SPLAT. Pedestrian stunned. Bad karma speedrun.", 1500);
+        break;
+      }
+    }
+    if(i>=shots.length) continue;
+
+    // hit cop
+    for(const c of cops){
+      if(c.stunned>0) continue;
+      if(rectsOverlap(s.x,s.y,2,2, c.x,c.y,c.w,c.h)){
+        c.stunned=120;
+        shots.splice(i,1);
+        // hitting cops escalates faster
+        bumpWanted(1);
+        toast("You hit a cop with a mushroom. They take it personally.", 1500);
+        break;
+      }
+    }
+    if(i>=shots.length) continue;
+
+    if(s.life<=0) shots.splice(i,1);
+  }
+}
+
+function anyCopSeesPoint(x,y){
+  if(state.street.wanted<=0 || cops.length===0) return false;
+  for(const c of cops){
+    const d=dist2(c.x,c.y,x,y);
+    if(d<260*260 && !blockedByBuilding(c.x+5,c.y+6,x,y)) return true;
+  }
+  return false;
+}
+
+/* ==========================================================
+   Run over logic (car vs pedestrian) increases wanted
+   ========================================================== */
+function checkCarHits(){
+  if(!state.street.inCar) return;
+  for(const p of peds){
+    if(p.stunned>0) continue;
+    if(rectsOverlap(car.x,car.y,car.w,car.h, p.x,p.y,p.w,p.h)){
+      p.stunned=160;
+      bumpWanted(2);
+      toast("You hit someone. Screams. Sirens. Five-star energy.", 1700);
+      // knock car slightly
+      car.vx*=-0.35; car.vy*=-0.35;
+      markSeen();
+    }
+  }
+}
+
+/* ==========================================================
+   Movement + camera
+   ========================================================== */
+
+function updatePlayer(t){
+  // hidden state
+  if(state.street.hidden){
+    if(!keysDown.has("e")) exitHidden();
+    return;
+  }
+
+  if(state.street.inCar){
+    const boost = keysDown.has("shift") ? 1.18 : 1.0;
+
+    let ax=0, ay=0;
+    if(keysDown.has("w")||keysDown.has("arrowup")) ay-=1;
+    if(keysDown.has("s")||keysDown.has("arrowdown")) ay+=1;
+    if(keysDown.has("a")||keysDown.has("arrowleft")) ax-=1;
+    if(keysDown.has("d")||keysDown.has("arrowright")) ax+=1;
+    if(ax && ay){ ax*=0.72; ay*=0.72; }
+
+    // accelerate
+    const accel=0.24*boost;
+    car.vx += ax*accel;
+    car.vy += ay*accel;
+
+    // friction
+    car.vx *= 0.92;
+    car.vy *= 0.92;
+
+    // cap speed
+    const maxSp=3.2*boost;
+    const sp=Math.hypot(car.vx,car.vy);
+    if(sp>maxSp){
+      car.vx=(car.vx/sp)*maxSp;
+      car.vy=(car.vy/sp)*maxSp;
+    }
+
+    tryMoveCar(car.vx,car.vy);
+
+    // keep sophia + milo “riding”
+    sophia.x=car.x+4; sophia.y=car.y+2;
+    milo.x=car.x+car.w-10; milo.y=car.y+2;
+
+  }else{
+    const run=keysDown.has("shift");
+    const sp=sophia.speed*(run?sophia.run:1);
+
+    let dx=0,dy=0;
+    if(keysDown.has("w")||keysDown.has("arrowup")) dy-=sp;
+    if(keysDown.has("s")||keysDown.has("arrowdown")) dy+=sp;
+    if(keysDown.has("a")||keysDown.has("arrowleft")) dx-=sp;
+    if(keysDown.has("d")||keysDown.has("arrowright")) dx+=sp;
+    if(dx && dy){ dx*=0.72; dy*=0.72; }
+    if(dx||dy) tryMove(sophia,dx,dy);
+
+    // Milo follow
+    const tx=sophia.x-10, ty=sophia.y+6;
+    milo.x += (tx-milo.x)*0.07;
+    milo.y += (ty-milo.y)*0.07;
+
+    // hide hold
+    if(keysDown.has("e") && hideHold){
+      hideHold++;
+      if(hideHold>28){ hideHold=0; enterHidden(); }
+    }
+    if(!keysDown.has("e")) hideHold=0;
+  }
+
+  collectMushrooms();
+  checkCarHits();
+}
+
+function updateCamera(){
+  const px = state.street.inCar ? (car.x+car.w/2) : (sophia.x+sophia.w/2);
+  const py = state.street.inCar ? (car.y+car.h/2) : (sophia.y+sophia.h/2);
+
+  const tx=clamp(px - VW/2, 0, WORLD.w - VW);
+  const ty=clamp(py - VH/2, 0, WORLD.h - VH);
+
+  cam.x += (tx - cam.x)*0.12;
+  cam.y += (ty - cam.y)*0.12;
+}
+
+/* ==========================================================
+   Navigation
+   ========================================================== */
 function go(file){
-  // persist important stuff
-  state.sophia.x = sophia.x; state.sophia.y = sophia.y;
-  state.milo.x = milo.x; state.milo.y = milo.y;
-  state.street.car = {x:car.x,y:car.y,vx:car.vx,vy:car.vy};
+  state.sophia.x=sophia.x; state.sophia.y=sophia.y;
+  state.milo.x=milo.x; state.milo.y=milo.y;
+  state.street.car={x:car.x,y:car.y,vx:car.vx,vy:car.vy};
   saveState();
-  location.href = file;
+  location.href=file;
 }
 
 /* ==========================================================
-   RENDER HELPERS (same bevel/hint style, brighter palette)
+   Controls: tap E to interact, SPACE to throw
    ========================================================== */
+let eWas=false, spWas=false;
+function handleButtons(){
+  const e=keysDown.has("e");
+  if(e && !eWas){
+    // if near dumpster and wanted>0: start hide
+    const z=nearestZone();
+    if(z && z.name.startsWith("DUMPSTER") && state.street.wanted>0) startHide();
+    else interact();
+  }
+  eWas=e;
+
+  const sp=keysDown.has(" ");
+  if(sp && !spWas) throwMushroom();
+  spWas=sp;
+}
+
+/* ==========================================================
+   Draw helpers (bevel + hint)
+   ========================================================== */
+function worldToView(x,y){ return {x:Math.round(x-cam.x), y:Math.round(y-cam.y)}; }
 
 function drawRectBevel(x,y,w,h,fill){
   ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
@@ -591,7 +914,6 @@ function drawRectBevel(x,y,w,h,fill){
   ctx.fillStyle="rgba(255,255,255,.07)"; ctx.fillRect(x,y,1,h);
   ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(x+w-1,y,1,h);
 }
-
 function drawHintBubble(text,x,y){
   const pad=3;
   ctx.font="8px ui-monospace, monospace";
@@ -605,350 +927,404 @@ function drawHintBubble(text,x,y){
   ctx.fillText(text,x-w/2+pad,y-4);
 }
 
-function worldToView(x,y){
-  return { x: Math.round(x - cam.x), y: Math.round(y - cam.y) };
-}
-
 /* ==========================================================
-   DRAW WORLD (bright, colorful, alive)
+   DRAW WORLD (bright day)
    ========================================================== */
-
 function drawBackground(t){
-  // base
-  ctx.fillStyle="#04040a";
+  // sky
+  const g=ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,"rgba(90,180,255,1)");
+  g.addColorStop(0.55,"rgba(150,215,255,1)");
+  g.addColorStop(1,"rgba(220,245,255,1)");
+  ctx.fillStyle=g;
   ctx.fillRect(0,0,VW,VH);
 
-  // sky glow
-  const g = ctx.createRadialGradient(VW*0.5, VH*0.35, 10, VW*0.5, VH*0.35, 220);
-  g.addColorStop(0, "rgba(255,210,77,.12)");
-  g.addColorStop(0.35, "rgba(0,255,213,.08)");
-  g.addColorStop(0.7, "rgba(138,46,255,.10)");
-  g.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle=g; ctx.fillRect(0,0,VW,VH);
+  // soft sun bloom
+  const s=ctx.createRadialGradient(60,30,8,60,30,140);
+  s.addColorStop(0,"rgba(255,255,255,.35)");
+  s.addColorStop(0.35,"rgba(255,210,77,.24)");
+  s.addColorStop(1,"rgba(255,255,255,0)");
+  ctx.fillStyle=s; ctx.fillRect(0,0,VW,VH);
+}
 
-  // subtle scanlines
-  for(let y=0;y<VH;y+=3){
-    ctx.fillStyle = `rgba(255,255,255,${(y%9===0)?0.04:0.02})`;
-    ctx.fillRect(0,y,VW,1);
+function drawGround(){
+  // grass base
+  ctx.fillStyle="rgba(60,190,110,1)";
+  ctx.fillRect(0,0,VW,VH);
+
+  // tiny noise sparkle
+  for(let i=0;i<90;i++){
+    const x=(i*37 + (t*2|0))%VW;
+    const y=(i*19)%VH;
+    ctx.fillStyle="rgba(255,255,255,.05)";
+    ctx.fillRect(x,y,1,1);
   }
 }
 
-function drawRoads(t){
-  // Simple road grid: draw rectangles (visual-only)
-  // We'll paint big asphalt bands and neon lane hints.
+function drawRoads(){
+  for(const r of roads){
+    // cull
+    if(r.x+r.w<cam.x-40||r.x>cam.x+VW+40||r.y+r.h<cam.y-40||r.y>cam.y+VH+40) continue;
+    const v=worldToView(r.x,r.y);
 
-  // Asphalt tone
-  function asphalt(x,y,w,h){
-    const v = worldToView(x,y);
-    drawRectBevel(v.x,v.y,w,h,"rgba(255,255,255,.045)");
-    // lane specks
-    ctx.fillStyle="rgba(0,0,0,.32)";
-    ctx.fillRect(v.x+2,v.y+2,w-4,h-4);
-  }
+    // asphalt gray
+    drawRectBevel(v.x,v.y,r.w,r.h,"rgba(90,95,105,1)");
+    ctx.fillStyle="rgba(40,45,55,.45)";
+    ctx.fillRect(v.x+2,v.y+2,r.w-4,r.h-4);
 
-  // Main horizontal road mid
-  asphalt(0, 760, WORLD.w, 120);
-
-  // Vertical boulevard to STARR
-  asphalt(1520, 0, 150, WORLD.h);
-
-  // Neighborhood roads
-  asphalt(420, 960, 520, 90);
-  asphalt(940, 920, 520, 90);
-  asphalt(220, 520, 720, 90);
-  asphalt(820, 520, 780, 90);
-
-  // Neon lane markers (subtle)
-  function lane(x,y,w,h,a){
-    const v=worldToView(x,y);
-    ctx.fillStyle=a;
-    for(let i=0;i<w;i+=14){
-      ctx.fillRect(v.x+i, v.y, 8, h);
+    // lane hints
+    ctx.fillStyle="rgba(255,255,255,.22)";
+    if(r.w>r.h){
+      const yy=v.y + (r.h/2|0);
+      for(let x=v.x+10;x<v.x+r.w-10;x+=18){
+        ctx.fillRect(x,yy,10,1);
+      }
+    }else{
+      const xx=v.x + (r.w/2|0);
+      for(let y=v.y+10;y<v.y+r.h-10;y+=18){
+        ctx.fillRect(xx,y,1,10);
+      }
     }
+
+    // sidewalks
+    ctx.fillStyle="rgba(220,220,220,.45)";
+    ctx.fillRect(v.x, v.y, r.w, 3);
+    ctx.fillRect(v.x, v.y+r.h-3, r.w, 3);
+    ctx.fillRect(v.x, v.y, 3, r.h);
+    ctx.fillRect(v.x+r.w-3, v.y, 3, r.h);
   }
-  lane(20, 815, WORLD.w-40, 2, "rgba(0,255,213,.12)");
-  lane(1540, 20, 2, WORLD.h-40, "rgba(138,46,255,.12)");
 }
 
-function drawParksAndGrass(t){
-  // park area north-west (inside the fence solids)
-  const park = {x:260,y:360,w:320,h:236};
+function drawPark(){
+  // park fill
+  if(park.x+park.w<cam.x-10||park.x>cam.x+VW+10||park.y+park.h<cam.y-10||park.y>cam.y+VH+10) return;
   const v=worldToView(park.x,park.y);
-  drawRectBevel(v.x,v.y,park.w,park.h,"rgba(0,255,170,.06)");
-  // sprinkles
-  for(let i=0;i<40;i++){
-    const px = v.x + ((i*23 + (t*0.4|0))%park.w);
-    const py = v.y + (i*7)%park.h;
-    ctx.fillStyle="rgba(255,210,77,.04)";
-    ctx.fillRect(px,py,1,1);
-  }
+  drawRectBevel(v.x,v.y,park.w,park.h,"rgba(40,160,90,1)");
+  ctx.fillStyle="rgba(255,255,255,.08)";
+  ctx.fillRect(v.x+20,v.y+30,park.w-40,2);
+  ctx.fillRect(v.x+20,v.y+park.h-40,park.w-40,2);
 
-  // general ground “city glow”
-  // (just a gentle wash that makes it brighter)
-  ctx.fillStyle="rgba(0,255,170,.015)";
-  ctx.fillRect(0,0,VW,VH);
+  // fountain dot
+  ctx.fillStyle="rgba(0,255,213,.18)";
+  ctx.fillRect(v.x+park.w/2-8, v.y+park.h/2-6, 16, 12);
+  ctx.fillStyle="rgba(255,255,255,.25)";
+  ctx.fillRect(v.x+park.w/2-3, v.y+park.h/2-2, 6, 4);
 }
 
-function drawTrees(t){
+function drawTrees(){
   for(const tr of trees){
-    // skip if out of view
-    if(tr.x<cam.x-30 || tr.x>cam.x+VW+30 || tr.y<cam.y-30 || tr.y>cam.y+VH+30) continue;
+    if(tr.x<cam.x-40||tr.x>cam.x+VW+40||tr.y<cam.y-40||tr.y>cam.y+VH+40) continue;
     const v=worldToView(tr.x,tr.y);
     const s=tr.s;
+
+    // shadow
+    ctx.fillStyle="rgba(0,0,0,.18)";
+    ctx.fillRect(v.x-3*s, v.y+6*s, 10*s, 2*s);
+
     // trunk
-    ctx.fillStyle="rgba(0,0,0,.45)";
-    ctx.fillRect(v.x, v.y, 2, 5*s);
+    ctx.fillStyle="rgba(80,50,30,.9)";
+    ctx.fillRect(v.x, v.y, 2, 6*s);
+
     // canopy
-    const glow = (tr.hue==="aqua") ? "rgba(0,255,213,.10)" : "rgba(255,210,77,.10)";
+    const glow = (tr.tint==="aqua") ? "rgba(0,255,213,.16)" : "rgba(255,210,77,.14)";
     ctx.fillStyle=glow;
-    ctx.fillRect(v.x-4*s, v.y-5*s, 10*s, 9*s);
-    ctx.fillStyle="rgba(255,255,255,.06)";
-    ctx.fillRect(v.x-3*s, v.y-4*s, 8*s, 7*s);
+    ctx.fillRect(v.x-5*s, v.y-6*s, 12*s, 10*s);
+
+    ctx.fillStyle="rgba(30,120,60,.92)";
+    ctx.fillRect(v.x-4*s, v.y-5*s, 10*s, 8*s);
+
+    ctx.fillStyle="rgba(255,255,255,.08)";
+    ctx.fillRect(v.x-2*s, v.y-4*s, 4*s, 2*s);
   }
 }
 
-function drawBuildings(t){
-  for(const b of buildings){
-    // cull
-    if(b.x+b.w<cam.x-10 || b.x>cam.x+VW+10 || b.y+b.h<cam.y-10 || b.y>cam.y+VH+10) continue;
-
-    const v=worldToView(b.x,b.y);
-    // base fill
-    drawRectBevel(v.x,v.y,b.w,b.h,"rgba(255,255,255,.055)");
-
-    // interior shadow
+function drawSigns(){
+  for(const s of signs){
+    if(s.x<cam.x-60||s.x>cam.x+VW+60||s.y<cam.y-60||s.y>cam.y+VH+60) continue;
+    const v=worldToView(s.x,s.y);
+    // pole
+    ctx.fillStyle="rgba(60,60,70,1)";
+    ctx.fillRect(v.x, v.y, 2, 12);
+    // sign
+    drawRectBevel(v.x-14, v.y-10, 34, 10, "rgba(255,255,255,.18)");
     ctx.fillStyle="rgba(0,0,0,.45)";
-    ctx.fillRect(v.x+3, v.y+3, b.w-6, b.h-6);
+    ctx.fillRect(v.x-12, v.y-8, 30, 6);
+    ctx.font="7px ui-monospace, monospace";
+    ctx.fillStyle="rgba(255,255,255,.9)";
+    ctx.fillText(s.text, v.x-10, v.y-3);
+  }
+}
 
-    // sign glow strip
-    const stripH=18;
-    let glow = "rgba(138,46,255,.22)";
-    if(b.glow==="aqua") glow="rgba(0,255,213,.20)";
-    if(b.glow==="sun") glow="rgba(255,210,77,.20)";
-    if(b.glow==="hot") glow="rgba(255,99,255,.18)";
+function drawBuildings(){
+  for(const b of buildings){
+    if(b.x+b.w<cam.x-20||b.x>cam.x+VW+20||b.y+b.h<cam.y-20||b.y>cam.y+VH+20) continue;
+    const v=worldToView(b.x,b.y);
+
+    // base
+    drawRectBevel(v.x,v.y,b.w,b.h,"rgba(255,255,255,.20)");
+    ctx.fillStyle="rgba(0,0,0,.35)";
+    ctx.fillRect(v.x+3,v.y+3,b.w-6,b.h-6);
+
+    // roof sign strip
+    let glow="rgba(138,46,255,.22)";
+    if(b.tag==="GROC") glow="rgba(255,210,77,.22)";
+    if(b.tag==="CAT") glow="rgba(255,99,255,.18)";
+    if(b.tag==="WEED") glow="rgba(0,255,213,.20)";
+    if(b.tag==="STAR") glow="rgba(255,210,77,.26)";
     ctx.fillStyle=glow;
-    ctx.fillRect(v.x+6, v.y+6, b.w-12, stripH);
+    ctx.fillRect(v.x+6,v.y+6,b.w-12,18);
 
-    // sign text (pixel-ish)
     ctx.font="8px ui-monospace, monospace";
-    ctx.fillStyle="rgba(255,255,255,.92)";
-    const label = (b.name==="STARR" ? "STARR BUILDING" : b.name);
+    ctx.fillStyle="rgba(255,255,255,.95)";
+    const label=(b.name==="STARR")?"STARR BUILDING":b.name;
     ctx.fillText(label, v.x+10, v.y+18);
 
     // windows
-    for(let i=0;i<Math.max(2,(b.w/46|0));i++){
-      const wx=v.x+10+i*42;
-      const wy=v.y+32;
-      ctx.fillStyle="rgba(0,255,213,.06)";
-      ctx.fillRect(wx,wy,24,10);
-      ctx.fillStyle="rgba(255,255,255,.06)";
-      ctx.fillRect(wx+1,wy+1,22,8);
+    for(let i=0;i<Math.max(2,(b.w/50|0));i++){
+      const wx=v.x+12+i*46;
+      const wy=v.y+34;
+      ctx.fillStyle="rgba(90,180,255,.18)";
+      ctx.fillRect(wx,wy,26,12);
+      ctx.fillStyle="rgba(255,255,255,.10)";
+      ctx.fillRect(wx+1,wy+1,24,10);
     }
 
-    // door zone highlight (bottom-center)
-    const dz = {x:b.x+b.w/2-20, y:b.y+b.h-10, w:40, h:10};
-    const dv=worldToView(dz.x,dz.y);
-    ctx.fillStyle="rgba(255,255,255,.09)";
-    ctx.fillRect(dv.x,dv.y,dz.w,dz.h);
+    // door marker
+    const dr=buildingDoorRect(b);
+    const dv=worldToView(dr[0],dr[1]);
+    ctx.fillStyle="rgba(255,255,255,.20)";
+    ctx.fillRect(dv.x,dv.y,dr[2],dr[3]);
     ctx.fillStyle="rgba(0,0,0,.55)";
-    ctx.fillRect(dv.x+2,dv.y+2,dz.w-4,dz.h-4);
-    if(b.name==="STARR"){
-      ctx.fillStyle="rgba(255,210,77,.35)";
-      ctx.fillRect(dv.x+2,dv.y+2,6,6);
+    ctx.fillRect(dv.x+2,dv.y+2,dr[2]-4,dr[3]-4);
+
+    // STARR star badge
+    if(b.tag==="STAR"){
+      ctx.fillStyle="rgba(255,210,77,.80)";
+      ctx.fillRect(dv.x+4,dv.y+3,4,4);
+      ctx.fillRect(dv.x+9,dv.y+4,6,2);
     }
   }
 }
 
-function drawDecor(t){
-  // planter islands / medians
-  for(const d of decorSolids){
-    if(d[0]+d[2]<cam.x-10 || d[0]>cam.x+VW+10 || d[1]+d[3]<cam.y-10 || d[1]>cam.y+VH+10) continue;
-    const v=worldToView(d[0],d[1]);
-    drawRectBevel(v.x,v.y,d[2],d[3],"rgba(0,255,170,.05)");
-    ctx.fillStyle="rgba(255,210,77,.06)";
-    ctx.fillRect(v.x+2,v.y+2,d[2]-4,2);
+function drawDumpsters(){
+  for(const d of dumpsters){
+    if(d.x+d.w<cam.x-20||d.x>cam.x+VW+20||d.y+d.h<cam.y-20||d.y>cam.y+VH+20) continue;
+    const v=worldToView(d.x,d.y);
+    drawRectBevel(v.x,v.y,d.w,d.h,"rgba(120,140,150,1)");
+    ctx.fillStyle="rgba(0,0,0,.45)";
+    ctx.fillRect(v.x+3,v.y+3,d.w-6,d.h-6);
+    ctx.fillStyle="rgba(0,255,213,.14)";
+    ctx.fillRect(v.x+4,v.y+4,10,5);
   }
+}
 
-  // dumpsters
-  for(const dmp of dumpsters){
-    if(dmp.x+dmp.w<cam.x-10 || dmp.x>cam.x+VW+10 || dmp.y+dmp.h<cam.y-10 || dmp.y>cam.y+VH+10) continue;
-    const v=worldToView(dmp.x,dmp.y);
-    drawRectBevel(v.x,v.y,dmp.w,dmp.h,"rgba(255,255,255,.05)");
-    ctx.fillStyle="rgba(0,0,0,.55)";
-    ctx.fillRect(v.x+3,v.y+3,dmp.w-6,dmp.h-6);
-    ctx.fillStyle="rgba(0,255,213,.10)";
-    ctx.fillRect(v.x+3,v.y+3,8,4);
-  }
-
-  // mushrooms
-  for(const m of mushrooms){
+function drawMushrooms(){
+  for(const m of mushWorld){
     if(!m.alive) continue;
-    if(m.x<cam.x-10||m.x>cam.x+VW+10||m.y<cam.y-10||m.y>cam.y+VH+10) continue;
+    if(m.x<cam.x-20||m.x>cam.x+VW+20||m.y<cam.y-20||m.y>cam.y+VH+20) continue;
     const v=worldToView(m.x,m.y);
-    ctx.fillStyle="rgba(255,255,255,.10)";
+    ctx.fillStyle="rgba(255,255,255,.20)";
     ctx.fillRect(v.x, v.y+2, 6, 2);
-    ctx.fillStyle = (m.kind==="gold") ? "rgba(255,210,77,.55)" : "rgba(138,46,255,.45)";
+    ctx.fillStyle = (m.kind==="gold") ? "rgba(255,210,77,.80)" : "rgba(138,46,255,.65)";
     ctx.fillRect(v.x+1, v.y, 4, 2);
   }
 }
 
-function drawNPCs(t){
-  for(const n of npcs){
-    if(n.x<cam.x-20||n.x>cam.x+VW+20||n.y<cam.y-20||n.y>cam.y+VH+20) continue;
-    const v=worldToView(n.x,n.y);
+/* Sprites */
+function drawSophia(){
+  if(state.street.inCar || state.street.hidden) return;
+  const v=worldToView(sophia.x,sophia.y);
+  const x=v.x,y=v.y;
+  ctx.fillStyle="rgba(0,0,0,.22)"; ctx.fillRect(x-1,y+11,12,2);
+  ctx.fillStyle="#f2d27a"; ctx.fillRect(x+1,y+0,8,4); ctx.fillRect(x+0,y+3,10,3);
+  ctx.fillStyle="#ffd9c9"; ctx.fillRect(x+2,y+5,6,4);
+  ctx.fillStyle="#67b7ff"; ctx.fillRect(x+3,y+6,1,1); ctx.fillRect(x+6,y+6,1,1);
+  ctx.fillStyle="rgba(138,46,255,.70)"; ctx.fillRect(x+2,y+9,6,3);
+  ctx.fillStyle="rgba(255,255,255,.18)"; ctx.fillRect(x+3,y+10,4,1);
+}
+function drawMilo(t){
+  if(state.street.inCar || state.street.hidden) return;
+  const v=worldToView(milo.x,milo.y);
+  const x=v.x,y=v.y;
+  ctx.fillStyle="rgba(0,0,0,.20)"; ctx.fillRect(x-1,y+7,10,2);
+  ctx.fillStyle="#d8d8d8"; ctx.fillRect(x+1,y+2,6,5);
+  ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+1,y+1,2,2); ctx.fillRect(x+5,y+1,2,2);
+  ctx.fillStyle="#1affd3"; ctx.fillRect(x+2,y+4,1,1); ctx.fillRect(x+5,y+4,1,1);
+  ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+7,y+3,1,3);
+}
+
+function drawCar(t){
+  if(car.x<cam.x-40||car.x>cam.x+VW+40||car.y<cam.y-40||car.y>cam.y+VH+40) return;
+  const v=worldToView(car.x,car.y);
+  // shadow
+  ctx.fillStyle="rgba(0,0,0,.18)";
+  ctx.fillRect(v.x, v.y+car.h, car.w, 2);
+
+  drawRectBevel(v.x,v.y,car.w,car.h,"rgba(255,255,255,.24)");
+  ctx.fillStyle="rgba(0,0,0,.45)";
+  ctx.fillRect(v.x+2,v.y+2,car.w-4,car.h-4);
+
+  ctx.fillStyle="rgba(90,180,255,.20)";
+  ctx.fillRect(v.x+3,v.y+3,car.w-6,2);
+
+  ctx.fillStyle="rgba(255,210,77,.16)";
+  ctx.fillRect(v.x+3,v.y+6,car.w-6,2);
+
+  if(state.street.inCar){
+    // driver + milo pixels
+    ctx.fillStyle="rgba(255,255,255,.20)";
+    ctx.fillRect(v.x+4,v.y+4,2,2);
+    ctx.fillStyle="rgba(0,255,213,.20)";
+    ctx.fillRect(v.x+car.w-6,v.y+4,2,2);
+  }
+}
+
+function drawTraffic(){
+  for(const vcar of traffic){
+    if(vcar.x<cam.x-40||vcar.x>cam.x+VW+40||vcar.y<cam.y-40||vcar.y>cam.y+VH+40) continue;
+    const v=worldToView(vcar.x,vcar.y);
+
+    ctx.fillStyle="rgba(0,0,0,.18)";
+    ctx.fillRect(v.x, v.y+vcar.h, vcar.w, 2);
+
+    drawRectBevel(v.x,v.y,vcar.w,vcar.h,"rgba(255,255,255,.20)");
+    ctx.fillStyle="rgba(0,0,0,.45)";
+    ctx.fillRect(v.x+2,v.y+2,vcar.w-4,vcar.h-4);
+
+    let stripe="rgba(138,46,255,.18)";
+    if(vcar.color==="aqua") stripe="rgba(0,255,213,.18)";
+    if(vcar.color==="sun") stripe="rgba(255,210,77,.18)";
+    ctx.fillStyle=stripe;
+    ctx.fillRect(v.x+3,v.y+6,vcar.w-6,2);
+
+    if(vcar.beep>0){
+      ctx.fillStyle="rgba(255,99,255,.40)";
+      ctx.fillRect(v.x-1,v.y-2,vcar.w+2,2);
+    }
+  }
+}
+
+function drawPeds(t){
+  for(const p of peds){
+    if(p.x<cam.x-30||p.x>cam.x+VW+30||p.y<cam.y-30||p.y>cam.y+VH+30) continue;
+    const v=worldToView(p.x,p.y);
+    const x=v.x,y=v.y;
 
     // shadow
-    ctx.fillStyle="rgba(0,0,0,.35)";
-    ctx.fillRect(v.x-1, v.y+12, 12, 2);
+    ctx.fillStyle="rgba(0,0,0,.18)";
+    ctx.fillRect(x-1,y+11,12,2);
 
-    // body
-    ctx.fillStyle="rgba(255,255,255,.07)";
-    ctx.fillRect(v.x, v.y, 10, 12);
+    // hair
+    let hair="#f2d27a";
+    if(p.hair==="brown") hair="#c79a63";
+    if(p.hair==="black") hair="#6b5a55";
+    ctx.fillStyle=hair;
+    ctx.fillRect(x+1,y+0,8,4);
+    ctx.fillRect(x+0,y+3,10,3);
 
-    // neon shirt
-    let c="rgba(138,46,255,.35)";
-    if(n.color==="aqua") c="rgba(0,255,213,.35)";
-    if(n.color==="sun") c="rgba(255,210,77,.35)";
-    ctx.fillStyle=c;
-    ctx.fillRect(v.x+2, v.y+7, 6, 3);
+    // face
+    ctx.fillStyle="#ffd9c9";
+    ctx.fillRect(x+2,y+5,6,4);
 
-    // face pixel
-    ctx.fillStyle="rgba(255,255,255,.18)";
-    ctx.fillRect(v.x+3, v.y+3, 4, 2);
+    // eyes
+    ctx.fillStyle="#67b7ff";
+    ctx.fillRect(x+3,y+6,1,1);
+    ctx.fillRect(x+6,y+6,1,1);
 
-    // hit effect
-    if(n.hit>0){
-      ctx.fillStyle=`rgba(255,99,255,${0.12 + 0.10*Math.sin(n.hit*0.6)})`;
-      ctx.fillRect(v.x-2, v.y-2, 14, 16);
+    // shirt
+    let shirt="rgba(138,46,255,.65)";
+    if(p.shirt==="aqua") shirt="rgba(0,255,213,.55)";
+    if(p.shirt==="sun") shirt="rgba(255,210,77,.55)";
+    ctx.fillStyle=shirt;
+    ctx.fillRect(x+2,y+9,6,3);
+
+    // wave (little arm)
+    if(p.wave>0 && p.stunned<=0){
+      const arm = Math.round(Math.sin((t+p.wave)*0.25)*1);
+      ctx.fillStyle="rgba(255,255,255,.18)";
+      ctx.fillRect(x+8, y+7+arm, 2, 1);
+      ctx.fillStyle="rgba(255,210,77,.22)";
+      ctx.fillRect(x+10, y+6+arm, 1, 2);
     }
+
+    // stunned overlay
+    if(p.stunned>0){
+      ctx.fillStyle="rgba(255,99,255,.16)";
+      ctx.fillRect(x-2,y-2,14,16);
+      // little stars
+      ctx.fillStyle="rgba(255,255,255,.35)";
+      ctx.fillRect(x+2,y-4,2,1);
+      ctx.fillRect(x+6,y-5,2,1);
+    }
+
+    // dog + leash
+    if(p.hasDog && p.dog){
+      const dv=worldToView(p.dog.x,p.dog.y);
+      // leash
+      ctx.fillStyle="rgba(0,0,0,.20)";
+      ctx.fillRect(Math.min(x+1,dv.x+1), Math.min(y+10,dv.y+6), Math.abs((x+1)-(dv.x+1))+1, 1);
+      // dog sprite
+      ctx.fillStyle="rgba(0,0,0,.18)";
+      ctx.fillRect(dv.x-1,dv.y+7,10,2);
+      ctx.fillStyle="rgba(255,170,60,.85)";
+      ctx.fillRect(dv.x+1,dv.y+2,6,5);
+      ctx.fillStyle="rgba(255,255,255,.18)";
+      ctx.fillRect(dv.x+2,dv.y+3,1,1);
+      ctx.fillRect(dv.x+5,dv.y+3,1,1);
+      ctx.fillStyle="rgba(60,40,30,.7)";
+      ctx.fillRect(dv.x+7,dv.y+4,1,2);
+    }
+  }
+}
+
+function drawShots(){
+  for(const s of shots){
+    if(s.x<cam.x-20||s.x>cam.x+VW+20||s.y<cam.y-20||s.y>cam.y+VH+20) continue;
+    const v=worldToView(s.x,s.y);
+    ctx.fillStyle="rgba(255,255,255,.85)";
+    ctx.fillRect(v.x,v.y,2,2);
+    ctx.fillStyle="rgba(138,46,255,.25)";
+    ctx.fillRect(v.x-1,v.y-1,4,4);
   }
 }
 
 function drawCops(t){
   for(const c of cops){
-    if(c.x<cam.x-20||c.x>cam.x+VW+20||c.y<cam.y-20||c.y>cam.y+VH+20) continue;
+    if(c.x<cam.x-30||c.x>cam.x+VW+30||c.y<cam.y-30||c.y>cam.y+VH+30) continue;
     const v=worldToView(c.x,c.y);
+    const x=v.x,y=v.y;
 
-    // shadow
-    ctx.fillStyle="rgba(0,0,0,.40)";
-    ctx.fillRect(v.x-1,v.y+12,12,2);
+    ctx.fillStyle="rgba(0,0,0,.20)";
+    ctx.fillRect(x-1,y+11,12,2);
 
     // uniform
-    ctx.fillStyle="rgba(255,255,255,.06)";
-    ctx.fillRect(v.x,v.y,10,12);
-    ctx.fillStyle="rgba(0,255,213,.18)";
-    ctx.fillRect(v.x+2,v.y+7,6,3);
+    ctx.fillStyle="rgba(255,255,255,.16)";
+    ctx.fillRect(x+0,y+0,10,12);
+    ctx.fillStyle="rgba(0,255,213,.22)";
+    ctx.fillRect(x+2,y+9,6,3);
 
     // siren blink
-    const blink = ((t + (c.blink|0)) % 24) < 8;
-    ctx.fillStyle = blink ? "rgba(255,99,255,.65)" : "rgba(255,210,77,.45)";
-    ctx.fillRect(v.x+2, v.y-2, 6, 2);
+    const blink=((t+c.blink)%26)<10;
+    ctx.fillStyle=blink ? "rgba(255,99,255,.70)" : "rgba(255,210,77,.60)";
+    ctx.fillRect(x+2,y-2,6,2);
+
+    if(c.stunned>0){
+      ctx.fillStyle="rgba(138,46,255,.18)";
+      ctx.fillRect(x-2,y-2,14,16);
+    }
   }
-}
-
-function drawShots(t){
-  for(const s of shots){
-    if(s.x<cam.x-10||s.x>cam.x+VW+10||s.y<cam.y-10||s.y>cam.y+VH+10) continue;
-    const v=worldToView(s.x,s.y);
-    ctx.fillStyle="rgba(255,255,255,.85)";
-    ctx.fillRect(v.x, v.y, 2, 2);
-    ctx.fillStyle="rgba(138,46,255,.25)";
-    ctx.fillRect(v.x-1, v.y-1, 4, 4);
-  }
-}
-
-function drawCar(t){
-  // only draw car if visible
-  if(car.x+car.w<cam.x-20||car.x>cam.x+VW+20||car.y+car.h<cam.y-20||car.y>cam.y+VH+20) return;
-  const v=worldToView(car.x,car.y);
-
-  // glow underside
-  ctx.fillStyle="rgba(0,255,213,.10)";
-  ctx.fillRect(v.x, v.y+car.h, car.w, 2);
-
-  // body
-  drawRectBevel(v.x,v.y,car.w,car.h,"rgba(255,255,255,.07)");
-  ctx.fillStyle="rgba(0,0,0,.50)";
-  ctx.fillRect(v.x+2,v.y+2,car.w-4,car.h-4);
-
-  // windshield + neon stripe
-  ctx.fillStyle="rgba(255,210,77,.10)";
-  ctx.fillRect(v.x+3,v.y+3,car.w-6,2);
-  ctx.fillStyle="rgba(138,46,255,.20)";
-  ctx.fillRect(v.x+3,v.y+6,car.w-6,2);
-
-  // “driver pixel” if in car
-  if(state.street.inCar){
-    ctx.fillStyle="rgba(255,255,255,.18)";
-    ctx.fillRect(v.x+4, v.y+4, 2, 2);
-    // Milo co-pilot pixel
-    ctx.fillStyle="rgba(0,255,213,.18)";
-    ctx.fillRect(v.x+car.w-6, v.y+4, 2, 2);
-  }
-}
-
-/* Sophia + Milo (same vibe as other rooms) */
-function drawSophia(t){
-  if(state.street.inCar || state.street.hidden) return;
-
-  const x=Math.round(sophia.x - cam.x), y=Math.round(sophia.y - cam.y);
-  // shadow
-  ctx.fillStyle="rgba(0,0,0,.45)";
-  ctx.fillRect(x-1,y+11,12,2);
-
-  // hair
-  ctx.fillStyle="#f2d27a";
-  ctx.fillRect(x+1,y+0,8,4);
-  ctx.fillRect(x+0,y+3,10,3);
-
-  // face
-  ctx.fillStyle="#ffd9c9";
-  ctx.fillRect(x+2,y+5,6,4);
-
-  // eyes
-  ctx.fillStyle="#67b7ff";
-  ctx.fillRect(x+3,y+6,1,1);
-  ctx.fillRect(x+6,y+6,1,1);
-
-  // dress
-  ctx.fillStyle="rgba(138,46,255,.55)";
-  ctx.fillRect(x+2,y+9,6,3);
-  ctx.fillStyle="rgba(255,255,255,.14)";
-  ctx.fillRect(x+3,y+10,4,1);
-}
-
-function drawMilo(t){
-  if(state.street.inCar || state.street.hidden) return;
-
-  const x=Math.round(milo.x - cam.x), y=Math.round(milo.y - cam.y);
-  ctx.fillStyle="rgba(0,0,0,.40)";
-  ctx.fillRect(x-1,y+7,10,2);
-  ctx.fillStyle="#d8d8d8";
-  ctx.fillRect(x+1,y+2,6,5);
-  ctx.fillStyle="#cfcfcf";
-  ctx.fillRect(x+1,y+1,2,2);
-  ctx.fillRect(x+5,y+1,2,2);
-  // eyes
-  ctx.fillStyle="#1affd3";
-  ctx.fillRect(x+2,y+4,1,1);
-  ctx.fillRect(x+5,y+4,1,1);
-  // tail
-  ctx.fillStyle="#cfcfcf";
-  ctx.fillRect(x+7,y+3,1,3);
 }
 
 function drawWantedOverlay(t){
-  const w = state.street.wanted|0;
+  const w=state.street.wanted|0;
   if(w<=0) return;
-
-  // siren wash
-  const a = 0.05 + 0.02*w;
-  const blink = (t%30)<15;
-  ctx.fillStyle = blink ? `rgba(255,99,255,${a})` : `rgba(0,255,213,${a})`;
+  const a=0.05 + 0.02*w;
+  const blink=(t%30)<15;
+  ctx.fillStyle=blink ? `rgba(255,99,255,${a})` : `rgba(0,255,213,${a})`;
   ctx.fillRect(0,0,VW,VH);
 
-  // edge vignette
-  ctx.fillStyle="rgba(0,0,0,.22)";
+  // subtle edge
+  ctx.fillStyle="rgba(0,0,0,.12)";
   ctx.fillRect(0,0,VW,2);
   ctx.fillRect(0,VH-2,VW,2);
   ctx.fillRect(0,0,2,VH);
@@ -957,334 +1333,83 @@ function drawWantedOverlay(t){
 
 function drawHiddenOverlay(t){
   if(!state.street.hidden) return;
-
-  // muffled black-green
-  ctx.fillStyle="rgba(0,0,0,.55)";
+  ctx.fillStyle="rgba(0,0,0,.45)";
   ctx.fillRect(0,0,VW,VH);
   ctx.fillStyle=`rgba(0,255,213,${0.06 + 0.04*Math.sin(t*0.12)})`;
   ctx.fillRect(0,0,VW,VH);
-
   ctx.font="9px ui-monospace, monospace";
-  ctx.fillStyle="rgba(255,255,255,.8)";
-  ctx.fillText("HIDING… (hold E to stay, release to exit)", 18, 92);
+  ctx.fillStyle="rgba(255,255,255,.85)";
+  ctx.fillText("HIDING… hold E to stay, release to exit", 18, 92);
 }
 
 /* ==========================================================
-   UPDATE LOOP
+   MINIMAP (top-right)
+   - shows buildings + audition star + player + cops
    ========================================================== */
+function drawMinimap(){
+  const mw=84, mh=62;
+  const x=VW-mw-6, y=6;
 
-function updateNPCs(t){
-  for(const n of npcs){
-    // wander
-    if(Math.random()<0.01){
-      n.vx += rand(-0.12,0.12);
-      n.vy += rand(-0.12,0.12);
-    }
-    n.vx = clamp(n.vx, -0.55, 0.55);
-    n.vy = clamp(n.vy, -0.55, 0.55);
+  // frame
+  drawRectBevel(x,y,mw,mh,"rgba(255,255,255,.16)");
+  ctx.fillStyle="rgba(0,0,0,.45)";
+  ctx.fillRect(x+2,y+2,mw-4,mh-4);
 
-    // avoid buildings a bit (simple bounce)
-    const nx = n.x + n.vx;
-    const ny = n.y + n.vy;
-    if(!collides(nx, n.y, 10, 12)) n.x = nx; else n.vx *= -0.8;
-    if(!collides(n.x, ny, 10, 12)) n.y = ny; else n.vy *= -0.8;
+  // map scale
+  const sx=(mw-8)/WORLD.w;
+  const sy=(mh-8)/WORLD.h;
 
-    // keep in world
-    n.x = clamp(n.x, 0, WORLD.w-10);
-    n.y = clamp(n.y, 0, WORLD.h-12);
-
-    if(n.hit>0) n.hit--;
-  }
-}
-
-function updateShots(){
-  for(let i=shots.length-1;i>=0;i--){
-    const s=shots[i];
-    s.x += s.vx;
-    s.y += s.vy;
-    s.life--;
-
-    // collide with solids -> poof
-    if(collides(s.x, s.y, 2, 2)){
-      shots.splice(i,1);
-      continue;
-    }
-
-    // hit npc -> wanted
-    for(const n of npcs){
-      if(rectsOverlap(s.x,s.y,2,2, n.x,n.y,10,12)){
-        n.hit = 60;
-        shots.splice(i,1);
-        escalateWanted();
-        toast("Mushroom splat. Bad choice. Cops agree.", 1600);
-        break;
-      }
-    }
-    if(i>=shots.length) continue;
-    if(s.life<=0) shots.splice(i,1);
-  }
-}
-
-function updateCops(t){
-  const w = state.street.wanted|0;
-  if(w<=0){
-    cops.length = 0;
-    return;
+  // roads faint
+  ctx.fillStyle="rgba(255,255,255,.08)";
+  for(const r of roads){
+    ctx.fillRect(x+4 + r.x*sx, y+4 + r.y*sy, r.w*sx, r.h*sy);
   }
 
-  // Target is Sophia unless in car, then target car.
-  const tx = state.street.inCar ? (car.x+car.w/2) : (sophia.x+sophia.w/2);
-  const ty = state.street.inCar ? (car.y+car.h/2) : (sophia.y+sophia.h/2);
+  // buildings
+  for(const b of buildings){
+    const bx=x+4 + b.x*sx;
+    const by=y+4 + b.y*sy;
+    ctx.fillStyle = (b.tag==="STAR") ? "rgba(255,210,77,.80)" : "rgba(255,255,255,.20)";
+    ctx.fillRect(bx,by, Math.max(2,b.w*sx), Math.max(2,b.h*sy));
+    // star icon
+    if(b.tag==="STAR"){
+      ctx.fillStyle="rgba(255,210,77,1)";
+      ctx.fillRect(bx+2,by+2,2,2);
+    }
+  }
 
-  // If hidden, cops lose track over time (unless extremely close)
-  const hidden = state.street.hidden;
-
+  // cops
+  ctx.fillStyle="rgba(255,99,255,.70)";
   for(const c of cops){
-    let vx=0,vy=0;
-
-    const dx = tx - (c.x+5);
-    const dy = ty - (c.y+6);
-    const d = Math.hypot(dx,dy) || 1;
-
-    // "vision" check (simple): if not hidden and within range -> seen
-    const seen = (!hidden && d < 240) || (hidden && d < 42);
-    if(seen){
-      markSeen();
-      c.lose = 0;
-    }else{
-      c.lose += 1;
-    }
-
-    // If hidden and cops haven't seen for a bit, they drift / search
-    if(hidden && c.lose > 90){
-      vx = Math.sin((t+c.blink)*0.03)*0.35;
-      vy = Math.cos((t+c.blink)*0.04)*0.35;
-    }else{
-      // chase
-      const sp = 0.85 + 0.15*w;
-      vx = (dx/d) * sp;
-      vy = (dy/d) * sp;
-    }
-
-    // move with collision
-    const nx=c.x+vx, ny=c.y+vy;
-    if(!collides(nx, c.y, c.w, c.h)) c.x=nx; else c.vx*=-0.2;
-    if(!collides(c.x, ny, c.w, c.h)) c.y=ny; else c.vy*=-0.2;
-
-    // catch: if cop overlaps player/car -> spikes wanted effect (but no game over)
-    if(!hidden){
-      if(state.street.inCar){
-        if(rectsOverlap(c.x,c.y,c.w,c.h, car.x,car.y,car.w,car.h)){
-          toast("Cop bumps your bumper. Siren screams in lowercase.", 1200);
-          // little knockback
-          car.vx *= -0.5; car.vy *= -0.5;
-          // increase heat a touch
-          if(Math.random()<0.2) setWanted(state.street.wanted + 1);
-        }
-      }else{
-        if(rectsOverlap(c.x,c.y,c.w,c.h, sophia.x,sophia.y,sophia.w,sophia.h)){
-          toast("Caught. They lecture you about mushrooms. Loudly.", 1400);
-          // small penalty: drop 1 mushroom
-          if(state.street.mushrooms>0){
-            state.street.mushrooms--;
-            UI.mush.textContent=state.street.mushrooms;
-          }
-          // push sophia away
-          sophia.x = clamp(sophia.x - dx*0.02, 0, WORLD.w-sophia.w);
-          sophia.y = clamp(sophia.y - dy*0.02, 0, WORLD.h-sophia.h);
-          markSeen();
-        }
-      }
-    }
-  }
-}
-
-function updatePlayer(t){
-  // Hiding logic: if hidden, player doesn't move
-  if(state.street.hidden){
-    // if E released -> exit hidden
-    if(!keysDown.has("e")) exitHidden();
-    return;
+    const cx=x+4 + c.x*sx;
+    const cy=y+4 + c.y*sy;
+    ctx.fillRect(cx,cy,1,1);
   }
 
-  if(state.street.inCar){
-    // Driving
-    const boost = keysDown.has("shift") ? 1.18 : 1.0;
-
-    let ax=0, ay=0;
-    if(keysDown.has("w")||keysDown.has("arrowup")) ay -= 1;
-    if(keysDown.has("s")||keysDown.has("arrowdown")) ay += 1;
-    if(keysDown.has("a")||keysDown.has("arrowleft")) ax -= 1;
-    if(keysDown.has("d")||keysDown.has("arrowright")) ax += 1;
-
-    // normalize
-    if(ax && ay){ ax*=0.72; ay*=0.72; }
-
-    // acceleration
-    const accel = 0.22 * boost;
-    car.vx += ax*accel;
-    car.vy += ay*accel;
-
-    // friction
-    car.vx *= 0.92;
-    car.vy *= 0.92;
-
-    // cap speed
-    const maxSp = 3.0 * boost;
-    const sp = Math.hypot(car.vx,car.vy);
-    if(sp > maxSp){
-      car.vx = (car.vx/sp)*maxSp;
-      car.vy = (car.vy/sp)*maxSp;
-    }
-
-    // move + collide
-    tryMoveCar(car.vx, car.vy);
-
-    // keep Sophia/Milo “with” car
-    sophia.x = car.x + 4; sophia.y = car.y + 2;
-    milo.x = car.x + car.w - 10; milo.y = car.y + 2;
-
-  }else{
-    // On foot
-    const run = keysDown.has("shift");
-    const sp = sophia.speed * (run ? sophia.run : 1);
-
-    let dx=0, dy=0;
-    if(keysDown.has("w")||keysDown.has("arrowup")) dy-=sp;
-    if(keysDown.has("s")||keysDown.has("arrowdown")) dy+=sp;
-    if(keysDown.has("a")||keysDown.has("arrowleft")) dx-=sp;
-    if(keysDown.has("d")||keysDown.has("arrowright")) dx+=sp;
-    if(dx&&dy){dx*=0.72; dy*=0.72;}
-    if(dx||dy) tryMove(sophia,dx,dy);
-
-    // Milo follow
-    const tx=sophia.x-10, ty=sophia.y+6;
-    milo.x += (tx - milo.x)*0.07;
-    milo.y += (ty - milo.y)*0.07;
-
-    // If holding E near dumpster and wanted > 0, enter hidden after a moment
-    if(keysDown.has("e") && hideHold){
-      hideHold++;
-      if(hideHold>28){
-        hideHold=0;
-        enterHidden();
-      }
-    }
-    if(!keysDown.has("e")) hideHold=0;
-  }
-
-  // collection works for both modes
-  collectMushrooms();
-}
-
-function updateCamera(){
-  const px = state.street.inCar ? (car.x+car.w/2) : (sophia.x+sophia.w/2);
-  const py = state.street.inCar ? (car.y+car.h/2) : (sophia.y+sophia.h/2);
-
-  // camera follow with gentle smoothing
-  const targetX = clamp(px - VW/2, 0, WORLD.w - VW);
-  const targetY = clamp(py - VH/2, 0, WORLD.h - VH);
-
-  cam.x += (targetX - cam.x) * 0.12;
-  cam.y += (targetY - cam.y) * 0.12;
-}
-
-/* ==========================================================
-   INTERACT + THROW bindings
-   ========================================================== */
-
-let spaceWasDown=false;
-let eWasDown=false;
-
-function handleButtons(){
-  // Space = throw mushroom (tap)
-  const sp = keysDown.has(" ");
-  if(sp && !spaceWasDown){
-    throwMushroom();
-  }
-  spaceWasDown = sp;
-
-  // E = interact (tap), unless hidden (handled in update)
-  const e = keysDown.has("e");
-  if(e && !eWasDown){
-    // If hidden, updatePlayer will keep you there
-    if(!state.street.hidden){
-      // If near dumpster and wanted > 0, start hide workflow,
-      // else normal interact.
-      const z = nearestZone();
-      if(z && z.name==="DUMPSTER" && state.street.wanted>0){
-        startHide();
-      }else{
-        interactPress();
-      }
-    }
-  }
-  eWasDown = e;
-}
-
-/* ==========================================================
-   DRAW FRAME
-   ========================================================== */
-
-function draw(t){
-  drawBackground(t);
-  drawParksAndGrass(t);
-  drawRoads(t);
-  drawTrees(t);
-  drawBuildings(t);
-  drawDecor(t);
-
-  drawCar(t);
-  drawShots(t);
-  drawNPCs(t);
-  drawCops(t);
-
-  // player last for clarity
-  drawMilo(t);
-  drawSophia(t);
-
-  // hint bubble
-  const z = nearestZone();
-  if(z && !state.street.hidden){
-    const px = state.street.inCar ? (car.x+car.w/2) : (sophia.x+6);
-    const py = state.street.inCar ? (car.y-6) : (sophia.y-10);
-    const v = worldToView(px,py);
-    drawHintBubble(z.name, v.x, v.y);
-  }
-
-  drawWantedOverlay(t);
-  drawHiddenOverlay(t);
+  // player
+  const pxW = state.street.inCar ? car.x : sophia.x;
+  const pyW = state.street.inCar ? car.y : sophia.y;
+  ctx.fillStyle="rgba(0,255,213,1)";
+  ctx.fillRect(x+4 + pxW*sx, y+4 + pyW*sy, 2, 2);
 }
 
 /* ==========================================================
    MAIN LOOP
    ========================================================== */
-
 let t=0;
 function loop(){
   t++;
 
-  // If wanted>0 and not seen (or hidden), decay eventually
-  if(state.street.wanted>0){
-    // If hidden, cops lose quicker
-    if(state.street.hidden){
-      state.street.seenTimer += 2.0;
-    }
-    // If in car going fast, you still might be "seen" (handled in cops)
-    coolWanted();
-  }
-
   handleButtons();
-  updateNPCs(t);
+  updateTraffic(t);
+  updatePeds(t);
   updateShots();
   updateCops(t);
   updatePlayer(t);
   updateCamera();
 
-  // occasional tiny ambient line
-  if(t%900===0 && state.street.wanted===0){
-    toast("Somewhere downtown: a neon sign buzzes like it’s thinking.", 1700);
-  }
+  // wanted cooldown
+  coolWanted();
 
   // autosave
   if(t%60===0){
@@ -1294,15 +1419,46 @@ function loop(){
     saveState();
   }
 
-  draw(t);
+  // draw order: sky -> grass -> roads -> details -> entities -> overlays -> minimap
+  drawBackground(t);
+  drawGround(t);
+  drawPark();
+  drawRoads();
+  drawTrees();
+  drawBuildings();
+  drawDumpsters();
+  drawSigns();
+  drawMushrooms();
+
+  drawTraffic();
+  drawCar(t);
+  drawShots();
+  drawPeds(t);
+  drawCops(t);
+  drawMilo(t);
+  drawSophia();
+
+  // hint bubble
+  const z=nearestZone();
+  if(z && !state.street.hidden){
+    const px = state.street.inCar ? car.x+car.w/2 : sophia.x+6;
+    const py = state.street.inCar ? car.y-6 : sophia.y-10;
+    const v=worldToView(px,py);
+    drawHintBubble(z.name, v.x, v.y);
+  }
+
+  drawWantedOverlay(t);
+  drawHiddenOverlay(t);
+  drawMinimap();
+
   requestAnimationFrame(loop);
 }
 loop();
 
 /* ==========================================================
-   NOTE: Keys logic
-   - In your world, keys should ONLY come from the backyard gnome chase.
-   - This page respects state.hasKeys (from other pages).
+   NOTE:
+   - Keys come from backyard gnome chase (your rule).
+   - This page respects state.hasKeys; doesn’t generate keys.
    ========================================================== */
 </script>
 </body>
