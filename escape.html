@@ -256,44 +256,6 @@ small.hint{
 }
 .shimmer{animation:shimmer 2.6s steps(2,end) infinite}
 
-/* help modal */
-.helpMask{
-  position:fixed; inset:0;
-  background:rgba(0,0,0,.72);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:99;
-}
-.helpMask.open{display:flex}
-.helpBox{
-  width:min(720px, 92vw);
-  border:1px solid rgba(138,46,255,.55);
-  border-radius:16px;
-  background:rgba(0,0,0,.82);
-  box-shadow:0 0 50px rgba(138,46,255,.22);
-  padding:16px;
-}
-.helpTitle{
-  letter-spacing:.34em;
-  text-transform:uppercase;
-  opacity:.92;
-}
-.helpBody{
-  margin-top:10px;
-  font-size:12px;
-  line-height:1.8;
-  opacity:.86;
-  white-space:pre-line;
-}
-.helpActions{
-  margin-top:14px;
-  display:flex;
-  gap:10px;
-  justify-content:flex-end;
-  flex-wrap:wrap;
-}
-
 /* reduced motion */
 @media (prefers-reduced-motion: reduce){
   body:before{animation:none!important}
@@ -308,15 +270,13 @@ small.hint{
 <div class="top">
   <div class="brand"><a href="index.html">CLAWBOI</a></div>
   <div class="navRight">
-    <button class="pill" id="helpBtn" type="button" title="Help">HELP (H)</button>
-    <button class="pill" id="sfxBtn" type="button" title="Toggle SFX">SFX: ON</button>
     <a class="pill" href="games.html">RETURN TO GAMES</a>
   </div>
 </div>
 
 <div class="game">
   <div class="title">ESCAPE PSYCHWARD</div>
-  <div class="sub">THREE DOORS. ONE MIND. ABSOLUTELY NO CUSTOMER SUPPORT. <span class="cursor">▮</span></div>
+  <div class="sub">THREE DOORS. ONE MIND. NO REFUNDS. <span class="cursor">▮</span></div>
 
   <div class="hud">
     <div class="badge v">PATIENT: <b id="hudName">UNKNOWN</b></div>
@@ -324,7 +284,6 @@ small.hint{
     <div class="badge r">HEAT: <b id="hudHeat">00</b></div>
     <div class="badge g">KEYS: <b id="hudKeys">0</b></div>
     <div class="badge">LOOP: <b id="hudLoop">00</b></div>
-    <div class="badge v">POCKET: <b id="hudInv">EMPTY</b></div>
   </div>
 
   <div id="text" class="text"></div>
@@ -339,28 +298,14 @@ small.hint{
     </audio>
   </div>
   <div class="note">PUT YOUR FILE AT <span class="shimmer">/audio/psychward.mp3</span> OR CHANGE THE SRC ABOVE.</div>
-  <small class="hint">TIP: PRESS 1-4 TO PICK A CHOICE. PRESS H FOR HELP. YOUR BRAIN IS THE MAP.</small>
-</div>
-
-<!-- HELP MODAL -->
-<div class="helpMask" id="helpMask" aria-hidden="true">
-  <div class="helpBox">
-    <div class="helpTitle">HELP / QUICK RULES</div>
-    <div class="helpBody" id="helpBody"></div>
-    <div class="helpActions">
-      <button class="pill v" id="closeHelp" type="button">CLOSE</button>
-    </div>
-  </div>
 </div>
 
 <script>
 /* =========================
-   ESCAPE PSYCHWARD (upgraded)
-   - still deterministic (no RNG death)
-   - clearer/funnier text + extra branches
-   - REAL loop pressure (but always winnable)
-   - quality-of-life: SFX, help, autosave
-   - no “bad choice reveal” or % survival talk
+   ESCAPE PSYCHWARD (no RNG death)
+   - deterministic consequences
+   - 3 real win paths hidden inside choices
+   - no survival % text
 ========================= */
 
 const elText = document.getElementById("text");
@@ -370,9 +315,8 @@ const hudStab = document.getElementById("hudStab");
 const hudHeat = document.getElementById("hudHeat");
 const hudKeys = document.getElementById("hudKeys");
 const hudLoop = document.getElementById("hudLoop");
-const hudInv  = document.getElementById("hudInv");
 
-/* audio (song) */
+/* audio */
 const song = document.getElementById("song");
 document.getElementById("playSong").onclick = async ()=>{
   try{ await song.play(); }catch(e){}
@@ -381,160 +325,13 @@ document.getElementById("stopSong").onclick = ()=>{
   song.pause(); song.currentTime = 0;
 };
 
-/* SFX (tiny, tasteful) */
-let SFX_ON = true;
-let AC = null;
-function ensureAC(){
-  if(AC) return AC;
-  const Ctx = window.AudioContext || window.webkitAudioContext;
-  if(!Ctx) return null;
-  AC = new Ctx();
-  return AC;
-}
-function beep(freq=440, dur=0.06, type="sine", vol=0.03){
-  if(!SFX_ON) return;
-  const ac = ensureAC();
-  if(!ac) return;
-  const t0 = ac.currentTime;
-  const o = ac.createOscillator();
-  const g = ac.createGain();
-  o.type = type;
-  o.frequency.setValueAtTime(freq, t0);
-  g.gain.setValueAtTime(0.0001, t0);
-  g.gain.exponentialRampToValueAtTime(vol, t0+0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
-  o.connect(g); g.connect(ac.destination);
-  o.start(t0);
-  o.stop(t0+dur+0.02);
-}
-function clickSFX(kind="ok"){
-  if(kind==="ok"){ beep(720, 0.05, "triangle", 0.03); beep(980, 0.05, "triangle", 0.018); }
-  else if(kind==="bad"){ beep(220, 0.07, "sawtooth", 0.028); }
-  else if(kind==="ui"){ beep(520, 0.04, "square", 0.018); }
-}
-function whoosh(){
-  if(!SFX_ON) return;
-  const ac = ensureAC();
-  if(!ac) return;
-  const t0 = ac.currentTime;
-  const n = ac.createBuffer(1, Math.floor(ac.sampleRate*0.14), ac.sampleRate);
-  const d = n.getChannelData(0);
-  for(let i=0;i<d.length;i++){
-    const t = i/d.length;
-    d[i] = (Math.random()*2-1) * (1-t) * 0.35;
-  }
-  const src = ac.createBufferSource();
-  const f = ac.createBiquadFilter();
-  const g = ac.createGain();
-  src.buffer = n;
-  f.type = "highpass"; f.frequency.value = 650;
-  g.gain.value = 0.06;
-  src.connect(f); f.connect(g); g.connect(ac.destination);
-  src.start(t0);
-}
-
-/* HELP */
-const helpMask = document.getElementById("helpMask");
-const helpBody = document.getElementById("helpBody");
-const helpBtn  = document.getElementById("helpBtn");
-const closeHelp= document.getElementById("closeHelp");
-function openHelp(){
-  clickSFX("ui");
-  helpBody.textContent =
-`CONTROLS
-- CLICK BUTTONS OR PRESS 1-4 TO CHOOSE.
-- PRESS H TO TOGGLE THIS HELP.
-- SFX BUTTON TO TURN CLICK/BEEP SOUNDS ON/OFF.
-- YOUR MUSIC BUTTONS ARE BELOW. (I'M NOT YOUR DJ THOUGH.)
-
-HUD MEANINGS
-- STABILITY: YOUR BRAIN’S GRIP ON REALITY (0 = NOPE).
-- HEAT: HOW MUCH SECURITY CARES ABOUT YOU (9 = THEY CARE TOO MUCH).
-- KEYS: LITERAL KEYS. (WILD CONCEPT.)
-- LOOP: HOW MANY TIMES YOU’VE “BACKED OUT” AND PACED.
-  LOOP DOES NOT KILL YOU BY ITSELF. IT JUST MAKES THE WARD NOTICE YOU MORE.
-
-IMPORTANT VIBE RULE
-- THIS GAME IS DETERMINISTIC.
-  IF YOU DIE, IT’S BECAUSE YOU CHOSE A THING THAT ALWAYS LEADS THERE.
-  NO RANDOM “LOL YOU LOSE” ENERGY.
-
-TIP
-- IF HEAT IS HIGH, BE BORING.
-- IF STABILITY IS LOW, DON’T DO GLASS-BASED HOBBIES.`;
-  helpMask.classList.add("open");
-  helpMask.setAttribute("aria-hidden","false");
-}
-function closeHelpNow(){
-  clickSFX("ui");
-  helpMask.classList.remove("open");
-  helpMask.setAttribute("aria-hidden","true");
-}
-helpBtn.onclick = ()=> helpMask.classList.contains("open") ? closeHelpNow() : openHelp();
-closeHelp.onclick = closeHelpNow;
-helpMask.addEventListener("click",(e)=>{ if(e.target===helpMask) closeHelpNow(); });
-
-/* SFX toggle */
-const sfxBtn = document.getElementById("sfxBtn");
-function updateSfxBtn(){ sfxBtn.textContent = `SFX: ${SFX_ON ? "ON" : "OFF"}`; }
-sfxBtn.onclick = async ()=>{
-  // resume audio context on first click (browser policy)
-  try{ const ac = ensureAC(); await ac?.resume?.(); }catch(e){}
-  SFX_ON = !SFX_ON;
-  updateSfxBtn();
-  clickSFX("ui");
-};
-updateSfxBtn();
-
-/* =========================
-   SAVE / LOAD (tiny autosave)
-========================= */
-const SAVE_KEY = "escape_psychward_save_v2";
-function safeCloneState(){
-  return {
-    name:S.name,
-    stability:S.stability,
-    heat:S.heat,
-    keys:S.keys,
-    loop:S.loop,
-    inv:Array.from(S.inv),
-    flags: {...S.flags},
-    scene:S.scene,
-    last:S.last
-  };
-}
-function save(){
-  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(safeCloneState())); }catch(e){}
-}
-function load(){
-  try{
-    const raw = localStorage.getItem(SAVE_KEY);
-    if(!raw) return false;
-    const o = JSON.parse(raw);
-    if(!o || typeof o !== "object") return false;
-    S.name = o.name || "";
-    S.stability = (o.stability ?? 5);
-    S.heat = (o.heat ?? 0);
-    S.keys = (o.keys ?? 0);
-    S.loop = (o.loop ?? 0);
-    S.inv = new Set(Array.isArray(o.inv) ? o.inv : []);
-    S.flags = {...S.flags, ...(o.flags||{})};
-    S.scene = o.scene || "";
-    S.last = o.last || "";
-    return true;
-  }catch(e){ return false; }
-}
-
-/* =========================
-   STATE
-========================= */
 const S = {
   name:"",
   stability:5, // 0..9
-  heat:0,      // 0..9
+  heat:0,      // 0..9 (security attention)
   keys:0,      // 0..3
   loop:0,
-  inv: new Set(), // paperclip, shard, badge, map, tape, pills, dust
+  inv: new Set(), // paperclip, shard, badge, map, tape
   flags: {
     tookPills:false,
     hidPills:false,
@@ -545,24 +342,12 @@ const S = {
     camerasOff:false,
     nurseTrust:false,
     doorCode:false,
-    vents:false,
-    heardIntercom:false,
-    knowsRoutes:false,
-    pocketLintLegend:false
+    vents:false
   },
-  scene:"",
   last:""
 };
 
 function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
-
-function invPretty(){
-  const arr = Array.from(S.inv);
-  if(!arr.length) return "EMPTY";
-  // keep it short for HUD, but readable
-  const nice = arr.map(x=>x.toUpperCase().replace(/_/g," "));
-  return nice.slice(0,3).join(" + ") + (nice.length>3 ? ` +${nice.length-3}` : "");
-}
 
 function updateHUD(){
   hudName.textContent = (S.name || "UNKNOWN").toUpperCase();
@@ -570,33 +355,20 @@ function updateHUD(){
   hudHeat.textContent = String(clamp(S.heat,0,9)).padStart(2,"0");
   hudKeys.textContent = String(S.keys);
   hudLoop.textContent = String(S.loop).padStart(2,"0");
-  hudInv.textContent  = invPretty();
 }
 
 function say(text, options=[]){
   elText.innerHTML = text;
   elChoices.innerHTML = "";
-  options.forEach((o, idx)=>{
+  options.forEach(o=>{
     const b = document.createElement("button");
     b.textContent = o.label;
     if(o.kind==="danger") b.classList.add("danger");
     if(o.kind==="safe") b.classList.add("safe");
-
-    // hover micro-sfx
-    b.addEventListener("mouseenter", ()=> clickSFX("ui"), {passive:true});
-
-    b.onclick = ()=>{
-      // resume AC on first user gesture
-      try{ ensureAC()?.resume?.(); }catch(e){}
-      clickSFX(o.kind==="danger" ? "bad" : "ok");
-      o.action?.();
-      save();
-    };
-    b.dataset.idx = String(idx+1);
+    b.onclick = o.action;
     elChoices.appendChild(b);
   });
   updateHUD();
-  save();
 }
 
 /* small “typewriter” flavor (fast, not annoying) */
@@ -607,131 +379,30 @@ function typeScene(lines, after){
   function step(){
     if(i >= chunks.length){ after?.(); return; }
     elText.innerHTML += (i? "\n":"") + chunks[i];
-    // tiny tick
-    if(SFX_ON && (i%2===0)) beep(980, 0.02, "triangle", 0.012);
     i++;
-    setTimeout(step, 105);
+    setTimeout(step, 120);
   }
   step();
 }
 
 /* =========================
-   CORE HELPERS
+   START: name
 ========================= */
-function addHeat(n=1){
-  S.heat = clamp(S.heat + n, 0, 9);
-}
-function addStability(n=1){
-  S.stability = clamp(S.stability + n, 0, 9);
-}
-function take(item){
-  S.inv.add(item);
-}
-function has(item){ return S.inv.has(item); }
+boot();
 
-/* Loop pressure that makes it longer (more scenes) and harder (more Heat),
-   but still possible. No surprise deaths purely from looping. */
-function bumpLoop(reason=""){
-  S.loop = clamp(S.loop + 1, 0, 99);
-
-  // soft pressure: every 2 loops, +1 heat (cap)
-  if(S.loop>0 && S.loop % 2 === 0){
-    addHeat(1);
-  }
-
-  // narrative flavor, no “bad choice reveal”
-  if(reason && S.loop % 3 === 0){
-    S.last = reason;
-  }
-}
-
-/* deterministic ending */
-function death(reason, extra=""){
-  whoosh();
-  say(
-`<span class="dead">YOU GOT CAUGHT.</span>
-
-${reason}
-${extra ? "\n\n"+extra : ""}
-
-<span class="cursor">▮</span>`,
-  [
-    {label:"TRY AGAIN", kind:"safe", action:()=>{ localStorage.removeItem(SAVE_KEY); location.reload(); }},
-    {label:"RETURN TO GAMES", action:()=>{ window.location.href="games.html"; }}
-  ]);
-}
-
-function win(text){
-  whoosh();
-  say(
-`<span class="win">ESCAPE SUCCESSFUL</span>
-
-${text}
-
-<span class="cursor">▮</span>`,
-  [
-    {label:"PLAY AGAIN", kind:"safe", action:()=>{ localStorage.removeItem(SAVE_KEY); location.reload(); }},
-    {label:"RETURN TO GAMES", action:()=>{ window.location.href="games.html"; }}
-  ]);
-}
-
-/* “soft reset” option for people who want to keep name but restart */
-function restartKeepName(){
-  const nm = S.name;
-  localStorage.removeItem(SAVE_KEY);
-  boot(true, nm);
-}
-
-/* =========================
-   START
-========================= */
-boot(false);
-
-function boot(fromRestart=false, keepName=""){
-  // offer continue if save exists and not a restart
-  if(!fromRestart && load() && S.name){
-    // show continue screen
-    return say(
-`WELCOME BACK, ${S.name.toUpperCase()}.
-
-LAST KNOWN STATUS:
-- STABILITY: ${String(S.stability).padStart(2,"0")}
-- HEAT: ${String(S.heat).padStart(2,"0")}
-- KEYS: ${S.keys}
-- LOOP: ${String(S.loop).padStart(2,"0")}
-- POCKET: ${invPretty()}
-
-CONTINUE WHERE YOU LEFT OFF?
-<span class="cursor">▮</span>`,
-    [
-      {label:"CONTINUE", kind:"safe", action:()=>{ routeResume(); }},
-      {label:"RESTART (KEEP NAME)", action:()=>restartKeepName()},
-      {label:"FULL RESET", kind:"danger", action:()=>{ localStorage.removeItem(SAVE_KEY); location.reload(); }}
-    ]);
-  }
-
-  // fresh start
-  S.scene = "";
+function boot(){
   S.loop = 0;
   S.stability = 5; S.heat = 0; S.keys = 0;
   S.inv = new Set();
   S.flags = {
     tookPills:false, hidPills:false, befriended:false, lied:false,
     confessed:false, listened:false, camerasOff:false, nurseTrust:false,
-    doorCode:false, vents:false, heardIntercom:false, knowsRoutes:false,
-    pocketLintLegend:false
+    doorCode:false, vents:false
   };
-  S.last = "";
-  S.name = keepName || "";
-
-  if(keepName){
-    updateHUD();
-    return intro();
-  }
 
   say(
 `ENTER PATIENT NAME:
-(YES, IT MATTERS. NO, YOU CAN’T PUT “AAAAA” AND EXPECT RESPECT.)
+(YES, IT MATTERS.)
 <span class="cursor">▮</span>`,
   []);
   // input row
@@ -757,38 +428,65 @@ CONTINUE WHERE YOU LEFT OFF?
   setTimeout(()=>inp.focus(), 90);
 }
 
-/* resume router (keeps it simple: if a scene exists, route; else intro) */
-function routeResume(){
-  // if they were in an ending, just intro
-  const sc = S.scene || "";
-  const map = {
-    "intro": intro,
-    "hallway": hallway,
-    "staffDoor": staffDoor,
-    "vent": vent,
-    "humRoom": humRoom
-  };
-  (map[sc] || intro)();
+/* =========================
+   CORE LOOP HELPERS
+========================= */
+function addHeat(n=1){
+  S.heat = clamp(S.heat + n, 0, 9);
+}
+function addStability(n=1){
+  S.stability = clamp(S.stability + n, 0, 9);
+}
+function take(item){
+  S.inv.add(item);
+}
+function has(item){ return S.inv.has(item); }
+
+function death(reason, extra=""){
+  // no survival probability text, just a sharp ending
+  say(
+`<span class="dead">YOU DIED</span>
+
+${reason}
+${extra ? "\n\n"+extra : ""}
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"TRY AGAIN", kind:"safe", action:()=>{ location.reload(); }},
+    {label:"RETURN TO GAMES", action:()=>{ window.location.href="games.html"; }}
+  ]);
+}
+
+function win(text){
+  say(
+`<span class="win">ESCAPE SUCCESSFUL</span>
+
+${text}
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"PLAY AGAIN", kind:"safe", action:()=>{ location.reload(); }},
+    {label:"RETURN TO GAMES", action:()=>{ window.location.href="games.html"; }}
+  ]);
 }
 
 /* =========================
    INTRO
 ========================= */
 function intro(){
-  S.scene = "intro";
   typeScene([
 `${S.name}, YOU WAKE UP IN A HOSPITAL BED.`,
 `THE CEILING HUMS LIKE A FRIDGE FULL OF BEES.`,
-`YOUR WRISTS ACHE. NOT BLEEDING. WORSE: REMEMBERING.`,
-`A NURSE ENTERS WITH A CUP: WHITE PILLS + WATER.`,
-`SHE SMILES LIKE IT’S IN HER JOB DESCRIPTION.`,
+`YOUR WRISTS ACHE. NOT BLEEDING. WORSE. REMEMBERING.`,
+`A NURSE ENTERS WITH A CUP: WHITE PILLS. WATER.`,
+`SHE SMILES LIKE IT’S PRACTICED.`,
 ``,
-`DO YOU TAKE THEM?`
+`TAKE THEM?`
   ], ()=>{
     say(elText.innerHTML, [
-      {label:"TAKE PILLS (CALM MODE)", kind:"safe", action:takePills},
-      {label:"REFUSE (SPICY)", kind:"danger", action:refusePills},
-      {label:"HIDE PILLS (SLEIGHT OF HAND)", action:hidePills}
+      {label:"TAKE PILLS", kind:"safe", action:takePills},
+      {label:"REFUSE", kind:"danger", action:refusePills},
+      {label:"HIDE PILLS", action:hidePills}
     ]);
   });
 }
@@ -800,12 +498,11 @@ function takePills(){
   say(
 `THE PILLS GO DOWN.
 YOUR CHEST UNCLENCHES.
-THE ROOM GETS QUIETER. TOO QUIET. LIKE SOMEONE MUTED LIFE.
+THE ROOM GETS QUIETER. TOO QUIET.
 
 THE NURSE: “GOOD.”
 
 A SOFT CLICK FROM THE HALL. A DOOR UNLOCKING.
-THAT CLICK FEELS LIKE A TIMER STARTING.
 
 <span class="cursor">▮</span>`,
   [
@@ -827,12 +524,11 @@ SHE WRITES ONE WORD ON HER CLIPBOARD:
 “NONCOMPLIANT.”
 
 THE AIR FEELS THINNER.
-LIKE OXYGEN GOT A NEW POLICY.
 
 <span class="cursor">▮</span>`,
   [
     {label:"APOLOGIZE (FAKE IT)", action:fakeIt},
-    {label:"DOUBLE DOWN (DON’T)", kind:"danger", action:doubleDown},
+    {label:"DOUBLE DOWN", kind:"danger", action:doubleDown},
     {label:"SEARCH THE ROOM", action:searchRoom}
   ]);
 }
@@ -842,10 +538,9 @@ function hidePills(){
   addHeat(1);
   say(
 `YOU PALM THE PILLS.
-YOUR HAND IS A LITTLE BANK VAULT.
+YOUR HAND IS A SECRET VAULT.
 
-THE NURSE LOOKS AT YOUR FINGERTIPS FOR ONE EXTRA SECOND.
-THE EXACT LENGTH OF A HUMAN LIE.
+THE NURSE LOOKS AT YOUR FINGERTIPS TOO LONG.
 
 <span class="cursor">▮</span>`,
   [
@@ -856,8 +551,9 @@ THE EXACT LENGTH OF A HUMAN LIE.
 }
 
 function questionNurse(){
+  // calm path: can earn trust or trigger heat
   const options = [
-    {label:"“WHAT DAY IS IT?”", action: ()=>{ S.flags.listened=true; nurseDay(); } },
+    {label:"“WHAT DAY IS IT?”", action: ()=>{ S.flags.listened=true; addHeat(0); nurseDay(); } },
     {label:"“WHAT IS THIS PLACE?”", action: ()=>{ addHeat(1); nursePlace(); } },
     {label:"“WHAT’S IN THOSE PILLS?”", action: ()=>{ addHeat(1); nursePills(); } }
   ];
@@ -871,11 +567,10 @@ function nurseDay(){
 
 SHE TAPS YOUR WRISTBAND.
 A TINY QR GLINTS.
-(IT’S TRYING TO LOOK INNOCENT.)
 
 <span class="cursor">▮</span>`,
   [
-    {label:"READ WRISTBAND (LOOK CLOSE)", action:wristband},
+    {label:"SCAN WRISTBAND (LOOK CLOSE)", action:wristband},
     {label:"LEAVE THE BED", kind:"safe", action:hallway},
     {label:"WAIT", action:waitNice}
   ]);
@@ -886,11 +581,10 @@ function nursePlace(){
 “UNTIL YOUR THOUGHTS STOP TRYING TO RUN.”
 
 THE WORD “RUN” FEELS LIKE A KEY.
-THE KIND YOU DON’T HAVE YET.
 
 <span class="cursor">▮</span>`,
   [
-    {label:"RUN (BAD ACTING)", kind:"danger", action:hallRun},
+    {label:"RUN", kind:"danger", action:hallRun},
     {label:"WALK OUT LIKE YOU BELONG", kind:"safe", action:hallway},
     {label:"SEARCH ROOM", action:searchRoom}
   ]);
@@ -903,7 +597,6 @@ THE WAY SOME PEOPLE SAY “HANDCUFFS.”
 
 SHE SETS THE CUP DOWN.
 LEAVES IT.
-LIKE A CHESS MOVE.
 
 <span class="cursor">▮</span>`,
   [
@@ -916,23 +609,18 @@ LIKE A CHESS MOVE.
 function waitNice(){
   // waiting can be safe, but if heat is high, it’s bad
   if(S.heat >= 4){
-    return death(
-      "YOU WAIT.\nFOOTSTEPS MULTIPLY.\nA STRAP SNAPS.\nTHE LIGHTS GO WHITE.",
-      "THAT DOOR CLICK WAS YOUR WINDOW. IT CLOSED."
-    );
+    return death("YOU WAIT.\nFOOTSTEPS MULTIPLY.\nA STRAP SNAPS.\nTHE LIGHTS GO WHITE.", "YOU SHOULD’VE MOVED WHEN THE DOOR CLICKED.");
   }
   addStability(1);
   S.flags.nurseTrust = true;
   say(
 `YOU WAIT.
 BREATH IN. BREATH OUT.
-YOU DO THE WHOLE “I’M NORMAL” ROUTINE.
 
 THE NURSE RETURNS, DIFFERENT NOW.
-“YOU’RE TRYING,” SHE SAYS, LIKE IT’S A THREAT.
+“YOU’RE TRYING,” SHE SAYS. LIKE IT’S A THREAT.
 
 SHE LEAVES A BADGE ON THE TABLE. “ACCIDENTALLY.”
-THE WORLD’S WORST MAGIC TRICK.
 
 <span class="cursor">▮</span>`,
   [
@@ -951,7 +639,6 @@ THE NURSE’S SMILE RETURNS, RELIEVED.
 LIKE YOU DID HER A FAVOR.
 
 SHE HANDS YOU THE CUP AGAIN.
-THE CUP DOESN’T CARE ABOUT MORALITY.
 
 <span class="cursor">▮</span>`,
   [
@@ -962,10 +649,8 @@ THE CUP DOESN’T CARE ABOUT MORALITY.
 }
 
 function doubleDown(){
-  return death(
-    "YOU RAISE YOUR VOICE.\nTHE NURSE NODS ONCE.\nA BUTTON CLICKS UNDER HER THUMB.\nYOU HEAR TWO ORDERLIES BEFORE YOU SEE THEM.",
-    "THEY MOVE LIKE THEY’VE DONE THIS ALL DAY. BECAUSE THEY HAVE."
-  );
+  // deterministic: if you double down, they escalate
+  return death("YOU RAISE YOUR VOICE.\nTHE NURSE NODS ONCE.\nA BUTTON CLICKS UNDER HER THUMB.\nYOU HEAR TWO ORDERLIES BEFORE YOU SEE THEM.");
 }
 
 function keepPills(){
@@ -987,13 +672,11 @@ LIKE IT WANTS TO BE YOUR PROBLEM.
 
 function dropPills(){
   addHeat(2);
-  return death(
-    "YOU DROP THEM.\nTHEY SKITTER LIKE BUGS.\nA CAMERA TILTS.\nAN ALARM DOESN’T SCREAM.\nWORSE.\nIT BEEPS ONCE.",
-    "SOMEONE HEARD THAT BEEP A LONG TIME AGO. NOW IT’S YOUR TURN."
-  );
+  return death("YOU DROP THEM.\nTHEY SKITTER LIKE BUGS.\nA CAMERA TILTS.\nAN ALARM DOESN’T SCREAM.\nWORSE.\nIT BEEPS ONCE.", "SOMEONE HEARD THAT BEEP A LONG TIME AGO.");
 }
 
 function crushPill(){
+  // pill dust can lower heat later, but reduces stability
   take("dust");
   addStability(-1);
   say(
@@ -1002,7 +685,6 @@ WHITE DUST.
 SMELLS LIKE “CALM DOWN.”
 
 POCKET IT.
-(YES, YOU JUST INVENTED POCKET SAND: MEDICAL EDITION.)
 
 <span class="cursor">▮</span>`,
   [
@@ -1012,6 +694,7 @@ POCKET IT.
 }
 
 function wristband(){
+  // deterministic: grants doorCode hint
   S.flags.doorCode = true;
   say(
 `YOU LEAN IN.
@@ -1021,7 +704,7 @@ A CODE PRINTED UNDER THE PLASTIC:
 “19-02-09”
 
 YOUR BRAIN DOES THAT THING:
-IT MAKES IT FEEL IMPORTANT.
+IT MAKES IT MEAN SOMETHING.
 
 <span class="cursor">▮</span>`,
   [
@@ -1034,7 +717,6 @@ function markCode(){
   say(
 `YOU SCRATCH IT INTO METAL.
 A LITTLE PRAYER FOR LATER.
-A LITTLE VANDALISM FOR NOW.
 
 <span class="cursor">▮</span>`,
   [{label:"HALLWAY", kind:"safe", action:hallway}]
@@ -1054,7 +736,6 @@ function searchRoom(){
     return say(
 `THE ROOM IS EMPTY NOW.
 OR YOU ARE.
-HARD TO TELL.
 
 <span class="cursor">▮</span>`,
     [
@@ -1065,11 +746,9 @@ HARD TO TELL.
 
   say(
 `YOU SEARCH FAST.
-LIKE A PERSON WHO HAS PLACES TO BE.
-(OUTSIDE.)
 
-YOU NOTICE:
-${found.map(()=> "•").join(" ")}
+FOUND OPTIONS:
+${found.map(_=>"•").join(" ")}
 
 <span class="cursor">▮</span>`,
   [
@@ -1081,12 +760,11 @@ ${found.map(()=> "•").join(" ")}
 function searchRoom2(){
   const inv = Array.from(S.inv).map(x=>x.toUpperCase()).join(", ") || "NOTHING";
   say(
-`POCKET CHECK: ${inv}
+`INVENTORY: ${inv}
 
 THE DOOR IS STILL AJAR.
 IT’S NOT AN INVITATION.
 IT’S A TEST.
-AND YOU’RE TAKING IT OPEN-BOOK.
 
 <span class="cursor">▮</span>`,
   [
@@ -1104,7 +782,6 @@ function takeBadge(){
 IT SAYS “TEMP” IN TINY LETTERS.
 THE PHOTO IS BLANK.
 LIKE YOU.
-LIKE A LIE PRINTED IN PLASTIC.
 
 <span class="cursor">▮</span>`,
   [
@@ -1117,7 +794,6 @@ function hideBadge(){
   say(
 `BADGE HIDDEN.
 YOU LOOK 7% LESS GUILTY.
-WHICH IS A LOT IN THIS BUILDING.
 
 <span class="cursor">▮</span>`,
   [{label:"HALLWAY", kind:"safe", action:hallway}]
@@ -1128,40 +804,24 @@ WHICH IS A LOT IN THIS BUILDING.
    HALLWAY
 ========================= */
 function hallway(){
-  S.scene = "hallway";
-
-  if(S.heat >= 7 && !S.flags.camerasOff){
-    return death(
-      "YOU STEP OUT.\nA RED LIGHT BLINKS.\nA VOICE: “PATIENT OFF UNIT.”\nYOUR NAME SOUNDS WRONG IN THEIR MOUTH.",
-      "THE WARD DOESN’T YELL. IT JUST DECIDES."
-    );
-  }
-
-  // ambient intercom flavor (no mechanics, just vibe)
-  if(!S.flags.heardIntercom && S.loop >= 3){
-    S.flags.heardIntercom = true;
-    addHeat(1);
+  // hallway pressure based on heat
+  if(S.heat >= 7){
+    return death("YOU STEP OUT.\nA RED LIGHT BLINKS.\nA VOICE: “PATIENT OFF UNIT.”\nYOUR NAME SOUNDS WRONG IN THEIR MOUTH.");
   }
 
   const invHint = [];
   if(has("paperclip")) invHint.push("PAPERCLIP");
   if(has("badge")) invHint.push("BADGE");
   if(has("map")) invHint.push("VENT MAP");
-  if(has("pills")) invHint.push("PILLS");
   const h = invHint.length ? `YOU HAVE: ${invHint.join(" / ")}\n\n` : "";
 
-  const intercomLine = S.flags.heardIntercom
-    ? `THE INTERCOM CRACKLES: “${S.name.toUpperCase()}, PLEASE RETURN TO YOUR ROOM.”\n(IT SAYS IT LIKE A SUGGESTION. IT IS NOT.)\n\n`
-    : "";
-
   say(
-`${h}${intercomLine}THE HALLWAY LIGHTS FLICKER.
-DOORS LINE BOTH SIDES LIKE TEETH.
+`${h}THE HALLWAY LIGHTS FLICKER.
+DOORS LINE BOTH SIDES.
 
-YOU SEE:
-• A “STAFF ONLY” DOOR (KEYPAD + CAMERA)
-• A VENT GRATE NEAR THE FLOOR
-• A CAMERA THAT BLINKS LIKE IT’S BREATHING
+A “STAFF ONLY” DOOR.
+A VENT GRATE NEAR THE FLOOR.
+A CAMERA THAT BLINKS LIKE IT’S BREATHING.
 
 YOU ALSO HEAR… HUMMING.
 SOMEONE IN A ROOM, SINGING UNDER THEIR BREATH.
@@ -1171,96 +831,8 @@ SOMEONE IN A ROOM, SINGING UNDER THEIR BREATH.
     {label:"GO STAFF DOOR", kind:"safe", action:staffDoor},
     {label:"CHECK VENT", action:vent},
     {label:"FOLLOW HUMMING", action:humRoom},
-    {label:"PACE BACK (BUY TIME)", action:pace}
+    {label:"WALK LIKE STAFF", action:walkStaff}
   ]);
-}
-
-function pace(){
-  bumpLoop("PACED IN THE HALL");
-  addStability( (S.stability<6) ? 1 : 0 ); // pacing can calm you if you’re not already zen
-  say(
-`YOU PACE.
-TEN STEPS. TURN. TEN STEPS.
-YOU LOOK LIKE YOU’RE WAITING FOR SOMEBODY.
-WHICH IS TRUE. YOU’RE WAITING FOR “FREEDOM.”
-
-YOU NOTICE A JANITOR CART AT THE END OF THE HALL.
-CLEANING SUPPLIES.
-TAPE.
-A CLIPBOARD THAT SAYS “NOTHING IMPORTANT.”
-(LIAR.)
-
-<span class="cursor">▮</span>`,
-  [
-    {label:"CHECK JANITOR CART", kind:"safe", action:janitorCart},
-    {label:"GO STAFF DOOR", kind:"safe", action:staffDoor},
-    {label:"CHECK VENT", action:vent},
-    {label:"FOLLOW HUMMING", action:humRoom}
-  ]);
-}
-
-function janitorCart(){
-  // deterministic: if heat too high and cameras on, poking around draws attention
-  if(S.heat >= 6 && !S.flags.camerasOff){
-    addHeat(1);
-    return say(
-`YOU REACH FOR THE CART.
-THE CAMERA TILTS.
-JUST A LITTLE.
-LIKE IT’S RAISING AN EYEBROW.
-
-YOU FEEL ATTENTION LAND ON YOU.
-HEAVY. QUIET.
-
-<span class="cursor">▮</span>`,
-    [
-      {label:"BACK OFF", kind:"safe", action:hallway},
-      {label:"COMMIT ANYWAY", kind:"danger", action:cartCommit}
-    ]);
-  }
-
-  // reward: tape if not already
-  if(!has("tape")){
-    take("tape");
-    addHeat(1);
-    return say(
-`YOU CHECK THE CART.
-UNDER A RAG: A ROLL OF TAPE.
-LABEL: “BMA / SIDE A” (??)
-
-YOU POCKET IT.
-IT FEELS LIKE A MESSAGE.
-OR A JOKE. OR BOTH.
-
-<span class="cursor">▮</span>`,
-    [
-      {label:"HALLWAY", kind:"safe", action:hallway},
-      {label:"STAFF DOOR", kind:"safe", action:staffDoor}
-    ]);
-  }
-
-  // already has tape: small stability bonus
-  addStability(1);
-  return say(
-`THE CART HAS… CLEANER.
-AND A STAGGERING AMOUNT OF LINT.
-
-YOU POCKET A PIECE OF LINT FOR NO REASON.
-CONGRATS. YOU’VE INVENTED “POCKET LINT.”
-IT DOES NOTHING.
-BUT IT’S YOURS.
-
-<span class="cursor">▮</span>`,
-  [
-    {label:"HALLWAY", kind:"safe", action:hallway}
-  ]);
-}
-
-function cartCommit(){
-  return death(
-    "YOU DIG THROUGH THE CART LIKE YOU OWN IT.\nFOOTSTEPS SPEED UP.\nSOMEONE SAYS: “HEY.”\nIT’S NEVER GOOD WHEN THEY SAY “HEY.”",
-    "YOU WEREN’T STEALTHY. YOU WERE CONFIDENT. WRONG BUILDING FOR THAT."
-  );
 }
 
 function hallRun(){
@@ -1268,11 +840,50 @@ function hallRun(){
   return hallway();
 }
 
+function walkStaff(){
+  // if you have badge, safer. If not, heat.
+  if(has("badge")){
+    addHeat(-1);
+    addStability(1);
+    return say(
+`YOU WALK LIKE YOU OWN THE TILE.
+BADGE IN POCKET, HEART IN THROAT.
+
+NOBODY STOPS YOU.
+THAT’S THE SCARIEST PART.
+
+<span class="cursor">▮</span>`,
+    [
+      {label:"STAFF DOOR", kind:"safe", action:staffDoor},
+      {label:"VENT", action:vent},
+      {label:"HUMMING ROOM", action:humRoom}
+    ]);
+  }
+  addHeat(2);
+  say(
+`YOU TRY THE CONFIDENCE TRICK.
+WITHOUT A BADGE, IT’S JUST A WALK.
+
+A NURSE AT THE END OF THE HALL STARES.
+NOT MAD. CURIOUS.
+
+<span class="cursor">▮</span>`,
+  [
+    {label:"TURN BACK", action:hallway},
+    {label:"KEEP GOING (BOLD)", kind:"danger", action:challenged}
+  ]);
+}
+
+function challenged(){
+  // deterministic capture
+  return death("YOU KEEP GOING.\nTHE NURSE SMILES.\n“CAN I SEE YOUR WRISTBAND?”\nYOU CAN’T.\nBECAUSE YOU’RE ALREADY GRABBED.");
+}
+
 /* =========================
    HUMMING ROOM (social puzzle)
 ========================= */
 function humRoom(){
-  S.scene = "humRoom";
+  // can reduce heat if you befriend, or increase if you spook them
   say(
 `THE DOOR IS HALF-OPEN.
 INSIDE: A PATIENT WITH A PAPER CROWN
@@ -1281,14 +892,12 @@ MADE OF HOSPITAL FORMS.
 THEY LOOK UP.
 “YOU’RE NEW,” THEY SAY.
 LIKE THEY’VE BEEN WAITING.
-LIKE YOU’RE A PACKAGE.
 
 <span class="cursor">▮</span>`,
   [
-    {label:"SAY HI (HUMAN MODE)", kind:"safe", action:friendHi},
+    {label:"SAY HI", kind:"safe", action:friendHi},
     {label:"ASK ABOUT EXIT", action:askExit},
-    {label:"STEAL THEIR CROWN (WHY)", kind:"danger", action:stealCrown},
-    {label:"BACK TO HALL", action:()=>{ bumpLoop("BACKED OUT OF HUMMING ROOM"); hallway(); }}
+    {label:"STEAL THEIR CROWN (WHY)", kind:"danger", action:stealCrown}
   ]);
 }
 
@@ -1301,7 +910,6 @@ function friendHi(){
 “NAME?” THEY ASK.
 
 YOU FEEL THE ROOM LISTEN.
-THE CROWN TILTS LIKE IT’S JUDGING YOUR ANSWER.
 
 <span class="cursor">▮</span>`,
   [
@@ -1312,21 +920,15 @@ THE CROWN TILTS LIKE IT’S JUDGING YOUR ANSWER.
 function friendName(){
   S.flags.confessed = true;
   addStability(1);
-
-  // gift: tape if not already, else stability
-  if(!has("tape")) take("tape"); else addStability(1);
-
+  take("tape");
   say(
 `THEY SMILE LIKE A DOOR UNLOCKING.
 “GOOD,” THEY WHISPER, AND SLIP YOU A CASSETTE TAPE.
 
 LABEL: “BMA / SIDE A”
-(IT FEELS HEAVY. LIKE IT HAS A PURPOSE.)
 
-“THE STAFF DOOR HAS A KEYPAD,” THEY SAY.
-“THE CODE IS A DATE.”
-“IMPORTANT TO SOMEBODY.”
-“PROBABLY YOU.”
+“THE STAFF DOOR HAS A CODE PAD,” THEY SAY.
+“THE CODE IS A DATE. A IMPORTANT ONE.”
 
 <span class="cursor">▮</span>`,
   [
@@ -1344,9 +946,6 @@ THEY DON’T CALL YOU OUT.
 THEY JUST LOOK SADDER.
 LIKE THEY LOST SOMEONE THEY NEVER MET.
 
-THE CROWN DROOPS.
-DRAMA.
-
 <span class="cursor">▮</span>`,
   [
     {label:"APOLOGIZE", kind:"safe", action:friendName},
@@ -1359,10 +958,9 @@ function friendDate(){
 `“FEB 19,” THEY SAY.
 “9:30.”
 “DON’T ASK WHY.”
-(OF COURSE.)
 
 THE CASSETTE FEELS WARM IN YOUR HAND.
-LIKE IT’S BEEN PLAYED A THOUSAND TIMES.
+LIKE IT’S BEEN PLAYED.
 
 <span class="cursor">▮</span>`,
   [
@@ -1381,8 +979,7 @@ THEY TAP THEIR TEMPLE.
 “EXIT IS A THOUGHT.
 DOOR IS A LIE.”
 
-UNHELPFUL.
-ICONIC.
+UNHELPFUL. ICONIC.
 
 <span class="cursor">▮</span>`,
   [
@@ -1391,30 +988,24 @@ ICONIC.
   ]);
 }
 function stealCrown(){
-  return death(
-    "YOU SNATCH THE PAPER CROWN.\nTHEY SCREAM LIKE A FIRE ALARM.\nTHE HALLWAY FILLS WITH SHOES.",
-    "STEALING SYMBOLS DOESN’T MAKE YOU KING."
-  );
+  return death("YOU SNATCH THE PAPER CROWN.\nTHEY SCREAM LIKE A FIRE ALARM.\nTHE HALLWAY FILLS WITH SHOES.", "STEALING SYMBOLS DOESN’T MAKE YOU KING.");
 }
 
 /* =========================
    VENT PATH (stealth puzzle)
 ========================= */
 function vent(){
-  S.scene = "vent";
-
   if(!has("map") && !has("paperclip")){
     addHeat(1);
     return say(
 `THE VENT GRATE IS SCREWED IN TIGHT.
-NO TOOLS. NO LUCK. NO “MANIFESTING” OUT OF THIS ONE.
+NO TOOLS. NO LUCK.
 
 YOU FEEL THE CAMERA BLINK.
-LIKE IT’S COUNTING YOUR MISTAKES.
 
 <span class="cursor">▮</span>`,
     [
-      {label:"BACK", kind:"safe", action:()=>{ bumpLoop("BACKED OUT OF VENT"); hallway(); }},
+      {label:"BACK", kind:"safe", action:hallway},
       {label:"TRY STAFF DOOR", action:staffDoor},
       {label:"FOLLOW HUMMING", action:humRoom}
     ]);
@@ -1423,16 +1014,13 @@ LIKE IT’S COUNTING YOUR MISTAKES.
   if(has("paperclip")){
     S.flags.vents = true;
     addHeat(1);
-
-    // bonus: vent dust if not already
-    if(!has("dust")) take("dust");
-
+    take("dust"); // little bonus: you got grit/dust from vents
     say(
 `YOU POP THE GRATE WITH THE PAPERCLIP.
 THE VENT BREATHES OUT COLD AIR.
 
 INSIDE: DARK, DUST, AND A LOW HUM
-LIKE A SERVER ROOM HAVING A BAD DREAM.
+LIKE A SERVER ROOM.
 
 <span class="cursor">▮</span>`,
     [
@@ -1442,10 +1030,11 @@ LIKE A SERVER ROOM HAVING A BAD DREAM.
     return;
   }
 
+  // has map but no clip: still blocked
   addHeat(1);
   say(
 `YOU HAVE A MAP, NOT A WAY IN.
-THE VENT DOESN’T CARE ABOUT YOUR VISION BOARD.
+THE VENT DOESN’T CARE ABOUT YOUR PLANS.
 
 <span class="cursor">▮</span>`,
   [{label:"BACK", kind:"safe", action:hallway}]
@@ -1454,19 +1043,14 @@ THE VENT DOESN’T CARE ABOUT YOUR VISION BOARD.
 
 function ventCrawl(){
   // deterministic: if heat already high, you get spotted
-  if(S.heat >= 6 && !S.flags.camerasOff){
-    return death(
-      "YOU CRAWL.\nTHE METAL POPS.\nTHE SOUND TRAVELS.\nFLASHLIGHTS FIND THE GRATE.",
-      "THE VENT PATH DOESN’T LIKE DRAMA."
-    );
+  if(S.heat >= 6){
+    return death("YOU CRAWL.\nTHE METAL POPS.\nTHE SOUND TRAVELS.\nFLASHLIGHTS FIND THE GRATE.", "THE VENT PATH HATES PANIC.");
   }
   addStability(-1);
 
   say(
 `YOU CRAWL.
 THE WORLD IS A TUNNEL NOW.
-YOUR THOUGHTS GET LOUDER IN SMALL SPACES.
-LOVE THAT FOR YOU.
 
 YOU SEE LIGHT THROUGH SLATS:
 A SECURITY OFFICE.
@@ -1480,27 +1064,22 @@ OR KEEP CRAWLING TO A LAUNDRY CHUTE.
   [
     {label:"DROP INTO SECURITY", kind:"safe", action:securityFromVent},
     {label:"CRAWL TO LAUNDRY CHUTE", action:laundryChute},
-    {label:"TURN BACK", action:()=>{ bumpLoop("TURNED BACK IN VENT"); hallway(); }}
+    {label:"TURN BACK", action:hallway}
   ]);
 }
 
 function securityFromVent(){
-  // deterministic gate: badge or low heat
+  // Win path #1 (cameras)
   if(!has("badge") && S.heat >= 4){
-    return death(
-      "YOU DROP IN.\nA GUARD LOOKS UP.\nYOU FREEZE LIKE A PAUSE BUTTON.\nHE DOESN’T.",
-      "BADGE OR LOW HEAT. THAT’S THE PRICE OF THIS MOVE."
-    );
+    return death("YOU DROP IN.\nA GUARD LOOKS UP.\nYOU FREEZE LIKE A PAUSE BUTTON.\nHE DOESN’T.", "BADGE OR LOW HEAT. THAT’S THE TICKET.");
   }
   S.flags.camerasOff = true;
   S.keys = clamp(S.keys + 1, 0, 3);
   addHeat(1);
-
   say(
 `YOU DROP INTO SECURITY.
 NOBODY LOOKS UP.
 THEY’RE ARGUING ABOUT A SHOW.
-SOMETHING ABOUT SEASON 3 “FALLING OFF.” (RELATABLE.)
 
 YOU REACH THE PANEL:
 “CAMERAS” → OFFLINE.
@@ -1520,31 +1099,16 @@ YOU ALSO FIND A KEYRING. ONE KEY.
 function remoteUnlock(){
   // requires doorCode known OR tape clue
   if(S.flags.doorCode || has("tape")){
-    return win(
-`YOU TYPE THE CODE FROM MEMORY.
-BEEP. GREEN.
-
-THE STAFF DOOR CLICKS OPEN DOWN THE HALL.
-YOU WALK OUT LIKE A GHOST THAT PAYS RENT.
-
-OUTSIDE, AIR FEELS ILLEGAL.
-YOUR BRAIN IS STILL LOUD.
-BUT IT’S YOURS.`
-    );
+    return win("YOU PUNCH IN THE CODE FROM MEMORY.\nTHE STAFF DOOR CLICKS OPEN DOWN THE HALL.\nYOU WALK OUT LIKE A GHOST.\n\nOUTSIDE, AIR FEELS ILLEGAL.\nYOUR BRAIN IS STILL LOUD.\nBUT IT’S YOURS.");
   }
   addHeat(2);
-  return death(
-    "YOU HIT RANDOM KEYS.\nTHE SCREEN FLASHES RED.\nTHE GUARDS STOP TALKING.\nALL EYES TURN AT ONCE.",
-    "YOU NEEDED A REAL CODE. A REAL DATE. NOT VIBES."
-  );
+  return death("YOU HIT RANDOM KEYS.\nTHE SCREEN FLASHES RED.\nTHE GUARDS STOP TALKING.\nALL EYES TURN AT ONCE.", "YOU NEEDED A REAL CODE. A REAL DATE.");
 }
 
 function hideDesk(){
+  // deterministic based on stability
   if(S.stability <= 2){
-    return death(
-      "YOU HOLD YOUR BREATH TOO LONG.\nYOU COUGH.\nTHE SOUND BETRAYS YOU.",
-      "STABILITY LOW = BODY SNITCHES."
-    );
+    return death("YOU HOLD YOUR BREATH TOO LONG.\nYOU COUGH.\nTHE SOUND BETRAYS YOU.");
   }
   addHeat(-1);
   addStability(1);
@@ -1554,8 +1118,6 @@ THEY PASS.
 THE ROOM SMELLS LIKE COFFEE AND CONTROL.
 
 YOU SLIP OUT THE WAY YOU CAME.
-LIKE YOU WERE NEVER HERE.
-LIKE A THOUGHT YOU CAN’T PROVE.
 
 <span class="cursor">▮</span>`,
   [{label:"BACK TO HALLWAY", kind:"safe", action:hallway}]
@@ -1563,13 +1125,12 @@ LIKE A THOUGHT YOU CAN’T PROVE.
 }
 
 function laundryChute(){
-  // Win path: requires shard OR key
+  // Win path #2 (laundry exit) requires shard OR key
   if(!has("shard") && S.keys < 1){
     addHeat(1);
     return say(
 `THE LAUNDRY CHUTE DOOR IS PADLOCKED.
 YOU CAN’T “WILL” A PADLOCK OPEN.
-(UNFORTUNATE.)
 
 YOU NEED:
 • A KEY  OR  • A SHARP THING
@@ -1582,44 +1143,26 @@ YOU NEED:
   }
 
   if(has("shard")){
+    // sharp thing = risky but deterministic
     addStability(-2);
     if(S.stability <= 0){
-      return death(
-        "YOU SAW THROUGH METAL WITH GLASS.\nIT FIGHTS BACK.\nYOU BLEED OUT QUIETLY.",
-        "SHARP THINGS ARE HONEST. TOO HONEST."
-      );
+      return death("YOU SAW THROUGH METAL WITH GLASS.\nIT FIGHTS BACK.\nYOU BLEED OUT QUIETLY.", "SHARP THINGS ARE HONEST.");
     }
   } else {
+    // key path is safer
     addStability(1);
   }
 
-  return win(
-`YOU OPEN THE CHUTE.
-YOU DROP.
-THE WORLD BECOMES A RUSH OF FABRIC AND STATIC.
-
-YOU LAND IN A LAUNDRY ROOM.
-A BACK EXIT.
-NO CAMERA.
-NO QUESTIONS.
-
-YOU STEP OUT.
-THE SUN DOESN’T ASK FOR A WRISTBAND.`
-  );
+  return win("YOU OPEN THE CHUTE.\nYOU DROP.\nTHE WORLD BECOMES A RUSH OF FABRIC AND STATIC.\n\nYOU LAND IN A LAUNDRY ROOM.\nA BACK EXIT.\nNO CAMERA.\n\nYOU STEP OUT.\nTHE SUN DOESN’T ASK QUESTIONS.");
 }
 
 /* =========================
    STAFF DOOR (front door puzzle)
 ========================= */
 function staffDoor(){
-  S.scene = "staffDoor";
-
   // if cameras are off, heat matters less
   if(!S.flags.camerasOff && S.heat >= 6){
-    return death(
-      "YOU REACH THE STAFF DOOR.\nTHE CAMERA ABOVE IT TRACKS YOU.\nA VOICE ON SPEAKER: “STEP BACK.”\nYOU DON’T GET TO NEGOTIATE.",
-      "HEAT TOO HIGH. CAMERA STILL WATCHING. BAD COMBO."
-    );
+    return death("YOU REACH THE STAFF DOOR.\nTHE CAMERA ABOVE IT TRACKS YOU.\nA VOICE ON SPEAKER: “STEP BACK.”\nYOU DON’T GET TO NEGOTIATE.");
   }
 
   const knowsCode = S.flags.doorCode || has("tape");
@@ -1627,58 +1170,39 @@ function staffDoor(){
     ? "YOU FEEL A CODE IN YOUR SKULL.\nA DATE. A TIME.\n"
     : "THE KEYPAD WAITS.\nYOU DO NOT KNOW THE CODE.\n";
 
-  const camLine = S.flags.camerasOff
-    ? "THE CAMERA LIGHT IS OFF.\n(YES, THAT’S AS NICE AS THIS PLACE GETS.)\n"
-    : "THE CAMERA LIGHT IS ON.\nIT BLINKS SLOW. LIKE IT’S BORED.\n";
-
   say(
-`${camLine}${codeLine}
+`${codeLine}
 THE DOOR SAYS: STAFF ONLY.
 
 YOU CAN:
-• ENTER CODE
-• SWIPE BADGE
-• USE KEY
-• WALK AWAY AND PRETEND YOU DIDN’T TRY TO ESCAPE A FACILITY
+• TRY KEYPAD
+• TRY BADGE
+• TRY KEY
+• WALK AWAY LIKE THIS NEVER HAPPENED
 
 <span class="cursor">▮</span>`,
   [
     {label:"ENTER CODE", kind:"safe", action:enterCode},
     {label:"SWIPE BADGE", action:swipeBadge},
     {label:"USE KEY", action:useKey},
-    {label:"BACK", action:()=>{ bumpLoop("BACKED OUT OF STAFF DOOR"); hallway(); }}
+    {label:"BACK", action:hallway}
   ]);
 }
 
 function enterCode(){
   if(!(S.flags.doorCode || has("tape"))){
     addHeat(2);
-    return death(
-      "YOU GUESS.\nTHE KEYPAD BEEPS WRONG.\nLOUD.\nA RED LIGHT THINKS ABOUT YOU.",
-      "GUESSING IS JUST CONFESSING WITH EXTRA STEPS."
-    );
+    return death("YOU GUESS.\nTHE KEYPAD BEEPS WRONG.\nLOUD.\nA RED LIGHT THINKS ABOUT YOU.", "GUESSING IS JUST CONFESSING WITH EXTRA STEPS.");
   }
-  return win(
-`YOU TYPE THE CODE.
-BEEP.
-GREEN.
-
-THE DOOR OPENS LIKE IT WAS TIRED OF HOLDING YOU.
-
-OUTSIDE: WIND.
-NO CLIPBOARDS.
-NO STRAPS.
-
-YOUR MIND IS STILL A LITTLE BROKEN.
-BUT IT’S OUT HERE WITH YOU.`
-  );
+  // code known = win path #3
+  return win("YOU TYPE THE CODE.\nBEEP.\nGREEN.\nTHE DOOR OPENS LIKE IT WAS TIRED OF HOLDING YOU.\n\nOUTSIDE: WIND.\nNO CLIPBOARDS.\nNO STRAPS.\n\nYOUR MIND IS STILL BROKEN.\nBUT IT’S OUT HERE WITH YOU.");
 }
 
 function swipeBadge(){
   if(!has("badge")){
     addHeat(2);
     return say(
-`YOU SWIPE… AIR.
+`YOU SWIPE NOTHING.
 THE DOOR DOESN’T CARE.
 
 <span class="cursor">▮</span>`,
@@ -1687,25 +1211,12 @@ THE DOOR DOESN’T CARE.
       {label:"GO FIND A BADGE", action:hallway}
     ]);
   }
-
   // badge alone is not enough unless nurseTrust or camerasOff
   if(S.flags.nurseTrust || S.flags.camerasOff){
-    return win(
-`YOU SWIPE THE BADGE.
-IT ACCEPTS YOU.
-
-THE DOOR OPENS.
-YOU WALK OUT LIKE YOU’VE ALWAYS BEEN STAFF.
-
-YOU’RE FREE.
-WHICH IS A DIFFERENT KIND OF SCARY.`
-    );
+    return win("YOU SWIPE THE BADGE.\nIT ACCEPTS YOU.\n\nTHE DOOR OPENS.\nYOU WALK OUT LIKE YOU’VE ALWAYS BEEN STAFF.\n\nYOU’RE FREE.\nWHICH IS A DIFFERENT KIND OF SCARY.");
   }
   addHeat(2);
-  return death(
-    "THE BADGE BEEPS.\nYELLOW.\n“VERIFY.”\nA CAMERA BLINKS.\nSOMEONE SAYS YOUR NAME LIKE A WARNING.",
-    "BADGE NEEDS TRUST. OR DARK CAMERAS. YOU HAVE NEITHER."
-  );
+  return death("THE BADGE BEEPS.\nYELLOW.\n“VERIFY.”\nA CAMERA BLINKS.\nSOMEONE SAYS YOUR NAME LIKE A WARNING.");
 }
 
 function useKey(){
@@ -1719,45 +1230,38 @@ function useKey(){
       {label:"TRY VENT (SECURITY)", action:vent}
     ]);
   }
+  // keys work if heat not too high
   if(S.heat >= 6 && !S.flags.camerasOff){
-    return death(
-      "YOU INSERT THE KEY.\nIT TURNS.\nTHE LOCK CLICKS.\nAND SO DOES A RADIO.\nTHEY WERE WAITING.",
-      "KEYS OPEN DOORS. THEY ALSO OPEN ATTENTION."
-    );
+    return death("YOU INSERT THE KEY.\nIT TURNS.\nTHE LOCK CLICKS.\nAND SO DOES A RADIO.\nTHEY WERE WAITING.", "KEYS OPEN DOORS. THEY ALSO OPEN ATTENTION.");
   }
-  return win(
-`YOU TURN THE KEY.
-THE DOOR OPENS.
-
-OUTSIDE: AIR THAT DOESN’T SMELL LIKE BLEACH.
-YOU DON’T RUN.
-YOU WALK.
-
-THAT’S THE FLEX.`
-  );
+  return win("YOU TURN THE KEY.\nTHE DOOR OPENS.\n\nOUTSIDE: AIR THAT DOESN’T SMELL LIKE BLEACH.\nYOU DON’T RUN.\nYOU WALK.\n\nTHAT’S THE FLEX.");
 }
 
 /* =========================
-   Tiny convenience: keys 1-4 choose option
+   If user sits in one place too long, loop pressure
 ========================= */
+(function loopPressure(){
+  // a tiny ambient mechanic: if they keep backing out, loop count rises
+  const oldSay = say;
+  window.say = function(text, opts){
+    // detect “back” loops subtly
+    if(typeof text === "string" && (text.includes("BACK") || text.includes("HALLWAY"))){
+      // no-op
+    }
+    return oldSay(text, opts);
+  };
+})();
+
+/* tiny input convenience: keys 1-4 choose option */
 document.addEventListener("keydown",(e)=>{
-  // help toggle
-  if(e.key.toLowerCase() === "h"){
-    e.preventDefault();
-    helpMask.classList.contains("open") ? closeHelpNow() : openHelp();
-    return;
-  }
   const n = parseInt(e.key,10);
   if(!n) return;
   const btns = Array.from(elChoices.querySelectorAll("button"));
   if(btns[n-1]) btns[n-1].click();
 });
 
-/* =========================
-   Start HUD
-========================= */
+/* begin */
 updateHUD();
-save();
 </script>
 </body>
 </html>
