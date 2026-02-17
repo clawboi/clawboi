@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Grocery Store</title>
+<style>
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff; --aqua:#00ffd5;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%; display:grid; place-items:center;}
+  canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+  .hud{position:fixed; left:12px; right:12px; top:12px; z-index:7; display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;}
+  .pill{pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.35); backdrop-filter: blur(8px);
+    border-radius:999px; padding:10px 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase; display:flex; gap:10px; align-items:center; white-space:nowrap;}
+  .toast{position:fixed; left:50%; bottom:16px; transform:translateX(-50%); border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+    border-radius:14px; padding:10px 12px; font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s; max-width:min(860px, calc(100vw - 24px)); text-align:center; z-index:8;}
+  .toast.on{opacity:1}
+  .microhint{position:fixed; right:12px; bottom:12px; z-index:6; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.35);
+    backdrop-filter: blur(8px); border-radius:14px; padding:8px 10px; font-size:10px; letter-spacing:.12em; opacity:.88; pointer-events:none;}
+</style>
+</head>
+<body>
+<div class="hud">
+  <div class="pill"><b>GROCERY STORE</b> <span>INTERIOR</span></div>
+  <div class="pill">CART: <span id="cart">FREE</span></div>
+  <div class="pill">DURABILITY: <span id="dur">100</span>%</div>
+  <div class="pill">SCORE: <span id="score">0</span></div>
+  <div class="pill">E: GRAB/DROP CART · ESC: EXIT</div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="microhint">Boost (Shift) in cart. Smash piles/NPCs for score. Cart can break.</div>
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d',{alpha:false});
+ctx.imageSmoothingEnabled=false;
+
+const UI={
+  toast:document.getElementById('toast'),
+  cart:document.getElementById('cart'),
+  dur:document.getElementById('dur'),
+  score:document.getElementById('score')
+};
+
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+function loadState(){
+  const r=localStorage.getItem(STORE_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return { sophia:{x:160,y:120}, milo:{x:148,y:132} };
+}
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+let state=loadState();
+saveState();
+
+function toast(msg,ms=1500){
+  UI.toast.textContent=msg;
+  UI.toast.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>UI.toast.classList.remove('on'),ms);
+}
+function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
+
+/* input */
+const keysDown=new Set();
+addEventListener('keydown',(e)=>{
+  const k=e.key.toLowerCase();
+  if(["arrowup","arrowdown","arrowleft","arrowright"," ","shift","w","a","s","d","e","escape"].includes(k)) e.preventDefault();
+  keysDown.add(k);
+});
+addEventListener('keyup',(e)=>keysDown.delete(e.key.toLowerCase()));
+
+/* world */
+const W=canvas.width,H=canvas.height;
+
+const sophia={x:160,y:130,w:10,h:12};
+const cart={x:160,y:130,w:16,h:10, vx:0, vy:0, held:false, dur:100};
+let score=0;
+
+const piles=[];
+const npcs=[];
+
+function resetObstacles(){
+  piles.length=0; npcs.length=0;
+  for(let i=0;i<9;i++){
+    piles.push({x:40 + ((Math.random()*240)|0), y:40 + ((Math.random()*110)|0), w:14,h:10, alive:true});
+  }
+  for(let i=0;i<6;i++){
+    npcs.push({x:60 + ((Math.random()*220)|0), y:50 + ((Math.random()*100)|0), w:8,h:10, alive:true, wob:Math.random()*99});
+  }
+}
+resetObstacles();
+
+function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
+  return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
+}
+
+function toggleCart(){
+  if(cart.dur<=0) return toast("Cart is broken.", 1200);
+
+  // must be near cart to grab
+  const near = ((sophia.x-cart.x)**2 + (sophia.y-cart.y)**2) < 18*18;
+  if(!cart.held && !near) return toast("Get closer to the cart.", 1200);
+
+  cart.held = !cart.held;
+  UI.cart.textContent = cart.held ? "HELD" : "FREE";
+  toast(cart.held ? "She grips the cart. Turbo chaos." : "She lets go of the cart.", 1200);
+}
+
+function hitSomething(power){
+  cart.dur = clamp(cart.dur - (power*6), 0, 100);
+  UI.dur.textContent = String(cart.dur|0);
+
+  if(cart.dur<=0){
+    cart.held=false;
+    UI.cart.textContent="BROKEN";
+    toast("The cart breaks. A wheel skitters away.", 1700);
+  }
+}
+
+function updateCartPhysics(){
+  // when held, cart follows input and drags Sophia along
+  if(cart.held){
+    const run = keysDown.has("shift");
+    const accel = run ? 0.18 : 0.12;
+    const drag = 0.92;
+
+    let ax=0, ay=0;
+    if(keysDown.has("w")||keysDown.has("arrowup")) ay-=accel;
+    if(keysDown.has("s")||keysDown.has("arrowdown")) ay+=accel;
+    if(keysDown.has("a")||keysDown.has("arrowleft")) ax-=accel;
+    if(keysDown.has("d")||keysDown.has("arrowright")) ax+=accel;
+    if(ax&&ay){ax*=0.72; ay*=0.72;}
+
+    cart.vx = (cart.vx + ax) * drag;
+    cart.vy = (cart.vy + ay) * drag;
+
+    // boost sparks
+    if(run && (Math.abs(cart.vx)+Math.abs(cart.vy))>0.35){
+      // small durability tax
+      cart.dur = clamp(cart.dur - 0.05, 0, 100);
+      UI.dur.textContent = String(cart.dur|0);
+    }
+
+    cart.x = clamp(cart.x + cart.vx, 12, W-12);
+    cart.y = clamp(cart.y + cart.vy, 22, H-14);
+
+    // Sophia “attached”
+    sophia.x += (cart.x - sophia.x)*0.20;
+    sophia.y += (cart.y - sophia.y)*0.20;
+
+    // collisions
+    const cr={x:cart.x-cart.w/2,y:cart.y-cart.h/2,w:cart.w,h:cart.h};
+
+    for(const p of piles){
+      if(!p.alive) continue;
+      if(rectsOverlap(cr.x,cr.y,cr.w,cr.h, p.x-p.w/2,p.y-p.h/2,p.w,p.h)){
+        p.alive=false;
+        score += 12;
+        UI.score.textContent=String(score);
+        toast("Groceries explode everywhere.", 900);
+        hitSomething(Math.min(1.5, Math.abs(cart.vx)+Math.abs(cart.vy)));
+      }
+    }
+    for(const n of npcs){
+      if(!n.alive) continue;
+      if(rectsOverlap(cr.x,cr.y,cr.w,cr.h, n.x-n.w/2,n.y-n.h/2,n.w,n.h)){
+        n.alive=false;
+        score += 25;
+        UI.score.textContent=String(score);
+        toast("Someone yelps and dives behind cereal.", 900);
+        hitSomething(Math.min(2.0, 0.8 + Math.abs(cart.vx)+Math.abs(cart.vy)));
+      }
+    }
+
+  } else {
+    // on foot
+    const sp=0.9*(keysDown.has("shift")?1.35:1);
+    let dx=0,dy=0;
+    if(keysDown.has("w")||keysDown.has("arrowup")) dy-=sp;
+    if(keysDown.has("s")||keysDown.has("arrowdown")) dy+=sp;
+    if(keysDown.has("a")||keysDown.has("arrowleft")) dx-=sp;
+    if(keysDown.has("d")||keysDown.has("arrowright")) dx+=sp;
+    if(dx&&dy){dx*=0.72; dy*=0.72;}
+    sophia.x=clamp(sophia.x+dx, 12, W-12);
+    sophia.y=clamp(sophia.y+dy, 22, H-14);
+
+    // cart drifts to stop
+    cart.vx*=0.88; cart.vy*=0.88;
+    cart.x=clamp(cart.x+cart.vx, 12, W-12);
+    cart.y=clamp(cart.y+cart.vy, 22, H-14);
+  }
+}
+
+function drawBevel(x,y,w,h,fill){
+  ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(x,y,w,1);
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(x,y+h-1,w,1);
+  ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(x,y,1,h);
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(x+w-1,y,1,h);
+}
+function drawSophia(x,y){
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(x-1,y+11,12,2);
+  ctx.fillStyle="#f2d27a"; ctx.fillRect(x+1,y+0,8,4); ctx.fillRect(x+0,y+3,10,3);
+  ctx.fillStyle="#ffd9c9"; ctx.fillRect(x+2,y+5,6,4);
+  ctx.fillStyle="#67b7ff"; ctx.fillRect(x+3,y+6,1,1); ctx.fillRect(x+6,y+6,1,1);
+  ctx.fillStyle="rgba(138,46,255,.55)"; ctx.fillRect(x+2,y+9,6,3);
+  ctx.fillStyle="rgba(255,255,255,.14)"; ctx.fillRect(x+3,y+10,4,1);
+}
+function drawCart(){
+  const x=Math.round(cart.x), y=Math.round(cart.y);
+  ctx.fillStyle="rgba(0,0,0,.40)"; ctx.fillRect(x-10,y+6,20,3);
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(x-8,y-4,16,10);
+  ctx.fillStyle="rgba(0,255,213,.10)"; ctx.fillRect(x-6,y-2,12,2);
+  // wheels
+  ctx.fillStyle="rgba(255,255,255,.06)";
+  ctx.fillRect(x-9,y+5,3,3); ctx.fillRect(x+6,y+5,3,3);
+
+  if(cart.held){
+    ctx.fillStyle="rgba(0,255,213,.08)";
+    ctx.fillRect(x-14,y-12,28,10);
+    ctx.font="8px ui-monospace, monospace";
+    ctx.fillStyle="rgba(255,255,255,.75)";
+    ctx.fillText("BOOST CART", x-12, y-5);
+  }
+}
+
+function drawWorld(t){
+  ctx.fillStyle="#05050a"; ctx.fillRect(0,0,W,H);
+
+  // store lighting
+  const g=ctx.createRadialGradient(160,40,10,160,40,180);
+  g.addColorStop(0,"rgba(255,255,255,.10)");
+  g.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  // aisles
+  for(let i=0;i<6;i++){
+    drawBevel(28+i*48, 24, 18, 132, "rgba(255,255,255,.05)");
+  }
+
+  // piles
+  for(const p of piles){
+    if(!p.alive) continue;
+    drawBevel(p.x-p.w/2, p.y-p.h/2, p.w, p.h, "rgba(138,46,255,.10)");
+    ctx.fillStyle="rgba(0,255,213,.08)";
+    ctx.fillRect(p.x-2, p.y-1, 4, 2);
+  }
+
+  // npcs
+  for(const n of npcs){
+    if(!n.alive) continue;
+    n.wob += 0.06;
+    const bob=Math.sin(n.wob)*1;
+    const x=Math.round(n.x), y=Math.round(n.y+bob);
+    ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(x-3,y+9,6,2);
+    ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(x-2,y+2,4,7);
+    ctx.fillStyle="rgba(255,217,201,.18)"; ctx.fillRect(x-2,y,4,3);
+  }
+
+  // exit door
+  drawBevel(0,70,18,40,"rgba(255,255,255,.06)");
+  ctx.fillStyle="rgba(0,0,0,.55)"; ctx.fillRect(2,74,14,10);
+
+  // prompt
+  ctx.font="8px ui-monospace, monospace";
+  ctx.fillStyle="rgba(255,255,255,.70)";
+  ctx.fillText("E: grab/drop cart · ESC: exit", 22, 168);
+}
+
+/* loop */
+let t=0;
+function loop(){
+  t++;
+
+  if(keysDown.has("e")){
+    if(!loop._e){ loop._e=true; toggleCart(); }
+  } else loop._e=false;
+
+  if(keysDown.has("escape")){
+    if(!loop._esc){ loop._esc=true; saveState(); location.href="street.html"; }
+  } else loop._esc=false;
+
+  updateCartPhysics();
+
+  drawWorld(t);
+  drawCart();
+  drawSophia(Math.round(sophia.x), Math.round(sophia.y));
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
