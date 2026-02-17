@@ -7,7 +7,45 @@
 <style>
   :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff;}
   html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
-  .wrap{height:100%; display:grid; place-items:center; padding:18px;}
+
+  /* UPGRADE: full-page atmosphere (no layout changes) */
+  body{
+    position:relative;
+    overflow:hidden;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:-25%;
+    pointer-events:none;
+    z-index:0;
+    background:
+      radial-gradient(circle at 20% 15%, rgba(138,46,255,.18), transparent 60%),
+      radial-gradient(circle at 80% 30%, rgba(0,255,213,.10), transparent 65%),
+      radial-gradient(circle at 50% 90%, rgba(138,46,255,.12), transparent 70%);
+    mix-blend-mode:screen;
+    filter:blur(22px) saturate(1.25);
+    animation: drift 10s ease-in-out infinite;
+  }
+  body::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:0;
+    background:
+      radial-gradient(1200px 900px at 50% 45%, rgba(0,0,0,0) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.65) 100%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 4px);
+    mix-blend-mode:overlay;
+    opacity:.55;
+  }
+  @keyframes drift{
+    0%,100%{transform:translate3d(0,0,0)}
+    50%{transform:translate3d(1.6%, -1.2%, 0)}
+  }
+
+  .wrap{height:100%; display:grid; place-items:center; padding:18px; position:relative; z-index:1;}
+
   .card{
     width:min(920px, 100%);
     border:1px solid var(--ui2);
@@ -16,6 +54,9 @@
     padding:18px;
     position:relative;
     overflow:hidden;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,.04) inset,
+      0 14px 60px rgba(0,0,0,.55);
   }
   .card:before{
     content:"";
@@ -26,23 +67,61 @@
       radial-gradient(circle at 52% 90%, rgba(255,255,255,.08), transparent 70%);
     filter: blur(34px) saturate(1.2);
     pointer-events:none;
+    animation: cardStorm 7s ease-in-out infinite;
   }
+  @keyframes cardStorm{
+    0%,100%{opacity:.85; transform:translate3d(0,0,0)}
+    50%{opacity:1; transform:translate3d(1.2%, -0.8%, 0)}
+  }
+
+  /* UPGRADE: thin top scanline + edge glow */
+  .card:after{
+    content:"";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background:
+      linear-gradient(90deg, transparent, rgba(138,46,255,.42), transparent) 0 0/100% 1px no-repeat,
+      radial-gradient(600px 220px at 50% 0%, rgba(138,46,255,.14), transparent 70%);
+    opacity:.55;
+  }
+
   .inner{position:relative; z-index:2;}
+
   .h1{
     font-size:clamp(22px,5vw,44px);
     letter-spacing:.28em;
     text-transform:uppercase;
     text-shadow:0 0 18px rgba(138,46,255,.35);
   }
+
+  /* UPGRADE: “best game title” treatment without changing your title text */
+  .h1{
+    position:relative;
+    display:inline-block;
+  }
+  .h1::after{
+    content:"";
+    position:absolute;
+    left:0; right:0;
+    bottom:-10px;
+    height:1px;
+    background:linear-gradient(90deg, transparent, rgba(138,46,255,.65), rgba(0,255,213,.28), rgba(138,46,255,.65), transparent);
+    opacity:.55;
+  }
+
   .sub{
-    margin-top:10px;
+    margin-top:14px;
     font-size:12px;
     letter-spacing:.14em;
-    opacity:.75;
-    line-height:1.6;
+    opacity:.78;
+    line-height:1.7;
     max-width:70ch;
   }
-  .row{display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;}
+
+  /* UPGRADE: micro “tagline chips” feel using existing row spacing */
+  .row{display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;}
+
   .btn{
     appearance:none;
     border:1px solid var(--ui2);
@@ -55,9 +134,12 @@
     letter-spacing:.22em;
     text-transform:uppercase;
     cursor:pointer;
+    transition:transform .12s ease, filter .12s ease, border-color .12s ease;
   }
   .btn.primary{ border-color: rgba(138,46,255,.55); background:rgba(138,46,255,.16); }
-  .btn:hover{filter:brightness(1.06)}
+  .btn:hover{filter:brightness(1.08)}
+  .btn:active{transform:translateY(1px) scale(.99)}
+
   .mono{
     margin-top:14px;
     border:1px solid var(--ui2);
@@ -68,14 +150,35 @@
     font-size:12px;
     letter-spacing:.08em;
     line-height:1.6;
-    opacity:.85;
+    opacity:.88;
     white-space:pre-wrap;
+    box-shadow:0 0 0 1px rgba(255,255,255,.03) inset;
+  }
+
+  /* UPGRADE: subtle corner marks */
+  .card .corner{
+    position:absolute;
+    width:18px;height:18px;
+    border:1px solid rgba(255,255,255,.14);
+    opacity:.55;
+    pointer-events:none;
+  }
+  .card .c1{top:12px;left:12px;border-right:none;border-bottom:none;border-color:rgba(138,46,255,.28)}
+  .card .c2{top:12px;right:12px;border-left:none;border-bottom:none}
+  .card .c3{bottom:12px;left:12px;border-right:none;border-top:none}
+  .card .c4{bottom:12px;right:12px;border-left:none;border-top:none;border-color:rgba(0,255,213,.18)}
+
+  /* UPGRADE: reduce motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce){
+    body::before,.card:before{animation:none}
+    .btn{transition:none}
   }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
+    <i class="corner c1"></i><i class="corner c2"></i><i class="corner c3"></i><i class="corner c4"></i>
     <div class="inner">
       <div class="h1">SOPHIA’S AUDITION</div>
       <div class="sub">
