@@ -56,8 +56,6 @@ body::before{
     filter:blur(14px) saturate(1.4) brightness(.45);
   }
 }
-  
-}
 
 /* NEW: subtle texture + vignette so it feels less empty (no layout changes) */
 body::after{
@@ -82,6 +80,105 @@ body::after{
 }
 
 a{color:#fff;text-decoration:none}
+
+/* =========================
+   NEW: SUBTLE STAR/GALAXY FX
+   (no layout changes)
+   ========================= */
+#spaceFX{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0; /* behind .wrap (z=1) and behind header (z=9) */
+  overflow:hidden;
+}
+
+/* tiny floating stars (soft twinkle) */
+.star{
+  position:absolute;
+  width:2px;
+  height:2px;
+  border-radius:999px;
+  background:rgba(255,255,255,.9);
+  box-shadow:
+    0 0 8px rgba(255,255,255,.22),
+    0 0 18px rgba(138,46,255,.10);
+  opacity:.55;
+  animation:
+    drift var(--dur,18s) linear infinite,
+    twinkle var(--tw,4.5s) ease-in-out infinite;
+  transform:translate3d(0,0,0);
+  will-change: transform, opacity;
+}
+
+.star.s2{ width:1px; height:1px; opacity:.45; filter:blur(.2px); }
+.star.s3{ width:3px; height:3px; opacity:.35; filter:blur(.15px); }
+
+@keyframes twinkle{
+  0%,100%{ opacity: calc(var(--o, .55)); }
+  50%{ opacity: calc(var(--o, .55) * .45); }
+}
+
+@keyframes drift{
+  0%{
+    transform:translate3d(0,0,0);
+  }
+  100%{
+    transform:translate3d(var(--dx, 20px), var(--dy, -30px), 0);
+  }
+}
+
+/* subtle galaxy haze layers (very low opacity) */
+.galaxy{
+  position:absolute;
+  inset:-20%;
+  background:
+    radial-gradient(600px 420px at 30% 40%, rgba(138,46,255,.08), transparent 65%),
+    radial-gradient(520px 360px at 72% 58%, rgba(0,255,213,.05), transparent 70%),
+    radial-gradient(780px 520px at 52% 82%, rgba(138,46,255,.06), transparent 68%);
+  filter: blur(18px) saturate(1.15);
+  opacity:.28;
+  mix-blend-mode:screen;
+  animation: galaxyFloat 22s ease-in-out infinite;
+}
+
+@keyframes galaxyFloat{
+  0%,100%{ transform:translate3d(0,0,0) scale(1); opacity:.26; }
+  50%{ transform:translate3d(-18px, 12px, 0) scale(1.02); opacity:.18; }
+}
+
+/* shooting stars */
+.shoot{
+  position:absolute;
+  width:160px;
+  height:2px;
+  border-radius:999px;
+  background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.85), rgba(138,46,255,.22), rgba(255,255,255,0));
+  opacity:0;
+  filter: blur(.2px);
+  transform:rotate(var(--ang, -20deg)) translate3d(0,0,0);
+  transform-origin:left center;
+  animation: shoot var(--sdur, 3.8s) ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes shoot{
+  0%{ opacity:0; transform:rotate(var(--ang, -20deg)) translate3d(-40px, -40px, 0); }
+  8%{ opacity:.55; }
+  28%{ opacity:.18; }
+  40%{ opacity:0; transform:rotate(var(--ang, -20deg)) translate3d(520px, 240px, 0); }
+  100%{ opacity:0; }
+}
+
+/* keep it extra subtle on small devices */
+@media (max-width:800px){
+  .galaxy{ opacity:.22; }
+  .shoot{ opacity:.0; } /* still runs but invisible, reduces visual noise */
+}
+/* ========================= */
+
+
+
 
 /* NAV */
 header{
@@ -401,6 +498,11 @@ footer{
 </head>
 <body>
 
+<!-- NEW: subtle space layer (behind everything, no interaction) -->
+<div id="spaceFX" aria-hidden="true">
+  <div class="galaxy"></div>
+</div>
+
 <header>
 <a href="listen.html">LISTEN</a>
 <a href="#visuals">VISUALS</a>
@@ -512,6 +614,66 @@ footer{
 
 <script>
 document.getElementById("y").textContent=new Date().getFullYear();
+
+/* NEW: subtle stars + occasional shooting stars (no layout change) */
+(function(){
+  const fx = document.getElementById("spaceFX");
+  if(!fx) return;
+
+  // Create floating stars
+  const STAR_COUNT = 70; // subtle, not crowded
+  for(let i=0;i<STAR_COUNT;i++){
+    const s = document.createElement("div");
+    const r = Math.random();
+    s.className = "star" + (r<0.22 ? " s2" : (r>0.92 ? " s3" : ""));
+    const x = Math.random()*100;
+    const y = Math.random()*100;
+    const dur = 14 + Math.random()*22;
+    const tw  = 3.2 + Math.random()*5.8;
+    const dx  = (-18 + Math.random()*36) + "px";
+    const dy  = (-28 + Math.random()*56) + "px";
+    const o   = (0.28 + Math.random()*0.48).toFixed(2);
+
+    s.style.left = x+"%";
+    s.style.top  = y+"%";
+    s.style.setProperty("--dur", dur+"s");
+    s.style.setProperty("--tw",  tw+"s");
+    s.style.setProperty("--dx", dx);
+    s.style.setProperty("--dy", dy);
+    s.style.setProperty("--o", o);
+
+    // random delay so they don't sync
+    s.style.animationDelay = (-Math.random()*dur)+"s, "+(-Math.random()*tw)+"s";
+    fx.appendChild(s);
+  }
+
+  // Shooting stars (few, staggered)
+  const SHOOTERS = 5;
+  for(let i=0;i<SHOOTERS;i++){
+    const sh = document.createElement("div");
+    sh.className = "shoot";
+    const startX = 10 + Math.random()*80;  // %
+    const startY = 5  + Math.random()*45;  // %
+    const ang = (-10 - Math.random()*25).toFixed(1) + "deg";
+    const sdur = (3.2 + Math.random()*2.2).toFixed(2) + "s";
+
+    sh.style.left = startX+"%";
+    sh.style.top  = startY+"%";
+    sh.style.setProperty("--ang", ang);
+    sh.style.setProperty("--sdur", sdur);
+
+    // long gaps between passes by using big delays
+    const delay = (2 + Math.random()*10 + i*4).toFixed(2) + "s";
+    sh.style.animationDelay = delay;
+    fx.appendChild(sh);
+  }
+
+  // Respect reduced motion
+  const mq = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+  if(mq && mq.matches){
+    fx.style.display = "none";
+  }
+})();
 
 /* spotlight */
 document.addEventListener("pointermove",e=>{
