@@ -5,83 +5,108 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Sophia's Audition 01 — Bedroom</title>
 <style>
-:root{ --bg:#07070b; --fg:#fff; --ui:rgba(255,255,255,.08); --ui2:rgba(255,255,255,.14); --vio:#8a2eff;}
-html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+:root{
+  --bg:#07070b; --fg:#fff;
+  --ui:rgba(255,255,255,.08); --ui2:rgba(255,255,255,.14);
+  --vio:#8a2eff;
+}
+html,body{
+  height:100%; margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+}
 .wrap{height:100%; display:grid; place-items:center;}
-canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none; outline:none;}
+
+/* BIGGER ROOM: larger internal canvas, still responsive on page */
+canvas{
+  width:min(1180px, 100vw);
+  height:auto;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  touch-action:none;
+  outline:none;
+}
 
 body::before{
-content:"";
-position:fixed;
-inset:-20%;
-background:
-radial-gradient(circle at 20% 10%, rgba(138,46,255,.18), transparent 60%),
-radial-gradient(circle at 80% 40%, rgba(0,255,213,.12), transparent 65%);
-filter:blur(40px);
-animation:drift 12s ease-in-out infinite;
-pointer-events:none;
+  content:"";
+  position:fixed;
+  inset:-20%;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255,170,255,.16), transparent 60%),
+    radial-gradient(circle at 82% 44%, rgba(160,255,240,.14), transparent 65%),
+    radial-gradient(circle at 50% 85%, rgba(138,46,255,.10), transparent 60%);
+  filter:blur(42px);
+  animation:drift 12s ease-in-out infinite;
+  pointer-events:none;
 }
 @keyframes drift{
-0%,100%{transform:translate3d(0,0,0)}
-50%{transform:translate3d(1.5%, -1.5%,0)}
+  0%,100%{transform:translate3d(0,0,0)}
+  50%{transform:translate3d(1.5%, -1.5%,0)}
 }
 
 .hud{
-position:fixed; left:12px; right:12px; top:12px; z-index:5;
-display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;
-pointer-events:none;
+  position:fixed; left:12px; right:12px; top:12px; z-index:5;
+  display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;
+  pointer-events:none;
 }
 .pill{
-pointer-events:auto;
-border:1px solid var(--ui2); background:rgba(0,0,0,.35);
-backdrop-filter: blur(8px);
-border-radius:999px; padding:10px 12px;
-font-size:11px; letter-spacing:.18em; text-transform:uppercase;
-display:flex; gap:10px; align-items:center;
+  pointer-events:auto;
+  border:1px solid var(--ui2);
+  background:rgba(0,0,0,.35);
+  backdrop-filter: blur(8px);
+  border-radius:999px; padding:10px 12px;
+  font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+  display:flex; gap:10px; align-items:center;
 }
 .pill b{letter-spacing:.22em}
 .hint{
-pointer-events:auto;
-flex:1 1 260px;
-border:1px solid var(--ui2); background:rgba(0,0,0,.35);
-backdrop-filter: blur(8px);
-border-radius:18px; padding:10px 12px;
-font-size:11px; letter-spacing:.10em; line-height:1.35;
+  pointer-events:auto;
+  flex:1 1 260px;
+  border:1px solid var(--ui2);
+  background:rgba(0,0,0,.35);
+  backdrop-filter: blur(8px);
+  border-radius:18px; padding:10px 12px;
+  font-size:11px; letter-spacing:.10em; line-height:1.35;
 }
-.hint .k{display:inline-block; padding:2px 7px; border-radius:8px; border:1px solid var(--ui2); background:rgba(255,255,255,.06); font-weight:700}
+.hint .k{
+  display:inline-block; padding:2px 7px; border-radius:8px;
+  border:1px solid var(--ui2); background:rgba(255,255,255,.06);
+  font-weight:700
+}
 .toast{
-position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
-border:1px solid var(--ui2); background:rgba(0,0,0,.55);
-border-radius:14px; padding:10px 12px;
-font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
-max-width:min(720px, calc(100vw - 24px)); text-align:center;
+  position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+  border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+  border-radius:14px; padding:10px 12px;
+  font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
+  max-width:min(760px, calc(100vw - 24px)); text-align:center;
 }
 .toast.on{opacity:1}
 
 /* poem modal */
 #poemBox{
-position:fixed;
-inset:0;
-display:none;
-place-items:center;
-background:rgba(0,0,0,.6);
-z-index:9;
+  position:fixed; inset:0;
+  display:none; place-items:center;
+  background:rgba(0,0,0,.6);
+  z-index:9;
 }
 #poemBox textarea{
-width:300px;height:180px;
-background:#0b0b12;
-color:#fff;
-border:1px solid var(--ui2);
-padding:10px;
-font-family:monospace;
+  width:320px; height:190px;
+  background:#0b0b12;
+  color:#fff;
+  border:1px solid var(--ui2);
+  padding:10px;
+  font-family:monospace;
+  border-radius:12px;
 }
 #poemBox button{
-margin-top:6px;
-background:var(--vio);
-border:none;
-color:white;
-padding:6px 14px;
-cursor:pointer;
+  margin-top:8px;
+  background:var(--vio);
+  border:none;
+  color:white;
+  padding:8px 16px;
+  cursor:pointer;
+  border-radius:10px;
 }
 </style>
 </head>
@@ -106,7 +131,8 @@ cursor:pointer;
   </div>
 </div>
 
-<div class="wrap"><canvas id="c" width="320" height="180" tabindex="0"></canvas></div>
+<!-- BIGGER ROOM: increased internal resolution -->
+<div class="wrap"><canvas id="c" width="480" height="270" tabindex="0"></canvas></div>
 
 <script>
 (() => {
@@ -129,13 +155,13 @@ cursor:pointer;
     "poemLines":0,"poems":[],"guitarPlayed":0,
     "outfit":0,
     "lastRoom":"BEDROOM",
-    "sophia":{"x":160,"y":120},
-    "milo":{"x":148,"y":132}
+    "sophia":{"x":240,"y":175},
+    "milo":{"x":216,"y":194}
   }`);
 
   function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
-  const W=320, H=180;
+  const W = canvas.width, H = canvas.height;
 
   // Keep UI consistent
   statusEl.textContent = "BEDROOM";
@@ -144,14 +170,11 @@ cursor:pointer;
 
   /* ---------- controls ---------- */
   const keysDown = new Set();
+  const held = { e:false };
 
-  function keyName(e){
-    // normalize space/shift etc if you expand later
-    return (e.key || "").toLowerCase();
-  }
+  function keyName(e){ return (e.key || "").toLowerCase(); }
 
   window.addEventListener("keydown", (e) => {
-    // prevent page scrolling on arrows/space
     if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(keyName(e))) e.preventDefault();
     keysDown.add(keyName(e));
   }, { passive:false });
@@ -160,29 +183,35 @@ cursor:pointer;
     keysDown.delete(keyName(e));
   });
 
-  // Make sure key events hit even if user clicked elsewhere
   window.addEventListener("pointerdown", () => canvas.focus(), { passive:true });
+
+  /* ---------- room layout helpers (scaled from your original 320x180 map) ---------- */
+  const SX = W/320, SY = H/180;
+  const S = (x)=>Math.round(x*SX);
+  const T = (y)=>Math.round(y*SY);
+  const SW = (w)=>Math.round(w*SX);
+  const SH = (h)=>Math.round(h*SY);
 
   /* ---------- solids ---------- */
   const solids=[
-    [0,0,W,10],[0,0,10,H],[0,H-10,W,10],[W-10,0,10,H],
+    [0,0,W,T(10)],[0,0,S(10),H],[0,H-T(10),W,T(10)],[W-S(10),0,S(10),H],
 
-    // furniture collision blocks
-    [38,48,90,34],    // desk
-    [210,42,78,42],   // bed
-    [52,118,22,30],   // guitar stand
-    [132,86,56,18],   // dresser
-    [90,130,40,20]    // clothes pile
+    // furniture collision blocks (scaled)
+    [S(38),T(48),SW(90),SH(34)],    // desk
+    [S(210),T(42),SW(78),SH(42)],   // bed
+    [S(52),T(118),SW(22),SH(30)],   // guitar stand
+    [S(132),T(86),SW(56),SH(18)],   // dresser
+    [S(90),T(130),SW(40),SH(20)]    // clothes pile
   ];
 
   /* ---------- zones ---------- */
   const zones=[
-    {name:"DESK", rect:[44,52,78,26], action:()=>{ location.href="poetry.html"; }},
-    {name:"BED", rect:[216,46,66,34], action:()=>{ state.slept=true; save(); toast("She sleeps. Audition gone."); }},
-    {name:"GUITAR", rect:[48,122,32,26], action:()=>{ location.href="guitar.html"; }},
-    {name:"CLOTHES", rect:[90,130,40,20], action:changeOutfit},
-    {name:"DOOR_LIVING", rect:[W-24,78,14,28], action:()=>go("Sophie03.html")},
-    {name:"DOOR_YARD", rect:[154,H-20,34,10], action:()=>go("Sophie02.html")}
+    {name:"DESK", rect:[S(44),T(52),SW(78),SH(26)], action:()=>{ location.href="poetry.html"; }},
+    {name:"BED", rect:[S(216),T(46),SW(66),SH(34)], action:()=>{ state.slept=true; save(); toast("She sleeps. Audition gone."); }},
+    {name:"GUITAR", rect:[S(48),T(122),SW(32),SH(26)], action:()=>{ location.href="guitar.html"; }},
+    {name:"CLOTHES", rect:[S(90),T(130),SW(40),SH(20)], action:changeOutfit},
+    {name:"DOOR_LIVING", rect:[W-S(24),T(78),S(14),SH(28)], action:()=>go("Sophie03.html")},
+    {name:"DOOR_YARD", rect:[S(154),H-T(20),SW(34),T(10)], action:()=>go("Sophie02.html")}
   ];
 
   function changeOutfit(){
@@ -203,11 +232,10 @@ cursor:pointer;
     toast("Poetry saved.");
   }
   poemSaveBtn.addEventListener("click", savePoem);
-  // keep your inline compatibility too
   window.savePoem = savePoem;
 
-  /* ---------- entities ---------- */
-  const sophia={ x: state.sophia.x, y: state.sophia.y, w:10, h:12 };
+  /* ---------- entities (BIGGER / CUTER) ---------- */
+  const sophia={ x: state.sophia.x, y: state.sophia.y, w:S(14), h:T(18) };
   const milo={ x: state.milo.x, y: state.milo.y };
 
   function col(x,y,w,h){
@@ -224,12 +252,14 @@ cursor:pointer;
 
   /* ---------- interact ---------- */
   function nearest(){
-    let best=null, bd=9999;
+    let best=null, bd=999999;
+    const px = sophia.x + sophia.w/2;
+    const py = sophia.y + sophia.h/2;
     for(const z of zones){
       const cx = z.rect[0] + z.rect[2]/2;
       const cy = z.rect[1] + z.rect[3]/2;
-      const d = (cx - (sophia.x+5))**2 + (cy - (sophia.y+6))**2;
-      if(d < bd && d < 1400){ bd=d; best=z; }
+      const d = (cx - px)**2 + (cy - py)**2;
+      if(d < bd && d < (S(44)*S(44))){ bd=d; best=z; }
     }
     return best;
   }
@@ -240,7 +270,6 @@ cursor:pointer;
     else toast("Nothing to interact with.");
   }
 
-  // Click/tap to interact too (less finicky)
   canvas.addEventListener("pointerdown", (e) => {
     e.preventDefault();
     canvas.focus();
@@ -256,115 +285,195 @@ cursor:pointer;
 
   /* ---------- milo ---------- */
   function updateMilo(){
-    const tx=sophia.x-12, ty=sophia.y+6;
-    milo.x += (tx-milo.x)*.05;
-    milo.y += (ty-milo.y)*.05;
-    if(Math.random()<.002) toast("Milo: meow (he wants outside)");
+    const tx=sophia.x - S(18), ty=sophia.y + T(10);
+    milo.x += (tx-milo.x)*.055;
+    milo.y += (ty-milo.y)*.055;
+    if(Math.random()<.0018) toast("Milo: meow ♡");
   }
 
-  /* ---------- render ---------- */
+  /* ---------- render (CUTER ROOM) ---------- */
+  function rrect(x,y,w,h,r,fill,stroke){
+    r=Math.max(0,Math.min(r,Math.min(w,h)/2));
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+    if(fill){ ctx.fillStyle=fill; ctx.fill(); }
+    if(stroke){ ctx.strokeStyle=stroke; ctx.stroke(); }
+  }
+
+  function sparkle(x,y,a){
+    ctx.fillStyle=`rgba(255,255,255,${a})`;
+    ctx.fillRect(x,y,1,1);
+    ctx.fillRect(x+1,y+1,1,1);
+    ctx.fillRect(x-1,y+1,1,1);
+    ctx.fillRect(x,y+2,1,1);
+  }
+
   function drawFurniture(){
-    // furniture blocks more visible (still minimal)
-    rect(38,48,90,34, "rgba(255,255,255,.10)");   // desk
-    rect(210,42,78,42,"rgba(255,255,255,.09)");   // bed
-    rect(52,118,22,30,"rgba(255,255,255,.09)");   // guitar stand
-    rect(132,86,56,18,"rgba(255,255,255,.08)");   // dresser
-    rect(90,130,40,20,"rgba(255,255,255,.10)");   // clothes
-    // door hints
-    rect(W-24,78,14,28,"rgba(0,255,213,.10)");
-    rect(154,H-20,34,10,"rgba(0,255,213,.10)");
-  }
+    // cute pastel furniture (rounded)
+    rrect(S(36),T(46),SW(94),SH(38), S(6), "rgba(255,255,255,.07)", "rgba(255,255,255,.16)"); // desk
+    rrect(S(208),T(40),SW(82),SH(46), S(7), "rgba(255,255,255,.06)", "rgba(255,255,255,.14)"); // bed
+    rrect(S(50),T(116),SW(26),SH(34), S(6), "rgba(255,255,255,.06)", "rgba(255,255,255,.14)"); // guitar
+    rrect(S(130),T(84),SW(60),SH(22), S(6), "rgba(255,255,255,.05)", "rgba(255,255,255,.13)"); // dresser
+    rrect(S(88),T(128),SW(44),SH(24), S(6), "rgba(255,255,255,.06)", "rgba(255,255,255,.14)"); // clothes
 
-  function rect(x,y,w,h,fill){
-    ctx.fillStyle = fill || "rgba(255,255,255,.08)";
-    ctx.fillRect(x,y,w,h);
+    // cute door glow markers
+    rrect(W-S(26),T(76),S(18),SH(32), S(6), "rgba(0,255,213,.08)", "rgba(0,255,213,.16)");
+    rrect(S(152),H-T(22),SW(38),T(12), S(6), "rgba(0,255,213,.08)", "rgba(0,255,213,.16)");
+
+    // tiny stickers on wall
+    rrect(S(26),T(20),SW(18),SH(14), S(5), "rgba(255,170,255,.10)", "rgba(255,170,255,.18)");
+    rrect(S(52),T(22),SW(12),SH(10), S(4), "rgba(160,255,240,.10)", "rgba(160,255,240,.18)");
   }
 
   function bg(){
+    // base
     ctx.fillStyle="#05050a";
     ctx.fillRect(0,0,W,H);
 
-    // ambient room glow
-    let g=ctx.createRadialGradient(80,60,10,80,60,160);
-    g.addColorStop(0,"rgba(138,46,255,.20)");
-    g.addColorStop(.6,"rgba(138,46,255,.06)");
-    g.addColorStop(1,"transparent");
+    // soft gradient room wash
+    let g=ctx.createRadialGradient(S(90),T(70),S(20),S(90),T(70),S(210));
+    g.addColorStop(0,"rgba(255,170,255,.18)");
+    g.addColorStop(.55,"rgba(138,46,255,.08)");
+    g.addColorStop(1,"rgba(0,0,0,0)");
     ctx.fillStyle=g;
     ctx.fillRect(0,0,W,H);
 
-    // subtle cinematic lighting pass
-    let light = ctx.createRadialGradient(
-      sophia.x+5, sophia.y+5, 8,
-      sophia.x+5, sophia.y+5, 90
-    );
-    light.addColorStop(0,"rgba(255,255,255,.07)");
-    light.addColorStop(.4,"rgba(255,255,255,.03)");
-    light.addColorStop(1,"transparent");
-    ctx.fillStyle=light;
+    let g2=ctx.createRadialGradient(S(260),T(110),S(10),S(260),T(110),S(230));
+    g2.addColorStop(0,"rgba(160,255,240,.14)");
+    g2.addColorStop(.6,"rgba(0,255,213,.06)");
+    g2.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=g2;
     ctx.fillRect(0,0,W,H);
 
-    // top wall panel
-    ctx.fillStyle="rgba(255,255,255,.05)";
-    ctx.fillRect(10,10,W-20,80);
+    // wall panel
+    rrect(S(12),T(12),W-S(24),T(110), S(10), "rgba(255,255,255,.04)", "rgba(255,255,255,.10)");
 
-    // floor scanlines
-    for(let y=92;y<H-10;y++){
-      ctx.fillStyle=`rgba(255,255,255,${y%6===0?.10:.045})`;
-      ctx.fillRect(10,y,W-20,1);
+    // floor (cute stripes instead of harsh scanlines)
+    for(let y=T(112); y<H-T(10); y+=2){
+      const a = (y%8===0) ? .07 : .035;
+      ctx.fillStyle=`rgba(255,255,255,${a})`;
+      ctx.fillRect(S(10),y,W-S(20),1);
     }
 
-    // vignette edges
+    // sparkles
+    for(let i=0;i<26;i++){
+      const x = (i*37 + 19) % (W-S(20)) + S(10);
+      const y = (i*23 + 41) % (H-T(34)) + T(16);
+      sparkle(x,y,.12);
+    }
+
+    // vignette
     ctx.fillStyle="rgba(0,0,0,.18)";
-    ctx.fillRect(0,0,W,8);
-    ctx.fillRect(0,H-8,W,8);
-    ctx.fillRect(0,0,8,H);
-    ctx.fillRect(W-8,0,8,H);
+    ctx.fillRect(0,0,W,T(10));
+    ctx.fillRect(0,H-T(10),W,T(10));
+    ctx.fillRect(0,0,S(10),H);
+    ctx.fillRect(W-S(10),0,S(10),H);
 
     drawFurniture();
   }
 
+  /* ---------- CUTER ANIME-STYLE CHIBI SPRITES (still pixel) ---------- */
   function drawSophia(){
-    const x=sophia.x, y=sophia.y;
+    const x=Math.round(sophia.x), y=Math.round(sophia.y);
 
-    ctx.fillStyle="#f2d27a"; // hair
-    ctx.fillRect(x+1,y,8,4);
-    ctx.fillRect(x,y+3,10,3);
+    const outfits=[
+      {dress:"#b98bff", bow:"#ffd1ff"},
+      {dress:"#8fffe9", bow:"#d7f7ff"},
+      {dress:"#ff85b2", bow:"#ffe0ea"},
+      {dress:"#ffe07a", bow:"#fff0bf"}
+    ];
+    const o = outfits[state.outfit];
 
-    ctx.fillStyle="#ffd9c9"; // face
-    ctx.fillRect(x+2,y+5,6,4);
+    // shadow
+    ctx.fillStyle="rgba(0,0,0,.28)";
+    ctx.fillRect(x+S(4), y+T(16), S(8), T(2));
 
-    ctx.fillStyle="#67b7ff"; // eyes
-    ctx.fillRect(x+3,y+6,1,1);
-    ctx.fillRect(x+6,y+6,1,1);
+    // hair (bigger, softer)
+    ctx.fillStyle="#f2d27a";
+    ctx.fillRect(x+S(3), y+T(0), S(8), T(5));
+    ctx.fillRect(x+S(2), y+T(2), S(10), T(5));
+    // bangs
+    ctx.fillRect(x+S(3), y+T(5), S(2), T(2));
+    ctx.fillRect(x+S(8), y+T(5), S(2), T(2));
 
-    const outfits=["#a64dff","#4dffcf","#ff4d88","#ffd24d"];
-    ctx.fillStyle=outfits[state.outfit];
-    ctx.fillRect(x+2,y+9,6,3);
+    // face (bigger)
+    ctx.fillStyle="#ffd9c9";
+    ctx.fillRect(x+S(3), y+T(6), S(8), T(7));
+
+    // eyes (anime big)
+    ctx.fillStyle="#1a0f2a";
+    ctx.fillRect(x+S(4), y+T(8), S(2), T(2));
+    ctx.fillRect(x+S(8), y+T(8), S(2), T(2));
+    ctx.fillStyle="#67b7ff";
+    ctx.fillRect(x+S(4), y+T(9), S(1), T(1));
+    ctx.fillRect(x+S(8), y+T(9), S(1), T(1));
+
+    // blush
+    ctx.fillStyle="rgba(255,120,160,.22)";
+    ctx.fillRect(x+S(3), y+T(11), S(2), T(1));
+    ctx.fillRect(x+S(9), y+T(11), S(2), T(1));
+
+    // bow
+    ctx.fillStyle=o.bow;
+    ctx.fillRect(x+S(6), y+T(5), S(2), T(1));
+    ctx.fillRect(x+S(5), y+T(4), S(1), T(2));
+    ctx.fillRect(x+S(8), y+T(4), S(1), T(2));
+
+    // dress/body
+    ctx.fillStyle=o.dress;
+    ctx.fillRect(x+S(4), y+T(13), S(6), T(4));
+    ctx.fillRect(x+S(3), y+T(14), S(8), T(4));
+
+    // little sleeves
+    ctx.fillStyle="rgba(255,255,255,.22)";
+    ctx.fillRect(x+S(2), y+T(14), S(2), T(2));
+    ctx.fillRect(x+S(10), y+T(14), S(2), T(2));
   }
 
   function drawMilo(){
-    const x=milo.x, y=milo.y;
-    ctx.fillStyle="#d8d8d8";
-    ctx.fillRect(x+1,y+2,6,5);
-    ctx.fillRect(x+1,y+1,2,2);
-    ctx.fillRect(x+5,y+1,2,2);
+    const x=Math.round(milo.x), y=Math.round(milo.y);
+
+    // shadow
+    ctx.fillStyle="rgba(0,0,0,.25)";
+    ctx.fillRect(x+S(2), y+T(9), S(8), T(2));
+
+    // body (chubby)
+    ctx.fillStyle="#e6e6ef";
+    ctx.fillRect(x+S(2), y+T(4), S(8), T(6));
+    ctx.fillRect(x+S(3), y+T(3), S(6), T(6));
+
+    // ears
+    ctx.fillRect(x+S(2), y+T(3), S(2), T(2));
+    ctx.fillRect(x+S(8), y+T(3), S(2), T(2));
+
+    // eyes + sparkle
+    ctx.fillStyle="#1a0f2a";
+    ctx.fillRect(x+S(4), y+T(6), S(1), T(1));
+    ctx.fillRect(x+S(7), y+T(6), S(1), T(1));
     ctx.fillStyle="#1affd3";
-    ctx.fillRect(x+2,y+4,1,1);
-    ctx.fillRect(x+5,y+4,1,1);
+    ctx.fillRect(x+S(4), y+T(5), S(1), T(1));
+    ctx.fillRect(x+S(7), y+T(5), S(1), T(1));
+
+    // tiny mouth
+    ctx.fillStyle="rgba(255,120,160,.35)";
+    ctx.fillRect(x+S(5), y+T(8), S(2), T(1));
   }
 
   function drawInteractHint(){
     const z = nearest();
     if(!z) return;
-    // tiny on-canvas hint so you KNOW it’s hittable
-    ctx.fillStyle="rgba(0,0,0,.55)";
-    ctx.fillRect(10, H-26, 160, 16);
-    ctx.strokeStyle="rgba(255,255,255,.18)";
-    ctx.strokeRect(10.5, H-25.5, 160, 16);
 
-    ctx.fillStyle="rgba(255,255,255,.92)";
-    ctx.font="10px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
-    ctx.fillText(`Press E or tap: ${z.name}`, 16, H-14);
+    // cute hint bubble
+    const bx = S(12), by = H - T(30), bw = S(210), bh = T(18);
+    rrect(bx, by, bw, bh, S(8), "rgba(0,0,0,.50)", "rgba(255,255,255,.18)");
+    ctx.fillStyle="rgba(255,255,255,.95)";
+    ctx.font = `${T(10)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.fillText(`Press E or tap: ${z.name}`, bx + S(10), by + T(12));
   }
 
   /* ---------- loop ---------- */
@@ -372,15 +481,14 @@ cursor:pointer;
 
   function loop(){
     if(!state.slept){
-      const sp = keysDown.has("shift") ? 1.4 : .9;
+      const sp = keysDown.has("shift") ? 1.9 : 1.25; // a little faster because bigger room
       const dx = (keysDown.has("d")||keysDown.has("arrowright")?sp:0) - (keysDown.has("a")||keysDown.has("arrowleft")?sp:0);
       const dy = (keysDown.has("s")||keysDown.has("arrowdown")?sp:0) - (keysDown.has("w")||keysDown.has("arrowup")?sp:0);
       move(dx,dy);
     }
 
-    // make E reliable (fires once per press)
-    if(keysDown.has("e") && !loop.e){ interact(); loop.e=1; }
-    if(!keysDown.has("e")) loop.e=0;
+    if(keysDown.has("e") && !held.e){ interact(); held.e=true; }
+    if(!keysDown.has("e")) held.e=false;
 
     updateMilo();
 
@@ -396,7 +504,6 @@ cursor:pointer;
     requestAnimationFrame(loop);
   }
 
-  // start focused
   canvas.focus();
   loop();
 })();
