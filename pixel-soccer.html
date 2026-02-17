@@ -1,0 +1,2041 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PIXEL SOCCER: CLUB DECAY EDITION</title>
+<style>
+  :root{
+    --bg:#05030a;
+    --ui:#e8e8ff;
+    --muted:#9aa0c6;
+    --accent:#b300ff;
+    --accent2:#00ffd5;
+    --danger:#ff3b6b;
+    --ok:#7CFF6B;
+  }
+  html,body{
+    height:100%; margin:0; overflow:hidden;
+    background: radial-gradient(1200px 800px at 50% 40%, #160a30 0%, #05030a 55%, #02010a 100%);
+    color:var(--ui);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  }
+  #wrap{height:100%; display:grid; place-items:center;}
+  canvas{
+    width:min(96vw, 1280px);
+    height:auto;
+    max-height:90vh;
+    aspect-ratio: 16 / 9;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 16px;
+    background: #03020a;
+    box-shadow:
+      0 18px 70px rgba(0,0,0,0.70),
+      0 0 0 1px rgba(179,0,255,0.20) inset,
+      0 0 70px rgba(179,0,255,0.10);
+  }
+  .hint{
+    position:fixed; left:14px; bottom:12px;
+    font-size:12px; color:var(--muted);
+    user-select:none; opacity:0.95;
+    max-width:min(900px, 92vw);
+    line-height:1.35;
+  }
+  .hint b{color:var(--ui)}
+  .topright{
+    position:fixed; right:14px; top:12px;
+    font-size:12px; color:var(--muted);
+    user-select:none; opacity:0.92;
+    text-align:right;
+  }
+  .topright .tag{color:rgba(255,255,255,0.66)}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="960" height="540"></canvas></div>
+<div class="topright">
+  PIXEL SOCCER<br/>
+  <span class="tag">Tournament + Career + Extra Modes · One-file build</span>
+</div>
+<div class="hint">
+  <b>Menu</b>: ↑/↓ select · Enter confirm · Esc back<br/>
+  <b>P1</b>: Move WASD · Dash Shift · Pass J · Shoot K (hold) · Skill L · Switch (2v2) U<br/>
+  <b>P2</b>: Move Arrows · Dash / · Pass Numpad1 (or ,) · Shoot Numpad2 (or .) (hold) · Skill Numpad3 (or /) · Switch (2v2) Numpad0 (or M)<br/>
+  <span style="opacity:.8">Tip: Double-tap direction to feint. Hold Shoot for power + curve. Skill = Rainbow flick near ball.</span>
+</div>
+
+<script>
+(() => {
+  // ========= Canvas / Pixel buffer =========
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d', { alpha:false });
+
+  const W = 320, H = 180;
+  const world = document.createElement('canvas');
+  world.width=W; world.height=H;
+  const g = world.getContext('2d', { alpha:false });
+
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const sat=(t)=>clamp(t,0,1);
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const randi=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  const hypot=(x,y)=>Math.hypot(x,y);
+  const dist2=(ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by; return dx*dx+dy*dy;};
+
+  // ========= Fixed timestep =========
+  let last=performance.now(), acc=0;
+  const DT=1/60;
+
+  // ========= Input =========
+  const keys=new Set();
+  const pressed=new Set();
+  window.addEventListener('keydown', (e)=>{
+    const k=(e.key||"").toLowerCase();
+    const c=(e.code||"");
+    keys.add(k); if(c) keys.add(c);
+    pressed.add(k); if(c) pressed.add(c);
+    if(!audioArmed){ audioArmed=true; Audio.init(); }
+    const block = [" ","arrowup","arrowdown","arrowleft","arrowright"];
+    if(block.includes(k)) e.preventDefault();
+  }, {passive:false});
+  window.addEventListener('keyup', (e)=>{
+    const k=(e.key||"").toLowerCase();
+    const c=(e.code||"");
+    keys.delete(k); if(c) keys.delete(c);
+  });
+  const hasAny=(set, arr)=>{ for(const a of arr){ if(set.has(a)) return true; } return false; };
+  const down=(arr)=>hasAny(keys,arr);
+  const was=(arr)=>hasAny(pressed,arr);
+  const consume=(arr)=>{ for(const a of arr) pressed.delete(a); };
+
+  // Mouse for sparkle positioning
+  let mouse={x:W/2,y:H/2};
+  canvas.addEventListener('mousemove',(e)=>{
+    const r=canvas.getBoundingClientRect();
+    const sx=(e.clientX-r.left)/r.width;
+    const sy=(e.clientY-r.top)/r.height;
+    mouse.x=clamp((sx*W)|0,0,W-1);
+    mouse.y=clamp((sy*H)|0,0,H-1);
+  });
+
+  // ========= Audio (WebAudio SFX) =========
+  let audioArmed=false;
+  const Audio = (() => {
+    let ac=null, master=null, noiseBuf=null, ready=false;
+    function mkNoiseBuffer(){
+      const len = 0.8 * (ac?.sampleRate||44100);
+      const buf = ac.createBuffer(1, len|0, ac.sampleRate);
+      const data = buf.getChannelData(0);
+      let x=0;
+      for(let i=0;i<data.length;i++){
+        x = x*0.98 + (Math.random()*2-1)*0.02;
+        data[i]=x;
+      }
+      return buf;
+    }
+    function init(){
+      if(ready) return;
+      try{
+        ac = new (window.AudioContext||window.webkitAudioContext)();
+        master = ac.createGain();
+        master.gain.value = 0.26;
+        master.connect(ac.destination);
+        noiseBuf=mkNoiseBuffer();
+        ready=true;
+      }catch(e){ ready=false; }
+    }
+    function tone({freq=220,type="sine",dur=0.08,gain=0.10,bend=1,pan=0}){
+      if(!ready) return;
+      const t0=ac.currentTime;
+      const o=ac.createOscillator();
+      const g0=ac.createGain();
+      const p0=ac.createStereoPanner?ac.createStereoPanner():null;
+      o.type=type;
+      o.frequency.setValueAtTime(freq,t0);
+      if(bend!==1){
+        o.frequency.exponentialRampToValueAtTime(Math.max(20,freq*bend), t0+dur);
+      }
+      g0.gain.setValueAtTime(0.0001,t0);
+      g0.gain.exponentialRampToValueAtTime(gain, t0+0.01);
+      g0.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+      o.connect(g0);
+      if(p0){ p0.pan.setValueAtTime(pan,t0); g0.connect(p0); p0.connect(master); }
+      else g0.connect(master);
+      o.start(t0); o.stop(t0+dur+0.02);
+    }
+    function noise({dur=0.10,gain=0.10,hp=900,pan=0}){
+      if(!ready) return;
+      const t0=ac.currentTime;
+      const src=ac.createBufferSource();
+      src.buffer=noiseBuf;
+      const f0=ac.createBiquadFilter();
+      f0.type="highpass";
+      f0.frequency.setValueAtTime(hp,t0);
+      const g0=ac.createGain();
+      const p0=ac.createStereoPanner?ac.createStereoPanner():null;
+      g0.gain.setValueAtTime(0.0001,t0);
+      g0.gain.exponentialRampToValueAtTime(gain, t0+0.01);
+      g0.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+      src.connect(f0); f0.connect(g0);
+      if(p0){ p0.pan.setValueAtTime(pan,t0); g0.connect(p0); p0.connect(master); }
+      else g0.connect(master);
+      src.start(t0); src.stop(t0+dur+0.02);
+    }
+    function kick(pan=0){
+      noise({dur:0.05,gain:0.10,hp:1200,pan});
+      tone({freq:180,type:"square",dur:0.06,gain:0.08,bend:0.65,pan});
+    }
+    function pass(pan=0){
+      tone({freq:520,type:"triangle",dur:0.06,gain:0.05,bend:1.25,pan});
+    }
+    function dash(pan=0){
+      noise({dur:0.08,gain:0.09,hp:1600,pan});
+      tone({freq:420,type:"sine",dur:0.07,gain:0.05,bend:1.6,pan});
+    }
+    function whistle(){
+      tone({freq:980,type:"sine",dur:0.08,gain:0.07,bend:1.2,pan:0});
+      tone({freq:1240,type:"sine",dur:0.10,gain:0.06,bend:0.9,pan:0});
+    }
+    function goal(){
+      tone({freq:260,type:"sawtooth",dur:0.12,gain:0.08,bend:1.35,pan:0});
+      tone({freq:520,type:"triangle",dur:0.18,gain:0.07,bend:1.1,pan:0});
+      noise({dur:0.18,gain:0.08,hp:800,pan:0});
+    }
+    function thud(pan=0){
+      noise({dur:0.06,gain:0.09,hp:500,pan});
+      tone({freq:110,type:"sine",dur:0.08,gain:0.07,bend:0.8,pan});
+    }
+    function levelup(){
+      tone({freq:520,type:"triangle",dur:0.10,gain:0.06,bend:1.35,pan:0});
+      tone({freq:780,type:"sine",dur:0.12,gain:0.06,bend:1.1,pan:0});
+      tone({freq:1040,type:"triangle",dur:0.14,gain:0.06,bend:1.05,pan:0});
+    }
+    return {init, kick, pass, dash, whistle, goal, thud, levelup};
+  })();
+
+  // ========= Pixel text helper =========
+  function text(txt,x,y,scale=1,color="#e8e8ff", mono=true){
+    g.fillStyle=color;
+    g.font = `${8*scale}px ${mono?"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace":"ui-sans-serif, system-ui"}`;
+    g.fillText(txt,x,y);
+  }
+
+  // ========= Game States =========
+  const GS={
+    TITLE:1,
+    MENU_MODE:2,
+    MENU_MAP:3,
+    MENU_TEAM:4,
+    CAREER_PERK:41,
+    PLAY:5,
+    GOAL:6,
+    DONE:7,
+    // extra mode flow
+    PENALTY:81,
+    SKILL:82,
+    KEEPERBOSS:83
+  };
+  let gs=GS.TITLE;
+
+  // ========= Career Save =========
+  const STORE_KEY="PIXEL_SOCCER_CAREER_V1";
+  const Career = (() => {
+    const defaults = {
+      xp:0, level:1, perkPoints:0,
+      perks:{
+        dash:0, // reduces stamina cost + cooldown
+        shot:0, // more shot power
+        control:0, // more dribble stickiness
+        curve:0 // more curve/spin
+      },
+      tournament:{
+        active:false,
+        round:0, // 0..2 (semi, final, champ)
+        wins:0, losses:0,
+        seed:0,
+        difficulty:0
+      },
+      stats:{
+        matches:0, goals:0, wins:0, losses:0, bestSurvival:0, bestSkill:0
+      }
+    };
+    let data;
+    function load(){
+      try{
+        const raw=localStorage.getItem(STORE_KEY);
+        data = raw ? JSON.parse(raw) : structuredClone(defaults);
+      }catch(e){
+        data = structuredClone(defaults);
+      }
+      // patch missing
+      for(const k of Object.keys(defaults)){
+        if(data[k]===undefined) data[k]=structuredClone(defaults[k]);
+      }
+      if(!data.perks) data.perks=structuredClone(defaults.perks);
+      if(!data.tournament) data.tournament=structuredClone(defaults.tournament);
+      if(!data.stats) data.stats=structuredClone(defaults.stats);
+      save();
+      return data;
+    }
+    function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }catch(e){} }
+    function reset(){ data=structuredClone(defaults); save(); return data; }
+    function xpToNext(level){ return 120 + (level-1)*90; }
+    function grantXP(amount){
+      data.xp += amount|0;
+      let leveled=false;
+      while(data.xp >= xpToNext(data.level)){
+        data.xp -= xpToNext(data.level);
+        data.level++;
+        data.perkPoints++;
+        leveled=true;
+      }
+      if(leveled) Audio.levelup();
+      save();
+      return leveled;
+    }
+    function spendPerk(key){
+      if(data.perkPoints<=0) return false;
+      if(data.perks[key]===undefined) return false;
+      if(data.perks[key] >= 6) return false;
+      data.perks[key]++;
+      data.perkPoints--;
+      save();
+      return true;
+    }
+    return {load,save,reset,grantXP,spendPerk,xpToNext,get data(){return data;}};
+  })();
+
+  const career = Career.load();
+
+  // ========= Content =========
+  const MODES = [
+    { id:"pve", name:"1P VS AI", desc:"Classic duel. First to 5." },
+    { id:"pvp", name:"2P LOCAL", desc:"You vs friend on one keyboard." },
+    { id:"2v2", name:"2V2 ARCADE", desc:"AI teammates. Chaos but fair." },
+    { id:"tourney", name:"TOURNAMENT", desc:"Bracket run. Earn perks." },
+    { id:"penalty", name:"PENALTY DUEL", desc:"Alternating shots. First to 5." },
+    { id:"skill", name:"SKILL ARENA", desc:"60s trick score. Beat your best." },
+    { id:"keeperboss", name:"KEEPER BOSS", desc:"Super keeper. Score as many as you can." },
+    { id:"survival", name:"SURVIVAL", desc:"Endless escalating AI. How long can you last?" }
+  ];
+
+  const MAPS = [
+    { id:"brazil", name:"BRAZIL BEACH", feel:"Sand: slower dribble, softer bounce", fric:0.985, ballFric:0.992, bounce:0.62, tint1:"rgba(255,210,74,0.08)", tint2:"rgba(0,255,213,0.05)" },
+    { id:"spain",  name:"SPAIN COURT", feel:"Fast: crisp bounce, quick turns",    fric:0.975, ballFric:0.990, bounce:0.72, tint1:"rgba(90,167,255,0.08)",  tint2:"rgba(179,0,255,0.06)" },
+    { id:"neon",   name:"NEON NIGHT",  feel:"Sticky: strong curve + control",      fric:0.980, ballFric:0.993, bounce:0.68, tint1:"rgba(179,0,255,0.10)", tint2:"rgba(0,255,213,0.07)" }
+  ];
+
+  const TEAMS = [
+    { id:"violet", name:"VIOLET KINGS", c1:"#b300ff", c2:"#00ffd5" },
+    { id:"teal",   name:"TEAL PHANTOMS",c1:"#00ffd5", c2:"#e8e8ff" },
+    { id:"rose",   name:"ROSE RIOT",    c1:"#ff3b6b", c2:"#ffd24a" },
+    { id:"ice",    name:"ICE NOVA",     c1:"#5aa7ff", c2:"#e8e8ff" },
+  ];
+
+  const STARS = [
+    { id:"dribbler", name:"ELASTICO", spd:86, acc:92, shot:74, pass:80, ctrl:94, curve:0.18 },
+    { id:"sniper",   name:"TOP CORNER",spd:78, acc:80, shot:96, pass:70, ctrl:78, curve:0.28 },
+    { id:"engine",   name:"BOX-TO-BOX",spd:88, acc:88, shot:80, pass:92, ctrl:86, curve:0.16 },
+    { id:"tank",     name:"BULLDOZER", spd:72, acc:76, shot:84, pass:72, ctrl:70, curve:0.10 }
+  ];
+
+  // ========= Menu selections =========
+  let selMode=0, selMap=0, selTeamA=0, selTeamB=1, selStarA=0, selStarB=1;
+  let menuCursor=0;
+
+  // ========= Pitch + Physics =========
+  const PITCH = {
+    x: 18, y: 18,
+    w: W-36, h: H-36,
+    goalW: 30,
+    line: "rgba(255,255,255,0.14)"
+  };
+
+  const cam = { shake:0, flash:0 };
+  const sparks=[];
+
+  function addSparks(x,y,n,col){
+    for(let i=0;i<n;i++){
+      const a=rand(0,Math.PI*2), s=rand(18,70);
+      sparks.push({x,y,vx:Math.cos(a)*s, vy:Math.sin(a)*s, life:rand(0.15,0.35), col});
+    }
+    if(sparks.length>520) sparks.splice(0, sparks.length-520);
+  }
+
+  function panFromX(x){
+    const t=(x/W)-0.5;
+    return clamp(t*1.2, -0.9, 0.9);
+  }
+
+  // ========= Entities =========
+  function makePlayer(side, team, star, human=false){
+    const isLeft = side<0;
+    const baseX = isLeft ? (PITCH.x + 36) : (PITCH.x + PITCH.w - 36);
+    const baseY = PITCH.y + PITCH.h/2 + rand(-22,22);
+
+    const s = star;
+    const stat = (k)=> (s[k]/100);
+
+    // Career modifiers (P1 only gets them; AI gets difficulty mods elsewhere)
+    const perk = career.perks;
+    const perkShot = 1 + 0.05*perk.shot;
+    const perkCtrl = 1 + 0.06*perk.control;
+    const perkCurve= 1 + 0.08*perk.curve;
+    const perkDash = perk.dash; // used later in dash cost/cd
+
+    return {
+      side, team, star:s, human,
+      x: baseX, y: baseY,
+      vx:0, vy:0,
+      facing: isLeft ? 1 : -1,
+      stamina: 1.0,
+      dashCD: 0,
+      dashT: 0,
+      shootHold: 0,
+      lastDir: {x:0,y:0,t:0, tap:0},
+      active: true,
+      // derived
+      maxSpd: 64 + 36*stat("spd"),
+      accel: 10 + 16*stat("acc"),
+      control: (0.40 + 0.55*stat("ctrl")) * (human && side<0 ? perkCtrl : 1),
+      shot:    (0.60 + 0.95*stat("shot")) * (human && side<0 ? perkShot : 1),
+      pass:    (0.60 + 0.85*stat("pass")),
+      curve:   (s.curve || 0.16) * (human && side<0 ? perkCurve : 1),
+      perkDash
+    };
+  }
+
+  const ball = {
+    x: W/2, y: H/2,
+    vx:0, vy:0,
+    spin:0,
+    lastTouchSide: 0,
+    carryBy: null
+  };
+
+  // Keeper entity for Boss/Penalty
+  const keeper = {
+    active:false,
+    side:+1,
+    x: PITCH.x+PITCH.w-12,
+    y: PITCH.y+PITCH.h/2,
+    vy:0,
+    power:1.0, // boss multiplier
+    rage:0
+  };
+
+  let roster = {
+    mode: MODES[0],
+    map: MAPS[0],
+    A: TEAMS[0],
+    B: TEAMS[1],
+    starA: STARS[0],
+    starB: STARS[1],
+    p1: null, p2: null, a2:null, b2:null,
+    aiDiff: 0 // 0..?
+  };
+
+  let scoreA=0, scoreB=0;
+  let matchTime=0;
+  let goalTimer=0;
+  let lastScorer=0;
+
+  // mode-specific
+  let survivalTime=0, survivalBest=career.stats.bestSurvival||0;
+  let skillTime=60, skillScore=0, skillBest=career.stats.bestSkill||0;
+  let penaltyTurn=0; // 0 P1 shoot, 1 AI shoot
+  let penaltyPhase="aim"; // aim -> shot -> reset
+  let keeperBossTime=45, keeperBossGoals=0;
+
+  // Tournament state (career.tournament)
+  function startTournament(){
+    career.tournament.active=true;
+    career.tournament.round=0;
+    career.tournament.wins=0;
+    career.tournament.losses=0;
+    career.tournament.seed=randi(1,9999);
+    career.tournament.difficulty=0;
+    Career.save();
+  }
+  function endTournament(champ){
+    career.tournament.active=false;
+    Career.save();
+    // champ bonus
+    if(champ){
+      Career.grantXP(220);
+      career.stats.wins++;
+    }
+  }
+
+  function winScoreForMode(){
+    const id=roster.mode.id;
+    if(id==="pve" || id==="pvp" || id==="2v2" || id==="tourney" || id==="survival") return 5;
+    if(id==="penalty") return 5;
+    return 5;
+  }
+
+  function resetKickoff(scoredBySide=0){
+    ball.x=W/2; ball.y=H/2;
+    ball.vx=0; ball.vy=0; ball.spin=0; ball.carryBy=null;
+    keeper.active=false;
+
+    roster.p1.x = PITCH.x + 48; roster.p1.y = PITCH.y + PITCH.h/2;
+    roster.p2.x = PITCH.x + PITCH.w - 48; roster.p2.y = PITCH.y + PITCH.h/2;
+    roster.p1.vx=roster.p1.vy=0; roster.p2.vx=roster.p2.vy=0;
+    roster.p1.dashCD=roster.p2.dashCD=0;
+    roster.p1.dashT=roster.p2.dashT=0;
+    roster.p1.shootHold=roster.p2.shootHold=0;
+    roster.p1.stamina=roster.p2.stamina=1;
+    roster.p1.active=true; roster.p2.active=true;
+
+    if(roster.mode.id==="2v2"){
+      roster.a2.x = PITCH.x + 62; roster.a2.y = PITCH.y + PITCH.h/2 - 28;
+      roster.b2.x = PITCH.x + PITCH.w - 62; roster.b2.y = PITCH.y + PITCH.h/2 + 28;
+      roster.a2.vx=roster.a2.vy=0; roster.b2.vx=roster.b2.vy=0;
+      roster.a2.dashCD=roster.b2.dashCD=0;
+      roster.a2.dashT=roster.b2.dashT=0;
+      roster.a2.stamina=roster.b2.stamina=1;
+      roster.a2.active=false; roster.b2.active=false;
+    }
+
+    if(scoredBySide!==0){
+      const kicker = (scoredBySide<0) ? roster.p2 : roster.p1; // conceding team starts
+      ball.x = kicker.x + kicker.facing*8;
+      ball.y = kicker.y;
+    }
+  }
+
+  function newMatch(){
+    roster.mode = MODES[selMode];
+    roster.map = MAPS[selMap];
+    roster.A = TEAMS[selTeamA];
+    roster.B = TEAMS[selTeamB];
+    roster.starA = STARS[selStarA];
+    roster.starB = STARS[selStarB];
+
+    // AI difficulty scaling (tournament/survival)
+    roster.aiDiff = 0;
+    if(roster.mode.id==="tourney" && career.tournament.active){
+      roster.aiDiff = career.tournament.round*0.7 + career.tournament.difficulty*0.2;
+    }
+    if(roster.mode.id==="survival"){
+      roster.aiDiff = 0;
+    }
+
+    scoreA=0; scoreB=0;
+    matchTime=0; goalTimer=0; lastScorer=0;
+
+    survivalTime=0;
+    skillTime=60; skillScore=0;
+    penaltyTurn=0; penaltyPhase="aim";
+    keeperBossTime=45; keeperBossGoals=0;
+
+    roster.p1 = makePlayer(-1, roster.A, roster.starA, true);
+
+    const p2Human = (roster.mode.id==="pvp");
+    roster.p2 = makePlayer(+1, roster.B, roster.starB, p2Human);
+
+    if(roster.mode.id==="2v2"){
+      roster.a2 = makePlayer(-1, roster.A, STARS[2], false);
+      roster.b2 = makePlayer(+1, roster.B, STARS[2], false);
+    } else {
+      roster.a2 = null; roster.b2=null;
+    }
+
+    resetKickoff(0);
+  }
+
+  // ========= Controls mapping =========
+  const P1 = {
+    up:["w","KeyW"], down:["s","KeyS"], left:["a","KeyA"], right:["d","KeyD"],
+    dash:["shift","ShiftLeft","ShiftRight"],
+    pass:["j","KeyJ"], shoot:["k","KeyK"], skill:["l","KeyL"],
+    switch:["u","KeyU"]
+  };
+  const P2 = {
+    up:["arrowup","ArrowUp"], down:["arrowdown","ArrowDown"], left:["arrowleft","ArrowLeft"], right:["arrowright","ArrowRight"],
+    dash:["/","Slash","NumpadDivide"],
+    pass:["numpad1","Numpad1",","], shoot:["numpad2","Numpad2","."], skill:["numpad3","Numpad3","/","Slash"],
+    switch:["numpad0","Numpad0","m","KeyM"]
+  };
+  const MENU = { up:["arrowup","ArrowUp","w","KeyW"], down:["arrowdown","ArrowDown","s","KeyS"], enter:["enter","Enter"], esc:["escape","Escape"] };
+
+  function getMoveFor(bind){
+    let mx=0,my=0;
+    if(down(bind.left)) mx -= 1;
+    if(down(bind.right)) mx += 1;
+    if(down(bind.up)) my -= 1;
+    if(down(bind.down)) my += 1;
+    const l=hypot(mx,my)||1;
+    return {mx:mx/l,my:my/l, raw:{mx,my}};
+  }
+
+  // ========= Skill moves =========
+  function registerTap(pl, mx, my, now){
+    const t = now;
+    const mag = hypot(mx,my);
+    if(mag<0.9) return false;
+
+    const dx = Math.sign(mx), dy = Math.sign(my);
+    const same = (dx===pl.lastDir.x && dy===pl.lastDir.y);
+    const dt = t - pl.lastDir.t;
+
+    if(same && dt>0 && dt<220){
+      pl.lastDir.tap++;
+    } else {
+      pl.lastDir.tap=1;
+    }
+    pl.lastDir.x=dx; pl.lastDir.y=dy; pl.lastDir.t=t;
+    return (pl.lastDir.tap>=2);
+  }
+
+  function tryFeintBoost(pl){
+    const boost = 120;
+    pl.vx += (pl.facing)*0.15*boost;
+    pl.stamina = Math.max(0, pl.stamina - 0.06);
+    addSparks(pl.x,pl.y,10,"rgba(0,255,213,0.55)");
+    cam.shake = Math.max(cam.shake, 2);
+  }
+
+  function doDash(pl, mx, my){
+    if(pl.dashCD>0 || pl.dashT>0) return;
+    const dashPerk = (pl.human && pl.side<0) ? pl.perkDash : 0;
+    const staminaCost = 0.16 * (1 - 0.06*dashPerk);
+    const cd = 0.65 * (1 - 0.06*dashPerk);
+
+    if(pl.stamina < 0.18) return;
+
+    const l = hypot(mx,my) || 1;
+    const dx = mx/l, dy=my/l;
+    pl.dashT = 0.14;
+    pl.dashCD = cd;
+    pl.stamina = Math.max(0, pl.stamina - staminaCost);
+
+    const power = 210 + 140*pl.star.acc/100;
+    pl.vx += dx*power;
+    pl.vy += dy*power;
+    addSparks(pl.x,pl.y,16,"rgba(179,0,255,0.55)");
+    Audio.dash(panFromX(pl.x));
+  }
+
+  function closeToBall(pl, r=10){
+    return dist2(pl.x,pl.y, ball.x,ball.y) <= r*r;
+  }
+
+  function kickBall(pl, strength, isPass=false){
+    const dx = ball.x - pl.x;
+    const dy = ball.y - pl.y;
+    let ang = Math.atan2(dy,dx);
+    if(hypot(dx,dy) < 2.5) ang = (pl.side<0) ? 0 : Math.PI;
+
+    const p = isPass ? (0.75 + 0.55*pl.pass) : (0.85 + 0.85*pl.shot);
+    const kick = strength * p;
+
+    const sideVel = (pl.vx * Math.sin(ang) - pl.vy * Math.cos(ang));
+    ball.spin = clamp(ball.spin + (sideVel/240)*pl.curve, -0.55, 0.55);
+
+    ball.vx += Math.cos(ang)*kick;
+    ball.vy += Math.sin(ang)*kick;
+
+    ball.lastTouchSide = pl.side;
+    ball.carryBy = null;
+
+    addSparks(ball.x,ball.y, isPass?10:18, isPass?"rgba(0,255,213,0.55)":"rgba(255,59,107,0.65)");
+    cam.shake = Math.max(cam.shake, isPass?1.5:3.2);
+    if(isPass) Audio.pass(panFromX(pl.x)); else Audio.kick(panFromX(pl.x));
+  }
+
+  function rainbowFlick(pl){
+    if(!closeToBall(pl, 9)) return false;
+    const dir = (pl.side<0) ? 0 : Math.PI;
+    ball.vx += Math.cos(dir)*(160 + 110*pl.control);
+    ball.vy += (rand(-1,1))*40;
+    ball.spin = clamp(ball.spin + (pl.side<0?1:-1)*0.22, -0.60, 0.60);
+    addSparks(ball.x,ball.y,22,"rgba(255,210,74,0.65)");
+    cam.flash = Math.max(cam.flash, 0.08);
+    cam.shake = Math.max(cam.shake, 4.5);
+    Audio.kick(panFromX(pl.x));
+    return true;
+  }
+
+  // ========= AI =========
+  function aiParams(){
+    // base + difficulty ramp (tourney/survival)
+    const d = roster.aiDiff;
+    return {
+      speedMul: 1 + 0.10*d,
+      react: 0.15 + 0.02*d,
+      dashChance: 0.010 + 0.003*d,
+      shotBias: 0.55 + 0.05*d
+    };
+  }
+
+  function aiBrain(pl, dt){
+    const ap = aiParams();
+    const ownGoalX = (pl.side<0) ? PITCH.x+2 : PITCH.x+PITCH.w-2;
+    const danger = Math.abs(ball.x - ownGoalX) < 54 && Math.abs(ball.y - (PITCH.y+PITCH.h/2)) < 60;
+    let targetX=ball.x, targetY=ball.y;
+
+    const isTeammate = (roster.mode.id==="2v2") && (pl!==roster.p1 && pl!==roster.p2);
+    const opp = (pl.side<0) ? roster.p2 : roster.p1;
+
+    if(danger){
+      targetX = (pl.side<0) ? (PITCH.x + 14) : (PITCH.x + PITCH.w - 14);
+      targetY = clamp(ball.y, PITCH.y+20, PITCH.y+PITCH.h-20);
+    } else if(isTeammate){
+      targetX = lerp(ball.x, (pl.side<0)?(ball.x-34):(ball.x+34), 0.55);
+      targetY = lerp(ball.y, (pl.side<0)?(ball.y-18):(ball.y+18), 0.55);
+    } else {
+      const oppHas = closeToBall(opp, 10) && (dist2(opp.x,opp.y,ball.x,ball.y)<90);
+      if(oppHas){
+        targetX = lerp(ball.x, (pl.side<0)?(ball.x-18):(ball.x+18), 0.25);
+        targetY = lerp(ball.y, opp.y, 0.35);
+      }
+    }
+
+    let mx = targetX - pl.x;
+    let my = targetY - pl.y;
+    const l = hypot(mx,my)||1;
+    mx/=l; my/=l;
+
+    if(pl.dashCD<=0 && pl.stamina>0.25 && Math.random()<ap.dashChance){
+      doDash(pl, mx, my);
+    }
+
+    if(closeToBall(pl, 9)){
+      const towardGoal = (pl.side<0) ? (PITCH.x+PITCH.w - ball.x) : (ball.x - PITCH.x);
+      const angleToGoal = Math.abs(ball.y - (PITCH.y+PITCH.h/2));
+      const goodShot = towardGoal > 120 && angleToGoal < 55;
+
+      if(goodShot && Math.random()<ap.shotBias){
+        kickBall(pl, (190 + 120*pl.shot) * (1+0.06*roster.aiDiff), false);
+      } else if(Math.random()<0.70){
+        kickBall(pl, (140 + 80*pl.pass) * (1+0.03*roster.aiDiff), true);
+      } else {
+        kickBall(pl, (160 + 70*pl.shot) * (1+0.05*roster.aiDiff), false);
+      }
+    }
+
+    const max = pl.maxSpd * ap.speedMul;
+    pl.vx = lerp(pl.vx, mx*max, ap.react);
+    pl.vy = lerp(pl.vy, my*max, ap.react);
+    pl.facing = (pl.side<0) ? 1 : -1;
+  }
+
+  // Keeper AI (boss/penalty)
+  function keeperUpdate(dt){
+    if(!keeper.active) return;
+    // track ball y with aggression
+    const targetY = clamp(ball.y, PITCH.y+22, PITCH.y+PITCH.h-22);
+    const diff = targetY - keeper.y;
+    const spd = 120 * keeper.power + 40*keeper.rage;
+    keeper.vy = lerp(keeper.vy, clamp(diff*4, -spd, spd), 0.20);
+    keeper.y += keeper.vy*dt;
+    keeper.y = clamp(keeper.y, PITCH.y+22, PITCH.y+PITCH.h-22);
+
+    // attempt save if ball near goal
+    const nearGoal = ball.x > PITCH.x+PITCH.w-26;
+    if(nearGoal){
+      const dy = Math.abs(ball.y - keeper.y);
+      const sp = hypot(ball.vx,ball.vy);
+      const reach = 9 + 6*keeper.power + 3*keeper.rage;
+      if(dy < reach && sp > 60 && ball.vx > 0){
+        // block: reflect + add sparks
+        ball.vx = -Math.abs(ball.vx) * (0.65 + 0.10*keeper.power);
+        ball.vy = ball.vy * 0.75 + (rand(-1,1))*40*keeper.power;
+        ball.spin *= 0.6;
+        addSparks(PITCH.x+PITCH.w-10, keeper.y, 26, "rgba(0,255,213,0.55)");
+        cam.shake = Math.max(cam.shake, 4.5);
+        Audio.thud(panFromX(PITCH.x+PITCH.w-6));
+        keeper.rage = clamp(keeper.rage + 0.12, 0, 1.2);
+      }
+    }
+
+    keeper.rage = Math.max(0, keeper.rage - dt*0.12);
+  }
+
+  // ========= Physics =========
+  function applyFriction(pl, dt, map){
+    const fr = map.fric;
+    const d = Math.pow(fr, dt*60);
+    pl.vx *= d;
+    pl.vy *= d;
+
+    pl.stamina = clamp(pl.stamina + dt*0.085, 0, 1);
+    pl.dashCD = Math.max(0, pl.dashCD - dt);
+    pl.dashT  = Math.max(0, pl.dashT - dt);
+  }
+
+  function clampToPitch(pl){
+    pl.x = clamp(pl.x, PITCH.x+6, PITCH.x+PITCH.w-6);
+    pl.y = clamp(pl.y, PITCH.y+6, PITCH.y+PITCH.h-6);
+  }
+
+  function ballPhysics(dt, map){
+    const curve = ball.spin * 22;
+    const spd = hypot(ball.vx, ball.vy);
+
+    if(spd>2){
+      const ax = -ball.vy / (spd||1) * curve;
+      const ay =  ball.vx / (spd||1) * curve;
+      ball.vx += ax * dt;
+      ball.vy += ay * dt;
+      ball.spin *= Math.pow(0.985, dt*60);
+    } else {
+      ball.spin *= Math.pow(0.96, dt*60);
+    }
+
+    ball.x += ball.vx*dt;
+    ball.y += ball.vy*dt;
+
+    const bf = Math.pow(map.ballFric, dt*60);
+    ball.vx *= bf;
+    ball.vy *= bf;
+
+    const b = map.bounce;
+    const r = 2.2;
+
+    // pitch walls
+    if(ball.x < PITCH.x+r){ ball.x=PITCH.x+r; ball.vx = Math.abs(ball.vx)*b; Audio.thud(panFromX(ball.x)); }
+    if(ball.x > PITCH.x+PITCH.w-r){ ball.x=PITCH.x+PITCH.w-r; ball.vx = -Math.abs(ball.vx)*b; Audio.thud(panFromX(ball.x)); }
+    if(ball.y < PITCH.y+r){ ball.y=PITCH.y+r; ball.vy = Math.abs(ball.vy)*b; Audio.thud(panFromX(ball.x)); }
+    if(ball.y > PITCH.y+PITCH.h-r){ ball.y=PITCH.y+PITCH.h-r; ball.vy = -Math.abs(ball.vy)*b; Audio.thud(panFromX(ball.x)); }
+  }
+
+  function tryPossess(pl){
+    const d = hypot(ball.x-pl.x, ball.y-pl.y);
+    if(d < 9.0){
+      const sp = hypot(ball.vx,ball.vy);
+      if(sp < 140){
+        const stick = pl.control;
+        ball.vx = lerp(ball.vx, pl.vx*(0.95+0.55*stick), 0.08+0.10*stick);
+        ball.vy = lerp(ball.vy, pl.vy*(0.95+0.55*stick), 0.08+0.10*stick);
+        ball.x = lerp(ball.x, pl.x + pl.facing*5, 0.04+0.06*stick);
+        ball.y = lerp(ball.y, pl.y, 0.04+0.06*stick);
+        ball.carryBy = pl;
+        ball.lastTouchSide = pl.side;
+      }
+    }
+  }
+
+  function goalCheck(){
+    const goalTop = PITCH.y + (PITCH.h - PITCH.goalW)/2;
+    const goalBot = goalTop + PITCH.goalW;
+
+    if(ball.x <= PITCH.x+2.2 && ball.y>=goalTop && ball.y<=goalBot && hypot(ball.vx,ball.vy)>12){
+      scoreB++; lastScorer=+1; return true;
+    }
+    if(ball.x >= PITCH.x+PITCH.w-2.2 && ball.y>=goalTop && ball.y<=goalBot && hypot(ball.vx,ball.vy)>12){
+      scoreA++; lastScorer=-1; return true;
+    }
+    return false;
+  }
+
+  // ========= Players update =========
+  function stepPlayers(dt){
+    const map = roster.map;
+
+    roster.p1.human = true;
+    roster.p2.human = (roster.mode.id==="pvp");
+
+    if(roster.mode.id==="2v2"){
+      if(was(P1.switch)){
+        roster.p1.active = !roster.p1.active;
+        roster.a2.active = !roster.a2.active;
+        Audio.pass(0);
+        consume(P1.switch);
+      }
+      if(was(P2.switch)){
+        roster.p2.active = !roster.p2.active;
+        roster.b2.active = !roster.b2.active;
+        Audio.pass(0);
+        consume(P2.switch);
+      }
+    }
+
+    const all = [roster.p1, roster.p2];
+    if(roster.mode.id==="2v2"){ all.push(roster.a2, roster.b2); }
+
+    for(const pl of all){
+      const isHuman = (pl===roster.p1) ? true :
+                      (pl===roster.p2) ? roster.p2.human :
+                      false;
+
+      const sideIsLeft = pl.side<0;
+      const canHuman = isHuman && (roster.mode.id!=="2v2" || pl.active);
+
+      if(canHuman){
+        const bind = (pl===roster.p1) ? P1 : P2;
+        const {mx,my,raw} = getMoveFor(bind);
+
+        const feint = registerTap(pl, raw.mx, raw.my, performance.now());
+        if(feint && pl.stamina>0.08) tryFeintBoost(pl);
+
+        if(was(bind.dash)) { doDash(pl, mx, my); consume(bind.dash); }
+
+        const max = pl.maxSpd * (pl.dashT>0 ? 1.12 : 1.0);
+        const ax = mx*max - pl.vx;
+        const ay = my*max - pl.vy;
+        pl.vx += ax * clamp(pl.accel*dt, 0, 1);
+        pl.vy += ay * clamp(pl.accel*dt, 0, 1);
+
+        if(hypot(mx,my)>0.2){
+          pl.facing = (mx>=0) ? 1 : -1;
+        } else {
+          pl.facing = sideIsLeft ? 1 : -1;
+        }
+
+        if(was(bind.pass) && closeToBall(pl, 10)){
+          const toward = sideIsLeft ? 0 : Math.PI;
+          ball.x = lerp(ball.x, pl.x + pl.facing*5, 0.25);
+          ball.y = lerp(ball.y, pl.y, 0.25);
+          const a = toward + rand(-0.28, 0.28) + (ball.y-(PITCH.y+PITCH.h/2))*0.004*(sideIsLeft? -1 : 1);
+          ball.vx += Math.cos(a)*(170 + 90*pl.pass);
+          ball.vy += Math.sin(a)*(170 + 90*pl.pass);
+          ball.spin = clamp(ball.spin + (sideIsLeft?0.12:-0.12), -0.50, 0.50);
+          ball.lastTouchSide = pl.side;
+          ball.carryBy = null;
+          addSparks(ball.x,ball.y,12,"rgba(0,255,213,0.55)");
+          Audio.pass(panFromX(pl.x));
+          cam.shake = Math.max(cam.shake, 2);
+          consume(bind.pass);
+        }
+
+        if(down(bind.shoot) && closeToBall(pl, 10)){
+          pl.shootHold = clamp(pl.shootHold + dt*1.25, 0, 1);
+        } else if(pl.shootHold>0){
+          if(closeToBall(pl, 11)){
+            const power = 210 + 260*pl.shootHold;
+            kickBall(pl, power, false);
+          }
+          pl.shootHold = 0;
+        }
+
+        if(was(bind.skill)){
+          if(rainbowFlick(pl)){
+            // ok
+          } else if(closeToBall(pl, 18)){
+            ball.vx += pl.facing*(90 + 60*pl.control);
+            ball.vy += rand(-1,1)*40;
+            addSparks(ball.x,ball.y,12,"rgba(179,0,255,0.55)");
+            Audio.kick(panFromX(pl.x));
+          }
+          consume(bind.skill);
+        }
+      } else {
+        aiBrain(pl, dt);
+      }
+
+      pl.x += pl.vx*dt;
+      pl.y += pl.vy*dt;
+      applyFriction(pl, dt, map);
+      clampToPitch(pl);
+      tryPossess(pl);
+    }
+  }
+
+  // ========= Extra Modes: Penalty / Skill / Keeper Boss =========
+  function setupPenalty(){
+    keeper.active=true;
+    keeper.power=1.05 + 0.15*roster.aiDiff;
+    keeper.x = PITCH.x+PITCH.w-12;
+    keeper.y = PITCH.y+PITCH.h/2;
+    keeper.vy=0; keeper.rage=0;
+
+    roster.p1.x = PITCH.x + PITCH.w - 64;
+    roster.p1.y = PITCH.y + PITCH.h/2;
+    roster.p1.vx=roster.p1.vy=0;
+
+    ball.x = roster.p1.x + 10;
+    ball.y = roster.p1.y;
+    ball.vx=0; ball.vy=0; ball.spin=0;
+
+    penaltyPhase="aim";
+    penaltyTurn = 0; // P1 shoots first
+    scoreA=0; scoreB=0;
+  }
+
+  function penaltyUpdate(dt){
+    keeperUpdate(dt);
+
+    // simple: P1 aims up/down with W/S, charge with K, release shoots. AI does same after.
+    if(penaltyTurn===0){
+      // lock player mostly
+      const {mx,my} = getMoveFor(P1);
+      roster.p1.y = clamp(roster.p1.y + my*50*dt, PITCH.y+24, PITCH.y+PITCH.h-24);
+      ball.y = lerp(ball.y, roster.p1.y, 0.25);
+
+      if(down(P1.shoot)){
+        roster.p1.shootHold = clamp(roster.p1.shootHold + dt*1.25, 0, 1);
+      } else if(roster.p1.shootHold>0){
+        // shoot toward goal
+        const hold=roster.p1.shootHold;
+        roster.p1.shootHold=0;
+        const aim = clamp((ball.y - (PITCH.y+PITCH.h/2))/50, -1, 1);
+        ball.x = roster.p1.x + 12;
+        ball.vx = 240 + 320*hold;
+        ball.vy = aim*(120 + 140*hold);
+        ball.spin = clamp(ball.spin + aim*0.18, -0.45, 0.45);
+        Audio.kick(panFromX(roster.p1.x));
+        addSparks(ball.x,ball.y,18,"rgba(255,59,107,0.65)");
+        penaltyPhase="shot";
+      }
+    } else {
+      // AI shot: quick random aim + power
+      if(penaltyPhase==="aim"){
+        const t = (performance.now()*0.001);
+        const aim = clamp(Math.sin(t*2.2)*0.55 + rand(-0.35,0.35), -0.95, 0.95);
+        // place ball left side now
+        roster.p2.x = PITCH.x + 64;
+        roster.p2.y = clamp(PITCH.y+PITCH.h/2 + aim*38, PITCH.y+24, PITCH.y+PITCH.h-24);
+        ball.x = roster.p2.x - 10;
+        ball.y = roster.p2.y;
+        // shoot
+        const hold = 0.35 + 0.55*rand(0,1) + 0.10*roster.aiDiff;
+        ball.vx = -(240 + 320*hold);
+        ball.vy = aim*(120 + 140*hold);
+        ball.spin = clamp(ball.spin - aim*0.16, -0.45, 0.45);
+        Audio.kick(panFromX(roster.p2.x));
+        addSparks(ball.x,ball.y,16,"rgba(0,255,213,0.55)");
+        penaltyPhase="shot";
+      }
+    }
+
+    // simulate ball
+    ballPhysics(dt, roster.map);
+
+    // goalie save logic: keeper blocks on right goal only; for AI shot we treat left “ghost keeper” by mirroring logic
+    if(penaltyTurn===0){
+      // keeper saves at right
+      keeperUpdate(dt);
+    } else {
+      // mirror keeper on left (invisible): if ball near left line, bounce back
+      const goalTop = PITCH.y + (PITCH.h - PITCH.goalW)/2;
+      const goalBot = goalTop + PITCH.goalW;
+      const near = ball.x < PITCH.x+26;
+      if(near && ball.vx < 0){
+        const ky = clamp(ball.y, goalTop, goalBot);
+        const dy = Math.abs(ball.y - ky);
+        const reach = 10 + 5*(1.05+0.15*roster.aiDiff);
+        if(dy < reach && hypot(ball.vx,ball.vy)>60){
+          ball.vx = Math.abs(ball.vx) * 0.72;
+          ball.vy *= 0.7;
+          ball.spin *= 0.6;
+          addSparks(PITCH.x+10, ky, 22, "rgba(179,0,255,0.55)");
+          Audio.thud(panFromX(PITCH.x));
+          cam.shake = Math.max(cam.shake, 4);
+        }
+      }
+    }
+
+    // goal check for penalty: right goal for P1, left goal for AI
+    const goalTop = PITCH.y + (PITCH.h - PITCH.goalW)/2;
+    const goalBot = goalTop + PITCH.goalW;
+
+    // P1 scores if ball crosses right line in opening
+    if(penaltyTurn===0 && ball.x >= PITCH.x+PITCH.w-2.2 && ball.y>=goalTop && ball.y<=goalBot && hypot(ball.vx,ball.vy)>12){
+      scoreA++; Audio.goal(); cam.flash=0.14; cam.shake=10;
+      nextPenaltyTurn();
+    }
+    // AI scores if ball crosses left line
+    if(penaltyTurn===1 && ball.x <= PITCH.x+2.2 && ball.y>=goalTop && ball.y<=goalBot && hypot(ball.vx,ball.vy)>12){
+      scoreB++; Audio.goal(); cam.flash=0.14; cam.shake=10;
+      nextPenaltyTurn();
+    }
+
+    // miss: if ball slows or hits back wall opposite
+    if(penaltyPhase==="shot" && hypot(ball.vx,ball.vy) < 18){
+      nextPenaltyTurn();
+    }
+
+    const win = winScoreForMode();
+    if(scoreA>=win || scoreB>=win){
+      gs=GS.DONE;
+    }
+  }
+
+  function nextPenaltyTurn(){
+    penaltyTurn = 1-penaltyTurn;
+    penaltyPhase="aim";
+    ball.vx=0; ball.vy=0; ball.spin=0;
+
+    if(penaltyTurn===0){
+      roster.p1.x = PITCH.x + PITCH.w - 64;
+      roster.p1.y = PITCH.y + PITCH.h/2;
+      ball.x = roster.p1.x + 10;
+      ball.y = roster.p1.y;
+      keeper.active=true;
+      keeper.x = PITCH.x+PITCH.w-12;
+      keeper.y = PITCH.y+PITCH.h/2;
+      keeper.power=1.05 + 0.15*roster.aiDiff;
+      keeper.vy=0; keeper.rage=0;
+    } else {
+      keeper.active=false; // right keeper off while AI shoots left
+    }
+    Audio.whistle();
+  }
+
+  // Skill Arena: score for flicks, curve shots, and “cone nutmegs”
+  const cones = [];
+  function setupSkill(){
+    skillTime=60;
+    skillScore=0;
+    cones.length=0;
+    for(let i=0;i<7;i++){
+      cones.push({x:randi(PITCH.x+50,PITCH.x+PITCH.w-50), y:randi(PITCH.y+26,PITCH.y+PITCH.h-26), hit:false});
+    }
+    resetKickoff(0);
+  }
+
+  function skillUpdate(dt){
+    stepPlayers(dt);
+    ballPhysics(dt, roster.map);
+
+    // timer
+    skillTime = Math.max(0, skillTime - dt);
+
+    // scoring rules:
+    // 1) rainbow flick adds points instantly (we detect via spike in spin + speed)
+    const sp = hypot(ball.vx,ball.vy);
+    if(sp>360 && Math.abs(ball.spin)>0.35){
+      skillScore += 6;
+      addSparks(ball.x,ball.y,14,"rgba(255,210,74,0.65)");
+    }
+
+    // 2) cone hit gives points once
+    for(const c of cones){
+      if(c.hit) continue;
+      if(dist2(ball.x,ball.y,c.x,c.y) < 8*8){
+        c.hit=true;
+        skillScore += 10;
+        addSparks(c.x,c.y,26,"rgba(0,255,213,0.55)");
+        cam.flash=Math.max(cam.flash,0.10);
+      }
+    }
+
+    // end
+    if(skillTime<=0){
+      if(skillScore > skillBest){
+        skillBest = skillScore;
+        career.stats.bestSkill = skillBest;
+        Career.save();
+        Career.grantXP(80 + Math.min(180, skillScore));
+      } else {
+        Career.grantXP(40 + Math.min(120, (skillScore*0.6)|0));
+      }
+      gs=GS.DONE;
+    }
+  }
+
+  // Keeper Boss: you shoot on a super keeper for 45s, each goal = points
+  function setupKeeperBoss(){
+    keeperBossTime=45;
+    keeperBossGoals=0;
+    resetKickoff(0);
+
+    // place you closer to goal for rapid shots
+    roster.p1.x = PITCH.x + PITCH.w - 86;
+    roster.p1.y = PITCH.y + PITCH.h/2;
+
+    roster.p2.x = PITCH.x + 60; // dummy defender (AI harasser)
+    roster.p2.y = PITCH.y + PITCH.h/2;
+
+    keeper.active=true;
+    keeper.side=+1;
+    keeper.x = PITCH.x+PITCH.w-12;
+    keeper.y = PITCH.y + PITCH.h/2;
+    keeper.power = 1.25 + 0.20*roster.aiDiff;
+    keeper.vy=0; keeper.rage=0.25;
+  }
+
+  function keeperBossUpdate(dt){
+    // you + harasser AI
+    roster.p2.human=false;
+    roster.aiDiff = Math.min(3, roster.aiDiff + dt*0.08); // ramps inside boss
+    stepPlayers(dt);
+    ballPhysics(dt, roster.map);
+
+    keeperBossTime = Math.max(0, keeperBossTime - dt);
+
+    // keeper responds
+    keeperUpdate(dt);
+
+    // if you drift too far, warp you back a bit (keeps mode tight)
+    roster.p1.x = clamp(roster.p1.x, PITCH.x + PITCH.w - 110, PITCH.x + PITCH.w - 36);
+
+    // goal check: only count right goal for you
+    const goalTop = PITCH.y + (PITCH.h - PITCH.goalW)/2;
+    const goalBot = goalTop + PITCH.goalW;
+    if(ball.x >= PITCH.x+PITCH.w-2.2 && ball.y>=goalTop && ball.y<=goalBot && hypot(ball.vx,ball.vy)>12){
+      keeperBossGoals++;
+      Audio.goal();
+      cam.flash=0.16; cam.shake=12;
+      addSparks(ball.x,ball.y,60,"rgba(255,255,255,0.35)");
+      // instant reset for rapid-fire
+      ball.x = roster.p1.x + 12;
+      ball.y = roster.p1.y;
+      ball.vx=0; ball.vy=0; ball.spin=0;
+      keeper.rage = clamp(keeper.rage + 0.25, 0, 1.4);
+    }
+
+    if(keeperBossTime<=0){
+      const xp = 60 + Math.min(240, keeperBossGoals*22);
+      Career.grantXP(xp);
+      gs=GS.DONE;
+    }
+  }
+
+  // ========= Rendering =========
+  function drawPitch(map){
+    g.fillStyle="#050214";
+    g.fillRect(0,0,W,H);
+
+    g.fillStyle=map.tint1; g.fillRect(0,0,W,42);
+    g.fillStyle=map.tint2; g.fillRect(0,H-42,W,42);
+
+    g.fillStyle="rgba(0,0,0,0.25)";
+    g.fillRect(PITCH.x-2, PITCH.y-2, PITCH.w+4, PITCH.h+4);
+
+    g.fillStyle="rgba(255,255,255,0.03)";
+    for(let i=0;i<260;i++){
+      const x = (Math.random()*PITCH.w + PITCH.x)|0;
+      const y = (Math.random()*PITCH.h + PITCH.y)|0;
+      g.fillRect(x,y,1,1);
+    }
+
+    g.strokeStyle=PITCH.line;
+    g.lineWidth=1;
+    g.strokeRect(PITCH.x+0.5,PITCH.y+0.5,PITCH.w-1,PITCH.h-1);
+
+    g.beginPath();
+    g.moveTo(PITCH.x+PITCH.w/2+0.5, PITCH.y+2);
+    g.lineTo(PITCH.x+PITCH.w/2+0.5, PITCH.y+PITCH.h-2);
+    g.stroke();
+
+    g.beginPath();
+    g.arc(PITCH.x+PITCH.w/2, PITCH.y+PITCH.h/2, 18, 0, Math.PI*2);
+    g.stroke();
+
+    const goalTop = PITCH.y + (PITCH.h - PITCH.goalW)/2;
+    g.strokeStyle="rgba(0,255,213,0.18)";
+    g.strokeRect(PITCH.x-6+0.5, goalTop+0.5, 6, PITCH.goalW);
+    g.strokeRect(PITCH.x+PITCH.w+0.5, goalTop+0.5, 6, PITCH.goalW);
+
+    g.strokeStyle="rgba(179,0,255,0.18)";
+    g.strokeRect(PITCH.x+0.5, PITCH.y+PITCH.h/2-26+0.5, 26, 52);
+    g.strokeRect(PITCH.x+PITCH.w-26+0.5, PITCH.y+PITCH.h/2-26+0.5, 26, 52);
+  }
+
+  function drawPlayer(pl){
+    g.fillStyle="rgba(0,0,0,0.35)";
+    g.fillRect((pl.x-5)|0, (pl.y+5)|0, 10, 3);
+
+    g.fillStyle=pl.team.c1;
+    g.fillRect((pl.x-4)|0, (pl.y-6)|0, 8, 10);
+
+    g.fillStyle=pl.team.c2;
+    g.fillRect((pl.x-4)|0, (pl.y-2)|0, 8, 2);
+
+    g.fillStyle="rgba(232,232,255,0.9)";
+    g.fillRect((pl.x-3)|0, (pl.y-12)|0, 6, 6);
+
+    g.fillStyle="rgba(0,0,0,0.5)";
+    g.fillRect((pl.x-2 + (pl.facing>0?1:-1))|0, (pl.y-10)|0, 2, 2);
+
+    if(roster.mode.id==="2v2" && pl.human){
+      g.fillStyle = pl.active ? "rgba(0,255,213,0.20)" : "rgba(255,255,255,0.08)";
+      g.fillRect((pl.x-7)|0, (pl.y-16)|0, 14, 2);
+      g.fillStyle = pl.active ? "rgba(179,0,255,0.18)" : "rgba(255,255,255,0.06)";
+      g.fillRect((pl.x-7)|0, (pl.y-17)|0, 14, 1);
+    }
+
+    if(pl.shootHold>0.01){
+      const p=pl.shootHold;
+      g.fillStyle="rgba(0,0,0,0.45)";
+      g.fillRect((pl.x-7)|0, (pl.y-18)|0, 14, 3);
+      g.fillStyle = p<0.6 ? "#00ffd5" : (p<0.9 ? "#ffd24a" : "#ff3b6b");
+      g.fillRect((pl.x-7)|0, (pl.y-18)|0, (14*p)|0, 3);
+    }
+  }
+
+  function drawKeeper(){
+    if(!keeper.active) return;
+    g.fillStyle="rgba(0,0,0,0.35)";
+    g.fillRect((keeper.x-6)|0, (keeper.y+6)|0, 12, 3);
+
+    g.fillStyle="rgba(0,255,213,0.85)";
+    g.fillRect((keeper.x-5)|0, (keeper.y-10)|0, 10, 14);
+
+    g.fillStyle="rgba(179,0,255,0.65)";
+    g.fillRect((keeper.x-5)|0, (keeper.y-4)|0, 10, 2);
+
+    // rage ring
+    const r = 10 + 6*keeper.rage;
+    g.strokeStyle = `rgba(255,210,74,${0.12+0.10*sat(keeper.rage)})`;
+    g.beginPath();
+    g.arc(keeper.x, keeper.y-4, r, 0, Math.PI*2);
+    g.stroke();
+  }
+
+  function drawBall(){
+    g.fillStyle="rgba(0,0,0,0.35)";
+    g.fillRect((ball.x-2)|0, (ball.y+3)|0, 4, 2);
+
+    g.fillStyle="#e8e8ff";
+    g.fillRect((ball.x-2)|0, (ball.y-2)|0, 4, 4);
+    g.fillStyle="rgba(0,0,0,0.18)";
+    g.fillRect((ball.x-1)|0, (ball.y-1)|0, 2, 2);
+
+    const sp = hypot(ball.vx,ball.vy);
+    if(sp>80){
+      g.fillStyle = `rgba(179,0,255,${0.12+0.12*sat(Math.abs(ball.spin)*2)})`;
+      g.fillRect((ball.x - ball.vx*0.02 - 1)|0, (ball.y - ball.vy*0.02 - 1)|0, 2, 2);
+    }
+  }
+
+  function drawHUD(){
+    g.fillStyle="rgba(0,0,0,0.55)";
+    g.fillRect(0,0,W,22);
+    g.fillStyle="rgba(179,0,255,0.12)";
+    g.fillRect(0,21,W,1);
+
+    const A = roster.A.name;
+    const B = roster.B.name;
+    text(`${A}`, 8, 14, 0.95, roster.A.c2);
+    text(`${scoreA}`, 78, 14, 1.1, "#e8e8ff");
+    text(`-`, 94, 14, 1.1, "rgba(232,232,255,0.6)");
+    text(`${scoreB}`, 106, 14, 1.1, "#e8e8ff");
+    text(`${B}`, 128, 14, 0.95, roster.B.c2);
+
+    text(`${roster.map.name}`, 214, 14, 0.9, "rgba(232,232,255,0.70)");
+    text(`${roster.mode.name}`, 214, 20, 0.85, "rgba(0,255,213,0.70)");
+
+    // stamina bars
+    const p1=roster.p1, p2=roster.p2;
+    g.fillStyle="rgba(255,255,255,0.08)";
+    g.fillRect(8, 26, 70, 4);
+    g.fillStyle="rgba(0,255,213,0.85)";
+    g.fillRect(8, 26, 70*p1.stamina, 4);
+
+    g.fillStyle="rgba(255,255,255,0.08)";
+    g.fillRect(W-78, 26, 70, 4);
+    g.fillStyle="rgba(255,59,107,0.85)";
+    g.fillRect(W-78, 26, 70*p2.stamina, 4);
+  }
+
+  function drawCareerMini(){
+    // top-left career readout
+    const xpNext = Career.xpToNext(career.level);
+    const frac = career.xp / xpNext;
+
+    g.fillStyle="rgba(0,0,0,0.45)";
+    g.fillRect(6, 34, 140, 22);
+    text(`LV ${career.level}  XP ${career.xp}/${xpNext}`, 10, 48, 0.85, "rgba(232,232,255,0.75)");
+
+    g.fillStyle="rgba(255,255,255,0.10)";
+    g.fillRect(10, 52, 132, 2);
+    g.fillStyle="rgba(179,0,255,0.55)";
+    g.fillRect(10, 52, (132*frac)|0, 2);
+
+    // perk points
+    if(career.perkPoints>0){
+      text(`PERK +${career.perkPoints}`, 98, 48, 0.85, "rgba(0,255,213,0.85)");
+    }
+
+    if(career.tournament.active){
+      text(`BRACKET R${career.tournament.round+1}/3`, 10, 60, 0.8, "rgba(255,210,74,0.75)");
+    }
+  }
+
+  // ========= Menus =========
+  function menuBack(){
+    if(gs===GS.MENU_MODE) gs=GS.TITLE;
+    else if(gs===GS.MENU_MAP) gs=GS.MENU_MODE;
+    else if(gs===GS.MENU_TEAM) gs=GS.MENU_MAP;
+    else if(gs===GS.CAREER_PERK) gs=GS.MENU_MODE;
+    menuCursor=0;
+  }
+
+  function drawTitle(){
+    g.fillStyle="#050214";
+    g.fillRect(0,0,W,H);
+
+    for(let y=0;y<H;y+=3){
+      g.fillStyle = (y%6===0) ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.06)";
+      g.fillRect(0,y,W,1);
+    }
+
+    g.fillStyle="rgba(179,0,255,0.18)";
+    g.fillRect(0,0,W,58);
+    g.fillStyle="rgba(0,255,213,0.10)";
+    g.fillRect(0,58,W,10);
+
+    text("PIXEL SOCCER", 18, 26, 2.3, "#e8e8ff", false);
+    text("CLUB DECAY EDITION", 18, 44, 1.05, "rgba(0,255,213,0.92)", false);
+
+    const t=performance.now()*0.001;
+    const sx= (W/2) + Math.cos(t*0.9)*90;
+    const sy= (H/2) + Math.sin(t*1.1)*30;
+    addSparks(sx, sy, 1, "rgba(179,0,255,0.55)");
+
+    g.fillStyle="rgba(0,0,0,0.55)";
+    g.fillRect(36, 78, 248, 72);
+    text("PRESS ENTER", 108, 104, 1.5, "#00ffd5");
+    text("Tournament + Career perks + extra modes", 56, 122, 0.95, "rgba(232,232,255,0.78)");
+    text("↑/↓ + Enter · Esc back", 86, 140, 0.95, "rgba(232,232,255,0.62)");
+
+    // Career teaser
+    g.fillStyle="rgba(0,0,0,0.45)";
+    g.fillRect(36, 152, 248, 18);
+    text(`LV ${career.level}  PerkPts ${career.perkPoints}  (Hold Esc in menus for Career Perks)`, 42, 165, 0.8, "rgba(232,232,255,0.70)");
+  }
+
+  function drawMenu(titleStr, items, footer){
+    g.fillStyle="#050214";
+    g.fillRect(0,0,W,H);
+
+    g.fillStyle="rgba(179,0,255,0.16)";
+    g.fillRect(0,0,W,40);
+    text(titleStr, 14, 26, 1.5, "#e8e8ff", false);
+
+    const startY=60;
+    for(let i=0;i<items.length;i++){
+      const y=startY+i*18;
+      const cur=(i===menuCursor);
+      if(cur){
+        g.fillStyle="rgba(0,255,213,0.10)";
+        g.fillRect(12, y-12, W-24, 16);
+        g.fillStyle="rgba(179,0,255,0.14)";
+        g.fillRect(12, y-12, 6, 16);
+      }
+      const name=items[i].name ?? String(items[i]);
+      const desc=items[i].desc ?? items[i].feel ?? "";
+      text(name, 24, y, 1.05, cur?"#00ffd5":"rgba(232,232,255,0.90)", false);
+      if(desc) text(desc, 24, y+10, 0.85, "rgba(232,232,255,0.55)", true);
+    }
+
+    drawCareerMini();
+
+    g.fillStyle="rgba(0,0,0,0.55)";
+    g.fillRect(0,H-24,W,24);
+    text(footer, 12, H-8, 0.9, "rgba(232,232,255,0.72)");
+  }
+
+  function drawTeamMenu(){
+    g.fillStyle="#050214";
+    g.fillRect(0,0,W,H);
+
+    g.fillStyle="rgba(179,0,255,0.16)";
+    g.fillRect(0,0,W,40);
+    text("TEAMS + STARS", 14, 26, 1.5, "#e8e8ff", false);
+
+    const boxW=146, boxH=96;
+    const leftX=14, rightX=W-boxW-14, topY=54;
+
+    const teamA=TEAMS[selTeamA], teamB=TEAMS[selTeamB];
+    const starA=STARS[selStarA], starB=STARS[selStarB];
+
+    function drawBox(x,y,team,star,label,selected){
+      g.fillStyle = selected ? "rgba(0,255,213,0.10)" : "rgba(255,255,255,0.06)";
+      g.fillRect(x,y,boxW,boxH);
+      g.strokeStyle = selected ? "rgba(0,255,213,0.35)" : "rgba(179,0,255,0.20)";
+      g.strokeRect(x+0.5,y+0.5,boxW-1,boxH-1);
+
+      text(label, x+8, y+14, 0.9, "rgba(232,232,255,0.70)");
+      text(team.name, x+8, y+32, 1.05, team.c2, false);
+
+      g.fillStyle=team.c1; g.fillRect(x+8,y+40,10,10);
+      g.fillStyle=team.c2; g.fillRect(x+20,y+40,10,10);
+
+      text("STAR:", x+8, y+62, 0.9, "rgba(232,232,255,0.62)");
+      text(star.name, x+52, y+62, 1.0, "#00ffd5", false);
+
+      const s=star;
+      text(`SPD ${s.spd}  ACC ${s.acc}`, x+8, y+78, 0.85, "rgba(232,232,255,0.55)");
+      text(`SHT ${s.shot}  PAS ${s.pass}  CTRL ${s.ctrl}`, x+8, y+90, 0.85, "rgba(232,232,255,0.55)");
+    }
+
+    drawBox(leftX, topY, teamA, starA, "LEFT (P1)", menuCursor===0);
+    drawBox(rightX, topY, teamB, starB, "RIGHT (P2/AI)", menuCursor===1);
+
+    drawCareerMini();
+
+    g.fillStyle="rgba(0,0,0,0.55)";
+    g.fillRect(0,H-40,W,40);
+    text("↑/↓ side · ←/→ TEAM · J/K STAR · Enter start · Esc back", 10, H-18, 0.9, "rgba(232,232,255,0.72)");
+  }
+
+  function drawPerkMenu(){
+    g.fillStyle="#050214";
+    g.fillRect(0,0,W,H);
+
+    g.fillStyle="rgba(179,0,255,0.16)";
+    g.fillRect(0,0,W,40);
+    text("CAREER PERKS", 14, 26, 1.5, "#e8e8ff", false);
+
+    const perks = [
+      {key:"dash", name:"DASH TUNING", desc:"Lower stamina cost + cooldown"},
+      {key:"shot", name:"SHOT POWER", desc:"Harder shots, bigger strikes"},
+      {key:"control", name:"DRIBBLE CONTROL", desc:"Stickier possession"},
+      {key:"curve", name:"CURVE MASTER", desc:"More spin + bend"}
+    ];
+
+    const startY=60;
+    for(let i=0;i<perks.length;i++){
+      const y=startY+i*24;
+      const cur=(i===menuCursor);
+      const p=perks[i];
+      const lvl=career.perks[p.key]||0;
+      if(cur){
+        g.fillStyle="rgba(0,255,213,0.10)";
+        g.fillRect(12, y-14, W-24, 20);
+        g.fillStyle="rgba(179,0,255,0.14)";
+        g.fillRect(12, y-14, 6, 20);
+      }
+      text(`${p.name}  [${lvl}/6]`, 24, y, 1.1, cur?"#00ffd5":"rgba(232,232,255,0.90)", false);
+      text(p.desc, 24, y+12, 0.85, "rgba(232,232,255,0.55)", true);
+    }
+
+    const xpNext = Career.xpToNext(career.level);
+    g.fillStyle="rgba(0,0,0,0.55)";
+    g.fillRect(12, 150, W-24, 22);
+    text(`LV ${career.level}  XP ${career.xp}/${xpNext}  Perk Points: ${career.perkPoints}`, 18, 165, 0.9, "rgba(232,232,255,0.75)");
+
+    g.fillStyle="rgba(0,0,0,0.55)";
+    g.fillRect(0,H-24,W,24);
+    text("↑/↓ select · Enter spend point · Esc back · R reset career", 12, H-8, 0.9, "rgba(232,232,255,0.72)");
+  }
+
+  // ========= Menu input =========
+  let escHold=0;
+  function updateMenu(dt){
+    // esc hold opens perks
+    if(down(MENU.esc)){
+      escHold += dt;
+      if(escHold>0.55 && (gs===GS.MENU_MODE || gs===GS.MENU_MAP || gs===GS.MENU_TEAM || gs===GS.TITLE)){
+        gs=GS.CAREER_PERK;
+        menuCursor=0;
+        Audio.whistle();
+        escHold=0;
+      }
+    } else escHold=0;
+
+    if(was(MENU.up)){ menuCursor = (menuCursor-1 + 99) % 99; consume(MENU.up); }
+    if(was(MENU.down)){ menuCursor = (menuCursor+1) % 99; consume(MENU.down); }
+
+    if(gs===GS.TITLE){
+      if(was(MENU.enter)){
+        gs=GS.MENU_MODE;
+        menuCursor=0;
+        Audio.whistle();
+        consume(MENU.enter);
+      }
+      return;
+    }
+
+    if(gs===GS.CAREER_PERK){
+      const perksLen=4;
+      menuCursor = clamp(menuCursor, 0, perksLen-1);
+
+      if(was(["r","KeyR"])){
+        Career.reset();
+        Audio.whistle();
+        consume(["r","KeyR"]);
+      }
+      if(was(MENU.enter)){
+        const keys=["dash","shot","control","curve"];
+        if(Career.spendPerk(keys[menuCursor])){
+          addSparks(160,90,40,"rgba(0,255,213,0.55)");
+          cam.flash=0.10;
+        } else {
+          Audio.thud(0);
+        }
+        consume(MENU.enter);
+      }
+      if(was(MENU.esc)){
+        gs=GS.MENU_MODE;
+        menuCursor=selMode;
+        Audio.whistle();
+        consume(MENU.esc);
+      }
+      return;
+    }
+
+    if(was(MENU.esc)){
+      menuBack();
+      Audio.whistle();
+      consume(MENU.esc);
+      return;
+    }
+
+    if(gs===GS.MENU_MODE){
+      menuCursor = clamp(menuCursor, 0, MODES.length-1);
+      if(was(MENU.enter)){
+        selMode=menuCursor;
+
+        // Penalty/Skill/KeeperBoss go straight to map and teams (still use same flow)
+        gs=GS.MENU_MAP;
+        menuCursor=0;
+        Audio.whistle();
+        consume(MENU.enter);
+      }
+      return;
+    }
+
+    if(gs===GS.MENU_MAP){
+      menuCursor = clamp(menuCursor, 0, MAPS.length-1);
+      if(was(MENU.enter)){
+        selMap=menuCursor;
+        gs=GS.MENU_TEAM;
+        menuCursor=0;
+        Audio.whistle();
+        consume(MENU.enter);
+      }
+      return;
+    }
+
+    if(gs===GS.MENU_TEAM){
+      menuCursor = clamp(menuCursor, 0, 1);
+
+      const left = was(["arrowleft","ArrowLeft","a","KeyA"]);
+      const right = was(["arrowright","ArrowRight","d","KeyD"]);
+      const starPrev = was(["j","KeyJ",","]);
+      const starNext = was(["k","KeyK","."]);
+
+      if(left){
+        if(menuCursor===0) selTeamA = (selTeamA-1+TEAMS.length)%TEAMS.length;
+        else selTeamB = (selTeamB-1+TEAMS.length)%TEAMS.length;
+        consume(["arrowleft","ArrowLeft","a","KeyA"]);
+        Audio.pass(0);
+      }
+      if(right){
+        if(menuCursor===0) selTeamA = (selTeamA+1)%TEAMS.length;
+        else selTeamB = (selTeamB+1)%TEAMS.length;
+        consume(["arrowright","ArrowRight","d","KeyD"]);
+        Audio.pass(0);
+      }
+      if(starPrev){
+        if(menuCursor===0) selStarA=(selStarA-1+STARS.length)%STARS.length;
+        else selStarB=(selStarB-1+STARS.length)%STARS.length;
+        consume(["j","KeyJ",","]);
+        Audio.pass(0);
+      }
+      if(starNext){
+        if(menuCursor===0) selStarA=(selStarA+1)%STARS.length;
+        else selStarB=(selStarB+1)%STARS.length;
+        consume(["k","KeyK","."]);
+        Audio.pass(0);
+      }
+
+      if(selTeamA===selTeamB) selTeamB = (selTeamB+1)%TEAMS.length;
+
+      if(was(MENU.enter)){
+        // tournament boot
+        const modeId = MODES[selMode].id;
+        if(modeId==="tourney" && !career.tournament.active){
+          startTournament();
+        }
+
+        newMatch();
+
+        // mode-specific setups
+        if(roster.mode.id==="penalty"){
+          setupPenalty();
+          gs=GS.PENALTY;
+        } else if(roster.mode.id==="skill"){
+          setupSkill();
+          gs=GS.SKILL;
+        } else if(roster.mode.id==="keeperboss"){
+          setupKeeperBoss();
+          gs=GS.KEEPERBOSS;
+        } else {
+          gs=GS.PLAY;
+        }
+
+        cam.flash=0.10;
+        Audio.whistle();
+        consume(MENU.enter);
+      }
+      return;
+    }
+  }
+
+  // ========= Play update =========
+  function updatePlay(dt){
+    matchTime += dt;
+
+    if(roster.mode.id==="pve" || roster.mode.id==="tourney" || roster.mode.id==="survival") roster.p2.human=false;
+
+    if(roster.mode.id==="survival"){
+      survivalTime += dt;
+      // ramp difficulty over time
+      roster.aiDiff = survivalTime*0.10; // grows slowly
+      if(scoreB>scoreA) roster.aiDiff += 0.35;
+    }
+
+    stepPlayers(dt);
+    ballPhysics(dt, roster.map);
+
+    for(let i=sparks.length-1;i>=0;i--){
+      const p=sparks[i];
+      p.x += p.vx*dt;
+      p.y += p.vy*dt;
+      p.vx *= Math.pow(0.08, dt*60);
+      p.vy *= Math.pow(0.08, dt*60);
+      p.life -= dt;
+      if(p.life<=0) sparks.splice(i,1);
+    }
+
+    // goal?
+    if(goalCheck()){
+      gs=GS.GOAL;
+      goalTimer=1.15;
+      Audio.goal();
+      cam.flash=0.16;
+      cam.shake=10;
+      addSparks(ball.x,ball.y,60,"rgba(255,255,255,0.35)");
+    }
+
+    if(was(MENU.esc)){
+      gs=GS.MENU_MODE;
+      menuCursor=selMode;
+      Audio.whistle();
+      consume(MENU.esc);
+    }
+  }
+
+  function updateGoal(dt){
+    goalTimer -= dt;
+
+    roster.p1.vx *= 0.92; roster.p1.vy*=0.92;
+    roster.p2.vx *= 0.92; roster.p2.vy*=0.92;
+    ball.vx *= 0.90; ball.vy*=0.90;
+
+    if(roster.mode.id==="2v2"){
+      roster.a2.vx*=0.92; roster.a2.vy*=0.92;
+      roster.b2.vx*=0.92; roster.b2.vy*=0.92;
+    }
+
+    if(goalTimer<=0){
+      const win=winScoreForMode();
+      if(scoreA>=win || scoreB>=win){
+        gs=GS.DONE;
+      } else {
+        resetKickoff(lastScorer);
+        gs=GS.PLAY;
+        Audio.whistle();
+      }
+    }
+  }
+
+  // ========= Post-match: Career + Tournament =========
+  function finalizeMatchAndMaybeTournament(){
+    // record stats
+    career.stats.matches++;
+    career.stats.goals += (scoreA + scoreB);
+
+    const win = scoreA>scoreB;
+    if(win) career.stats.wins++; else career.stats.losses++;
+    Career.save();
+
+    // XP formula: base + goals + win bonus + difficulty
+    const base = 40;
+    const goals = (scoreA*14 + scoreB*6);
+    const winBonus = win ? 60 : 18;
+    const diffBonus = Math.min(120, (roster.aiDiff*30)|0);
+    Career.grantXP(base + goals + winBonus + diffBonus);
+
+    // tournament progression
+    if(roster.mode.id==="tourney" && career.tournament.active){
+      if(win){
+        career.tournament.wins++;
+        career.tournament.round++;
+        career.tournament.difficulty += 0.6;
+        Career.save();
+        if(career.tournament.round>=3){
+          endTournament(true);
+        }
+      } else {
+        career.tournament.losses++;
+        Career.save();
+        // one loss ends run
+        endTournament(false);
+      }
+    }
+
+    // survival best
+    if(roster.mode.id==="survival"){
+      if(survivalTime > career.stats.bestSurvival){
+        career.stats.bestSurvival = survivalTime;
+        Career.save();
+      }
+      // xp based on time
+      Career.grantXP(40 + Math.min(240, (survivalTime*10)|0));
+    }
+  }
+
+  // ========= Render =========
+  function render(){
+    const sx = cam.shake>0 ? randi(-cam.shake, cam.shake) : 0;
+    const sy = cam.shake>0 ? randi(-cam.shake, cam.shake) : 0;
+    cam.shake = Math.max(0, cam.shake - 0.65);
+    cam.flash = Math.max(0, cam.flash - 0.07);
+
+    g.save();
+    g.translate(sx, sy);
+
+    if(gs===GS.TITLE){
+      drawTitle();
+    } else if(gs===GS.MENU_MODE){
+      drawMenu("MODE SELECT", MODES, "↑/↓ + Enter · Esc back (hold Esc for Perks)");
+    } else if(gs===GS.MENU_MAP){
+      drawMenu("MAP SELECT", MAPS, "↑/↓ + Enter · Esc back (hold Esc for Perks)");
+    } else if(gs===GS.MENU_TEAM){
+      drawTeamMenu();
+    } else if(gs===GS.CAREER_PERK){
+      drawPerkMenu();
+    } else {
+      drawPitch(roster.map);
+
+      for(const p of sparks){
+        const a=sat(p.life/0.35);
+        g.fillStyle=p.col;
+        g.globalAlpha = 0.8*a;
+        g.fillRect((p.x|0),(p.y|0),1,1);
+        g.globalAlpha = 1;
+      }
+
+      // mode-specific props
+      if(gs===GS.SKILL){
+        // cones
+        for(const c of cones){
+          g.fillStyle = c.hit ? "rgba(255,255,255,0.10)" : "rgba(255,210,74,0.55)";
+          g.fillRect((c.x-2)|0,(c.y-2)|0,4,4);
+          g.fillStyle = c.hit ? "rgba(0,0,0,0.18)" : "rgba(0,0,0,0.32)";
+          g.fillRect((c.x-1)|0,(c.y-1)|0,2,2);
+        }
+      }
+
+      drawBall();
+
+      // players
+      drawPlayer(roster.p1);
+      if(roster.mode.id==="2v2") drawPlayer(roster.a2);
+      drawPlayer(roster.p2);
+      if(roster.mode.id==="2v2") drawPlayer(roster.b2);
+
+      // keeper
+      drawKeeper();
+
+      drawHUD();
+      drawCareerMini();
+
+      // overlays per mode
+      if(gs===GS.GOAL){
+        g.fillStyle="rgba(0,0,0,0.55)";
+        g.fillRect(52, 72, 216, 40);
+        const who = (lastScorer<0) ? roster.A.name : roster.B.name;
+        text("GOAL!", 132, 90, 1.7, "#00ffd5", false);
+        text(`${who} SCORES`, 104, 106, 1.0, "rgba(232,232,255,0.78)", false);
+      }
+
+      if(gs===GS.DONE){
+        g.fillStyle="rgba(0,0,0,0.65)";
+        g.fillRect(34, 48, 252, 88);
+
+        let title="MATCH OVER";
+        let sub=`FINAL ${scoreA} - ${scoreB}`;
+        if(roster.mode.id==="skill"){
+          title="SKILL COMPLETE";
+          sub=`SCORE ${skillScore}  BEST ${skillBest}`;
+        }
+        if(roster.mode.id==="keeperboss"){
+          title="BOSS OVER";
+          sub=`GOALS ${keeperBossGoals}`;
+        }
+        if(roster.mode.id==="survival"){
+          title="SURVIVAL OVER";
+          sub=`TIME ${(survivalTime).toFixed(1)}s  BEST ${(career.stats.bestSurvival||0).toFixed(1)}s`;
+        }
+        if(roster.mode.id==="penalty"){
+          title="PENALTY DUEL";
+          sub=`FINAL ${scoreA} - ${scoreB}`;
+        }
+        if(roster.mode.id==="tourney"){
+          if(career.tournament.active){
+            title="TOURNAMENT NEXT";
+            sub=`ROUND ${career.tournament.round+1}/3`;
+          } else {
+            title="TOURNAMENT END";
+            sub=`W ${career.tournament.wins}  L ${career.tournament.losses}`;
+          }
+        }
+
+        text(title, 74, 74, 1.6, "#00ffd5", false);
+        text(sub, 82, 92, 1.0, "rgba(232,232,255,0.82)", false);
+
+        text("Enter: continue · Esc: menu · Hold Esc: perks", 46, 116, 0.9, "rgba(232,232,255,0.72)");
+      }
+
+      if(gs===GS.PENALTY){
+        g.fillStyle="rgba(0,0,0,0.55)";
+        g.fillRect(86, 150, 148, 18);
+        text(penaltyTurn===0 ? "P1 SHOOT" : "AI SHOOT", 122, 163, 0.95, "rgba(255,210,74,0.80)");
+      }
+
+      if(gs===GS.SKILL){
+        g.fillStyle="rgba(0,0,0,0.55)";
+        g.fillRect(210, 34, 104, 30);
+        text(`TIME ${skillTime.toFixed(0)}`, 218, 48, 0.9, "rgba(232,232,255,0.75)");
+        text(`SCORE ${skillScore}`, 218, 60, 0.9, "rgba(0,255,213,0.85)");
+      }
+
+      if(gs===GS.KEEPERBOSS){
+        g.fillStyle="rgba(0,0,0,0.55)";
+        g.fillRect(206, 34, 108, 30);
+        text(`TIME ${keeperBossTime.toFixed(0)}`, 214, 48, 0.9, "rgba(232,232,255,0.75)");
+        text(`GOALS ${keeperBossGoals}`, 214, 60, 0.9, "rgba(255,210,74,0.85)");
+      }
+
+      if(roster.mode.id==="survival" && gs===GS.PLAY){
+        g.fillStyle="rgba(0,0,0,0.45)";
+        g.fillRect(210, 34, 108, 22);
+        text(`TIME ${survivalTime.toFixed(1)}s`, 214, 48, 0.9, "rgba(255,210,74,0.80)");
+      }
+    }
+
+    if(cam.flash>0.001){
+      g.fillStyle = `rgba(255,255,255,${cam.flash*0.35})`;
+      g.fillRect(0,0,W,H);
+      g.fillStyle = `rgba(179,0,255,${cam.flash*0.18})`;
+      g.fillRect(0,0,W,H);
+    }
+
+    g.restore();
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(world,0,0,W,H,0,0,canvas.width,canvas.height);
+  }
+
+  // ========= Main Update =========
+  function update(dt){
+    // global Enter on DONE
+    if(gs===GS.DONE){
+      if(was(MENU.enter)){
+        // continue tournament automatically: start next round match setup
+        if(roster.mode.id==="tourney"){
+          if(career.tournament.active){
+            // bump AI + randomize opponent team/star slightly for next round without changing your picks
+            selTeamB = (selTeamB + randi(1,TEAMS.length-1)) % TEAMS.length;
+            if(selTeamB===selTeamA) selTeamB=(selTeamB+1)%TEAMS.length;
+            selStarB = (selStarB + randi(1,STARS.length-1)) % STARS.length;
+            selMap = (selMap + 1) % MAPS.length;
+            newMatch();
+            gs=GS.PLAY;
+            Audio.whistle();
+          } else {
+            // tourney ended; rematch from scratch
+            newMatch();
+            gs=GS.PLAY;
+            Audio.whistle();
+          }
+        } else if(roster.mode.id==="penalty"){
+          newMatch(); setupPenalty(); gs=GS.PENALTY; Audio.whistle();
+        } else if(roster.mode.id==="skill"){
+          newMatch(); setupSkill(); gs=GS.SKILL; Audio.whistle();
+        } else if(roster.mode.id==="keeperboss"){
+          newMatch(); setupKeeperBoss(); gs=GS.KEEPERBOSS; Audio.whistle();
+        } else {
+          newMatch();
+          gs=GS.PLAY;
+          Audio.whistle();
+        }
+        consume(MENU.enter);
+      }
+
+      if(was(MENU.esc)){
+        gs=GS.MENU_MODE;
+        menuCursor=selMode;
+        Audio.whistle();
+        consume(MENU.esc);
+      }
+    }
+
+    // menus
+    if(gs===GS.TITLE || gs===GS.MENU_MODE || gs===GS.MENU_MAP || gs===GS.MENU_TEAM || gs===GS.CAREER_PERK){
+      updateMenu(dt);
+    } else if(gs===GS.PLAY){
+      updatePlay(dt);
+    } else if(gs===GS.GOAL){
+      updateGoal(dt);
+    } else if(gs===GS.PENALTY){
+      penaltyUpdate(dt);
+      if(gs===GS.DONE){
+        finalizeMatchAndMaybeTournament();
+      }
+    } else if(gs===GS.SKILL){
+      skillUpdate(dt);
+      if(gs===GS.DONE){
+        // skill handled internally already
+      }
+    } else if(gs===GS.KEEPERBOSS){
+      keeperBossUpdate(dt);
+      if(gs===GS.DONE){
+        // boss xp handled already
+      }
+    }
+
+    // finalize when match ends from standard play
+    if(gs===GS.DONE){
+      // if we just arrived from normal match modes, finalize once (guard by flag)
+      // Simple guard: if we recently ended by goal logic, we finalize when entering DONE from GOAL or PLAY
+    }
+
+    pressed.clear();
+  }
+
+  // Guard finalize once per done screen
+  let doneFinalized=false;
+  function maybeFinalizeOnDone(){
+    if(gs!==GS.DONE) { doneFinalized=false; return; }
+    if(doneFinalized) return;
+    doneFinalized=true;
+
+    if(roster.mode.id==="pve" || roster.mode.id==="pvp" || roster.mode.id==="2v2" || roster.mode.id==="tourney" || roster.mode.id==="survival"){
+      finalizeMatchAndMaybeTournament();
+    }
+  }
+
+  // ========= Loop =========
+  function loop(now){
+    const dt = Math.min(0.05, (now-last)/1000);
+    last=now;
+    acc += dt;
+    while(acc>=DT){
+      update(DT);
+      maybeFinalizeOnDone();
+      acc-=DT;
+    }
+
+    // sparks decay
+    for(let i=sparks.length-1;i>=0;i--){
+      const p=sparks[i];
+      p.x += p.vx*DT;
+      p.y += p.vy*DT;
+      p.vx *= 0.92;
+      p.vy *= 0.92;
+      p.life -= DT;
+      if(p.life<=0) sparks.splice(i,1);
+    }
+
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
