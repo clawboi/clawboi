@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Train Milo</title>
+<style>
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --aqua:#00ffd5; --vio:#8a2eff;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%; display:grid; place-items:center;}
+  canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+  .hud{position:fixed; left:12px; right:12px; top:12px; z-index:5; display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;}
+  .pill{pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.35); backdrop-filter: blur(8px);
+    border-radius:999px; padding:10px 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase; display:flex; gap:10px; align-items:center;}
+  .toast{position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    border:1px solid var(--ui2); background:rgba(0,0,0,.55); border-radius:14px; padding:10px 12px;
+    font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s; max-width:min(760px, calc(100vw - 24px)); text-align:center; z-index:6;}
+  .toast.on{opacity:1}
+  .microhint{position:fixed; right:12px; bottom:12px; z-index:4; border:1px solid rgba(255,255,255,.10);
+    background:rgba(0,0,0,.35); backdrop-filter: blur(8px); border-radius:14px; padding:8px 10px; font-size:10px; letter-spacing:.12em; opacity:.85; pointer-events:none;}
+  .exit{position:fixed; left:12px; bottom:12px; z-index:7; pointer-events:auto; border:1px solid rgba(255,255,255,.18);
+    background:rgba(0,0,0,.45); backdrop-filter: blur(8px); border-radius:14px; padding:10px 12px; font-size:11px; letter-spacing:.18em; text-transform:uppercase; cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="hud">
+  <div class="pill"><b>TRAIN MILO</b> <span id="phase">TRICKS</span></div>
+  <div class="pill">TIME: <span id="time">10:00</span></div>
+  <div class="pill">TREATS: <span id="treats">8</span></div>
+  <div class="pill">BOND: <span id="bond">0</span></div>
+  <div class="pill">COMBO: <span id="combo">0</span></div>
+</div>
+<div class="toast" id="toast"></div>
+<button class="exit" id="exitBtn">EXIT → LIVING ROOM</button>
+<div class="microhint">1=SIT · 2=ROLL · 3=HIGH5 · 4=SPIN · 5=PLAY DEAD · Exit: E</div>
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+
+<script>
+const c=document.getElementById("c");
+const ctx=c.getContext("2d",{alpha:false});
+ctx.imageSmoothingEnabled=false;
+
+const UI={
+  toast:document.getElementById("toast"),
+  time:document.getElementById("time"),
+  treats:document.getElementById("treats"),
+  bond:document.getElementById("bond"),
+  combo:document.getElementById("combo"),
+  exitBtn:document.getElementById("exitBtn"),
+};
+
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+const RUN_KEY="SOPHIA_AUDITION_RUN_V1";
+const DURATION_MS=10*60*1000;
+
+function loadState(){
+  const r=localStorage.getItem(STORE_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return {trip:false, miloTraining:{bond:0,bestCombo:0,learned:{}}};
+}
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+function loadRun(){
+  const r=localStorage.getItem(RUN_KEY);
+  if(r){ try{return JSON.parse(r);}catch(e){} }
+  return { startTime:0, durationMs:DURATION_MS, active:false, ended:false };
+}
+function saveRun(run){ localStorage.setItem(RUN_KEY, JSON.stringify(run)); }
+
+let state=loadState();
+state.miloTraining = state.miloTraining || { bond:0, bestCombo:0, learned:{} };
+saveState();
+
+function toast(msg,ms=1500){
+  UI.toast.textContent=msg;
+  UI.toast.classList.add("on");
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>UI.toast.classList.remove("on"),ms);
+}
+
+/* timer */
+function fmt(ms){
+  ms=Math.max(0, ms|0);
+  const s=Math.ceil(ms/1000);
+  const m=(s/60)|0;
+  const ss=String(s%60).padStart(2,"0");
+  return `${m}:${ss}`;
+}
+function timeLeftMs(){
+  const run=loadRun();
+  if(!run.active || run.ended) return run.durationMs;
+  return (run.startTime + run.durationMs - Date.now());
+}
+function tickTimer(){
+  const left=timeLeftMs();
+  UI.time.textContent=fmt(left);
+  if(left<=0){
+    const run=loadRun();
+    run.ended=true; run.active=false;
+    saveRun(run);
+    toast("TIME UP. Audition missed.", 1800);
+    setTimeout(()=>location.href="Sophie00.html", 700);
+  }
+}
+setInterval(tickTimer,250);
+tickTimer();
+
+/* input */
+const keysDown=new Set();
+addEventListener("keydown",(e)=>{
+  const k=e.key.toLowerCase();
+  if(["1","2","3","4","5","e"].includes(k)) e.preventDefault();
+  keysDown.add(k);
+});
+addEventListener("keyup",(e)=>keysDown.delete(e.key.toLowerCase()));
+
+const W=c.width,H=c.height;
+
+function bevel(x,y,w,h,fill){
+  ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(x,y,w,1);
+  ctx.fillStyle="rgba(0,0,0,.40)"; ctx.fillRect(x,y+h-1,w,1);
+  ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(x,y,1,h);
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(x+w-1,y,1,h);
+}
+
+const TRICKS=[
+  {id:"sit", label:"SIT", key:"1", diff:0.75},
+  {id:"roll", label:"ROLL", key:"2", diff:0.65},
+  {id:"high5", label:"HIGH5", key:"3", diff:0.60},
+  {id:"spin", label:"SPIN", key:"4", diff:0.55},
+  {id:"dead", label:"PLAY DEAD", key:"5", diff:0.50},
+];
+
+let t=0;
+let treats=8;
+let bond=state.miloTraining.bond|0;
+let combo=0;
+let bestCombo=state.miloTraining.bestCombo|0;
+
+UI.treats.textContent=String(treats);
+UI.bond.textContent=String(bond);
+UI.combo.textContent=String(combo);
+
+let request=null;      // current requested trick
+let requestAt=0;
+let windowMs=1100;
+let lastPress=0;
+
+function miloLine(kind){
+  const normal=[
+    "MILO: ok. but do it with respect.",
+    "MILO: treat first. then skill.",
+    "MILO: i am a professional creature.",
+    "MILO: that was… acceptable.",
+    "MILO: again. faster."
+  ];
+  const trip=[
+    "MILO: your hands are made of music.",
+    "MILO: i can see your thoughts. they taste purple.",
+    "MILO: this room is breathing. so am i.",
+    "MILO: training is a spell. treats are the payment.",
+    "MILO: i will high-five the moon if you ask."
+  ];
+  const pool = state.trip ? trip : normal;
+  toast(pool[(Math.random()*pool.length)|0], 1500);
+}
+
+function newRequest(){
+  const learnBoost = 1 + Math.min(0.4, bond*0.005);
+  const r=Math.random();
+  // favor easier tricks early, harder later
+  let pick;
+  if(r<0.35) pick=TRICKS[0];
+  else if(r<0.60) pick=TRICKS[1];
+  else if(r<0.78) pick=TRICKS[2];
+  else if(r<0.92) pick=TRICKS[3];
+  else pick=TRICKS[4];
+
+  request=pick;
+  requestAt=performance.now();
+  windowMs = 1050 - Math.min(350, combo*20); // faster when combo is high
+
+  // sometimes Milo "requests" something himself
+  if(state.trip && Math.random()<0.15){
+    miloLine("trip");
+  }else if(Math.random()<0.08){
+    miloLine("normal");
+  }
+}
+
+function success(){
+  combo++;
+  bestCombo=Math.max(bestCombo, combo);
+
+  // bond gain
+  const gain = 2 + Math.min(6, combo);
+  bond += gain;
+  state.miloTraining.bond=bond;
+  state.miloTraining.bestCombo=bestCombo;
+  state.miloTraining.learned[request.id] = true;
+  saveState();
+
+  // treats spend: higher combo makes it cheaper (you’re in sync)
+  if(treats>0) treats -= (combo>=6 ? 0 : 1);
+
+  UI.treats.textContent=String(treats);
+  UI.bond.textContent=String(bond);
+  UI.combo.textContent=String(combo);
+
+  toast(`SUCCESS: ${request.label} (+${gain} bond)`, 900);
+  request=null;
+
+  // “bonus treat” chance when you’re locked in
+  if(combo>=5 && Math.random()<0.25){
+    treats++;
+    UI.treats.textContent=String(treats);
+    toast("BONUS: Milo finds a treat like it was always there.", 1200);
+  }
+}
+
+function fail(reason){
+  combo=0;
+  UI.combo.textContent=String(combo);
+  toast(reason, 1000);
+  request=null;
+
+  // if you keep failing, Milo "walks away" briefly
+  if(Math.random()<0.12){
+    toast("Milo turns his back for a second. (dramatic.)", 1200);
+  }
+}
+
+function judge(key){
+  if(!request) return;
+  const now=performance.now();
+  const dt=now-requestAt;
+
+  if(dt>windowMs){
+    fail("TOO SLOW. Milo blinks, unimpressed.");
+    return;
+  }
+
+  if(key===request.key){
+    // difficulty check: bond + combo increases success
+    const skill = (request.diff + Math.min(0.30, bond*0.002) + Math.min(0.22, combo*0.03));
+    const roll = Math.random();
+    if(roll < skill){
+      success();
+    }else{
+      fail("Milo fakes it halfway. (he says it wasn’t your vibe)");
+    }
+  }else{
+    fail(`WRONG TRICK. Needed ${request.key}.`);
+  }
+}
+
+function goBack(){
+  saveState();
+  location.href="Sophie03.html";
+}
+UI.exitBtn.addEventListener("click", goBack);
+
+function drawMiloSprite(t, pose){
+  const x=190, y=110;
+  // shadow
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(x-2,y+16,30,3);
+
+  // body
+  ctx.fillStyle="rgba(255,255,255,.14)";
+  ctx.fillRect(x, y+8, 22, 10);
+
+  // head
+  ctx.fillRect(x-8, y+2, 12, 12);
+  // ears
+  ctx.fillRect(x-8, y, 3, 3);
+  ctx.fillRect(x-1, y, 3, 3);
+
+  // eyes
+  ctx.fillStyle=state.trip ? "rgba(255,99,255,.75)" : "rgba(0,255,213,.65)";
+  ctx.fillRect(x-4, y+7, 1, 1);
+  ctx.fillRect(x-1, y+7, 1, 1);
+
+  // tail wiggle
+  ctx.fillStyle="rgba(255,255,255,.10)";
+  const wag = Math.round(Math.sin(t*0.15)*2);
+  ctx.fillRect(x+22, y+10+wag, 10, 2);
+
+  // pose overlay
+  ctx.fillStyle="rgba(138,46,255,.10)";
+  if(pose==="sit"){
+    ctx.fillRect(x+4, y+12, 10, 6);
+  }else if(pose==="roll"){
+    ctx.fillRect(x+6, y+6, 8, 8);
+  }else if(pose==="high5"){
+    ctx.fillRect(x-12, y+10, 6, 2);
+  }else if(pose==="spin"){
+    ctx.fillRect(x+2, y+6, 18, 2);
+  }else if(pose==="dead"){
+    ctx.fillRect(x+2, y+14, 18, 2);
+  }
+}
+
+function draw(){
+  ctx.fillStyle="#05050a"; ctx.fillRect(0,0,W,H);
+
+  // training “mat”
+  const g=ctx.createRadialGradient(160,90,10,160,90,160);
+  g.addColorStop(0,"rgba(0,255,213,.08)");
+  g.addColorStop(0.5,"rgba(138,46,255,.08)");
+  g.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  bevel(26,116,268,48,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,0,0,.35)";
+  ctx.fillRect(32,122,256,36);
+
+  // command cards
+  for(let i=0;i<5;i++){
+    const x=32+i*52, y=126;
+    const active = request && request.key===String(i+1);
+    bevel(x,y,48,14, active ? "rgba(0,255,213,.12)" : "rgba(255,255,255,.05)");
+    ctx.fillStyle="rgba(0,0,0,.55)";
+    ctx.fillRect(x+2,y+2,44,10);
+    ctx.font="8px ui-monospace, monospace";
+    ctx.fillStyle="rgba(255,255,255,.85)";
+    ctx.fillText(`${i+1}`, x+6, y+11);
+    ctx.fillStyle="rgba(255,255,255,.55)";
+    ctx.fillText(TRICKS[i].label.slice(0,6), x+16, y+11);
+  }
+
+  // big request panel
+  bevel(22,18,276,44,"rgba(255,255,255,.06)");
+  ctx.fillStyle="rgba(0,0,0,.55)";
+  ctx.fillRect(28,24,264,32);
+
+  ctx.font="10px ui-monospace, monospace";
+  ctx.fillStyle="rgba(255,255,255,.92)";
+  if(request){
+    ctx.fillText(`COMMAND: ${request.label}`, 36, 42);
+    ctx.fillStyle="rgba(255,255,255,.55)";
+    ctx.fillText(`PRESS ${request.key}  (window ${Math.round(windowMs)}ms)`, 36, 56);
+
+    // timer bar
+    const now=performance.now();
+    const dt=Math.max(0, Math.min(windowMs, now-requestAt));
+    const p=1-(dt/windowMs);
+    ctx.fillStyle="rgba(0,255,213,.20)";
+    ctx.fillRect(28,60, Math.floor(264*p), 3);
+  }else{
+    ctx.fillText("WAITING FOR NEXT COMMAND…", 36, 48);
+  }
+
+  // Milo sprite
+  drawMiloSprite(t, request ? request.id : "idle");
+
+  // trip overlay
+  if(state.trip){
+    ctx.fillStyle=`rgba(255,99,255,${0.06+0.05*Math.sin(t*0.06)})`;
+    ctx.fillRect(0,0,W,H);
+    // scanlines
+    for(let y=0;y<H;y+=3){
+      ctx.fillStyle=`rgba(0,255,213,${0.02+0.02*Math.sin(t*0.12+y*0.2)})`;
+      ctx.fillRect(0,y,W,1);
+    }
+  }
+}
+
+function loop(){
+  t++;
+
+  // exit with E
+  if(keysDown.has("e")){
+    if(!loop._e) goBack();
+    loop._e=true;
+  } else loop._e=false;
+
+  const now=performance.now();
+  if(!request){
+    // if no treats, still allow training but “harder”
+    if(treats<=0 && Math.random()<0.06){
+      toast("No treats left. Milo negotiates with silence.", 1400);
+      treats=1; // tiny mercy drip so it never dead-ends
+      UI.treats.textContent=String(treats);
+    }
+    newRequest();
+  }else{
+    // expire
+    if(now-requestAt > windowMs){
+      fail("TOO SLOW. Milo performs 'walk away'.");
+    }
+  }
+
+  // key presses 1-5
+  const pressed = ["1","2","3","4","5"].find(k=>keysDown.has(k));
+  if(pressed){
+    if(!lastPress){
+      judge(pressed);
+      lastPress=pressed;
+    }
+  }else{
+    lastPress=0;
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+toast("Train Milo. Earn bond. Build combos. Don’t disrespect the cat athlete.", 1900);
+loop();
+</script>
+</body>
+</html>
