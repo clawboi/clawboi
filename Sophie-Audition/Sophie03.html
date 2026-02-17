@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Sophia's Audition 03+ — Living Room (Search + Outfit + Exit)</title>
 <style>
-  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14);}
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff; --aqua:#00ffd5;}
   html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
   .wrap{height:100%; display:grid; place-items:center;}
   canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
@@ -28,6 +28,20 @@
     max-width:min(720px, calc(100vw - 24px)); text-align:center;
   }
   .toast.on{opacity:1}
+
+  /* tiny helper footer hint (non-invasive) */
+  .microhint{
+    position:fixed; right:12px; bottom:12px; z-index:4;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(0,0,0,.35);
+    backdrop-filter: blur(8px);
+    border-radius:14px;
+    padding:8px 10px;
+    font-size:10px;
+    letter-spacing:.12em;
+    opacity:.8;
+    pointer-events:none;
+  }
 </style>
 </head>
 <body>
@@ -36,9 +50,11 @@
   <div class="pill">TIME: <span id="time">10:00</span></div>
   <div class="pill">KEYS: <span id="keys">NO</span></div>
   <div class="pill">HAT: <span id="hat">OFF</span></div>
+  <div class="pill">LUCAS: <span id="lucas">LOCKED IN</span></div>
   <div class="pill">Door → Bedroom (left) · Door → Kitchen (right)</div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="microhint">Move: WASD/Arrows · Interact: E · Run: Shift</div>
 <div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
 
 <script>
@@ -49,6 +65,7 @@ ctx.imageSmoothingEnabled=false;
 const UI={
   keys:document.getElementById('keys'),
   hat:document.getElementById('hat'),
+  lucas:document.getElementById('lucas'),
   time:document.getElementById('time'),
   toast:document.getElementById('toast')
 };
@@ -58,7 +75,15 @@ const RUN_KEY="SOPHIA_AUDITION_RUN_V1";
 const DURATION_MS=10*60*1000;
 
 function loadState(){ const r=localStorage.getItem(STORE_KEY); if(r){try{return JSON.parse(r);}catch(e){}}
-  return {hasKeys:false, slept:false, trip:false, puke:false, poemLines:0, guitarPlayed:0, lastRoom:"LIVING", hat:false, found:{couch:false, cabinet:false, table:false}, sophia:{x:160,y:120}, milo:{x:148,y:132}};
+  return {
+    hasKeys:false, slept:false, trip:false, puke:false,
+    poemLines:0, guitarPlayed:0, lastRoom:"LIVING",
+    hat:false,
+    found:{couch:false, cabinet:false, table:false},
+    lucas:{ mood:0, following:false, attempts:0, unlocked:false },
+    sophia:{x:160,y:120},
+    milo:{x:148,y:132}
+  };
 }
 function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
@@ -71,6 +96,7 @@ let state=loadState();
 state.lastRoom="LIVING";
 state.found = state.found || {couch:false, cabinet:false, table:false};
 if(typeof state.hat!=="boolean") state.hat=false;
+state.lucas = state.lucas || { mood:0, following:false, attempts:0, unlocked:false };
 saveState();
 
 function toast(msg,ms=1500){
@@ -82,6 +108,7 @@ function toast(msg,ms=1500){
 
 UI.keys.textContent = state.hasKeys ? "YES" : "NO";
 UI.hat.textContent = state.hat ? "ON" : "OFF";
+UI.lucas.textContent = state.lucas.following ? "FOLLOWING" : (state.lucas.unlocked ? "UP" : "LOCKED IN");
 
 /* ---------- TIMER GUARD (real countdown, 10 mins) ---------- */
 function fmt(ms){
@@ -100,7 +127,6 @@ function tickTimer(){
   const left=timeLeftMs();
   UI.time.textContent = fmt(left);
   if(left<=0){
-    // end run
     const run=loadRun();
     run.ended=true; run.active=false;
     saveRun(run);
@@ -124,14 +150,22 @@ addEventListener('keyup',(e)=>keysDown.delete(e.key.toLowerCase()));
 const W=canvas.width,H=canvas.height;
 const solids=[
   [0,0,W,10],[0,0,10,H],[0,H-10,W,10],[W-10,0,10,H],
-  // couch
+  // cabinet
+  [34,50,36,22],
+  // couch + table
   [58,82,88,26],
-  // coffee table
   [118,114,42,14],
   // TV stand
   [216,62,66,20],
-  // cabinet block (new)
-  [34,50,36,22],
+
+  /* NEW: TV couch interaction zone (solid-ish to “anchor” it) */
+  [200,120,70,18],
+  /* NEW: workout mat */
+  [46,132,40,18],
+  /* NEW: Milo training mat */
+  [100,132,36,18],
+  /* NEW: Lucas desk area */
+  [246,112,50,40],
 ];
 
 const zones=[
@@ -143,6 +177,13 @@ const zones=[
   // clothing pickup
   {name:"HAT", rect:[176,126,18,10], action: toggleHat},
 
+  // NEW: watch tv / workout / train milo / lucas / painting
+  {name:"WATCH TV", rect:[200,120,70,18], action: ()=>go("tv.html") },
+  {name:"WORKOUT", rect:[46,132,40,18], action: ()=>go("workout.html") },
+  {name:"TRAIN MILO", rect:[100,132,36,18], action: ()=>go("trainmilo.html") },
+  {name:"LUCAS", rect:[246,112,50,40], action: lucasInteraction },
+  {name:"PAINTING", rect:[74,20,36,22], action: lookPainting },
+
   // doors
   {name:"DOOR_BEDROOM", rect:[10,78,10,28], action: ()=>go("Sophie01.html")},
   {name:"DOOR_KITCHEN", rect:[W-20,78,10,28], action: ()=>go("Sophie04.html")},
@@ -153,6 +194,9 @@ const zones=[
 
 const sophia={x:state.sophia.x,y:state.sophia.y,w:10,h:12,speed:0.85,run:1.35};
 const milo={x:state.milo.x,y:state.milo.y,w:8,h:8};
+
+/* Lucas NPC (base position) */
+const lucas = { x:256, y:128, w:10, h:12 };
 
 function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
   return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
@@ -183,7 +227,6 @@ function interact(){ const z=nearestZone(); if(z) z.action(); }
 /* ---------- KEY SEARCH LOGIC ---------- */
 function maybeRevealKeys(){
   if(state.hasKeys) return;
-  // keys appear only after you've searched 2 of 3 spots (couch/cabinet/table)
   const count = (state.found.couch?1:0) + (state.found.cabinet?1:0) + (state.found.table?1:0);
   if(count>=2){
     state.hasKeys=true;
@@ -219,11 +262,60 @@ function toggleHat(){
   toast(state.hat ? "Hat on. Confidence +1." : "Hat off.", 1400);
 }
 
+/* ---------- PAINTINGS ---------- */
+function lookPainting(){
+  const lines=[
+    "An abstract void painting stares back.",
+    "It feels like it knows your secrets.",
+    "You swear it blinked.",
+    "Milo refuses to look at it.",
+    "For a second, the room hums like a memory."
+  ];
+  toast(lines[(Math.random()*lines.length)|0], 1700);
+}
+
+/* ---------- LUCAS ---------- */
+function lucasInteraction(){
+  // give it the “20% chance” vibe, but allow skillful persistence too
+  state.lucas.attempts = (state.lucas.attempts||0) + 1;
+
+  const choices=[
+    {label:"KISS", delta:+2, msg:"You lean in. Lucas freezes... then exhales."},
+    {label:"PET", delta:+1, msg:"You ruffle his hair. He doesn't hate it."},
+    {label:"YELL", delta:-1, msg:"Your voice spikes. He flinches. Still gaming."},
+    {label:"HIT", delta:-3, msg:"Bad move. Lucas hard-locks into the screen."},
+    {label:"THROW PILLOW", delta:-2, msg:"The pillow bounces off the chair. He sighs."},
+    {label:"SAY THE RIGHT THING", delta:+3, msg:"You say something that lands. His shoulders drop."}
+  ];
+
+  const pick = choices[(Math.random()*choices.length)|0];
+  state.lucas.mood = (state.lucas.mood||0) + pick.delta;
+  saveState();
+  toast(`LUCAS: ${pick.label}. ${pick.msg}`, 1900);
+
+  // unlock logic:
+  // - base 20% chance each interaction
+  // - OR mood threshold (skill/persistence)
+  // - cap negative spirals by allowing a “reset” chance after enough attempts
+  const chance = 0.20 + Math.min(0.10, (state.lucas.mood>0 ? state.lucas.mood*0.01 : 0));
+  const moodWin = state.lucas.mood >= 5;
+  const pity = state.lucas.attempts>=6 && Math.random()<0.15;
+
+  if(!state.lucas.following && (Math.random()<chance || moodWin || pity)){
+    state.lucas.following = true;
+    state.lucas.unlocked = true;
+    saveState();
+    UI.lucas.textContent="FOLLOWING";
+    toast("Lucas stands up. \"Alright. I'm coming.\" He follows you now.", 2200);
+  }else{
+    UI.lucas.textContent = state.lucas.unlocked ? "UP" : "LOCKED IN";
+  }
+}
+
 /* ---------- EXIT ---------- */
 function exitToStreet(){
   if(!state.hasKeys) return toast("Front door won’t budge. Keys first.", 1500);
   toast("Front door opens. Night air. Milo’s tail goes vertical.", 1700);
-  // keep state + timer running, go to street
   setTimeout(()=>go("street.html"), 600);
 }
 
@@ -231,11 +323,12 @@ function exitToStreet(){
 function go(file){
   state.sophia.x=sophia.x; state.sophia.y=sophia.y;
   state.milo.x=milo.x; state.milo.y=milo.y;
+  // persist lucas follow state
   saveState();
   location.href=file;
 }
 
-/* render */
+/* render helpers */
 function drawRectBevel(x,y,w,h,fill){
   ctx.fillStyle=fill; ctx.fillRect(x,y,w,h);
   ctx.fillStyle="rgba(255,255,255,.08)"; ctx.fillRect(x,y,w,1);
@@ -252,11 +345,12 @@ function drawHintBubble(text,x,y){
   ctx.strokeStyle="rgba(255,255,255,.12)"; ctx.strokeRect(x-w/2+0.5,y-h+0.5,w-1,h-1);
   ctx.fillStyle="rgba(255,255,255,.9)"; ctx.fillText(text,x-w/2+pad,y-4);
 }
+
+/* sprites */
 function drawSophia(){
   const x=Math.round(sophia.x), y=Math.round(sophia.y);
   ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(x-1,y+11,12,2);
 
-  // hat (if on)
   if(state.hat){
     ctx.fillStyle="rgba(0,0,0,.65)";
     ctx.fillRect(x+1,y+0,8,2);
@@ -264,25 +358,79 @@ function drawSophia(){
     ctx.fillRect(x+2,y+1,6,1);
   }
 
-  // hair
-  ctx.fillStyle="#f2d27a"; ctx.fillRect(x+1,y+0+(state.hat?2:0),8,4); ctx.fillRect(x+0,y+3+(state.hat?2:0),10,3);
-  // face
-  ctx.fillStyle="#ffd9c9"; ctx.fillRect(x+2,y+5+(state.hat?2:0),6,4);
-  // eyes
-  ctx.fillStyle="#67b7ff"; ctx.fillRect(x+3,y+6+(state.hat?2:0),1,1); ctx.fillRect(x+6,y+6+(state.hat?2:0),1,1);
-  // dress
-  ctx.fillStyle="rgba(138,46,255,.55)"; ctx.fillRect(x+2,y+9+(state.hat?1:0),6,3);
-  ctx.fillStyle="rgba(255,255,255,.14)"; ctx.fillRect(x+3,y+10+(state.hat?1:0),4,1);
+  ctx.fillStyle="#f2d27a";
+  ctx.fillRect(x+1,y+0+(state.hat?2:0),8,4);
+  ctx.fillRect(x+0,y+3+(state.hat?2:0),10,3);
+
+  ctx.fillStyle="#ffd9c9";
+  ctx.fillRect(x+2,y+5+(state.hat?2:0),6,4);
+
+  ctx.fillStyle="#67b7ff";
+  ctx.fillRect(x+3,y+6+(state.hat?2:0),1,1);
+  ctx.fillRect(x+6,y+6+(state.hat?2:0),1,1);
+
+  ctx.fillStyle="rgba(138,46,255,.55)";
+  ctx.fillRect(x+2,y+9+(state.hat?1:0),6,3);
+  ctx.fillStyle="rgba(255,255,255,.14)";
+  ctx.fillRect(x+3,y+10+(state.hat?1:0),4,1);
 }
+
 function drawMilo(t){
   const x=Math.round(milo.x), y=Math.round(milo.y);
   ctx.fillStyle="rgba(0,0,0,.40)"; ctx.fillRect(x-1,y+7,10,2);
   ctx.fillStyle="#d8d8d8"; ctx.fillRect(x+1,y+2,6,5);
   ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+1,y+1,2,2); ctx.fillRect(x+5,y+1,2,2);
   ctx.fillStyle="#1affd3"; ctx.fillRect(x+2,y+4,1,1); ctx.fillRect(x+5,y+4,1,1);
-  ctx.fillStyle="#cfcfcf"; ctx.fillRect(x+7,y+3,1,3);
+  ctx.fillStyle="#cfcfcf";
+  const wag = Math.round(Math.sin(t*0.18)*1);
+  ctx.fillRect(x+7,y+3+wag,1,3);
 }
-function drawWorld(){
+
+function drawLucas(t){
+  if(!state.lucas) return;
+
+  // base desk position
+  let lx = lucas.x, ly = lucas.y;
+
+  // if following, “snap” near Sophia with a tiny easing
+  if(state.lucas.following){
+    lx = sophia.x + 14 + Math.sin(t*0.05)*1;
+    ly = sophia.y + 0 + Math.cos(t*0.04)*1;
+  }
+
+  const x=Math.round(lx), y=Math.round(ly);
+
+  ctx.fillStyle="rgba(0,0,0,.45)";
+  ctx.fillRect(x-1,y+11,12,2);
+
+  // hair (brown)
+  ctx.fillStyle="#5a3b22";
+  ctx.fillRect(x+1,y+0,8,4);
+  ctx.fillRect(x+0,y+3,10,2);
+
+  // face
+  ctx.fillStyle="#ffd9c9";
+  ctx.fillRect(x+2,y+5,6,4);
+
+  // eyes (brown) + blink
+  const blink = Math.sin(t*0.12) > 0.97;
+  ctx.fillStyle="#3b2a1c";
+  if(blink){
+    ctx.fillRect(x+3,y+6,4,1);
+  }else{
+    ctx.fillRect(x+3,y+6,1,1);
+    ctx.fillRect(x+6,y+6,1,1);
+  }
+
+  // shirt
+  ctx.fillStyle="rgba(255,255,255,.10)";
+  ctx.fillRect(x+2,y+9,6,3);
+  ctx.fillStyle="rgba(0,0,0,.55)";
+  ctx.fillRect(x+3,y+10,4,1);
+}
+
+/* world render */
+function drawWorld(t){
   ctx.fillStyle="#05050a"; ctx.fillRect(0,0,W,H);
 
   const g=ctx.createRadialGradient(160,70,10,160,70,170);
@@ -291,7 +439,10 @@ function drawWorld(){
   g.addColorStop(1,"rgba(0,0,0,0)");
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
+  // room top
   ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(10,10,W-20,78);
+
+  // floor stripes
   for(let y=92;y<H-10;y++){
     ctx.fillStyle=`rgba(255,255,255,${(y%6===0)?0.10:0.05})`;
     ctx.fillRect(10,y,W-20,1);
@@ -305,10 +456,10 @@ function drawWorld(){
   drawRectBevel(58,82,88,26,"rgba(255,255,255,.06)");
   ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(62,86,80,10);
 
-  // table
+  // coffee table
   drawRectBevel(118,114,42,14,"rgba(255,255,255,.05)");
 
-  // TV
+  // TV stand (top right)
   drawRectBevel(216,62,66,20,"rgba(255,255,255,.05)");
   ctx.fillStyle="rgba(0,0,0,.55)"; ctx.fillRect(220,64,58,12);
 
@@ -317,6 +468,32 @@ function drawWorld(){
   ctx.fillRect(176,126,18,10);
   ctx.fillStyle="rgba(0,0,0,.55)";
   ctx.fillRect(179,129,12,4);
+
+  // NEW: TV couch interaction slab
+  drawRectBevel(200,120,70,18,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,0,0,.45)"; ctx.fillRect(204,124,62,10);
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(207,127,10,1);
+  ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(221,127,12,1);
+
+  // NEW: workout mat
+  drawRectBevel(46,132,40,18,"rgba(0,255,213,.10)");
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(50,136,32,10);
+
+  // NEW: Milo training mat
+  drawRectBevel(100,132,36,18,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.fillRect(104,136,28,10);
+
+  // NEW: painting
+  drawRectBevel(74,20,36,22,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,0,0,.5)"; ctx.fillRect(78,24,28,14);
+  // eerie “glint”
+  ctx.fillStyle="rgba(138,46,255,.20)"; ctx.fillRect(96,26,2,2);
+
+  // NEW: Lucas desk
+  drawRectBevel(246,112,50,40,"rgba(255,255,255,.05)");
+  ctx.fillStyle="rgba(0,0,0,.50)"; ctx.fillRect(250,116,42,30);
+  // screen glow
+  ctx.fillStyle="rgba(0,255,213,.08)"; ctx.fillRect(252,118,38,12);
 
   // doors
   ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fillRect(10,78,10,28);
@@ -327,13 +504,13 @@ function drawWorld(){
   ctx.fillRect(148,10,24,10);
   ctx.fillStyle="rgba(0,0,0,.55)"; ctx.fillRect(150,12,20,6);
 
-  // tiny “exit icon” appears only when keys acquired
   if(state.hasKeys){
     ctx.fillStyle="rgba(0,255,213,.85)";
     ctx.fillRect(156,12,4,4);
     ctx.fillRect(161,13,6,2);
   }
 
+  // hint
   const z=nearestZone();
   if(z) drawHintBubble(z.name, sophia.x+6, sophia.y-10);
 }
@@ -360,6 +537,13 @@ function loop(){
   milo.x += (tx-milo.x)*0.06;
   milo.y += (ty-milo.y)*0.06;
 
+  // Lucas follow (if unlocked)
+  if(state.lucas && state.lucas.following){
+    // keep him a little behind Sophia
+    lucas.x += ((sophia.x+14) - lucas.x) * 0.05;
+    lucas.y += ((sophia.y+2) - lucas.y) * 0.05;
+  }
+
   // interact
   if(keysDown.has("e")){
     if(!loop._eWasDown) interact();
@@ -372,8 +556,9 @@ function loop(){
     saveState();
   }
 
-  drawWorld();
+  drawWorld(t);
   drawMilo(t);
+  drawLucas(t);
   drawSophia();
   requestAnimationFrame(loop);
 }
