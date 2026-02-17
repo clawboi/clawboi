@@ -13,7 +13,7 @@
 html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
 .wrap{height:100%; display:grid; place-items:center;}
 canvas{
-  width:min(1400px, 100vw);
+  width:min(1200px, 100vw);      /* slightly smaller on desktop: more retro framing */
   height:auto;
   image-rendering:pixelated;
   image-rendering:crisp-edges;
@@ -21,55 +21,52 @@ canvas{
   outline:none;
 }
 
-/* darker, grounded, “moonlit studio” haze */
+/* softer film-grain haze (less modern blur, more “paper + dust”) */
 body::before{
   content:"";
   position:fixed;
   inset:-20%;
   background:
-    radial-gradient(circle at 18% 14%, rgba(255,240,210,.10), transparent 60%),
-    radial-gradient(circle at 78% 36%, rgba(110,190,170,.08), transparent 62%),
-    radial-gradient(circle at 50% 88%, rgba(138,46,255,.09), transparent 60%),
-    radial-gradient(circle at 20% 76%, rgba(255,110,170,.05), transparent 58%);
-  filter:blur(54px);
-  animation:drift 14s ease-in-out infinite;
+    radial-gradient(circle at 20% 18%, rgba(255,236,205,.08), transparent 62%),
+    radial-gradient(circle at 78% 30%, rgba(120,210,190,.06), transparent 62%),
+    radial-gradient(circle at 56% 86%, rgba(138,46,255,.07), transparent 60%);
+  filter:blur(32px);
+  animation:drift 16s ease-in-out infinite;
   pointer-events:none;
 }
-@keyframes drift{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(1.2%,-1.0%,0)}}
+@keyframes drift{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(.9%,-.7%,0)}}
 
 .hud{
   position:fixed; left:12px; right:12px; top:12px; z-index:5;
   display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;
   pointer-events:none;
 }
-.titleCard{
+.titleCard,.pill,.hint{
   pointer-events:auto;
   border:1px solid var(--ui2);
   background:rgba(0,0,0,.42);
-  backdrop-filter: blur(8px);
-  border-radius:18px;
+  backdrop-filter: blur(6px);
+  border-radius:16px;
+}
+.titleCard{
   padding:10px 14px;
   min-width:260px;
 }
 .titleCard .t{
-  font-weight:800;
-  letter-spacing:.16em;
+  font-weight:900;
+  letter-spacing:.18em;
   text-transform:uppercase;
-  font-size:13px;
+  font-size:12px;
 }
 .titleCard .s{
   margin-top:4px;
   font-size:12px;
-  letter-spacing:.10em;
-  opacity:.85;
+  letter-spacing:.08em;
+  opacity:.86;
 }
 .pill{
-  pointer-events:auto;
-  border:1px solid var(--ui2);
-  background:rgba(0,0,0,.42);
-  backdrop-filter: blur(8px);
   border-radius:999px;
-  padding:10px 12px;
+  padding:9px 12px;
   font-size:12px;
   letter-spacing:.14em;
   text-transform:uppercase;
@@ -77,27 +74,29 @@ body::before{
   white-space:nowrap;
 }
 .hint{
-  pointer-events:auto;
-  flex:1 1 380px;
-  border:1px solid var(--ui2);
-  background:rgba(0,0,0,.42);
-  backdrop-filter: blur(8px);
-  border-radius:18px;
+  flex:1 1 420px;
   padding:10px 12px;
   font-size:12px;
-  letter-spacing:.08em;
+  letter-spacing:.06em;
   line-height:1.35;
 }
-.hint .k{display:inline-block; padding:2px 7px; border-radius:8px; border:1px solid var(--ui2); background:rgba(255,255,255,.06); font-weight:800}
+.hint .k{
+  display:inline-block;
+  padding:2px 7px;
+  border-radius:8px;
+  border:1px solid var(--ui2);
+  background:rgba(255,255,255,.06);
+  font-weight:900;
+}
 
 .toast{
   position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
   border:1px solid var(--ui2);
-  background:rgba(0,0,0,.60);
+  background:rgba(0,0,0,.65);
   border-radius:14px;
   padding:10px 12px;
   font-size:12px;
-  letter-spacing:.08em;
+  letter-spacing:.06em;
   opacity:0;
   transition:.2s;
   max-width:min(860px, calc(100vw - 24px));
@@ -124,7 +123,7 @@ body::before{
 <div class="hud">
   <div class="titleCard">
     <div class="t">Sophia’s Audition</div>
-    <div class="s"><span id="status">Bedroom</span> · Moonlit room, quiet magic</div>
+    <div class="s"><span id="status">Bedroom</span> · Retro room, quiet magic</div>
   </div>
 
   <div class="pill">Milo: <span id="miloMood">following</span></div>
@@ -203,10 +202,9 @@ body::before{
   window.addEventListener("pointerdown", () => canvas.focus(), { passive:true });
 
   /* ---------- world + camera ---------- */
-  const VIEW_W = 320, VIEW_H = 180;
-
-  // slightly tighter world so the room reads as a “real bedroom”
-  const WORLD_W = 520, WORLD_H = 320;
+  // tighter “map feel” without breaking movement
+  const VIEW_W = 300, VIEW_H = 170;     // tighter viewport => room feels denser
+  const WORLD_W = 480, WORLD_H = 290;   // smaller world => less “big map” feeling
 
   const cam = { x:0, y:0 };
 
@@ -227,7 +225,7 @@ body::before{
     toast._t = setTimeout(()=>toastEl.classList.remove("on"), 1600);
   }
 
-  /* ---------- poem modal (kept) ---------- */
+  /* ---------- poem modal ---------- */
   function savePoem(){
     const t = poemInputEl.value.trim();
     if(!t) return;
@@ -243,27 +241,23 @@ body::before{
   /* ---------- geometry ---------- */
   const WALL = 10;
 
-  // furniture re-sized to match Sophia (16x20)
-  // tighter, more believable “walkable” layout
+  // keep your good sizing, but move slightly inward for smaller world
   const furn = {
-    window:  { x:118, y:22,  w:78, h:34 },
+    window:  { x:112, y:18,  w:78, h:34 },
 
-    bed:     { x:330, y:54,  w:120, h:52, d:10 },
-    desk:    { x:66,  y:78,  w:86,  h:28, d:8  },
-    dresser: { x:210, y:122, w:62,  h:22, d:8  },
+    bed:     { x:300, y:52,  w:120, h:52, d:10 },
+    desk:    { x:58,  y:74,  w:86,  h:28, d:8  },
+    dresser: { x:198, y:114, w:62,  h:22, d:8  },
 
-    guitar:  { x:92,  y:222, w:22,  h:40, d:6  },
-    clothes: { x:170, y:250, w:52,  h:24, d:6  },
+    guitar:  { x:84,  y:204, w:22,  h:40, d:6  },
+    clothes: { x:158, y:228, w:52,  h:24, d:6  },
 
-    table:   { x:310, y:164, w:32,  h:22, d:7  },
-
-    // little altar shelf (non-interactive but adds mystic grounding)
-    altar:   { x:244, y:64,  w:42,  h:14, d:6  },
+    table:   { x:284, y:154, w:32,  h:22, d:7  },
+    altar:   { x:232, y:58,  w:42,  h:14, d:6  }
   };
 
   const solids = [
     [0,0,WORLD_W,WALL],[0,0,WALL,WORLD_H],[0,WORLD_H-WALL,WORLD_W,WALL],[WORLD_W-WALL,0,WALL,WORLD_H],
-
     [furn.desk.x, furn.desk.y, furn.desk.w, furn.desk.h],
     [furn.bed.x, furn.bed.y, furn.bed.w, furn.bed.h],
     [furn.dresser.x, furn.dresser.y, furn.dresser.w, furn.dresser.h],
@@ -278,8 +272,8 @@ body::before{
     {name:"BED", rect:[furn.bed.x+10,furn.bed.y+8, 76, 30], action:()=>{ state.slept=true; save(); toast("She sleeps… the room listens."); }},
     {name:"GUITAR", rect:[furn.guitar.x-6,furn.guitar.y+8, 36, 24], action:()=>location.href="guitar.html"},
     {name:"CLOTHES", rect:[furn.clothes.x,furn.clothes.y, furn.clothes.w, furn.clothes.h], action:changeOutfit},
-    {name:"DOOR_LIVING", rect:[WORLD_W-20, 126, 12, 36], action:()=>go("Sophie03.html")},
-    {name:"DOOR_YARD", rect:[232, WORLD_H-18, 58, 10], action:()=>go("Sophie02.html")}
+    {name:"DOOR_LIVING", rect:[WORLD_W-20, 114, 12, 36], action:()=>go("Sophie03.html")},
+    {name:"DOOR_YARD", rect:[206, WORLD_H-18, 58, 10], action:()=>go("Sophie02.html")}
   ];
 
   function changeOutfit(){
@@ -298,13 +292,11 @@ body::before{
   /* ---------- entities ---------- */
   const sophia = { x: state.sophia.x, y: state.sophia.y, w:16, h:20, bob:0, z:0, vz:0 };
   const milo   = { x: state.milo.x,   y: state.milo.y,   bob:0, z:0 };
-
-  // dance state (not saved; it’s a vibe, not a checkpoint)
   const dance = { on:false, t:0 };
 
   // spawn safety
   if(insideSolid(sophia.x,sophia.y,sophia.w,sophia.h)){
-    sophia.x = 140; sophia.y = 208;
+    sophia.x = 140; sophia.y = 188;
   }
 
   function moveWithSlide(dx,dy){
@@ -359,6 +351,16 @@ body::before{
     if(stroke){ ctx.strokeStyle=stroke; ctx.stroke(); }
   }
 
+  // retro dither noise (stable pattern)
+  function ditherRect(px,py,pw,ph,a){
+    ctx.fillStyle = `rgba(0,0,0,${a})`;
+    for(let y=py; y<py+ph; y+=2){
+      for(let x=px + ((y/2|0)%2); x<px+pw; x+=2){
+        ctx.fillRect(x,y,1,1);
+      }
+    }
+  }
+
   function texture(px,py,pw,ph, step, a1, a2){
     for(let y=0;y<ph;y+=step){
       for(let x=0;x<pw;x+=step){
@@ -369,93 +371,133 @@ body::before{
     }
   }
 
+  // pixel outline helper (retro sprite look)
+  function outlineRect(px,py,pw,ph,col){
+    ctx.strokeStyle = col;
+    ctx.strokeRect(px+.5, py+.5, pw, ph);
+    ctx.strokeRect(px+1.5, py+1.5, pw-2, ph-2);
+  }
+
   function box3D(wx,wy,ww,wh,wd, colTop, colFront, colSide, edge){
     const x = X(wx), y = Y(wy), w = Wp(ww), h = Hp(wh), d = Hp(wd);
 
-    // floor shadow (ink wash style)
-    ctx.fillStyle="rgba(0,0,0,.24)";
-    rrect(x+Wp(2), y+h-Hp(2), w-Wp(4), Hp(4), Wp(2), "rgba(0,0,0,.24)");
+    // shadow
+    rrect(x+Wp(2), y+h-Hp(2), w-Wp(4), Hp(4), Wp(2), "rgba(0,0,0,.26)");
 
     // top
     rrect(x, y-d, w, d, Wp(4), colTop);
     texture(x, y-d, w, d, Math.max(2, Wp(2)), "rgba(255,255,255,.05)", "rgba(0,0,0,.03)");
+    ditherRect(x, y-d, w, d, 0.06);
 
     // side
     rrect(x+w-d, y-d, d, h, Wp(3), colSide);
     texture(x+w-d, y-d, d, h, Math.max(2, Wp(2)), "rgba(255,255,255,.04)", "rgba(0,0,0,.04)");
+    ditherRect(x+w-d, y-d, d, h, 0.07);
 
     // front
     rrect(x, y, w, h, Wp(5), colFront);
     texture(x, y, w, h, Math.max(2, Wp(2)), "rgba(255,255,255,.04)", "rgba(0,0,0,.03)");
+    ditherRect(x, y, w, h, 0.06);
 
-    // soft highlight
-    ctx.fillStyle="rgba(255,255,255,.08)";
+    // highlight band
     rrect(x+Wp(2), y+Hp(2), w-Wp(10), Hp(5), Wp(3), "rgba(255,255,255,.06)");
 
-    ctx.strokeStyle=edge;
-    ctx.strokeRect(x+.5, y+.5, w, h);
+    outlineRect(x, y, w, h, edge);
   }
 
   /* ---------- atmosphere ---------- */
-  const motes = Array.from({length:24}, ()=>({
+  const motes = Array.from({length:22}, ()=>({
     x: Math.random()*WORLD_W,
     y: Math.random()*WORLD_H,
     r: 1+Math.random()*2,
-    sp: 0.16+Math.random()*0.32
+    sp: 0.14+Math.random()*0.28
   }));
 
   function bg(){
-    // deep studio-night base
-    ctx.fillStyle="#080712";
+    // base
+    ctx.fillStyle="#070612";
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // walls (warm ink + plaster)
-    rrect(X(8),Y(8),Wp(VIEW_W-16),Hp(106),Wp(10), "#1b1a2a", "rgba(255,255,255,.08)");
-    texture(X(10),Y(10),Wp(VIEW_W-20),Hp(102),Math.max(2,Wp(2)),
-      "rgba(255,255,255,.02)","rgba(0,0,0,.03)");
+    // walls (paper plaster, warmer, more retro)
+    rrect(X(8),Y(8),Wp(VIEW_W-16),Hp(100),Wp(10), "#1a1927", "rgba(255,255,255,.08)");
+    texture(X(10),Y(10),Wp(VIEW_W-20),Hp(96),Math.max(2,Wp(2)),
+      "rgba(255,255,255,.018)","rgba(0,0,0,.03)");
+    ditherRect(X(10),Y(10),Wp(VIEW_W-20),Hp(96),0.05);
 
-    // window frame
+    // window
     const win = furn.window;
-    rrect(X(win.x),Y(win.y),Wp(win.w),Hp(win.h),Wp(8), "#2a2a3a", "rgba(255,255,255,.12)");
+    rrect(X(win.x),Y(win.y),Wp(win.w),Hp(win.h),Wp(8), "#2a2938", "rgba(255,255,255,.12)");
 
-    // moon spill (ghibli soft)
+    // “moon spill” + subtle rays (pixel-soft)
     const gx = X(win.x+win.w/2), gy = Y(win.y+win.h/2);
-    const g = ctx.createRadialGradient(gx,gy, Wp(8), gx,gy, Wp(160));
-    g.addColorStop(0,"rgba(255,245,220,.18)");
-    g.addColorStop(.55,"rgba(140,200,185,.06)");
+    const g = ctx.createRadialGradient(gx,gy, Wp(6), gx,gy, Wp(150));
+    g.addColorStop(0,"rgba(255,246,220,.16)");
+    g.addColorStop(.55,"rgba(170,210,195,.05)");
     g.addColorStop(1,"rgba(0,0,0,0)");
     ctx.fillStyle=g;
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // floor (warm wood, darker)
-    const floorY = 114;
+    const t = performance.now()*0.001;
+    for(let i=0;i<5;i++){
+      const rw = Wp(16+i*5);
+      const rh = Hp(80+i*7);
+      const ox = Math.sin(t*0.7+i)*Wp(5);
+      const oy = Math.cos(t*0.5+i)*Hp(2);
+      ctx.save();
+      ctx.translate(gx+ox, gy+oy);
+      ctx.rotate(0.12 + Math.sin(t*0.25+i)*0.03);
+      ctx.globalAlpha = 0.08 - i*0.012;
+      ctx.fillStyle = "rgba(255,246,220,.45)";
+      ctx.fillRect(0, 0, rw, rh);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+
+    // floor (more 16-bit wood feel)
+    const floorY = 108;
     const fy = Y(floorY);
-    ctx.fillStyle="#141021";
+    ctx.fillStyle="#120f1e";
     ctx.fillRect(0, fy, canvas.width, canvas.height - fy);
 
-    // floor planks
+    // planks + knots
     for(let y=fy; y<canvas.height; y+=Hp(4)){
-      ctx.fillStyle="rgba(255,255,255,.03)";
+      ctx.fillStyle="rgba(255,255,255,.028)";
       ctx.fillRect(0, y, canvas.width, 1);
     }
-    for(let x=0; x<canvas.width; x+=Wp(20)){
+    for(let x=0; x<canvas.width; x+=Wp(18)){
       ctx.fillStyle="rgba(0,0,0,.12)";
       ctx.fillRect(x, fy, 1, canvas.height - fy);
+      if(((x/Wp(18))|0)%4===0){
+        ctx.fillStyle="rgba(255,236,205,.05)";
+        ctx.fillRect(x+Wp(6), fy+Hp(14), Wp(2), Hp(1));
+      }
     }
+    ditherRect(0, fy, canvas.width, canvas.height-fy, 0.04);
 
-    // rug (muted moss + violet undertone)
-    rrect(X(198),Y(198),Wp(150),Hp(78),Wp(12), "#25253a", "rgba(255,255,255,.10)");
-    texture(X(198),Y(198),Wp(150),Hp(78),Math.max(2,Wp(2)),"rgba(140,200,185,.05)","rgba(0,0,0,.05)");
-    rrect(X(214),Y(214),Wp(118),Hp(46),Wp(10), "#2f2a44", "rgba(255,255,255,.08)");
+    // rug (more woven)
+    rrect(X(176),Y(188),Wp(150),Hp(72),Wp(12), "#23233a", "rgba(255,255,255,.10)");
+    texture(X(176),Y(188),Wp(150),Hp(72),Math.max(2,Wp(2)),"rgba(140,200,185,.05)","rgba(0,0,0,.06)");
+    ditherRect(X(176),Y(188),Wp(150),Hp(72),0.05);
+    rrect(X(192),Y(202),Wp(118),Hp(42),Wp(10), "#2b2742", "rgba(255,255,255,.08)");
+
+    // extra “lived-in” wall clutter (posters, hanging notes)
+    const p1x=X(34), p1y=Y(40);
+    rrect(p1x,p1y,Wp(20),Hp(14),Wp(4),"#2b2a3a","rgba(255,255,255,.10)");
+    ctx.fillStyle="rgba(255,246,220,.16)"; ctx.fillRect(p1x+Wp(4), p1y+Hp(4), Wp(12), Hp(1));
+    ctx.fillStyle="rgba(255,246,220,.10)"; ctx.fillRect(p1x+Wp(4), p1y+Hp(7), Wp(10), Hp(1));
+
+    const p2x=X(70), p2y=Y(44);
+    rrect(p2x,p2y,Wp(18),Hp(12),Wp(4),"#2a2a36","rgba(255,255,255,.10)");
+    ctx.fillStyle="rgba(138,46,255,.18)"; ctx.fillRect(p2x+Wp(4), p2y+Hp(5), Wp(10), Hp(1));
 
     // motes
     for(const m of motes){
       m.y -= m.sp;
-      m.x += Math.sin((m.y+m.r)*0.03)*0.18;
+      m.x += Math.sin((m.y+m.r)*0.03)*0.14;
       if(m.y < 0){ m.y = WORLD_H; m.x = Math.random()*WORLD_W; }
       const px = X(m.x), py = Y(m.y);
       if(px< -10 || px>canvas.width+10 || py< -10 || py>canvas.height+10) continue;
-      ctx.fillStyle="rgba(255,255,255,.06)";
+      ctx.fillStyle="rgba(255,255,255,.05)";
       ctx.fillRect(px,py, Math.max(1,Wp(m.r)), Math.max(1,Wp(m.r)));
     }
 
@@ -465,21 +507,30 @@ body::before{
     ctx.fillRect(0,canvas.height-Hp(6),canvas.width,Hp(6));
     ctx.fillRect(0,0,Wp(6),canvas.height);
     ctx.fillRect(canvas.width-Wp(6),0,Wp(6),canvas.height);
+
+    // subtle CRT scanlines (retro, very light)
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle="#000";
+    for(let y=0;y<canvas.height;y+=3) ctx.fillRect(0,y,canvas.width,1);
+    ctx.globalAlpha = 1;
   }
 
   function drawFurniture(){
-    // Ghibli-ish warm wood + cloth palette
-    const WOOD_T = "#6a5845";
-    const WOOD_F = "#5a4a3a";
-    const WOOD_S = "#453629";
-    const EDGE   = "rgba(0,0,0,.30)";
+    const EDGE   = "rgba(0,0,0,.34)";
 
     // desk
     box3D(furn.desk.x, furn.desk.y, furn.desk.w, furn.desk.h, furn.desk.d,
-      "#75614b", "#5f4d3d", "#4a3a2d", EDGE
+      "#7a644c", "#624f3d", "#4a3b2d", EDGE
     );
+    // desk clutter: books + cup
+    rrect(X(furn.desk.x+46), Y(furn.desk.y+8), Wp(14), Hp(6), Wp(2), "#2a2336", "rgba(255,255,255,.10)");
+    rrect(X(furn.desk.x+60), Y(furn.desk.y+8), Wp(10), Hp(6), Wp(2), "#2f2a44", "rgba(255,255,255,.10)");
+    rrect(X(furn.desk.x+74), Y(furn.desk.y+9), Wp(6), Hp(5), Wp(2), "#c98aa7", "rgba(0,0,0,.18)");
+
+    // monitor glow
     rrect(X(furn.desk.x+12), Y(furn.desk.y - furn.desk.d + 4), Wp(26), Hp(14), Wp(5), "#15121f", "rgba(255,255,255,.10)");
     rrect(X(furn.desk.x+15), Y(furn.desk.y - furn.desk.d + 8), Wp(18), Hp(6), Wp(3), "rgba(110,190,170,.90)", "rgba(0,0,0,.20)");
+    ditherRect(X(furn.desk.x+15), Y(furn.desk.y - furn.desk.d + 8), Wp(18), Hp(6), 0.08);
 
     // bed
     box3D(furn.bed.x, furn.bed.y, furn.bed.w, furn.bed.h, furn.bed.d,
@@ -487,12 +538,11 @@ body::before{
     );
     rrect(X(furn.bed.x+12), Y(furn.bed.y+10), Wp(40), Hp(14), Wp(7), "#efece3", "rgba(0,0,0,.16)");
     rrect(X(furn.bed.x+10), Y(furn.bed.y+28), Wp(furn.bed.w-20), Hp(14), Wp(8), "#c98aa7", "rgba(0,0,0,.16)");
-    texture(X(furn.bed.x+10), Y(furn.bed.y+28), Wp(furn.bed.w-20), Hp(14), Math.max(2,Wp(2)),
-      "rgba(255,255,255,.05)", "rgba(0,0,0,.05)");
+    ditherRect(X(furn.bed.x+10), Y(furn.bed.y+28), Wp(furn.bed.w-20), Hp(14), 0.06);
 
     // dresser
     box3D(furn.dresser.x, furn.dresser.y, furn.dresser.w, furn.dresser.h, furn.dresser.d,
-      WOOD_T, WOOD_F, WOOD_S, EDGE
+      "#6a5845", "#5a4a3a", "#453629", EDGE
     );
     for(let i=0;i<2;i++){
       rrect(X(furn.dresser.x+8), Y(furn.dresser.y+5+i*8), Wp(furn.dresser.w-16), Hp(6), Wp(4), "#3b2c22", "rgba(255,255,255,.08)");
@@ -503,8 +553,10 @@ body::before{
     box3D(furn.clothes.x, furn.clothes.y, furn.clothes.w, furn.clothes.h, furn.clothes.d,
       "#7a5e8c", "#5f476d", "#473452", EDGE
     );
+    // tiny hanging scarf detail
+    rrect(X(furn.clothes.x+8), Y(furn.clothes.y+furn.clothes.h-4), Wp(10), Hp(8), Wp(3), "rgba(255,246,220,.12)");
 
-    // guitar case-ish
+    // guitar case
     box3D(furn.guitar.x, furn.guitar.y, furn.guitar.w, furn.guitar.h, furn.guitar.d,
       "#e6e0d8", "#cfc7be", "#b0a69b", EDGE
     );
@@ -521,29 +573,22 @@ body::before{
       X(furn.table.x+13), Y(furn.table.y - furn.table.d + 6), Wp(4),
       X(furn.table.x+13), Y(furn.table.y - furn.table.d + 6), Wp(110)
     );
-    lamp.addColorStop(0,"rgba(255,240,210,.18)");
+    lamp.addColorStop(0,"rgba(255,240,210,.16)");
     lamp.addColorStop(1,"rgba(0,0,0,0)");
     ctx.fillStyle=lamp;
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // altar shelf (mystic grounding)
+    // altar shelf
     box3D(furn.altar.x, furn.altar.y, furn.altar.w, furn.altar.h, furn.altar.d,
-      "#3a3146", "#2a2236", "#1f1929", "rgba(0,0,0,.35)"
+      "#3a3146", "#2a2236", "#1f1929", "rgba(0,0,0,.40)"
     );
-    // candle + tiny aura
     rrect(X(furn.altar.x+10), Y(furn.altar.y - furn.altar.d + 4), Wp(5), Hp(8), Wp(2), "#f5e7c9", "rgba(0,0,0,.18)");
-    const aura = ctx.createRadialGradient(
-      X(furn.altar.x+12), Y(furn.altar.y - furn.altar.d + 6), Wp(2),
-      X(furn.altar.x+12), Y(furn.altar.y - furn.altar.d + 6), Wp(70)
-    );
-    aura.addColorStop(0,"rgba(138,46,255,.10)");
-    aura.addColorStop(1,"rgba(0,0,0,0)");
-    ctx.fillStyle=aura;
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    // tiny charm
+    rrect(X(furn.altar.x+20), Y(furn.altar.y - furn.altar.d + 6), Wp(6), Hp(6), Wp(2), "rgba(110,190,170,.20)");
 
-    // doors (kept)
-    rrect(X(WORLD_W-22), Y(124), Wp(14), Hp(40), Wp(6), "#262236", "rgba(0,255,213,.18)");
-    rrect(X(232), Y(WORLD_H-20), Wp(60), Hp(12), Wp(6), "#262236", "rgba(0,255,213,.18)");
+    // doors
+    rrect(X(WORLD_W-22), Y(112), Wp(14), Hp(40), Wp(6), "#262236", "rgba(0,255,213,.18)");
+    rrect(X(206), Y(WORLD_H-20), Wp(60), Hp(12), Wp(6), "#262236", "rgba(0,255,213,.18)");
   }
 
   /* ---------- sprites ---------- */
@@ -556,7 +601,6 @@ body::before{
     ];
     const o=outfits[state.outfit];
 
-    // bob reduces during dance (more deliberate)
     const bob = dance.on ? Math.sin(dance.t*0.8)*0.4 : Math.sin(sophia.bob)*0.8;
 
     const x = X(sophia.x);
@@ -564,8 +608,10 @@ body::before{
 
     // shadow reacts to jump height
     const sh = Math.max(0.55, 1 - sophia.z/18);
-    ctx.fillStyle="rgba(0,0,0,.26)";
     rrect(x+Wp(3), Y(sophia.y)+Hp(18), Math.round(Wp(10)*sh), Hp(3), Wp(2), "rgba(0,0,0,.26)");
+
+    // outline pass (retro sprite)
+    rrect(x+Wp(2), y+Hp(0), Wp(12), Hp(22), Wp(4), "rgba(0,0,0,0)", "rgba(0,0,0,.35)");
 
     // hair
     rrect(x+Wp(3), y+Hp(0), Wp(10), Hp(7), Wp(3), "#e7c777");
@@ -576,6 +622,7 @@ body::before{
 
     // face
     rrect(x+Wp(4), y+Hp(7), Wp(10), Hp(9), Wp(3), "#f2d2c2");
+    ditherRect(x+Wp(4), y+Hp(7), Wp(10), Hp(9), 0.03);
 
     // eyes
     rrect(x+Wp(6), y+Hp(10), Wp(3), Hp(3), Wp(1), "#1a0f2a");
@@ -585,7 +632,7 @@ body::before{
     ctx.fillRect(x+Wp(7), y+Hp(11), Wp(1), Hp(1));
     ctx.fillRect(x+Wp(12),y+Hp(11), Wp(1), Hp(1));
 
-    // blush (subtle)
+    // blush
     ctx.fillStyle="rgba(255,120,160,.16)";
     ctx.fillRect(x+Wp(5), y+Hp(14), Wp(2), Hp(1));
     ctx.fillRect(x+Wp(13),y+Hp(14), Wp(2), Hp(1));
@@ -598,7 +645,7 @@ body::before{
     ctx.fillStyle="rgba(255,255,255,.18)";
     ctx.fillRect(x+Wp(6), y+Hp(18), Wp(8), Hp(1));
 
-    // dance sparkle (dark-cute, not childish)
+    // dance sparkle
     if(dance.on && (Math.sin(dance.t*1.7)>0.7)){
       ctx.fillStyle="rgba(138,46,255,.18)";
       ctx.fillRect(x+Wp(2), y+Hp(2), Wp(1), Hp(1));
@@ -611,15 +658,13 @@ body::before{
     const x = X(milo.x);
     const y = Y(milo.y + bob);
 
-    ctx.fillStyle="rgba(0,0,0,.20)";
     rrect(x+Wp(2), y+Hp(10), Wp(12), Hp(3), Wp(2), "rgba(0,0,0,.20)");
+    rrect(x+Wp(2), y+Hp(4), Wp(14), Hp(9), Wp(4), "#ece7de", "rgba(0,0,0,.25)");
 
-    rrect(x+Wp(2), y+Hp(4), Wp(14), Hp(9), Wp(4), "#ece7de");
     ctx.fillStyle="#1a0f2a";
     ctx.fillRect(x+Wp(6), y+Hp(7), Wp(1), Hp(1));
     ctx.fillRect(x+Wp(11),y+Hp(7), Wp(1), Hp(1));
 
-    // eye glow shifts when dancing
     ctx.fillStyle = dance.on ? "rgba(255,110,170,.75)" : "rgba(0,255,213,.80)";
     ctx.fillRect(x+Wp(6), y+Hp(6), Wp(1), Hp(1));
     ctx.fillRect(x+Wp(11),y+Hp(6), Wp(1), Hp(1));
@@ -628,7 +673,7 @@ body::before{
   function drawInteractHint(){
     const z=nearest();
     if(!z) return;
-    rrect(Wp(8), canvas.height-Hp(28), Wp(300), Hp(18), Wp(8), "rgba(0,0,0,.55)", "rgba(255,255,255,.18)");
+    rrect(Wp(8), canvas.height-Hp(28), Wp(300), Hp(18), Wp(8), "rgba(0,0,0,.62)", "rgba(255,255,255,.16)");
     ctx.fillStyle="rgba(255,255,255,.92)";
     ctx.font = `${Math.max(10, Hp(10))}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.fillText(`Press E or tap: ${z.name}`, Wp(16), canvas.height-Hp(15));
@@ -638,10 +683,11 @@ body::before{
   function go(f){ save(); location.href=f; }
 
   function updateCamera(){
+    // tighter follow makes it feel like a smaller room
     const targetX = (sophia.x + sophia.w/2) - VIEW_W/2;
     const targetY = (sophia.y + sophia.h/2) - VIEW_H/2;
-    cam.x += (targetX - cam.x) * 0.10;
-    cam.y += (targetY - cam.y) * 0.10;
+    cam.x += (targetX - cam.x) * 0.14;
+    cam.y += (targetY - cam.y) * 0.14;
     cam.x = clamp(cam.x, 0, WORLD_W - VIEW_W);
     cam.y = clamp(cam.y, 0, WORLD_H - VIEW_H);
   }
@@ -658,15 +704,13 @@ body::before{
   }
 
   function loop(){
-    // movement
     if(!state.slept){
       const run = keysDown.has("shift");
-      const sp = run ? 2.2 : 1.55;
+      const sp = run ? 2.15 : 1.5;
 
       let dx = (keysDown.has("d")||keysDown.has("arrowright")?1:0) - (keysDown.has("a")||keysDown.has("arrowleft")?1:0);
       let dy = (keysDown.has("s")||keysDown.has("arrowdown")?1:0) - (keysDown.has("w")||keysDown.has("arrowup")?1:0);
 
-      // dancing slows movement (still grounded)
       const slow = dance.on ? 0.55 : 1;
 
       if(dx || dy){
@@ -681,39 +725,37 @@ body::before{
       sophia.bob += 0.04;
     }
 
-    // jump (space)
+    // jump
     const spaceHeld = keysDown.has(" ") || keysDown.has("space");
     const onGround = sophia.z <= 0.0001;
 
     if(spaceHeld && !held.space && onGround && !state.slept){
-      sophia.vz = 4.2;
+      sophia.vz = 4.15;
       held.space = true;
     }
     if(!spaceHeld) held.space = false;
 
-    // gravity
     if(!onGround || sophia.vz > 0){
       sophia.vz -= 0.26;
       sophia.z += sophia.vz;
       if(sophia.z < 0){ sophia.z = 0; sophia.vz = 0; }
     }
 
-    // interact once
+    // interact
     if(keysDown.has("e") && !held.e){ interact(); held.e=true; }
     if(!keysDown.has("e")) held.e=false;
 
-    // dance toggle (C)
+    // dance toggle
     if(keysDown.has("c") && !held.c){ toggleDance(); held.c=true; }
     if(!keysDown.has("c")) held.c=false;
 
-    // Milo follow (closer, more “pet-like”)
+    // milo follow
     const tx = sophia.x - 18;
     const ty = sophia.y + 12;
     milo.x += (tx - milo.x) * (dance.on ? 0.09 : 0.065);
     milo.y += (ty - milo.y) * (dance.on ? 0.09 : 0.065);
     milo.bob += dance.on ? 0.16 : 0.12;
 
-    // dance timer
     if(dance.on) dance.t += 0.16;
     else dance.t *= 0.92;
 
