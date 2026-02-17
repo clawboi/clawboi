@@ -32,13 +32,31 @@ body::before{
   position:fixed;
   inset:-20%;
   pointer-events:none;
-  z-index:-2; /* behind everything */
+  z-index:-2;
   background:
     radial-gradient(circle at 20% 20%, rgba(138,46,255,.22), transparent 60%),
     radial-gradient(circle at 80% 30%, rgba(138,46,255,.18), transparent 65%),
     radial-gradient(circle at 50% 90%, rgba(138,46,255,.16), transparent 70%);
   mix-blend-mode:screen;
   filter:blur(10px) saturate(1.2);
+  animation:violetBreath 18s ease-in-out infinite;
+}
+
+@keyframes violetBreath{
+  0%,100%{
+    opacity:1;
+    filter:blur(10px) saturate(1.2) brightness(1);
+  }
+  40%{
+    opacity:.35;
+    filter:blur(14px) saturate(1.4) brightness(.45);
+  }
+  60%{
+    opacity:.35;
+    filter:blur(14px) saturate(1.4) brightness(.45);
+  }
+}
+  
 }
 
 /* NEW: subtle texture + vignette so it feels less empty (no layout changes) */
