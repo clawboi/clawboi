@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Milo Pong</title>
+<style>
+body{margin:0;background:#000;color:#fff;font-family:monospace;text-align:center}
+canvas{display:block;margin:auto;background:#111}
+button{margin:10px;padding:10px 18px;background:#000;border:1px solid #fff;color:#fff}
+</style>
+</head>
+<body>
+
+<canvas id="c" width="320" height="180"></canvas>
+<button onclick="location.href='Sophie02.html'">RETURN</button>
+
+<script>
+const c=document.getElementById("c");
+const x=c.getContext("2d");
+
+let ball={x:160,y:90,vx:2,vy:1.5};
+let player=70;
+let milo=70;
+
+function loop(){
+
+/* physics */
+ball.x+=ball.vx;
+ball.y+=ball.vy;
+
+if(ball.y<0||ball.y>180)ball.vy*=-1;
+
+if(ball.x<20 && ball.y>player && ball.y<player+40)
+ball.vx*=-1;
+
+if(ball.x>300 && ball.y>milo && ball.y<milo+40)
+ball.vx*=-1;
+
+/* reset */
+if(ball.x<0||ball.x>320){
+ball={x:160,y:90,vx:(Math.random()>.5?2:-2),vy:1.5};
+}
+
+/* AI */
+milo+=(ball.y-(milo+20))*.05;
+
+/* controls */
+onmousemove=e=>player=e.clientY-20;
+
+/* draw */
+x.fillStyle="#000";x.fillRect(0,0,320,180);
+
+x.fillStyle="#fff";
+x.fillRect(10,player,6,40);
+x.fillRect(304,milo,6,40);
+x.fillRect(ball.x,ball.y,6,6);
+
+requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
+
