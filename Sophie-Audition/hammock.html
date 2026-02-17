@@ -1,0 +1,278 @@
+<!-- hammock.html -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sophia's Audition — Hammock</title>
+<style>
+  :root{ --bg:#07070b; --fg:#fff; --ui2:rgba(255,255,255,.14); --vio:#8a2eff;}
+  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  .wrap{height:100%; display:grid; place-items:center;}
+  canvas{width:min(980px, 100vw); height:auto; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;}
+  .hud{
+    position:fixed; left:12px; right:12px; top:12px; z-index:5;
+    display:flex; gap:10px; flex-wrap:wrap; pointer-events:none;
+  }
+  .pill{
+    pointer-events:auto; border:1px solid var(--ui2); background:rgba(0,0,0,.35);
+    backdrop-filter: blur(8px);
+    border-radius:999px; padding:10px 12px;
+    font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+    display:flex; gap:10px; align-items:center;
+  }
+  .toast{
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    border:1px solid var(--ui2); background:rgba(0,0,0,.55);
+    border-radius:14px; padding:10px 12px;
+    font-size:12px; letter-spacing:.08em; opacity:0; transition:.2s;
+    max-width:min(720px, calc(100vw - 24px)); text-align:center;
+  }
+  .toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="hud">
+  <div class="pill"><b>SOPHIA</b> <span>HAMMOCK</span></div>
+  <div class="pill">SWING: <span id="swing">0%</span></div>
+  <div class="pill">BREATH: <span id="breath">IN</span></div>
+  <div class="pill">Press <b>E</b> to exit back</div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="wrap"><canvas id="c" width="320" height="180"></canvas></div>
+
+<script>
+const canvas=document.getElementById("c");
+const ctx=canvas.getContext("2d",{alpha:false});
+ctx.imageSmoothingEnabled=false;
+
+const UI={
+  swing:document.getElementById("swing"),
+  breath:document.getElementById("breath"),
+  toast:document.getElementById("toast")
+};
+
+const STORE_KEY="SOPHIA_AUDITION_SAVE_V1";
+function loadState(){
+  const raw=localStorage.getItem(STORE_KEY);
+  if(raw){ try{return JSON.parse(raw);}catch(e){} }
+  return {hasKeys:false, slept:false, trip:false, puke:false, poemLines:0, guitarPlayed:0, lastRoom:"BACKYARD", sophia:{x:160,y:120}, milo:{x:148,y:132}};
+}
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+let state=loadState();
+
+// Keep lastRoom as BACKYARD so "continue" knows where we were
+state.lastRoom="BACKYARD";
+saveState();
+
+function toast(msg,ms=1600){
+  UI.toast.textContent=msg;
+  UI.toast.classList.add("on");
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>UI.toast.classList.remove("on"),ms);
+}
+
+/* Input */
+const keysDown=new Set();
+addEventListener("keydown",(e)=>{
+  const k=e.key.toLowerCase();
+  if(["arrowleft","arrowright","arrowup","arrowdown"," ","shift","w","a","s","d","e"].includes(k)) e.preventDefault();
+  keysDown.add(k);
+});
+addEventListener("keyup",(e)=>keysDown.delete(e.key.toLowerCase()));
+
+/* Scene state */
+const W=canvas.width, H=canvas.height;
+
+let swing=0;       // current swing angle-ish
+let swingVel=0;    // swing velocity
+let calm=0;        // meditation “depth”
+let cosmos=0;      // how much cosmos is visible
+let breathT=0;     // breathing timer
+let breath="IN";   // IN/OUT
+
+// start more intense if tripping
+if(state.trip){
+  cosmos=0.25;
+  calm=0.08;
+  toast("She closes her eyes. The cosmos waits behind her eyelids.", 2000);
+}else{
+  toast("Hammock creaks. Night air tastes like mint and distance.", 2000);
+}
+
+/* Helpers */
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+/* Draw */
+function drawSky(t){
+  ctx.fillStyle="#05050a";
+  ctx.fillRect(0,0,W,H);
+
+  // violet nebula drift
+  const neb=ctx.createRadialGradient(
+    160 + Math.sin(t*0.01)*60, 60 + Math.cos(t*0.012)*30, 20,
+    160, 60, 180
+  );
+  neb.addColorStop(0,`rgba(138,46,255,${0.10 + cosmos*0.35})`);
+  neb.addColorStop(0.55,`rgba(0,255,213,${0.04 + cosmos*0.12})`);
+  neb.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=neb;
+  ctx.fillRect(0,0,W,H);
+
+  // stars appear stronger with cosmos
+  const starCount = 60 + Math.floor(cosmos*140);
+  for(let i=0;i<starCount;i++){
+    const x=(i*47 + (t*0.6))%W;
+    const y=(i*83 + (t*0.2))%H;
+    const tw=0.06 + 0.10*Math.abs(Math.sin((t*0.03)+(i*0.7)));
+    const a=clamp((0.04+cosmos*0.25)*tw, 0, 0.22);
+    ctx.fillStyle=`rgba(255,255,255,${a})`;
+    ctx.fillRect(x|0,y|0,1,1);
+  }
+
+  // slow “galaxy ring” when deep meditation
+  if(cosmos>0.15){
+    const gx=160 + Math.sin(t*0.006)*10;
+    const gy=74 + Math.cos(t*0.007)*8;
+    for(let r=10;r<140;r+=6){
+      const a=clamp((cosmos-0.12)*0.18,0,0.14) * (1-r/160);
+      ctx.strokeStyle=`rgba(255,99,255,${a})`;
+      ctx.beginPath();
+      ctx.ellipse(gx,gy,r*1.2,r*0.65, Math.sin(t*0.003)*0.5, 0, Math.PI*2);
+      ctx.stroke();
+    }
+  }
+
+  // trip shimmer
+  if(state.trip){
+    ctx.fillStyle=`rgba(255,99,255,${0.05 + 0.04*Math.sin(t*0.07) * (0.4+cosmos)})`;
+    ctx.fillRect(0,0,W,H);
+    for(let y=0;y<H;y+=3){
+      ctx.fillStyle=`rgba(0,255,213,${0.01 + 0.02*Math.sin(t*0.12 + y*0.18) * (0.5+cosmos)})`;
+      ctx.fillRect(0,y,W,1);
+    }
+  }
+}
+
+function drawHammock(t){
+  // poles
+  ctx.fillStyle="rgba(255,255,255,.07)";
+  ctx.fillRect(62,64,3,74);
+  ctx.fillRect(255,64,3,74);
+
+  // rope
+  ctx.fillStyle="rgba(255,255,255,.08)";
+  ctx.fillRect(65,68,190,1);
+
+  // swing offset
+  const amp = 16 + cosmos*24;
+  const sx = Math.sin(swing)*amp;
+
+  // hammock fabric arc
+  for(let i=0;i<170;i++){
+    const x=75+i + sx;
+    const y=92 + Math.round(Math.sin((i/170)*Math.PI)*10) + Math.round(Math.sin(t*0.03 + i*0.08)*(cosmos*2));
+    ctx.fillStyle=`rgba(138,46,255,${0.10 + cosmos*0.18})`;
+    ctx.fillRect(x,y,1,2);
+  }
+
+  // Sophia chill silhouette (tiny pixel)
+  const px=152 + sx;
+  const py=88;
+  ctx.fillStyle="rgba(0,0,0,.35)";
+  ctx.fillRect(px-4,py+14,12,2);
+
+  // hair + face
+  ctx.fillStyle="#f2d27a"; ctx.fillRect(px,py,8,3);
+  ctx.fillStyle="#ffd9c9"; ctx.fillRect(px+1,py+3,6,4);
+
+  // blanket aura
+  ctx.fillStyle=`rgba(138,46,255,${0.10 + cosmos*0.18})`;
+  ctx.fillRect(px,py+8,8,6);
+
+  // Milo curl at feet
+  const mx=142 + sx;
+  const my=102;
+  ctx.fillStyle="rgba(0,0,0,.30)";
+  ctx.fillRect(mx-2,my+6,10,2);
+  ctx.fillStyle="#d8d8d8";
+  ctx.fillRect(mx,my,6,5);
+  ctx.fillStyle= state.trip ? "#ff63ff" : "#1affd3";
+  ctx.fillRect(mx+2,my+2,1,1);
+}
+
+function drawUIHints(t){
+  // center mantra
+  const a = clamp(0.10 + calm*0.55, 0, 0.7);
+  ctx.font="8px ui-monospace, monospace";
+  ctx.fillStyle=`rgba(255,255,255,${a})`;
+  const msg = calm<0.25 ? "BREATHE. SWING. LISTEN." :
+              calm<0.55 ? "THE HOUSE DISSOLVES. YOU REMAIN." :
+              "COSMOS: OPEN // SELF: QUIET";
+  ctx.fillText(msg, 86, 22);
+
+  // tiny prompt
+  ctx.fillStyle="rgba(255,255,255,.35)";
+  ctx.fillText("A/D to swing • Hold SHIFT to meditate • E to exit", 60, 170);
+}
+
+/* Loop */
+let t=0;
+function loop(){
+  t++;
+
+  // swing controls
+  const push = (keysDown.has("a")||keysDown.has("arrowleft") ? -1 : 0) + (keysDown.has("d")||keysDown.has("arrowright") ? 1 : 0);
+  swingVel += push * 0.0045;
+
+  // damping (but less damping if tripping)
+  const damp = state.trip ? 0.992 : 0.988;
+  swingVel *= damp;
+  swing += swingVel;
+
+  // meditation: hold shift to “go deeper”
+  const med = keysDown.has("shift") ? 1 : 0;
+  calm += (med ? 0.0022 : -0.0014);
+  calm = clamp(calm, 0, 1);
+
+  // cosmos rises with calm, spikes if tripping
+  const targetCos = clamp((state.trip ? 0.35 : 0.10) + calm*0.85, 0, 1);
+  cosmos += (targetCos - cosmos) * 0.02;
+
+  // breathing indicator
+  breathT += 0.015 + calm*0.01;
+  const s = Math.sin(breathT);
+  breath = s>0 ? "IN" : "OUT";
+  UI.breath.textContent = breath;
+
+  // swing percent indicator
+  const sp = clamp(Math.abs(Math.sin(swing)) * 100, 0, 100);
+  UI.swing.textContent = `${Math.round(sp)}%`;
+
+  drawSky(t);
+  drawHammock(t);
+  drawUIHints(t);
+
+  // occasional cosmic “events” at high calm
+  if(calm>0.70 && Math.random()<0.008){
+    toast("A constellation rearranges itself to spell nothing you can explain.", 1800);
+  }
+  if(state.trip && calm>0.35 && Math.random()<0.006){
+    toast("Milo purrs. The purr becomes a low choir.", 1600);
+  }
+
+  // exit
+  if(keysDown.has("e")){
+    if(!loop._eWasDown){
+      // return to backyard whenever
+      location.href="Sophie02.html";
+    }
+    loop._eWasDown=true;
+  } else loop._eWasDown=false;
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
