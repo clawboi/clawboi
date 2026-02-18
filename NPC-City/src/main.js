@@ -8,6 +8,10 @@ import { World } from "./world/world.js";
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d", { alpha: false });
 
+// IMPORTANT: make sure canvas can receive focus
+canvas.tabIndex = 0;
+canvas.addEventListener("pointerdown", () => canvas.focus());
+
 const input = new Input(canvas);
 const save = new Save("NPC_CITY_SAVE_V1");
 const ui = new UI(document.getElementById("ui-root"));
@@ -15,4 +19,5 @@ const assets = new Assets();
 const world = new World();
 const game = new Game({ canvas, ctx, input, save, ui, assets, world });
 
+canvas.focus(); // focus once on boot
 game.boot();
